@@ -173,3 +173,8 @@ A test bot gathering flat out collected 120 to 140 wood in a day, which is in li
 - Automated, in a headless browser: a bot playing whole solo days and nights (several play styles); real keyboard and mouse input; two tabs playing co-op through lobby, day, night, restart, a late joiner being refused and the host leaving.
 - **Not tested:** co-op over the real internet (the test machine could not reach the connection service), frame rate on a real graphics card, and how the sound effects actually sound.
 
+
+## Godot stage 3 patch: the click crash
+
+- Clicking in the game crashed it: `main.gd` still asked the HUD `notice_open()`, which went when the menus were rewritten. It now asks whether the window is open. Found from the log Godot keeps in `%APPDATA%\Godot\app_userdata\Peasant Defence\logs`.
+- New `godot/tests/click_test.gd` clicks the home screen and the game with real mouse presses (holding the button down as the game starts), which is how this got past `ui_test.gd`.
