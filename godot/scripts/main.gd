@@ -466,7 +466,7 @@ func _tick() -> void:
 		var e := R.move_player(p, mx, mz, STEP, _clock)
 		if e != "":
 			_edge = e; _edge_t = 0.5
-		var atk: bool = Keys.held("attack") or (Input.is_action_pressed("dtv_attack_mouse") and _build_sel == "" and not hud.notice_open()) or (_bot and R.phase == "night")
+		var atk: bool = Keys.held("attack") or (Input.is_action_pressed("dtv_attack_mouse") and _build_sel == "" and not win.visible) or (_bot and R.phase == "night")
 		if atk and _atk_cd <= 0 and p.gk != 5:
 			var I: Dictionary = D.IT[p.wpn]
 			_atk_cd = I.cd * (0.8 if I.rng and Rules.rk(p, 5) >= 5 else 1.0)

@@ -14,6 +14,9 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Godot: stage 3, patched", [
+		"Clicking the mouse no longer crashes the game. It asked the old readouts whether a notice was open, and they had been thrown out. They did not answer, and the game took it badly.",
+	]],
 	["Godot: the menus (stage 3 of the move)", [
 		"Everything that opens now opens in one window in the middle, framed by the scroll, so nothing sits on anything else. Esc or the cross closes it.",
 		"The readouts have fixed places round the edge: the day top left, the keep top middle, the map top right, what you carry and your books on the left, your health bottom left, and a bar along the bottom with your weapon’s trick, your bucket, your posse, your pack and the toilet break, each with its key.",

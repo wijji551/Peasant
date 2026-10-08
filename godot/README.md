@@ -30,7 +30,7 @@ The same as the web version: **W A S D** move, **Space** or left click attacks, 
 - `scripts/view/`: the models (`models.gd`, built by `mesher.gd`), the peasants, the dead, the trees, the defences, the things that move each morning, and the effects.
 - `scripts/ui/`: the window and what goes in it (`window.gd`, `menus.gd`, `notices.gd`), the look (`look.gd`: parchment, the scroll, the pictures), the keys and settings, the map in the corner, and the signs and names over the world.
 - `scripts/hud.gd`: the readouts.
-- `tests/`: `rules_test.gd` (107 checks, the same as the web version's), `ui_test.gd` (26 checks of the menus, driven as a player would) and `bot_week.gd` (a bot plays the whole week).
+- `tests/`: `rules_test.gd` (107 checks, the same as the web version's), `ui_test.gd` (26 checks of the menus, driven as a player would), `click_test.gd` (clicks the home screen and the game with the mouse; needs a window, not headless) and `bot_week.gd` (a bot plays the whole week).
 
 ## Tests
 
