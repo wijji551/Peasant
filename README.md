@@ -40,6 +40,10 @@ The tests drive the real page in a headless browser. They need Playwright (`npm 
 
 They are slow where there is no graphics card, and a few of the page tests are sensitive to that. The publishing workflow does not run them.
 
+## A Godot trial
+
+`godot-trial/` is a small trial of the game in Godot 4.7: the village, a peasant and posse, day turning to night, and the dead making for the keep. It is there to judge the look and feel before deciding whether to move. See its own README. The publishing workflow ignores it.
+
 ## Not done, and known limits
 
 - Nights 8 to 30, weather, merchants, hired help and contraptions are still to come.
