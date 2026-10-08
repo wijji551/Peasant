@@ -2,6 +2,30 @@
 
 The design lives in the doc "Defend the Village! — Game Design". This log records what each build actually contains and how it was made, so the next build can start from it.
 
+## Moving to Godot, stage 1: the rules (8 Oct 2026)
+
+**Where:** the `godot/` folder of the repository, and the Peasant Defence project on Matt's computer. The web version stays live at https://wijji551.github.io/Peasant/ until the Godot one has caught up.
+
+### What moved
+- **All the rules**, function for function from `src/05-sim.js`, with the same numbers: `godot/scripts/rules/` (data, map, things, rules). Nothing in them draws anything, so the host can run them for co-op later, as in the web version.
+- **A playable game on top**, plainer than the web version for now: the village, the moving outcrop, mine and jetty, the outer ruins rebuilt each dawn, the north wall's foundations and everything built, trees felled and growing back, peasants holding and wearing their gear, the dead (shambler, skeleton, archer, the Steward), the notices for every place and the pack as plain parchment boxes, the dawn notice, a line of news, and saving each morning.
+
+### Changes from the web version
+- The dead push each other apart using a grid rather than checking every pair, so a big horde stays cheap. Same result.
+- Walking into the outcrop only pushes you clear once you move (as in the web version, where the test for it was always true).
+
+### Tested
+- `godot/tests/rules_test.gd`: the web version's 107 rule checks, all passing.
+- `godot/tests/bot_week.gd`: the careful bot held all seven nights (410 of the dead put down, no peasants lost); the walls-only bot fell on night 3, as in the web version.
+- A bot night played in the game itself, headless, and screenshots by day and night (Compatibility renderer, software graphics on Linux).
+- **Not tested:** the look on Forward+ with Direct3D 12 on Matt's computer.
+
+### Still to move
+2. The map and models: the see-through keep, effects, better models for the dead, the minimap.
+3. Menus: the scroll look, the slot inventory, the handbook, changing keys, the home screen and the change log.
+4. Sound.
+5. Co-op.
+
 ## Build 3: the inn and the ruins (8 Oct 2026)
 
 **The game file:** `defend-the-village.html` in this project (it replaced Build 2). Saves from Build 2 do not load, and Build 2 and Build 3 players cannot join each other.

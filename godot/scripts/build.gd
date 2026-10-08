@@ -66,7 +66,10 @@ static func glow_box(parent: Node3D, size: Vector3, pos: Vector3, material: Mate
 
 
 ## An invisible wall: something villagers and the dead cannot walk through.
+## (Not used for play any more: the rules keep their own map of what is solid, in rules/map.gd. Kept as a no-op so the
+## building code reads the same as the web version's.)
 static func solid(body: StaticBody3D, centre: Vector3, half_w: float, half_d: float, height: float = 4.0, rot_y: float = 0.0) -> void:
+	return
 	var cs := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(half_w * 2.0, height, half_d * 2.0)

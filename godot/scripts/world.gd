@@ -59,7 +59,6 @@ func _ready() -> void:
 	_keep()
 	_buildings()
 	_farms()
-	_trees()
 
 
 func rr(a: float, b: float) -> float:
@@ -108,11 +107,7 @@ func _ground() -> void:
 	river.material_override = wm
 	Build.box(self, Vector3(300, 0.06, 2.5), Vector3(0, 0, 62), C.water2)
 	Build.box(self, Vector3(300, 0.06, 1.5), Vector3(0, 0, 68), C.water2)
-	# a jetty
-	Build.box(self, Vector3(1.8, 0.2, 7), Vector3(12, 0.25, 57.5), C.wood)
-	for sx in [-1.0, 1.0]:
-		for zz in [55.0, 58.0, 60.5]:
-			Build.box(self, Vector3(0.25, 1, 0.25), Vector3(12 + sx * 0.8, -0.2, zz), C.timber)
+	# (the jetty moves every morning: sites.gd draws it)
 
 
 func _castle() -> void:
@@ -210,10 +205,9 @@ func _gateway(pos: Vector3, rot_y: float, lit_side: float) -> void:
 
 
 func _walls() -> void:
-	# the north side: in this trial it is already built, with the gate standing open
-	_wall(-VW, VN, -3, VN)
-	_wall(3, VN, VW, VN)
-	_gateway(Vector3(0, 0, VN), 0.0, -0.9)
+	# the north side: the permanent stretches at the corners. The seven foundations between are built in play (defences.gd).
+	_wall(-VW, VN, -21, VN)
+	_wall(21, VN, VW, VN)
 	_wall(-VW, VN, -VW, GATE_Z - 3)
 	_wall(-VW, GATE_Z + 3, -VW, VS)
 	_wall(VW, VN, VW, GATE_Z - 3)
@@ -437,105 +431,5 @@ func _farms() -> void:
 	for p in [Vector2(-48, 33), Vector2(-46.5, 36), Vector2(-49, 38.5)]:
 		Build.cyl(self, 1.1, 1.3, 1.3, Vector3(p.x, 0, p.y), C.straw, 7)
 		Build.cone(self, 1.3, 1.1, Vector3(p.x, 1.3, p.y), C.straw, 7)
-	# a rocky outcrop and a small mine, east
-	for r in [[-1.1, -0.5, 2.1, 2.4, 1.8, 0.3, C.stone], [0.9, 0.5, 1.9, 1.7, 1.6, 1.1, C.stone2], [0.3, -1.1, 1.5, 1.1, 1.3, 2.0, C.stone3], [-0.6, 1.1, 1.4, 0.9, 1.2, 0.7, C.stone2], [1.9, -0.7, 1.0, 0.7, 0.9, 2.6, C.stone]]:
-		Build.box(self, Vector3(r[2], r[3], r[4]), Vector3(60 + r[0], 0, -8 + r[1]), r[6], r[5])
-	Build.solid(body, Vector3(60, 0, -8), 2.3, 1.9, 3.0)
-	Build.cyl(self, 1.9, 3.1, 2.3, Vector3(58, 0, 24), Color("93a064"), 8)
-	Build.box(self, Vector3(0.7, 1.9, 1.8), Vector3(55.25, 0, 24), Color("2a2420"))
-	for sz in [-1.0, 1.0]:
-		Build.box(self, Vector3(0.3, 2.1, 0.3), Vector3(54.95, 0, 24 + sz * 1.02), C.timber)
-	Build.box(self, Vector3(0.4, 0.3, 2.6), Vector3(54.95, 2.1, 24), C.timber)
-	Build.solid(body, Vector3(58, 0, 24), 2.2, 2.2, 3.0)
+	# (the rocky outcrop and the mine move every morning: sites.gd draws them)
 
-
-func _tree_ok(x: float, z: float) -> bool:
-	if x > -VW - 4 and x < VW + 4 and z > VN - 6 and z < VS + 4:
-		return false                                          # the village
-	if absf(x) < 34 and z < VN:
-		return false                                          # the north field and the graveyard
-	if absf(z - GATE_Z) < 4.5 and absf(x) < 50:
-		return false                                          # the gate paths
-	if Vector2(x - HILL.x, z - HILL.z).length() < 47:
-		return false                                          # castle hill
-	if x > -74 and x < -42 and z > 17 and z < 44:
-		return false                                          # the farms
-	if absf(x) > 90.5 and absf(x) < 98:
-		return false                                          # the thorn hedge
-	if absf(z + 62.8) < 1.6 and absf(x) < 93:
-		return false                                          # the stakes
-	if Vector2(x - 60, z + 8).length() < 6.5 or Vector2(x - 58, z - 24).length() < 6.5:
-		return false                                          # the outcrop and the mine
-	if absf(x - 12) < 3.5 and z > 46:
-		return false                                          # the path to the jetty
-	return z <= 53.5                                          # not in the river
-
-
-func _trees() -> void:
-	var spots: Array[Vector2] = []
-	var place := func(x0: float, x1: float, z0: float, z1: float, tries: int, gap: float) -> void:
-		for i in tries:
-			var p := Vector2(rr(x0, x1), rr(z0, z1))
-			if not _tree_ok(p.x, p.y):
-				continue
-			var ok := true
-			for q in spots:
-				if p.distance_squared_to(q) < gap * gap:
-					ok = false
-					break
-			if ok:
-				spots.append(p)
-	place.call(-90.0, -34.0, -48.0, 17.0, 420, 2.5)             # Hallowshire Forest
-	place.call(-125.0, 125.0, -95.0, 53.0, 520, 3.4)            # a scatter elsewhere
-	var trunk_xf: Array[Transform3D] = []
-	var trunk_col: Array[Color] = []
-	var cone_xf: Array[Transform3D] = []
-	var cone_col: Array[Color] = []
-	var ball_xf: Array[Transform3D] = []
-	var ball_col: Array[Color] = []
-	var shape := CylinderShape3D.new()
-	shape.radius = 0.45
-	shape.height = 3.0
-	for p in spots:
-		var s := rr(0.85, 1.35)
-		var rot := Basis(Vector3.UP, rr(0, TAU))
-		var tint := Color(rr(0.88, 1.08), rr(0.92, 1.1), rr(0.82, 1.02))
-		var at := Vector3(p.x, 0, p.y)
-		if rng.randf() < 0.72:      # a pine: three cones on a trunk
-			trunk_xf.append(Transform3D(rot.scaled(Vector3(s, s * 1.1, s)), at + Vector3(0, 0.55 * s, 0)))
-			trunk_col.append(C.trunk)
-			for k in [[1.25, 2.0, 0.8], [0.98, 1.8, 1.95], [0.62, 1.4, 3.0]]:
-				cone_xf.append(Transform3D(rot.scaled(Vector3(k[0] * s, k[1] * s, k[0] * s)), at + Vector3(0, (k[2] + k[1] * 0.5) * s, 0)))
-				cone_col.append(C.leaf * tint)
-		else:                       # a broadleaf: two lumps on a trunk
-			trunk_xf.append(Transform3D(rot.scaled(Vector3(s * 1.1, s * 1.5, s * 1.1)), at + Vector3(0, 0.75 * s, 0)))
-			trunk_col.append(C.trunk)
-			ball_xf.append(Transform3D(rot.scaled(Vector3.ONE * 1.35 * s), at + Vector3(0, 2.4 * s, 0)))
-			ball_col.append(C.leaf2 * tint)
-			ball_xf.append(Transform3D(rot.scaled(Vector3.ONE * 0.85 * s), at + rot * Vector3(0.7 * s, 3.2 * s, 0.25 * s)))
-			ball_col.append(C.leaf2 * tint)
-		if p.x > X_MIN and p.x < X_MAX and p.y > Z_MIN and p.y < Z_MAX:
-			var cs := CollisionShape3D.new()
-			cs.shape = shape
-			cs.position = at + Vector3(0, 1.5, 0)
-			body.add_child(cs)
-	var trunk := CylinderMesh.new()
-	trunk.top_radius = 0.2
-	trunk.bottom_radius = 0.28
-	trunk.height = 1.0
-	trunk.radial_segments = 5
-	trunk.rings = 1
-	var cone := CylinderMesh.new()
-	cone.top_radius = 0.0
-	cone.bottom_radius = 1.0
-	cone.height = 1.0
-	cone.radial_segments = 6
-	cone.rings = 1
-	var ball := SphereMesh.new()
-	ball.radius = 1.0
-	ball.height = 2.0
-	ball.radial_segments = 7
-	ball.rings = 4
-	_multi(trunk, trunk_xf, trunk_col)
-	_multi(cone, cone_xf, cone_col)
-	_multi(ball, ball_xf, ball_col)

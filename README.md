@@ -42,7 +42,7 @@ They are slow where there is no graphics card, and a few of the page tests are s
 
 ## A Godot trial
 
-`godot-trial/` is a small trial of the game in Godot 4.7: the village, a peasant and posse, day turning to night, and the dead making for the keep. It is there to judge the look and feel before deciding whether to move. See its own README. The publishing workflow ignores it.
+`godot/` is the game moving across to Godot 4.7. The rules are all there and tested; the map, menus, sound and co-op are being moved in stages, and the web version stays live until it has caught up. See its own README. The publishing workflow ignores it.
 
 ## Not done, and known limits
 
