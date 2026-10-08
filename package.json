@@ -1,0 +1,14 @@
+{
+  "name": "defend-the-village",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Defend the Village! A co-op game for 1 to 8 players: the peasants of Thornhallow against the dead of Ashhollow Castle.",
+  "scripts": {
+    "build": "node build.js",
+    "serve": "python3 -m http.server 8765 --bind 127.0.0.1 --directory out",
+    "test": "node test/rules.js && node test/week.js",
+    "test:page": "node test/page.js && node test/page-build3.js && node test/input.js",
+    "test:coop": "node test/coop.js",
+    "test:bot": "node test/bot-week.js steady"
+  }
+}

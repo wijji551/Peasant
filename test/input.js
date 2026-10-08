@@ -1,0 +1,44 @@
+// Real keyboard and mouse input through the browser, solo.
+const { chromium } = require('./_playwright');
+const URL = process.env.DTV_URL || 'http://127.0.0.1:8765/defend-the-village.html';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+(async () => {
+  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const ctx = await browser.newContext({ viewport: { width: 1100, height: 700 } });
+  const page = await ctx.newPage(); const errs = [];
+  page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + '\n' + e.stack));
+  const ok = (n, c, x) => console.log((c ? 'PASS ' : 'FAIL ') + n + (x !== undefined ? '  [' + x + ']' : ''));
+  await page.goto(URL); await sleep(1200);
+  await page.fill('#name', 'Matt'); await page.keyboard.press('Tab');
+  await page.click('#btnSolo'); await sleep(5000);
+  const g = f => page.evaluate(f);
+  const x0 = await g(() => window.__dtv.me().x);
+  await page.keyboard.down('KeyD'); await sleep(4500); await page.keyboard.up('KeyD');
+  const x1 = await g(() => window.__dtv.me().x); ok('D moves east', x1 > x0 + 2, (x1 - x0).toFixed(1));
+  await page.keyboard.down('ArrowUp'); await sleep(2500); await page.keyboard.up('ArrowUp');
+  ok('arrow up moves north (stops at the cottage row or keep)', await g(() => window.__dtv.me().z) < 5.9);
+  await g(() => { const d = window.__dtv, me = d.me(); me.x = 6; me.z = -32; me.r = Math.PI; me.wood = 20; });
+  await page.keyboard.press('Tab'); await sleep(1500);
+  ok('Tab picks the barricade', await g(() => window.__dtv.App.buildSel) === 'barricade');
+  await page.screenshot({ path: __dirname + '/shots/ghost.png' });
+  await page.keyboard.press('KeyE'); await sleep(1200);
+  ok('E places it and spends 5 wood', await g(() => window.__dtv.S.structs.filter(s => s.slot == null).length === 1 && window.__dtv.me().wood === 15));
+  await page.keyboard.press('Tab'); await sleep(600); ok('Tab again picks spikes', await g(() => window.__dtv.App.buildSel) === 'spikes');
+  await g(() => { const me = window.__dtv.me(); me.z = -38; });
+  await g(() => { document.getElementById("dawn").hidden = true; }); await page.mouse.click(550, 300); await sleep(1200);
+  ok('click places spikes', await g(() => window.__dtv.S.structs.filter(s => s.k === 'spikes').length === 1 && window.__dtv.me().wood === 7));
+  await page.keyboard.press('Escape'); await sleep(500); ok('Esc leaves build mode', await g(() => window.__dtv.App.buildSel) === null);
+  const ac0 = await g(() => window.__dtv.me().ac); await page.mouse.down({}); await sleep(1500); await page.mouse.up(); 
+  ok('click attacks', await g(() => window.__dtv.me().ac) > ac0);
+  const ac1 = await g(() => window.__dtv.me().ac); await page.keyboard.down('Space'); await sleep(1500); await page.keyboard.up('Space');
+  ok('Space attacks', await g(() => window.__dtv.me().ac) > ac1);
+  await page.keyboard.press('KeyR'); await sleep(2500);
+  ok('R readies up; alone, that starts dusk', await g(() => window.__dtv.S.phase) === 'dusk', await page.textContent('#hudPhase'));
+  await sleep(3000); await page.screenshot({ path: __dirname + '/shots/dusk-real.png' });
+  // narrow window: notice board must not scroll sideways
+  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: 400, height: 780 }); await p2.goto(URL); await sleep(1500);
+  ok('notice board fits a phone-width window', await p2.evaluate(() => document.getElementById('home').scrollWidth <= window.innerWidth + 1), await p2.evaluate(() => document.getElementById('home').scrollWidth));
+  await p2.screenshot({ path: __dirname + '/shots/home-narrow.png' });
+  console.log(errs.length ? errs.join('\n') : 'no errors');
+  await browser.close();
+})().catch(e => { console.error(e); process.exit(1); });
