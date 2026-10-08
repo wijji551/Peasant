@@ -13,8 +13,9 @@ const PLACES := [
 var R: Rules
 var me: E.Player
 var camera: Camera3D
+var hud: CanvasLayer
+var _zones: Array[Rect2] = []
 var focus := Vector3.ZERO
-var show_names := true
 var _signs: Array[Label] = []
 var _names: Array[Label] = []
 
@@ -50,12 +51,18 @@ func _put(l: Label, at: Vector3) -> void:   # centred over the point, sitting on
 		l.visible = false
 		return
 	var q := camera.unproject_position(at)
-	l.visible = true
 	l.position = (q - Vector2(l.size.x / 2, l.size.y)).round()
+	var r := Rect2(l.position, l.size)
+	for z in _zones:                                  # never on top of a readout or the window
+		if z.intersects(r):
+			l.visible = false
+			return
+	l.visible = true
 
 
 func _process(_delta: float) -> void:
 	if R == null or camera == null: return
+	_zones = hud.zones() if hud else []
 	for i in PLACES.size():
 		var p: Array = PLACES[i]
 		var x: float = p[1] if not (p[1] is String) else 0.0
@@ -69,7 +76,7 @@ func _process(_delta: float) -> void:
 			_put(l, Vector3(x, p[3], z))
 		else:
 			l.visible = false
-	var shown := R.players.filter(func(p): return p != me and p.state != "hide" and p.state != "inn") if show_names else []
+	var shown := R.players.filter(func(p): return p != me and p.state != "hide" and p.state != "inn") if Settings.tags else []
 	while _names.size() < shown.size(): _names.append(_label("", 13, Color("2f2318"), Color("f6ebc9")))
 	for i in _names.size():
 		var l := _names[i]

@@ -2,6 +2,23 @@
 
 The design lives in the doc "Defend the Village! — Game Design". This log records what each build actually contains and how it was made, so the next build can start from it.
 
+## Moving to Godot, stage 3: the menus (8 Oct 2026)
+
+Matt's note: the menus should be more intuitive and not overlap.
+
+### What changed
+- **One window.** Every notice (a place, your pack, the dawn, the handbook, the home screen, the end of the week) opens in one window in the middle of the screen, framed by the web version's scroll (rolled ends, wax seals, knots, torn edge). Only one is ever open. Esc or the cross closes it; walking away closes a place's notice; inside the Thorny Rose it stays until you go out.
+- **Fixed places for the readouts:** the day, time and "ready" line top left; the keep (and the Steward) top middle; the map and a Handbook button top right; what you carry and your books on the left; your health bottom left with the news above it; a bar along the bottom with your weapon's trick, your bucket, your posse, your pack and the toilet break, each with its key; the four things you can place bottom right with their costs (click one, or press 1 to 4). What holding E would do shows just above the bottom bar.
+- **Nothing on top of anything:** a place's notice and the pack sit between the top readouts and the bottom bar. The handbook, the dawn and the end take the whole screen and the readouts step aside. Big announcements wait while one of those is open. Signs and names over the world hide rather than sit on a readout, the window or the prompt.
+- **The pack as slots with pictures** (the web version's drawings): click a thing to use it or put it away, the cross drops it, pointing at one says what it is.
+- **The handbook on Esc:** the guide (with a new section, "Reading the screen"), the controls (change any key; a key does one thing) and options (names over players, the see-through keep, sound for later). The game waits while it is open, playing alone.
+- **A home screen:** name and colour, Carry on from the saved day, New village, and the change log.
+- **The end of the week:** as in the web version; losing keeps that morning's save, so you can try the day again.
+- Typefaces: the web version's (Pirata One and Alegreya) could not be fetched here, so the game asks Windows for Palatino Linotype (or Book Antiqua, or Georgia).
+
+### Tested
+- `godot/tests/ui_test.gd`: 26 checks, driving the menus with key presses (home, handbook from home and back, New village, dawn, Esc, the pack and 1 to 6, the handbook pausing the game, changing keys and a key moving between actions, a place's notice opening by holding E, choosing by number, closing by walking away, the end of the week), and that the notice and the pack do not cover the bottom bar. Rule checks 107 of 107. Screenshots of each window.
+
 ## Moving to Godot, stage 2: the map and models (8 Oct 2026)
 
 ### What moved

@@ -1,8 +1,8 @@
 class_name Keys
 extends RefCounted
-## Every action and its keys. They are set up as Godot input actions when the game starts, so the
-## handbook (a later stage of the move) can let players change them. Words on screen name the keys
-## as they are set: "{interact}" in any text becomes "E", or whatever E has been changed to.
+## Every action and its keys, as Godot input actions. The handbook lets the player change them, and they are
+## kept in Settings. Words on screen name the keys as they are set: "{interact}" in any text becomes "E", or
+## whatever E has been changed to.
 
 const ACTIONS := [
 	["up", "Move north"], ["left", "Move west"], ["down", "Move south"], ["right", "Move east"],
@@ -20,13 +20,20 @@ const DEF := {
 }
 
 
+static func keys_of(a: String) -> Array:
+	return Settings.binds.get(a, DEF[a])
+
+
+## Make the input actions from the keys as they are set now.
 static func setup() -> void:
+	Settings.load_all()
 	for a in DEF:
 		var act: String = "dtv_" + a
 		if InputMap.has_action(act):
-			continue
-		InputMap.add_action(act)
-		for k in DEF[a]:
+			InputMap.action_erase_events(act)
+		else:
+			InputMap.add_action(act)
+		for k in keys_of(a):
 			var e := InputEventKey.new()
 			e.physical_keycode = k
 			InputMap.action_add_event(act, e)
@@ -41,6 +48,31 @@ static func setup() -> void:
 		InputMap.action_add_event("dtv_trick_mouse", m2)
 
 
+## Which action a key does now, or "".
+static func action_of(k: int) -> String:
+	for a in DEF:
+		if keys_of(a).has(k): return a
+	return ""
+
+
+## Give a key to an action. A key does one thing: whatever had it loses it.
+static func set_bind(a: String, k: int) -> void:
+	for o in DEF:
+		var l: Array = keys_of(o).duplicate()
+		if l.has(k):
+			l.erase(k)
+			Settings.binds[o] = l
+	Settings.binds[a] = [k]
+	Settings.save()
+	setup()
+
+
+static func reset() -> void:
+	Settings.binds = {}
+	Settings.save()
+	setup()
+
+
 static func held(a: String) -> bool:
 	return Input.is_action_pressed("dtv_" + a)
 
@@ -49,19 +81,30 @@ static func is_act(e: InputEvent, a: String) -> bool:
 	return e.is_action_pressed("dtv_" + a, false, true)
 
 
+static func key_name(k: int) -> String:
+	match k:
+		KEY_SPACE: return "Space"
+		KEY_SHIFT: return "Shift"
+		KEY_TAB: return "Tab"
+		KEY_CTRL: return "Ctrl"
+		KEY_ALT: return "Alt"
+		KEY_UP: return "Up arrow"
+		KEY_DOWN: return "Down arrow"
+		KEY_LEFT: return "Left arrow"
+		KEY_RIGHT: return "Right arrow"
+	return OS.get_keycode_string(k)
+
+
 ## The name of the first key for an action, as a player would say it.
 static func name(a: String) -> String:
-	if not InputMap.has_action("dtv_" + a):
-		return a
-	for e in InputMap.action_get_events("dtv_" + a):
-		if e is InputEventKey:
-			var k: int = e.physical_keycode
-			match k:
-				KEY_SPACE: return "Space"
-				KEY_SHIFT: return "Shift"
-				KEY_TAB: return "Tab"
-			return OS.get_keycode_string(k)
-	return "no key"
+	if not DEF.has(a): return a
+	var l := keys_of(a)
+	return key_name(l[0]) if l.size() else "no key"
+
+
+static func all_names(a: String) -> String:
+	var l := keys_of(a)
+	return " or ".join(l.map(func(k): return key_name(k))) if l.size() else "no key set"
 
 
 ## "{interact}" becomes "E", and so on, for every action.

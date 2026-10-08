@@ -1,328 +1,360 @@
 extends CanvasLayer
-## The readouts: the day, the keep, your health, what you carry, what holding E would do, the notices,
-## the dawn notice, and a big line of text when something happens.
-## (Plain parchment for now; the scroll look from the web version comes with the menus stage.)
+## The readouts round the edge of the screen. Each has its own place, so nothing sits on anything else:
+##
+##   top left      the day, the time, and whether you are ready         top middle   the keep (and the Steward)
+##   left          what you carry, and your books                       top right    the map, and the handbook button
+##   bottom left   your health, and the news                            bottom right the four things you can place
+##   bottom middle what holding E would do, and your hand, bucket, posse, pack and courage
+##
+## Notices, the pack, the dawn and the handbook open in the one window in the middle (window.gd); while it is
+## open the big announcements wait.
 
-signal option(i: int)            # a numbered option in the open notice was clicked
-signal dawn_closed
+const ScrollWindow := preload("res://scripts/ui/window.gd")
 
-const INK := Color("2f2318")
-const PARCH := Color("ecdcae")
-const OUTLINE := Color("4a2a12")
+signal build_pressed(k: String)
+signal pack_pressed
+signal menu_pressed
+
+var window: Control
+var root: Control
 
 var _phase: Label
 var _timer: Label
+var _ready_lab: Label
 var _keep_bar: ProgressBar
 var _keep_num: Label
+var _boss: Control
+var _boss_bar: ProgressBar
+var _boss_num: Label
+var _res := {}                       # name -> Label
+var _carry: Label
+var _books: VBoxContainer
+var _books_sig := ""
 var _hp_bar: ProgressBar
-var _banner: Label
-var _banner_sub: Label
-var _banner_t := 0.0
-var _res: Label
-var _chips: Label
+var _hp_lab: Label
+var _feed: VBoxContainer
 var _prompt: Label
 var _prompt_bar: ProgressBar
-var _hint: Label
-var _feed: VBoxContainer
-var _notice: PanelContainer
-var _n_title: Label
-var _n_intro: Label
-var _n_opts: VBoxContainer
-var _n_hint: Label
-var _n_sig := ""
-var _dawn: PanelContainer
-var _dawn_text: Label
-var _dawn_title: Label
+var _prompt_box: Control
+var _hotbar: HBoxContainer
+var _chips := {}                     # name -> {box, icon, text, key}
+var _builds: HBoxContainer
+var _build_cards := {}
+var _banner: Label
+var _banner_sub: Label
+var _banner_box: Control
+var _banner_t := 0.0
+var _queued: Array = []              # announcements waiting for the window to close
+var map_slot: Control                # where the map goes (main puts it in)
+var _zones: Array[Control] = []      # everything that labels in the world must keep clear of
 
 
 func _ready() -> void:
-	var root := Control.new()
+	layer = 5
+	root = Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.theme = Look.theme()
 	add_child(root)
 
-	var tl := _chip(root)
-	_pin(tl, Control.PRESET_TOP_LEFT, 14, 12, 14, 12)
-	var v := VBoxContainer.new()
-	tl.add_child(v)
-	_phase = _label(v, "Day 1", 34)
-	_timer = _label(v, "", 16)
+	# --- top left: the day
+	var tl := _card(root)
+	_pin(tl, Control.PRESET_TOP_LEFT, 14, 12, 254, 12)
+	var v := _vbox(tl, 0)
+	_phase = Look.label(v, "Day 1", 30, Look.INK, true)
+	_timer = Look.label(v, "", 15, Look.INK_SOFT)
+	_ready_lab = Look.label(v, "", 13, Look.RUST)
+	_ready_lab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
-	var tm := _chip(root)
-	_pin(tm, Control.PRESET_CENTER_TOP, -170, 12, 170, 12)
-	var kv := VBoxContainer.new()
-	tm.add_child(kv)
+	# --- top middle: the keep, and the Steward when he comes
+	var tm := _card(root)
+	_pin(tm, Control.PRESET_CENTER_TOP, -180, 12, 180, 12)
+	var kv := _vbox(tm, 3)
 	var row := HBoxContainer.new()
 	kv.add_child(row)
-	var kl := _label(row, "THE KEEP", 13)
+	var ki := TextureRect.new(); ki.texture = Look.icon("keep", 18); row.add_child(ki)
+	var kl := Look.label(row, " The keep", 14, Look.INK)
 	kl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_keep_num = _label(row, "", 13)
-	_keep_bar = _bar(kv, Color("b3aa98"))
+	_keep_num = Look.label(row, "", 14, Look.INK_SOFT)
+	_keep_bar = _bar(kv, Color("8f8a7c"), 12)
+	_boss = VBoxContainer.new()
+	kv.add_child(_boss)
+	var br := HBoxContainer.new(); _boss.add_child(br)
+	var bl := Look.label(br, "The Steward", 14, Color("5d2a6e")); bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_boss_num = Look.label(br, "", 14, Look.INK_SOFT)
+	_boss_bar = _bar(_boss, Color("8e3fa0"), 10)
+	_boss.visible = false
 
-	var bl := _chip(root)
-	_pin(bl, Control.PRESET_BOTTOM_LEFT, 14, -52, 314, -52)
-	bl.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var hv := VBoxContainer.new()
-	bl.add_child(hv)
-	_label(hv, "YOUR HEALTH", 13)
-	_hp_bar = _bar(hv, Color("a8362c"))
+	# --- top right: the map, and the handbook
+	var top_right := VBoxContainer.new()
+	root.add_child(top_right)
+	_pin(top_right, Control.PRESET_TOP_RIGHT, -200, 12, -14, 12)
+	top_right.add_theme_constant_override("separation", 6)
+	map_slot = Control.new()
+	map_slot.custom_minimum_size = Vector2(186, 186)
+	map_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_right.add_child(map_slot)
+	var mb := Button.new()
+	mb.text = "Handbook  (Esc)"
+	mb.focus_mode = Control.FOCUS_NONE
+	mb.pressed.connect(func(): menu_pressed.emit())
+	top_right.add_child(mb)
+	_zones.append(top_right)
 
-	var top_right := _chip(root)
-	_pin(top_right, Control.PRESET_TOP_RIGHT, -330, 12, -14, 12)
-	top_right.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	var rv := VBoxContainer.new()
-	top_right.add_child(rv)
-	_res = _label(rv, "", 15)
-	_chips = _label(rv, "", 13)
-	_chips.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_chips.custom_minimum_size = Vector2(300, 0)
+	# --- left: what you carry, and your books
+	var lc := VBoxContainer.new()
+	root.add_child(lc)
+	_pin(lc, Control.PRESET_TOP_LEFT, 14, 132, 254, 132)
+	lc.add_theme_constant_override("separation", 8)
+	lc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rc := _card(lc)
+	var rv := _vbox(rc, 4)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 3)
+	rv.add_child(grid)
+	for r in ["wood", "stone", "iron", "food"]:
+		var h := HBoxContainer.new()
+		grid.add_child(h)
+		var ic := TextureRect.new(); ic.texture = Look.icon(r, 20); h.add_child(ic)
+		_res[r] = Look.label(h, "0", 16, Look.INK)
+		_res[r].custom_minimum_size.x = 64
+	var cr := HBoxContainer.new()
+	rv.add_child(cr)
+	var ci := TextureRect.new(); ci.texture = Look.icon("coin", 20); cr.add_child(ci)
+	_res.coin = Look.label(cr, "", 16, Look.INK)
+	_carry = Look.para(rv, "", 12, Look.INK_SOFT)
+	var bc := _card(lc)
+	_books = _vbox(bc, 3)
+	for card in [rc, bc]: card.custom_minimum_size.x = 240
+	_zones.append(lc)
 
+	# --- bottom left: health, and above it the news
+	var hb := _card(root)
+	_pin(hb, Control.PRESET_BOTTOM_LEFT, 14, -14, 254, -14)
+	hb.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var hv := _vbox(hb, 3)
+	_hp_lab = Look.label(hv, "Your health", 13, Look.INK)
+	_hp_bar = _bar(hv, Look.ROSE, 12)
 	_feed = VBoxContainer.new()
 	root.add_child(_feed)
-	_pin(_feed, Control.PRESET_BOTTOM_LEFT, 16, -130, 600, -130)
+	_pin(_feed, Control.PRESET_BOTTOM_LEFT, 16, -76, 300, -76)
 	_feed.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_feed.add_theme_constant_override("separation", 2)
 
-	var pv := VBoxContainer.new()
-	root.add_child(pv)
-	_pin(pv, Control.PRESET_CENTER_BOTTOM, -330, -60, 330, -60)
-	pv.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	pv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_prompt = _shout(pv, 20)
-	_prompt_bar = _bar(pv, Color("e0b44a"))
-	_prompt_bar.custom_minimum_size = Vector2(0, 8)
+	# --- bottom right: the things you can place
+	_builds = HBoxContainer.new()
+	root.add_child(_builds)
+	_pin(_builds, Control.PRESET_BOTTOM_RIGHT, -14, -14, -14, -14)
+	_builds.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_builds.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_builds.add_theme_constant_override("separation", 6)
+	var bn := {"barricade": "Barricade", "spikes": "Spikes", "bodywall": "Body wall", "decoy": "Decoy"}
+	for i in D.BUILDS.size():
+		var k: String = D.BUILDS[i]
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.toggle_mode = true
+		b.custom_minimum_size = Vector2(76, 70)
+		b.tooltip_text = "Place a %s (%d, or %s steps through these)" % [D.SNAME[k], i + 1, "{build}"]
+		b.pressed.connect(func(): build_pressed.emit(k))
+		var bv := VBoxContainer.new()
+		bv.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bv.alignment = BoxContainer.ALIGNMENT_CENTER
+		bv.add_theme_constant_override("separation", 0)
+		b.add_child(bv)
+		var top := HBoxContainer.new(); top.alignment = BoxContainer.ALIGNMENT_CENTER; bv.add_child(top)
+		top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var num := Look.label(top, str(i + 1) + " ", 12, Look.ROSE)
+		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ic := TextureRect.new(); ic.texture = Look.icon(k, 22); ic.mouse_filter = Control.MOUSE_FILTER_IGNORE; top.add_child(ic)
+		var nm := Look.label(bv, bn[k], 12, Look.INK); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var cost := Look.label(bv, "", 11, Look.INK_SOFT); cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		for l in [nm, cost]: l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_builds.add_child(b)
+		_build_cards[k] = {"b": b, "cost": cost}
+	_zones.append(_builds)
 
-	_notice = PanelContainer.new()
-	_notice.add_theme_stylebox_override("panel", _parch_box())
-	root.add_child(_notice)
-	_pin(_notice, Control.PRESET_RIGHT_WIDE, -470, 90, -16, -90)
-	_notice.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	var nv := VBoxContainer.new()
-	_notice.add_child(nv)
-	_n_title = _label(nv, "", 26)
-	_n_intro = _label(nv, "", 14)
-	_n_intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var sc := ScrollContainer.new()
-	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	nv.add_child(sc)
-	_n_opts = VBoxContainer.new()
-	_n_opts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sc.add_child(_n_opts)
-	_n_hint = _label(nv, "", 12)
-	_notice.visible = false
+	# --- bottom middle: your hand and the rest, and above them what holding E would do
+	_hotbar = HBoxContainer.new()
+	root.add_child(_hotbar)
+	_pin(_hotbar, Control.PRESET_CENTER_BOTTOM, 0, -14, 0, -14)
+	_hotbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_hotbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_hotbar.add_theme_constant_override("separation", 6)
+	for c in ["hand", "carry", "posse", "pack", "toilet", "courage"]:
+		_chip(c)
+	_zones.append(_hotbar)
+	_prompt_box = VBoxContainer.new()
+	root.add_child(_prompt_box)
+	_pin(_prompt_box, Control.PRESET_CENTER_BOTTOM, -280, -96, 280, -96)
+	_prompt_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_prompt_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prompt = _shout(_prompt_box, 20)
+	_prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_prompt_bar = _bar(_prompt_box, Color("e0b44a"), 7)
 
-	_dawn = PanelContainer.new()
-	_dawn.add_theme_stylebox_override("panel", _parch_box())
-	root.add_child(_dawn)
-	_pin(_dawn, Control.PRESET_CENTER, -330, -110, 330, 110)
-	_dawn.grow_vertical = Control.GROW_DIRECTION_BOTH
-	var dv := VBoxContainer.new()
-	_dawn.add_child(dv)
-	_dawn_title = _label(dv, "", 30)
-	_dawn_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_dawn_text = _label(dv, "", 16)
-	_dawn_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_dawn_text.custom_minimum_size = Vector2(600, 0)
-	var ok := Button.new()
-	ok.text = "To work (Esc)"
-	ok.pressed.connect(func(): _dawn.visible = false; dawn_closed.emit())
-	dv.add_child(ok)
-	_dawn.visible = false
+	# --- the big announcements: under the keep, only when nothing is open
+	_banner_box = VBoxContainer.new()
+	root.add_child(_banner_box)
+	_pin(_banner_box, Control.PRESET_CENTER_TOP, -420, 110, 420, 110)
+	_banner_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner = _shout(_banner_box, 58, true)
+	_banner_sub = _shout(_banner_box, 20)
+	_banner_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_banner_box.modulate.a = 0.0
 
-	var hint := Label.new()
-	_hint = hint
-	root.add_child(hint)
-	hint.text = ""
-	_pin(hint, Control.PRESET_CENTER_BOTTOM, -520, -16, 520, -16)
-	hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 16)
-	hint.add_theme_color_override("font_color", Color("f6ebc9"))
-	hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	hint.add_theme_constant_override("outline_size", 6)
-
-	var bv := VBoxContainer.new()
-	root.add_child(bv)
-	_pin(bv, Control.PRESET_CENTER_TOP, -560, 130, 560, 130)
-	bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner = _shout(bv, 76)
-	_banner_sub = _shout(bv, 22)
-	_banner.modulate.a = 0.0
-	_banner_sub.modulate.a = 0.0
+	window = ScrollWindow.new()
+	root.add_child(window)
+	_zones.append_array([tl, tm, hb])
 
 
-## Fix a control to an edge of the screen: the preset says which, the numbers are how far from it.
 func _pin(c: Control, preset: Control.LayoutPreset, left: float, top: float, right: float, bottom: float) -> void:
 	c.set_anchors_preset(preset)
-	c.offset_left = left
-	c.offset_top = top
-	c.offset_right = right
-	c.offset_bottom = bottom
+	c.offset_left = left; c.offset_top = top; c.offset_right = right; c.offset_bottom = bottom
 
 
-func _parch_box() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = PARCH
-	sb.border_color = OUTLINE
-	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(6)
-	sb.set_content_margin_all(16)
-	sb.shadow_color = Color(0, 0, 0, 0.4)
-	sb.shadow_size = 8
-	return sb
-
-
-func _chip(parent: Control) -> PanelContainer:
+func _card(parent: Control) -> PanelContainer:
 	var p := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = PARCH
-	sb.border_color = OUTLINE
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(5)
-	sb.set_content_margin_all(9)
-	sb.shadow_color = Color(0, 0, 0, 0.35)
-	sb.shadow_size = 5
-	p.add_theme_stylebox_override("panel", sb)
+	p.add_theme_stylebox_override("panel", Look.card())
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(p)
 	return p
 
 
-func _label(parent: Control, text: String, size: int) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", INK)
-	parent.add_child(l)
-	return l
+func _vbox(parent: Control, sep: int) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", sep)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(v)
+	return v
 
 
-func _shout(parent: Control, size: int) -> Label:
+func _shout(parent: Control, size: int, display: bool = false) -> Label:
 	var l := Label.new()
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", size)
+	if display: l.add_theme_font_override("font", Look.display_font())
 	l.add_theme_color_override("font_color", Color("f8eed3"))
-	l.add_theme_color_override("font_outline_color", Color(0.08, 0.05, 0.02, 0.85))
-	l.add_theme_constant_override("outline_size", 10)
+	l.add_theme_color_override("font_outline_color", Color(0.08, 0.05, 0.02, 0.9))
+	l.add_theme_constant_override("outline_size", 9 if size > 30 else 6)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
 	return l
 
 
-func _bar(parent: Control, fill: Color) -> ProgressBar:
+func _bar(parent: Control, fill: Color, h: float) -> ProgressBar:
 	var b := ProgressBar.new()
-	b.custom_minimum_size = Vector2(0, 14)
+	b.custom_minimum_size = Vector2(0, h)
 	b.show_percentage = false
 	b.max_value = 1.0
 	b.value = 1.0
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color("3a2d22")
-	bg.set_corner_radius_all(2)
-	var fg := StyleBoxFlat.new()
-	fg.bg_color = fill
-	fg.set_corner_radius_all(2)
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg := StyleBoxFlat.new(); bg.bg_color = Color("3a2d22"); bg.set_corner_radius_all(3)
+	var fg := StyleBoxFlat.new(); fg.bg_color = fill; fg.set_corner_radius_all(3)
 	b.add_theme_stylebox_override("background", bg)
 	b.add_theme_stylebox_override("fill", fg)
 	parent.add_child(b)
 	return b
 
 
+func _chip(name_: String) -> void:   # one slot in the bar at the bottom: a picture, a word or two, and its key
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(96, 54)
+	b.mouse_filter = Control.MOUSE_FILTER_STOP if name_ == "pack" else Control.MOUSE_FILTER_IGNORE
+	if name_ == "pack": b.pressed.connect(func(): pack_pressed.emit())
+	var h := HBoxContainer.new()
+	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.offset_left = 8; h.offset_right = -6
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_theme_constant_override("separation", 6)
+	b.add_child(h)
+	var ic := TextureRect.new()
+	ic.custom_minimum_size = Vector2(28, 28)
+	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(ic)
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", -2)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(v)
+	var key := Look.label(v, "", 11, Look.ROSE)
+	var text := Look.label(v, "", 13, Look.INK)
+	_hotbar.add_child(b)
+	_chips[name_] = {"box": b, "icon": ic, "text": text, "key": key}
+
+
+func _set_chip(name_: String, shown: bool, icon_key, key: String, text: String, tip: String, dim: bool = false) -> void:
+	var c: Dictionary = _chips[name_]
+	c.box.visible = shown
+	if not shown: return
+	if c.get("ik") != icon_key:                    # a number is an item; a word is one of the readout pictures
+		c.ik = icon_key
+		c.icon.texture = Look.icon(int(icon_key) if str(icon_key).is_valid_int() else icon_key, 28)
+	c.key.text = key
+	c.text.text = text
+	var need: float = maxf(c.key.get_minimum_size().x, c.text.get_minimum_size().x) + 28 + 6 + 18
+	c.box.custom_minimum_size.x = maxf(92, need)
+	c.box.tooltip_text = Keys.fill(tip)
+	c.box.modulate = Color(1, 1, 1, 0.55) if dim else Color.WHITE
+
+
+# ---------------------------------------------------------------- told by main.gd
+## On the home screen only the window shows; in the game, everything.
+var _covered := false
+var _playing := true
+
+func playing(on: bool) -> void:
+	_playing = on
+	_covered = false
+	for c in root.get_children():
+		if c != window: c.visible = on
+	if not on: _banner_t = 0.0
+
+
+
 func banner(title: String, sub: String = "", seconds: float = 3.2) -> void:
+	if window.visible and window.kind != "notice" and window.kind != "pack":
+		_queued.append([title, sub, seconds])      # wait for the window to close
+		if _queued.size() > 3: _queued.pop_front()
+		return
 	_banner.text = title
-	_banner_sub.text = sub
+	_banner_sub.text = Keys.fill(sub)
 	_banner_t = seconds
 
 
-func show_state(phase_text: String, timer_text: String, keep: float, keep_max: float, hp: float, hp_max: float) -> void:
-	_phase.text = phase_text
-	_timer.text = timer_text
-	_keep_bar.value = keep / keep_max
-	_keep_num.text = "%d / %d" % [maxi(0, roundi(keep)), roundi(keep_max)]
-	_hp_bar.value = hp / hp_max
-
-
-func show_res(text: String, chips: String) -> void:
-	if _res.text != text: _res.text = text
-	if _chips.text != chips: _chips.text = chips
-
-
-func show_hint(text: String) -> void:
-	if _hint.text != text: _hint.text = text
-
-
-## What holding E would do here; prog is how far through it you are (0 to 1); ok false greys it out.
-func show_prompt(text: String, prog: float, ok: bool) -> void:
-	_prompt.text = text
-	_prompt.modulate = Color(1, 1, 1, 1) if ok else Color(1, 0.75, 0.7, 0.9)
-	_prompt_bar.visible = prog > 0.0
-	_prompt_bar.value = prog
-
-
 func feed(msg: String) -> void:   # a line of news, which fades after a while
-	var l := _shout(_feed, 16)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var l := Label.new()
 	l.text = msg
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color("f8eed3"))
+	l.add_theme_color_override("font_outline_color", Color(0.08, 0.05, 0.02, 0.9))
+	l.add_theme_constant_override("outline_size", 5)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.set_meta("t", 9.0)
-	while _feed.get_child_count() > 6:
+	_feed.add_child(l)
+	while _feed.get_child_count() > 4:
 		var c := _feed.get_child(0)
 		_feed.remove_child(c)
 		c.queue_free()
 
 
-## A notice from a place, or none. d is from Notices.data().
-func show_notice(d: Dictionary, hint: String) -> void:
-	if d.is_empty():
-		_notice.visible = false
-		_n_sig = ""
-		return
-	var sig := str(d) + hint
-	_notice.visible = true
-	if sig == _n_sig:
-		return
-	_n_sig = sig
-	_n_title.text = d.title
-	_n_intro.text = Keys.fill(d.intro)
-	for c in _n_opts.get_children():
-		_n_opts.remove_child(c)
-		c.queue_free()
-	var n := 0
-	for o in d.o:
-		if o.has("head"):
-			var h := _label(_n_opts, o.head.to_upper(), 13)
-			h.add_theme_color_override("font_color", Color("7a4a22"))
-			continue
-		n += 1
-		var b := Button.new()
-		b.text = "%s  %s" % [str(n % 10) if n <= 10 else "·", o.label]
-		b.tooltip_text = Keys.fill(o.get("sub", ""))
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.disabled = not o.ok
-		var i := n - 1
-		b.pressed.connect(func(): option.emit(i))
-		_n_opts.add_child(b)
-		if o.get("sub", "") != "":
-			var s := _label(_n_opts, Keys.fill(o.sub), 12)
-			s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			s.add_theme_color_override("font_color", Color("5a4632"))
-	_n_hint.text = hint
-
-
-func notice_open() -> bool:
-	return _notice.visible
-
-
-func show_dawn(title: String, lines: Array) -> void:
-	_dawn_title.text = title
-	_dawn_text.text = "\n\n".join(lines)
-	_dawn.visible = true
-
-
-func dawn_open() -> bool:
-	return _dawn.visible
-
-
-func close_dawn() -> void:
-	_dawn.visible = false
+## Rectangles on screen that words over the world (signs, names) should not sit on.
+func zones() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if _prompt_box.visible: out.append(_prompt_box.get_global_rect().grow(6))
+	for z in _zones:
+		if z.visible: out.append(z.get_global_rect())
+	if window.visible: out.append(Rect2(Vector2.ZERO, root.size))
+	return out
 
 
 func _process(delta: float) -> void:
@@ -333,7 +365,110 @@ func _process(delta: float) -> void:
 		if t <= 0:
 			_feed.remove_child(l)
 			l.queue_free()
+	if _banner_t <= 0 and _queued.size() and not (window.visible and window.kind != "notice" and window.kind != "pack"):
+		var q: Array = _queued.pop_front()
+		banner(q[0], q[1], q[2])
 	_banner_t -= delta
-	var a := clampf(_banner_t / 0.6, 0.0, 1.0)
-	_banner.modulate.a = a
-	_banner_sub.modulate.a = a
+	_banner_box.modulate.a = clampf(_banner_t / 0.6, 0.0, 1.0)
+	_banner_box.visible = _banner_t > 0 and not (window.visible and window.kind != "notice" and window.kind != "pack")
+	# a window that covers the game (the handbook, the dawn, the end) has the screen to itself
+	var covered: bool = window.visible and window.covers()
+	if covered != _covered and _playing:
+		_covered = covered
+		for c in _zones: c.visible = not covered
+		_feed.visible = not covered
+
+
+## Everything that changes, from the rules. R and me, plus what main knows: the prompt, what is being placed.
+func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool, build_sel: String, ready_line: String) -> void:
+	var p := me
+	var ph := R.phase
+	_phase.text = "Dusk" if ph == "dusk" else "Night %d" % R.day if ph == "night" or ph == "lost" else "Day %d of %d" % [R.day, D.LAST_DAY]
+	var timer := ""
+	match ph:
+		"day": timer = "Dusk in " + _fmt(R.timeLeft)
+		"dusk": timer = "Night falls in " + _fmt(R.timeLeft)
+		"night": timer = ("%d undead left · %d still to rise" % [R.left, R.wave] if R.wave > 0 else "%d undead left · the last have risen" % R.left) if R.left > 0 else "The graveyard is quiet"
+		"won": timer = "The week is over"
+		"lost": timer = "The keep has fallen"
+	_timer.text = timer
+	_ready_lab.text = ready_line
+	_ready_lab.visible = ready_line != ""
+	_keep_bar.value = maxf(0, R.keepHp) / D.KEEP_HP
+	_keep_num.text = "%d / %d" % [maxi(0, roundi(R.keepHp)), roundi(D.KEEP_HP)]
+	_boss.visible = R.boss != null
+	if R.boss:
+		_boss_bar.value = maxf(0, R.boss.hp) / maxf(1, R.boss.mhp)
+		_boss_num.text = "%d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)]
+	# what you carry
+	var c := Rules.cap(p)
+	for r in ["wood", "stone", "iron", "food"]:
+		var n: int = p.get(r)
+		_res[r].text = str(n)
+		_res[r].add_theme_color_override("font_color", Look.ROSE if n >= c else Look.INK)
+	_res.coin.text = D.coins(p.coin)
+	_carry.text = "You can carry %d of each." % c + ("  Bodies %d / %d%s" % [p.bodies, D.MAX_BODIES, " (%d blessed)" % p.bbod if p.bbod else ""] if p.bodies else "")
+	# books: the ones you have, the rank, and how far to the next
+	var bsig := str(p.books) + str(p.xp.map(func(x): return floori(x))) + str(p.coward)
+	if bsig != _books_sig:
+		_books_sig = bsig
+		for ch in _books.get_children(): ch.queue_free()
+		var any := false
+		for b in 10:
+			var rnk: int = p.books[b]
+			if not rnk: continue
+			any = true
+			var h := HBoxContainer.new(); _books.add_child(h)
+			var t := Look.label(h, D.BOOKS[b].name, 12, Look.INK)
+			t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			t.custom_minimum_size.x = 10
+			t.clip_text = true
+			t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			Look.label(h, ["", "I", "II", "III", "IV", "V", "VI", "VII"][rnk], 13, Look.ROSE, true)
+			var lo := Rules.need_xp(b, rnk - 1) if rnk > 1 else 0
+			var f := 1.0 if rnk >= 7 else clampf((p.xp[b] - lo) / float(Rules.need_xp(b, rnk) - lo), 0, 1)
+			var pb := _bar(_books, Color("b8862b"), 4)
+			pb.value = f
+		if not any:
+			var t := Look.para(_books, "No book yet. The library has one for you.", 12, Look.INK_SOFT)
+			t.custom_minimum_size.x = 200
+	# health
+	_hp_bar.value = p.hp / Rules.max_hp(p)
+	_hp_lab.text = "Your health. %s eats." % Keys.name("eat") if p.food > 0 and p.hp < Rules.max_hp(p) and p.state == "ok" else "Your health"
+	# the bar at the bottom
+	var W: Dictionary = D.IT[p.wpn]
+	var A: Dictionary = D.AB[W.ab]
+	_set_chip("hand", true, str(p.wpn), Keys.name("trick"), A.n + (" %ds" % ceili(p.abCd) if p.abCd > 0 else ""),
+		"In your hand: %s%s. {trick} or right-click: %s, %s." % [W.n, " (blessed)" if p.bless & 1 else "", A.n, A.d], p.abCd > 0)
+	_set_chip("carry", p.trk >= 0, str(p.trk) if p.trk >= 0 else "pack", Keys.name("carry"), (["Handbell", "Censer", "Bucket"][p.trk - 26] if p.trk >= 26 else D.IT[p.trk].n) if p.trk >= 0 else "",
+		(D.IT[p.trk].note if p.trk >= 0 else ""), p.trk == 26 and p.useCd > 0)
+	var nv := 100.0
+	for q in R.peasants:
+		if q.owner == p.id and q.state != "body" and q.state != "hide" and q.nv < nv: nv = q.nv
+	var orders := Rules.rk(p, 6) >= 3
+	_set_chip("posse", true, "posse", (Keys.name("orders") + " " + ["follow", "hold", "charge"][p.order]) if orders else "", "Posse %d/%d" % [p.posse, R.posse_max(p)],
+		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + (" {orders}: follow, hold, charge." if orders else ""), p.posse == 0)
+	_set_chip("pack", true, "pack", Keys.name("pack"), "Pack %d/%d" % [p.inv.size(), D.PACK_MAX], "Your pack: what is on you, and six places for spares. Click or press {pack}.")
+	_set_chip("toilet", p.posse > 0, "toilet", Keys.name("toilet"), "Toilet" if p.tbCd <= 0 else "Toilet %ds" % ceili(p.tbCd), "Emergency toilet break: the dead nearby run from your posse.", p.tbCd > 0)
+	var cg := p.state == "inn" or p.cg > 0 or p.charge > 0 or p.hang > 0
+	_set_chip("courage", cg, "ale", "", "Charging %ds" % ceili(p.charge) if p.charge > 0 else "Hangover %ds" % ceili(p.hang) if p.hang > 0 else "Courage %d%%" % p.cg, "Dutch courage, from the Thorny Rose.")
+	# what you can place
+	for k in _build_cards:
+		var e: Dictionary = _build_cards[k]
+		var need_bodies: bool = D.COST[k].has("bodies")
+		e.b.visible = not need_bodies or p.bodies >= D.COST[k].bodies
+		e.b.button_pressed = build_sel == k
+		e.cost.text = D.cost_text(Rules.cost_of(p, k)).replace(" and ", ", ")
+		e.b.tooltip_text = Keys.fill("Place a %s. Press %d, or {build} to step through these." % [D.SNAME[k], D.BUILDS.find(k) + 1])
+	_builds.visible = p.state == "ok" and R.live() and not _covered
+	# the prompt
+	_prompt.text = Keys.fill(prompt)
+	_prompt.modulate = Color.WHITE if prompt_ok else Color(1, 0.75, 0.7, 0.95)
+	_prompt_bar.visible = prog > 0.0
+	_prompt_bar.value = prog
+	_prompt_box.visible = prompt != "" and not window.visible
+
+
+static func _fmt(s: float) -> String:
+	var n := maxi(0, ceili(s))
+	return "%d:%02d" % [floori(n / 60.0), n % 60]

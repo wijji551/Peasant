@@ -9,7 +9,7 @@ const Z0 := -128.0
 const Z1 := 72.0
 const W := 150.0
 const H := 150.0
-const SC := 1.4                   # drawn a little larger than the web version's
+const SC := 1.24                  # drawn a little larger than the web version's
 
 var R: Rules
 var me: E.Player

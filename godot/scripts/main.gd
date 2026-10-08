@@ -15,6 +15,7 @@ const TreesView := preload("res://scripts/view/trees.gd")
 const SitesView := preload("res://scripts/view/sites.gd")
 const DefencesView := preload("res://scripts/view/defences.gd")
 const Hud := preload("res://scripts/hud.gd")
+const Menus := preload("res://scripts/ui/menus.gd")
 const Build := preload("res://scripts/build.gd")
 
 const STEP := 1.0 / 30.0         # the rules run thirty times a second, as in the web version
@@ -40,27 +41,31 @@ var R: Rules
 var me: E.Player
 var world: Node3D
 var hud: CanvasLayer
+var menus
+var win: Control                 # the one window in the middle (hud.window)
 var camera: Camera3D
 var sun: DirectionalLight3D
 var env: Environment
 var trees_view: Node3D
 var sites_view: Node3D
 var defences_view: Node3D
+var dead_view: Node3D
+var minimap: Control
+var labels: Control
 
+var screen := "home"             # "home" or "game"
 var _acc := 0.0
 var _clock := 0.0
 var _atk_cd := 0.0
 var _figs := {}                  # "p<id>" or "q<id>" -> figure
 var _drops := {}                 # drop id -> node
 var _fx: Node3D                  # bits, and things in flight
-var dead_view: Node3D
 var _keep_a := 1.0
-var minimap: Control
-var labels: Control
 var _focus := Vector3(0, 0, -4)
 var _zoom := 1.0
 var _prev_phase := ""
 var _dawn_seen := -1
+var _dawn_t := 0.0
 var _panel := ""                 # which notice is open: a place's id, or "pack"
 var _page := ""
 var _build_sel := ""
@@ -68,13 +73,15 @@ var _ghost: MeshInstance3D
 var _ring: MeshInstance3D
 var _edge := ""
 var _edge_t := 0.0
-var _started := false
 var _end_t := 0.0
+var _end_shown := false
 var _frame := 0
 var _bot := false
+var _home_t := 0.0
 
 
 func _ready() -> void:
+	Settings.load_all()
 	Keys.setup()
 	world = World.new()
 	add_child(world)
@@ -105,51 +112,107 @@ func _ready() -> void:
 	add_child(_ring)
 	hud = Hud.new()
 	add_child(hud)
-	hud.option.connect(_option)
+	win = hud.window
+	win.closed.connect(_window_closed)
+	hud.build_pressed.connect(func(k): if screen == "game" and me.state == "ok": _build_sel = "" if _build_sel == k else k)
+	hud.pack_pressed.connect(func(): if screen == "game" and me.state == "ok": _open_pack())
+	hud.menu_pressed.connect(func(): menus.menu())
+	menus = Menus.new(self, win)
 	labels = Labels.new()
 	labels.camera = camera
-	hud.add_child(labels)
-	hud.move_child(labels, 0)                            # under the readouts
+	labels.hud = hud
+	hud.root.add_child(labels)
+	hud.root.move_child(labels, 0)                       # under the readouts
 	minimap = Minimap.new()
-	hud.add_child(minimap)
-	minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	minimap.offset_left = -16 - 210; minimap.offset_top = -16 - 210; minimap.offset_right = -16; minimap.offset_bottom = -16
+	hud.map_slot.add_child(minimap)
+	minimap.R = R
+	labels.R = R
 	_bot = OS.get_environment("DTV_BOT") != ""
-	_start()
+	var test := OS.get_environment("DTV_NEW") != "" or OS.get_environment("DTV_DEMO") != "" or OS.get_environment("DTV_BOT") != "" or OS.get_environment("DTV_PHASE") != ""
+	if OS.get_environment("DTV_HOME") == "" and (test or _go_straight):
+		_go_straight = false
+		begin(null if OS.get_environment("DTV_NEW") != "" or OS.get_environment("DTV_DEMO") != "" else (_go_save if _go_save else read_save()))
+	else:
+		_home()
 
 
-## Carry on from the saved morning if there is one, or start a new village. (The home screen comes with the menus stage.)
-func _start() -> void:
-	var info := [{"id": 1, "name": "Peasant", "col": 0}]
-	var saved = null
-	if FileAccess.file_exists(SAVE_PATH) and OS.get_environment("DTV_NEW") == "":
-		saved = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
-	if saved is Dictionary and saved.get("v") == 3 and saved.get("players", []).size():
-		info[0].name = saved.players[0].name
-		R.load_game(saved, info)
-		hud.feed("Carrying on from the morning of day %d. (Start the game with DTV_NEW=1 for a new village.)" % R.day)
+static var _go_straight := false     # set when the scene is reloaded to start a game straight away
+static var _go_save = null
+
+
+## The saved morning, if there is one that this version can read.
+func read_save():
+	if not FileAccess.file_exists(SAVE_PATH): return null
+	var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+	return d if d is Dictionary and d.get("v") == 3 and d.get("players", []).size() else null
+
+
+func _save(d: Dictionary) -> void:
+	if d.is_empty():                                      # the week is over: nothing to carry on from
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+		return
+	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if f: f.store_string(JSON.stringify(d))
+
+
+func in_game() -> bool:
+	return screen == "game"
+
+
+# ---------------------------------------------------------------- home and starting
+func _home() -> void:
+	screen = "home"
+	hud.playing(false)
+	menus.home()
+
+
+## Back to the home screen: start the scene again, clean.
+func to_home() -> void:
+	get_tree().reload_current_scene()
+
+
+## Start playing: carry on from a saved morning, or (save null) a new village.
+func begin(save) -> void:
+	if screen == "game":                                 # a game is running: start again from a clean scene
+		_go_straight = true
+		_go_save = save
+		if save == null: DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+		get_tree().reload_current_scene()
+		return
+	var nm: String = Settings.name if Settings.name != "" else "Peasant"
+	var info := [{"id": 1, "name": nm, "col": Settings.col}]
+	if save:
+		info[0].name = save.players[0].name
+		info[0].col = int(save.players[0].get("col", Settings.col))
+		R.load_game(save, info)
 	else:
 		R.new_game(info)
+	_go_save = null
 	me = R.players[0]
+	minimap.me = me
+	labels.me = me
+	screen = "game"
+	hud.playing(true)
+	win.close()
+	_dawn_seen = -1
+	_prev_phase = ""
 	if OS.get_environment("DTV_PHASE") == "night":       # for testing: go straight to night
 		R.dusk_falls(); R.timeLeft = 0.5
 	if OS.get_environment("DTV_DEMO") != "":            # for testing: a village with a bit of everything in it, for pictures
 		_demo()
 	_focus = Vector3(me.x, 0, me.z)
-	minimap.R = R; minimap.me = me
-	labels.R = R; labels.me = me
-	_started = true
 
 
 func _demo() -> void:
 	_dawn_seen = R.dawn.seq
 	for s in R.structs:
 		s.built = true; s.mhp = D.SHP[s.k]; s.hp = s.mhp * (0.6 if s.slot == 2 else 1.0); s.re = s.slot == 4
-	me.wood = 40; me.bodies = 2; me.bbod = 1
+	me.wood = 40; me.bodies = 2; me.bbod = 1; me.food = 6; me.coin = 30; me.stone = 12
 	R.try_place(me, "barricade", me.x - 3, me.z - 8, 0)
 	R.try_place(me, "spikes", me.x + 3, me.z - 8, 0)
 	me.bodies = 2
-	me.wpn = 4; me.head = 19; me.body = 22; me.off = 25; me.trk = 28
+	me.wpn = 4; me.head = 19; me.body = 22; me.off = 25; me.trk = 28; me.inv = [6, 13, 15]
+	me.books[0] = 3; me.books[4] = 2; me.books[6] = 3; me.xp[0] = 300.0
 	for i in 4:
 		var q: E.Peasant = R.peasants[i]
 		q.owner = me.id; q.state = "follow"; q.armed = i % 2
@@ -159,14 +222,6 @@ func _demo() -> void:
 	for i in 8:
 		var u := R.spawn_undead(i % 4 if i % 4 != 3 else 0, -2.0 + i * 0.8, -6.0)
 		u.state = "walk"
-
-
-func _save(d: Dictionary) -> void:
-	if d.is_empty():                                      # the week is over: nothing to carry on from
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-		return
-	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if f: f.store_string(JSON.stringify(d))
 
 
 func _lights() -> void:
@@ -200,30 +255,52 @@ func _lights() -> void:
 
 
 # ---------------------------------------------------------------- input
+func _input(e: InputEvent) -> void:
+	# the handbook is waiting for a key to give to an action
+	if win.is_open("menu") and menus.rebinding != "" and e is InputEventKey and e.pressed and not e.echo:
+		get_viewport().set_input_as_handled()
+		menus.take_key(e.physical_keycode)
+
+
 func _unhandled_input(e: InputEvent) -> void:
-	if not _started or not (e is InputEventKey or e is InputEventMouseButton) or not e.is_pressed() or e.is_echo():
+	if not (e is InputEventKey or e is InputEventMouseButton) or not e.is_pressed() or e.is_echo():
 		return
-	if e is InputEventKey and e.physical_keycode == KEY_ESCAPE:   # closes whatever is open
-		if hud.dawn_open(): hud.close_dawn()
+	if e is InputEventKey and e.physical_keycode == KEY_ESCAPE:   # closes whatever is open; with nothing open, the handbook
+		if win.visible:
+			if win.closable: win.close()
 		elif _build_sel != "": _build_sel = ""
-		elif _panel != "" and me.state != "inn": _panel = ""
-		else: get_tree().quit()
+		elif screen == "game": menus.menu()
 		return
-	var p := me
-	if Keys.is_act(e, "ready") and R.phase == "day":
-		p.ready = not p.ready
-		hud.close_dawn()
-		hud.banner("Ready for the night" if p.ready else "Not ready after all", "", 1.2)
+	if screen != "game":
+		return
 	var dg := -1
 	if e is InputEventKey and e.physical_keycode >= KEY_0 and e.physical_keycode <= KEY_9:
 		dg = e.physical_keycode - KEY_0
-	if dg >= 0 and _panel != "":
-		_option((dg + 9) % 10)
+	if win.is_open("notice"):
+		if dg >= 0: option((dg + 9) % 10)
+		elif not Keys.is_act(e, "interact"): _game_key(e, -1)
 		return
+	if win.is_open("pack"):
+		if dg >= 1 and dg <= D.PACK_MAX: inv_do("eq", dg - 1)
+		elif Keys.is_act(e, "pack"): win.close()
+		else: _game_key(e, -1)
+		return
+	if win.is_open("dawn") and (Keys.is_act(e, "interact") or Keys.is_act(e, "ready")):
+		win.close()
+	if win.visible and win.kind != "dawn":
+		return
+	_game_key(e, dg)
+
+
+func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the world
+	var p := me
+	if Keys.is_act(e, "ready") and R.phase == "day":
+		p.ready = not p.ready
+		hud.banner("Ready for the night" if p.ready else "Not ready after all", "", 1.2)
 	if p.state != "ok":
 		return
 	if Keys.is_act(e, "pack"):
-		_open("pack")
+		_open_pack()
 	elif Keys.is_act(e, "trick") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_RIGHT):
 		if p.abCd > 0: return
 		R.aim_assist(p); R.do_ability(p)
@@ -253,11 +330,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		var b := _builds_now()
 		var i := b.find(_build_sel)
 		_build_sel = b[i + 1] if i + 1 < b.size() else ""
-		_panel = ""
 	elif dg >= 1 and dg <= D.BUILDS.size():
 		var k: String = D.BUILDS[dg - 1]
 		_build_sel = "" if _build_sel == k or not _builds_now().has(k) else k
-		_panel = ""
 	elif (Keys.is_act(e, "interact") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT)) and _build_sel != "":
 		_place_ghost()
 	elif Keys.is_act(e, "eat"):
@@ -290,19 +365,29 @@ func _place_ghost() -> void:
 	R.try_place(me, k, g.x, g.z, g.rot)
 
 
-func _open(id: String) -> void:
-	_panel = "" if _panel == id else id
+func _open_pack() -> void:
+	if win.is_open("pack"):
+		win.close()
+		return
+	_panel = "pack"
 	_page = ""
 	_build_sel = ""
+	menus.pack(true)
 
 
-func _option(i: int) -> void:   # a numbered option in the open notice
-	if _panel == "" or me == null:
+func _window_closed(what: String) -> void:
+	if screen == "home":                                  # the handbook, opened from the home screen: back to it
+		menus.home.call_deferred()
 		return
-	if _panel == "pack" and _page == "" and i < me.inv.size():
-		if not Rules.can_use(me, me.inv[i]):
-			hud.banner("Not yet", "%s needs %s. The book is in the library." % [D.it_cap(me.inv[i]), Notices.book_need(D.IT[me.inv[i]].need)], 3.0)
-			return
+	if what == "notice" or what == "pack":
+		_panel = ""
+		_page = ""
+
+
+## A numbered option in a place's notice.
+func option(i: int) -> void:
+	if _panel == "" or _panel == "pack" or me == null:
+		return
 	var d := Notices.data(R, _panel, me, _page)
 	if d.is_empty():
 		return
@@ -314,19 +399,48 @@ func _option(i: int) -> void:   # a numbered option in the open notice
 		return
 	if o.has("page"):
 		_page = o.page
+		menus.notice(_panel, _page, true)
 	else:
 		R.do_act(me, o.a, o.get("arg"))
 
 
+## Something done in the pack: put on, put away, drop, bless.
+func inv_do(a: String, arg) -> void:
+	var p := me
+	if a == "eq" and (arg >= p.inv.size()):
+		return
+	if a == "eq" and not Rules.can_use(p, p.inv[arg]):
+		hud.banner("Not yet", "%s needs %s. The book is in the library." % [D.it_cap(p.inv[arg]), Notices.book_need(D.IT[p.inv[arg]].need)], 3.0)
+		return
+	if a == "uneq" and p.get(arg) == 0:
+		hud.banner("The pitchfork stays", "It is what you hold when you hold nothing else.", 1.8)
+		return
+	if a == "uneq" and p.inv.size() >= D.PACK_MAX:
+		hud.banner("Your pack is full", "Drop something, or leave it on the arms rack in the storehouse.", 2.2)
+		return
+	R.do_act(p, a, arg)
+
+
 # ---------------------------------------------------------------- the loop
 func _process(delta: float) -> void:
-	if not _started:
-		return
 	delta = minf(delta, 0.25)
-	_acc += delta
-	while _acc >= STEP:
-		_acc -= STEP
-		_tick()
+	if screen == "home":                                 # behind the home screen: a slow look round the village
+		_home_t += delta
+		var a := _home_t * 0.05
+		_focus = Vector3(sin(a) * 14, 0, -4 + cos(a) * 10)
+		camera.position = _focus + Vector3(0, 66, 56) * 1.25
+		camera.look_at(_focus + Vector3(0, 1, 0))
+		trees_view.sync(R, delta)
+		sites_view.sync(R)
+		_apply_light(0.0)
+		_test_hook()
+		return
+	var paused: bool = win.is_open("menu") and R.players.size() == 1   # alone, the game waits while you read the handbook
+	if not paused:
+		_acc += delta
+		while _acc >= STEP:
+			_acc -= STEP
+			_tick()
 	_draw(delta)
 	_hud_update(delta)
 	_test_hook()
@@ -485,7 +599,7 @@ func _draw(delta: float) -> void:
 	defences_view.sync(R, delta)
 	# the keep hides whatever is just north of it from this camera: it goes see-through when there is something there to see
 	var see := false
-	if D.d2(_focus.x, _focus.z, D.KEEP_X, D.KEEP_Z) < 400:
+	if Settings.see_keep and D.d2(_focus.x, _focus.z, D.KEEP_X, D.KEEP_Z) < 400:
 		var hid := func(e) -> bool: return absf(e.x - D.KEEP_X) < D.KEEP_H + 2 and e.z < D.KEEP_Z + D.KEEP_H and e.z > D.KEEP_Z - D.KEEP_H - 9
 		see = R.undead.any(func(u): return D.d2(u.x, u.z, D.KEEP_X, D.KEEP_Z) < 90) \
 			or R.players.any(func(p): return (p.state == "ok" or p.state == "down") and hid.call(p)) \
@@ -550,73 +664,54 @@ func _camera(delta: float) -> void:
 	camera.look_at(_focus + Vector3(0, 1, 0))
 
 
-# ---------------------------------------------------------------- the readouts
-func _fmt(s: float) -> String:
-	var n := maxi(0, ceili(s))
-	return "%d:%02d" % [floori(n / 60.0), n % 60]
-
-
+# ---------------------------------------------------------------- the readouts and the window
 func _hud_update(delta: float) -> void:
 	var p := me
 	var ph := R.phase
 	if ph != _prev_phase:
 		_prev_phase = ph
 		match ph:
+			"day":
+				_end_shown = false
 			"dusk":
 				hud.banner("Dusk", "The bell rings. Somebody at the castle is polishing the silver." if R.day == D.LAST_DAY else "The bell rings. Something is stirring at Ashhollow Castle.", 5.0)
-				hud.close_dawn(); _panel = ""
+				if win.is_open("dawn"): win.close()
 			"night":
-				hud.banner("Night %d" % R.day, "The dead are rising all along the graveyard.", 4.5)
-			"won":
-				hud.banner("Thornhallow stands", "Seven nights held. The castle has gone quiet, for now.", 12.0)
-				hud.show_dawn("The week is over", R.dawn.lines + ["Thornhallow held for seven nights. Close the game and start again for a new village."])
-			"lost":
-				hud.banner("The keep has fallen", "Robert Bailiff’s door remains bolted.", 8.0)
-				_end_t = 8.0
-	if ph == "lost":
+				hud.banner("Night %d" % R.day, "The dead are rising all along the graveyard, and some have brought bows." if R.day >= 4 else "The dead are rising all along the graveyard.", 4.5)
+			"won", "lost":
+				_end_t = 2.2
+	if (ph == "won" or ph == "lost") and not _end_shown:
 		_end_t -= delta
 		if _end_t <= 0:
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-			get_tree().reload_current_scene()
-			return
+			_end_shown = true
+			_build_sel = ""; _panel = ""
+			menus.ending(ph == "won")
 	if R.dawn.seq != _dawn_seen and ph == "day":         # a new morning: the dawn notice
 		_dawn_seen = R.dawn.seq
-		if R.dawn.lines.size():
-			hud.show_dawn("Day %d of %d" % [R.dawn.day, D.LAST_DAY], R.dawn.lines)
 		hud.banner("Day %d" % R.dawn.day, "", 2.6)
-	var timer := ""
-	match ph:
-		"day": timer = "Dusk in " + _fmt(R.timeLeft)
-		"dusk": timer = "Night falls in " + _fmt(R.timeLeft)
-		"night": timer = ("%d undead left · %d still to rise" % [R.left, R.wave] if R.wave > 0 else "%d undead left · the last have risen" % R.left) if R.left > 0 else "The graveyard is quiet"
-		"won": timer = "The week is over"
-		"lost": timer = "The keep has fallen"
-	var ptext := "Dusk" if ph == "dusk" else "Night %d" % R.day if ph == "night" or ph == "lost" else "Day %d of %d" % [R.day, D.LAST_DAY]
-	hud.show_state(ptext, timer, R.keepHp, D.KEEP_HP, p.hp, Rules.max_hp(p))
-	# what you carry, and the little readouts
-	var c := Rules.cap(p)
-	var res := "Wood %d · Stone %d · Iron %d · Food %d   (carry %d)\n%s" % [p.wood, p.stone, p.iron, p.food, c, D.coins(p.coin)]
-	var W: Dictionary = D.IT[p.wpn]
-	var A: Dictionary = D.AB[W.ab]
-	var nv := 100.0
-	for q in R.peasants:
-		if q.owner == p.id and q.state != "body" and q.state != "hide" and q.nv < nv: nv = q.nv
-	var lines := []
-	lines.append("In hand: %s%s.  %s: %s%s" % [W.n, " (blessed)" if p.bless & 1 else "", Keys.name("trick"), A.n, " in %ds" % ceili(p.abCd) if p.abCd > 0 else ", ready"])
-	var worn := [p.head, p.body, p.off].filter(func(id): return id >= 0).map(func(id): return D.IT[id].n)
-	if worn.size(): lines.append("Wearing: " + ", ".join(worn))
-	if p.trk >= 0: lines.append("Carrying (%s): %s%s" % [Keys.name("carry"), D.IT[p.trk].n, " (blessed)" if p.bless & 2 else ""])
-	lines.append("Posse %d / %d%s%s · Pack %d / %d (%s)" % [p.posse, R.posse_max(p), (" · " + ["following", "holding", "charging"][p.order]) if Rules.rk(p, 6) >= 3 and p.posse else "",
-		" · about to run" if p.posse and nv < 40 else " · uneasy" if p.posse and nv < 70 else "", p.inv.size(), D.PACK_MAX, Keys.name("pack")])
-	if p.bodies: lines.append("Bodies %d / %d%s" % [p.bodies, D.MAX_BODIES, " (%d blessed)" % p.bbod if p.bbod else ""])
-	if p.state == "inn" or p.cg > 0 or p.charge > 0 or p.hang > 0:
-		lines.append("Charging %ds" % ceili(p.charge) if p.charge > 0 else "Hangover %ds" % ceili(p.hang) if p.hang > 0 else "Courage %d%%" % p.cg)
-	var books := []
-	for b in 10:
-		if p.books[b]: books.append("%s %d" % [D.BOOKS[b].name, p.books[b]])
-	lines.append("Books: " + (", ".join(books) if books.size() else "none yet. The library has one for you."))
-	if R.boss: lines.append("The Steward: %d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)])
-	hud.show_res(res, "\n".join(lines))
+		if R.dawn.lines.size() and not win.is_open("menu"):
+			_panel = ""
+			menus.dawn(R.dawn.day, R.dawn.lines)
+			_dawn_t = 15.0
+	if win.is_open("dawn"):
+		_dawn_t -= delta
+		if _dawn_t <= 0 or ph != "day": win.close()
+	# a place's notice: open while you are beside it (and always, inside the Rose)
+	if p.state == "inn" and R.live() and not win.is_open("menu") and not win.is_open("end"):
+		_panel = "inn"
+	if _panel != "" and _panel != "pack":
+		var st := D.station(_panel)
+		var near: bool = p.state == "inn" or (p.state == "ok" and not st.is_empty() and D.d2(p.x, p.z, st.x, st.z) <= pow(st.r + 1.6, 2))
+		if not near or not R.live():
+			_panel = ""; _page = ""
+			if win.is_open("notice"): win.close()
+		elif not win.visible or win.kind == "notice" or win.kind == "pack" or win.kind == "dawn":
+			menus.notice(_panel, _page)
+	elif win.is_open("notice"):
+		win.close()
+	if _panel == "pack":
+		if p.state != "ok" or not R.live(): win.close()
+		elif win.is_open("pack"): menus.pack()
 	# the prompt: what holding E would do
 	var it = R.find_interact(p) if _build_sel == "" and R.live() else null
 	var ptxt := ""
@@ -628,37 +723,38 @@ func _hud_update(delta: float) -> void:
 	if p.state == "down": ptxt = "You are down. A team-mate can revive you for %d more seconds." % ceili(p.downT)
 	elif p.state == "dead": ptxt = "You are dead. A relative arrives at dawn."
 	elif _build_sel != "": ptxt = "Press {interact} or click to place a %s (%s). {build} changes, Esc cancels." % [D.SNAME[_build_sel], D.cost_text(Rules.cost_of(p, _build_sel))]
-	hud.show_prompt(Keys.fill(ptxt), p.prog if it and it.ok and p.gk != 5 else 0.0, it == null or it.ok)
-	# the open notice, if you are still beside the place
-	if p.state == "inn" and R.live(): _panel = "inn"
-	if _panel != "":
-		var st := D.station(_panel)
-		var near: bool = p.state == "inn" or (p.state == "ok" and (_panel == "pack" or (not st.is_empty() and D.d2(p.x, p.z, st.x, st.z) <= pow(st.r + 1.6, 2))))
-		if not near or not R.live():
-			_panel = ""; _page = ""
-	if _panel != "":
-		hud.show_notice(Notices.data(R, _panel, p, _page), "Press the number, or click." + ("" if p.state == "inn" else " Walk away or press Esc to close."))
-	else:
-		hud.show_notice({}, "")
 	var rd := R.players.filter(func(o): return o.ready).size()
-	hud.show_hint(("You are ready (%d of %d). Press %s to change your mind." % [rd, R.players.size(), Keys.name("ready")] if p.ready else "Press %s when you are ready for the night" % Keys.name("ready")) if ph == "day" else
-		"%s to move · %s or click to attack · %s or right-click: your weapon’s trick · %s eats" % ["W A S D", Keys.name("attack"), Keys.name("trick"), Keys.name("eat")])
+	var ready_line := ""
+	if ph == "day":
+		ready_line = ("You are ready (%d of %d). %s to change your mind." % [rd, R.players.size(), Keys.name("ready")]) if p.ready else "Press %s when you are ready for the night." % Keys.name("ready")
+	hud.update(R, p, ptxt, p.prog if it and it.ok and p.gk != 5 else 0.0, it == null or it.ok, _build_sel, ready_line)
 
 
 ## For testing from the command line: DTV_SHOT=file.png saves a picture after DTV_SHOT_AT frames and stops.
 ## DTV_AT=x,z puts the player there first. DTV_LOG=1 prints how the night is going every ten seconds.
 func _test_hook() -> void:
 	_frame += 1
-	if OS.get_environment("DTV_LOG") != "" and _frame % 600 == 0:
+	if OS.get_environment("DTV_LOG") != "" and _frame % 600 == 0 and me:
 		print("t=", floori(_frame / 60.0), "s ", R.phase, " day ", R.day, " undead ", R.undead.size(), " to rise ", R.wave, " kills ", R.stats.kills, " keep ", roundi(R.keepHp), " player ", me.state, " hp ", roundi(me.hp), " posse ", me.posse)
 	var shot := OS.get_environment("DTV_SHOT")
 	if shot == "":
 		return
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
-	if _frame == at and OS.get_environment("DTV_AT") != "":
+	if _frame == at and OS.get_environment("DTV_AT") != "" and me:
 		var xz := OS.get_environment("DTV_AT").split(",")
 		me.x = float(xz[0]); me.z = float(xz[1])
+	if _frame == at and OS.get_environment("DTV_OPEN") != "":   # open a window for the picture
+		var o := OS.get_environment("DTV_OPEN")
+		if o == "pack": _open_pack()
+		elif o == "menu": menus.menu()
+		elif o == "keys": menus.menu("keys")
+		elif o == "dawn": menus.dawn(R.day, R.dawn.lines); _dawn_t = 99.0
+		elif o == "end": menus.ending(true)
+		elif o.begins_with("notice:"):
+			var st := D.station(o.substr(7))
+			me.x = st.x; me.z = st.z
+			_panel = st.id
 	if _frame == at + 30:
 		get_viewport().get_texture().get_image().save_png(shot)
-		print("phase ", R.phase, " day ", R.day, " undead ", R.undead.size(), " kills ", R.stats.kills, " keep ", R.keepHp, " player ", Vector2(me.x, me.z))
+		print("screen ", screen, " phase ", R.phase, " day ", R.day, " undead ", R.undead.size(), " window ", win.kind)
 		get_tree().quit()
