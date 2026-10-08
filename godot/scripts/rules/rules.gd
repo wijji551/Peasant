@@ -20,7 +20,7 @@ var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
 var spots: Array = [0, 0, 0, 0, 0, 0, 0, 0]   # searches left in each heap of rubble
 var sites: Array = [0, 0, 0]
-var seed := 1
+var gseed := 1
 var ale := 0
 var innHp := D.INN_HP
 var innIn := 0
@@ -255,7 +255,7 @@ func mk_struct(k: String, x: float, z: float, rot: float, built: bool, hp: float
 
 # infos: [{id, name, col}] for the people playing
 func new_game(infos: Array) -> void:
-	clear_world(); day = 1; seed = 1 + randi() % 1000000
+	clear_world(); day = 1; gseed = 1 + randi() % 1000000
 	players = []
 	for i in infos.size():
 		players.append(mk_player(infos[i].id, infos[i].name, infos[i].get("col", i), i))
@@ -307,10 +307,10 @@ func start_day(lines: Array) -> void:
 const P_SAVE := ["name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths"]
 
 func save_data() -> Dictionary:
-	var tr := []
+	var tree_codes := []
 	for t in trees:
 		if t.st or t.par:
-			tr.append([t.i, t.st, t.par, t.gd])
+			tree_codes.append([t.i, t.st, t.par, t.gd])
 	var ss := []
 	for s in structs:
 		ss.append({"k": s.k, "x": s.x, "z": s.z, "rot": s.rot, "built": s.built, "hp": s.hp, "max": s.mhp, "slot": s.slot, "re": s.re, "bl": s.bl, "nr": s.nr, "age": s.age})
@@ -327,12 +327,12 @@ func save_data() -> Dictionary:
 	var ds := []
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z})
-	return {"v": 3, "day": day, "pm": pm, "seed": seed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
-		"sites": sites.duplicate(), "stats": stats.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tr, "structs": ss, "players": ps, "peasants": qs}
+	return {"v": 3, "day": day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
+		"sites": sites.duplicate(), "stats": stats.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "peasants": qs}
 
 # infos: the people playing now. Each takes over a saved peasant, by name where possible.
 func load_game(d: Dictionary, infos: Array) -> void:
-	clear_world(); day = int(d.day); pm = int(d.pm); seed = int(d.get("seed", 1)); keepHp = float(d.keepHp)
+	clear_world(); day = int(d.day); pm = int(d.pm); gseed = int(d.get("seed", 1)); keepHp = float(d.keepHp)
 	for k in store:
 		store[k] = int(d.store.get(k, 0))
 	for k in stats:
@@ -574,7 +574,7 @@ func find_interact(p: E.Player):
 		var pt := box_point(p.x, p.z, kb)
 		return {"type": "keep", "key": "keep", "ok": ok, "dur": 0.9, "x": pt.x, "z": pt.y, "rad": 1.2,
 			"label": "Hold {interact} to mend the keep (1 wood and 1 stone a time)" if ok else "Mending the keep needs wood and stone"}
-	var sps: Array = Map.ruin_layout(seed, day).spots
+	var sps: Array = Map.ruin_layout(gseed, day).spots
 	for i in sps.size():
 		var sp: Dictionary = sps[i]
 		if D.d2(p.x, p.z, sp.x, sp.z) < 4.6:
@@ -1030,8 +1030,8 @@ func do_use(p: E.Player) -> void:   # whatever you carry
 func do_order(p: E.Player) -> void:   # follow, hold here, charge
 	if p.state != "ok" or rk(p, 6) < 3:
 		return
-	p.ord = (p.ord + 1) % 3
-	if p.ord == 1:
+	p.order = (p.order + 1) % 3
+	if p.order == 1:
 		for q in peasants:
 			if q.owner == p.id:
 				q.px = q.x; q.pz = q.z
@@ -1059,7 +1059,7 @@ func do_fish(p: E.Player) -> void:
 	p.bite = 0; p.fishT = fish_wait(p)   # pulling early scares the fish off
 
 func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of rubble
-	var sps: Array = Map.ruin_layout(seed, day).spots
+	var sps: Array = Map.ruin_layout(gseed, day).spots
 	if i < 0 or i >= sps.size() or spots[i] <= 0:
 		return
 	var sp: Dictionary = sps[i]
@@ -1119,7 +1119,7 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 func leave_inn(p: E.Player, charging: bool) -> void:
 	if p.state != "inn":
 		return
-	p.state = "ok"; p.x = D.INN.dx; p.tx = p.x; p.z = D.INN.dz + rnd2(-0.8, 0.8); p.tz = p.z; p.r = PI / 2; p.tr = p.r; p.tp = tpc; tpc += 1; p.drinkT = 0
+	p.state = "ok"; p.x = D.INN.dx; p.tx = p.x; p.z = D.INN.dz + rnd2(-0.8, 0.8); p.tz = p.z; p.r = PI / 2; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.drinkT = 0
 	for q in peasants:
 		if q.owner == p.id and q.state == "inn":
 			q.state = "follow"; q.x = p.x + rnd2(0.4, 2); q.z = p.z + rnd2(-2, 2)
@@ -1153,7 +1153,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				if n: spark.call("coin")
 		"buy":
 			if near_station(p, "market") and D.RES.has(sa):
-				var n := mini(mini(5, cap(p) - p.get(sa)), p.coin / 2)
+				var n := mini(mini(5, cap(p) - p.get(sa)), floori(p.coin / 2.0))
 				if n > 0:
 					p.set(sa, p.get(sa) + n); p.coin -= n * 2; spark.call("coin")
 		"put":
@@ -1375,7 +1375,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 	var lines := ["Night %d is over. %d of the dead were put back down." % [day, N.kills]]
 	if fallen.size():
 		lines.append("Fallen: %s. What is left lies where it fell, and could still be useful." % ", ".join(fallen))
-	var share: int = 6 + N.kills / 5
+	var share: int = 6 + floori(N.kills / 5.0)
 	var paid := 0
 	for p in players:
 		if p.state == "inn": leave_inn(p, false)
@@ -1402,7 +1402,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 		var c := D.cottage(p.slot)
 		p.x = c.sx; p.tx = p.x; p.z = c.sz; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.bite = 0
 		# blessings and Dutch courage both wear off by morning
-		p.bless = 0; p.bbod = 0; p.cg = 0; p.charge = 0; p.hang = 0; p.drinkT = 0; p.parry = 0; p.guard = 0; p.upOnce = false; p.study = false; p.ord = 0; p.abCd = 0; p.useCd = 0; p.tbCd = 0
+		p.bless = 0; p.bbod = 0; p.cg = 0; p.charge = 0; p.hang = 0; p.drinkT = 0; p.parry = 0; p.guard = 0; p.upOnce = false; p.study = false; p.order = 0; p.abCd = 0; p.useCd = 0; p.tbCd = 0
 	if paid: lines.append("The village passed the hat: %s for everyone who stood and fought." % D.coins(share))
 	if ale > 0: lines.append("The innkeeper finished the last %d tankard%s himself." % [ale, "s" if ale > 1 else ""])
 	var row := {}
@@ -1442,7 +1442,7 @@ func player_step(p: E.Player, dt: float) -> void:
 			p.hang = 0.0 if r >= 4 else 5.0 if r >= 3 else 10.0
 	if p.remote:
 		var k := minf(1, dt * 16)
-		p.x = lerpf(p.x, p.tx, k); p.z = lerpf(p.z, p.tz, k); p.r = D.ang_lerp(p.r, p.tr, k)
+		p.x = lerpf(p.x, p.tx, k); p.z = lerpf(p.z, p.tz, k); p.r = D.ang_lerp(p.r, p.goal_r, k)
 	if p.state == "down":
 		p.downT -= dt
 		if p.downT <= 0:
@@ -1579,25 +1579,25 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 	if Ld.state == "inn":
 		q.state = "inn"
 		return
-	var ord := Ld.ord                              # 0 follow, 1 hold here, 2 charge
+	var order := Ld.order                              # 0 follow, 1 hold here, 2 charge
 	var tgt: E.Undead = null
-	var bd := 900.0 if ord == 2 else 81.0
+	var bd := 900.0 if order == 2 else 81.0
 	var near := false
 	for u in undead:
 		if u.state == "pile" or u.state == "rise": continue
 		var d := D.d2(q.x, q.z, u.x, u.z)
 		if d < 144: near = true
-		if d < bd and (ord == 2 or (D.d2(q.px, q.pz, u.x, u.z) < 36 if ord == 1 else D.d2(Ld.x, Ld.z, u.x, u.z) < 64)) and not wall_between(q.x, q.z, u.x, u.z):
+		if d < bd and (order == 2 or (D.d2(q.px, q.pz, u.x, u.z) < 36 if order == 1 else D.d2(Ld.x, Ld.z, u.x, u.z) < 64)) and not wall_between(q.x, q.z, u.x, u.z):
 			bd = d; tgt = u
 	if not near and q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
 	if tgt:
 		q.state = "fight"; q.tree = null
 		var reach: float = (2.2 if q.armed else 1.7) + D.UN[tgt.k].r
-		var d := step_to(q, tgt.x, tgt.z, 6.0 if ord == 2 else 5.2, dt, reach - 0.45)
+		var d := step_to(q, tgt.x, tgt.z, 6.0 if order == 2 else 5.2, dt, reach - 0.45)
 		if d < reach and q.cd <= 0:
 			q.cd = 0.9; q.ac += 1
 			hit_u(tgt, ((10.0 if q.armed else 6.0) + (3.0 if q.armed and rk(Ld, 3) >= 6 else 0.0)) * (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0), {"x": q.x, "z": q.z, "q": q})
-	elif ord == 1:
+	elif order == 1:
 		q.state = "follow"; q.tree = null; q.ct = 0
 		if Vector2(q.px - q.x, q.pz - q.z).length() > 0.5: step_to(q, q.px, q.pz, 5.4, dt, 0.3)
 	elif Ld.workT > 0 and Ld.workK != "fish" and Ld.get(D.GATHER[Ld.workK].res) < cap(Ld) and D.d2(q.x, q.z, Ld.x, Ld.z) < 400:
@@ -1759,7 +1759,7 @@ func undead_step(dt: float) -> void:
 					u.state = "atk"; u.r = D.ang_lerp(u.r, 0, 0.1); u.rt -= dt
 					if u.rt <= 0 and graves.size():
 						u.rt = 6; u.ac += 1
-						var n := mini(graves.size(), 2 + players.size() / 2)
+						var n := mini(graves.size(), 2 + floori(players.size() / 2.0))
 						for i in n:
 							var g: Dictionary = graves.pop_at(randi() % graves.size())
 							spawn_undead(g.k, g.x, g.z); ev.append(["raise", r1(g.x), r1(g.z)])
@@ -1791,18 +1791,18 @@ func undead_step(dt: float) -> void:
 			else:
 				var g := undead_goal(u)
 				gx = g.x; gz = g.y
-		var dx: float = gx - u.x
-		var dz: float = gz - u.z
-		var d := sqrt(dx * dx + dz * dz)
-		if d == 0: d = 1
-		u.r = D.ang_lerp(u.r, atan2(dx, dz), minf(1, dt * 6))
-		if tgt and d < U.r + 1.05 and not wall_between(u.x, u.z, tgt.x, tgt.z):
+		var gdx: float = gx - u.x
+		var gdz: float = gz - u.z
+		var gd := sqrt(gdx * gdx + gdz * gdz)
+		if gd == 0: gd = 1
+		u.r = D.ang_lerp(u.r, atan2(gdx, gdz), minf(1, dt * 6))
+		if tgt and gd < U.r + 1.05 and not wall_between(u.x, u.z, tgt.x, tgt.z):
 			if u.state != "atk" and u.t < -1: u.cd = maxf(u.cd, 0.45)
 			u.state = "atk"; u.t = 0
 			if u.cd <= 0:
 				u.cd = U.cd; u.ac += 1; hurt_friend(tgt, U.dmg, tp, u, false)
 			continue
-		if door and d < U.r + 1.3:
+		if door and gd < U.r + 1.3:
 			u.state = "atk"
 			if u.cd <= 0:
 				u.cd = U.cd; u.ac += 1; innHp -= U.sdmg; ev.append(["build", r1(D.INN.dx - 0.8), r1(D.INN.dz)])
@@ -1818,9 +1818,11 @@ func undead_step(dt: float) -> void:
 		if u.pin > 0:
 			u.state = "stun"
 			continue
-		var nx: float = u.x + dx / d * sp * dt
-		var nz: float = u.z + dz / d * sp * dt
+		var nx: float = u.x + gdx / gd * sp * dt
+		var nz: float = u.z + gdz / gd * sp * dt
 		var blk := blocking_struct(nx, nz, U.r)
+		if blk and blk.slot >= 0 and u.z > D.VN:   # already inside: the north wall is just in the way, not something to break
+			blk = null
 		if blk:
 			hit_struct(u, U, blk)
 			continue
@@ -1829,6 +1831,9 @@ func undead_step(dt: float) -> void:
 		for c in colliders: push_out(u, U.r, c, 0)
 		u.z = nz
 		for c in colliders: push_out(u, U.r, c, 1)
+		if u.z > D.VN:                                # inside, the north wall is solid like any other
+			for s in structs:
+				if s.slot >= 0 and s.built: push_out(u, U.r, s)
 	# keep them from standing inside each other (a grid, so a big horde stays cheap)
 	var grid := {}
 	for u in undead:

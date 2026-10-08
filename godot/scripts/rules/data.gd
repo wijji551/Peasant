@@ -232,8 +232,8 @@ static func rel_name(n: String, k: int) -> String:   # who takes over the cottag
 # money: 12 bronze pence to the silver shilling, 20 shillings to the gold piece
 static func coins(d: float) -> String:
 	var n := maxi(0, roundi(d))
-	var g := n / 240
-	var s := (n % 240) / 12
+	var g := floori(n / 240.0)
+	var s := floori((n % 240) / 12.0)
 	var p := n % 12
 	return (str(g) + " gold " if g else "") + (str(s) + "s " if g or s else "") + str(p) + "d"
 

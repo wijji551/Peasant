@@ -1,0 +1,82 @@
+extends Control
+## Words over the 3D world: the name of each place when you are near it (as the web version's signs), and the
+## names of the other players (your own banner is enough for you).
+
+const PLACES := [
+	["Market", 0.0, 21.6, 3.2], ["Smithy", 16.5, -4.7, 6.0], ["Storehouse", 17.0, 10.6, 6.5], ["Library", 17.0, 20.4, 8.0],
+	["Slum", -17.6, 20.5, 3.4], ["The Thorny Rose", -17.5, -4.7, 7.5], ["Robert Bailiff", -14.5, -12.6, 8.6],
+	["Farms: food", -58.0, 30.0, 1.5], ["The keep", 0.0, 0.0, 12.4], ["Chapel: the priest", 17.0, -14.0, 8.4],
+	["Old ruins: search", 10.8, -15.4, 3.4], ["West ruins: search", -58.0, 46.0, 5.0], ["East ruins: search", 58.0, 46.0, 5.0],
+	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
+]
+
+var R: Rules
+var me: E.Player
+var camera: Camera3D
+var focus := Vector3.ZERO
+var show_names := true
+var _signs: Array[Label] = []
+var _names: Array[Label] = []
+
+
+func _ready() -> void:
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for p in PLACES:
+		var l := _label(p[0], 14, Color("2f2318"), Color("ecdcae"))
+		_signs.append(l)
+
+
+func _label(text: String, size_: int, ink: Color, bg: Color) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", size_)
+	l.add_theme_color_override("font_color", ink)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(bg, 0.92)
+	sb.border_color = Color("4a2a12")
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(3)
+	sb.set_content_margin_all(3)
+	sb.content_margin_left = 6; sb.content_margin_right = 6
+	l.add_theme_stylebox_override("normal", sb)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(l)
+	return l
+
+
+func _put(l: Label, at: Vector3) -> void:   # centred over the point, sitting on it
+	if camera.is_position_behind(at):
+		l.visible = false
+		return
+	var q := camera.unproject_position(at)
+	l.visible = true
+	l.position = (q - Vector2(l.size.x / 2, l.size.y)).round()
+
+
+func _process(_delta: float) -> void:
+	if R == null or camera == null: return
+	for i in PLACES.size():
+		var p: Array = PLACES[i]
+		var x: float = p[1] if not (p[1] is String) else 0.0
+		var z: float = p[2]
+		match p[1]:
+			"quarry": x = R.QUARRY.x; z = R.QUARRY.z
+			"mine": x = R.MINEC.x; z = R.MINEC.z
+			"jetty": x = R.JETTY.x; z = R.JETTY.z + 2.6
+		var l := _signs[i]
+		if D.d2(focus.x, focus.z, x, z) < 30 * 30 and R.live():
+			_put(l, Vector3(x, p[3], z))
+		else:
+			l.visible = false
+	var shown := R.players.filter(func(p): return p != me and p.state != "hide" and p.state != "inn") if show_names else []
+	while _names.size() < shown.size(): _names.append(_label("", 13, Color("2f2318"), Color("f6ebc9")))
+	for i in _names.size():
+		var l := _names[i]
+		if i >= shown.size():
+			l.visible = false
+			continue
+		var p: E.Player = shown[i]
+		l.text = p.dn + (" (coward)" if p.coward else "")
+		(l.get_theme_stylebox("normal") as StyleBoxFlat).border_color = Color(D.PCOL[p.col % 8])
+		_put(l, Vector3(p.x, 3.75 + maxf(0, p.bodies - 2) * 0.4, p.z))

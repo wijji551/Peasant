@@ -803,11 +803,13 @@ function undeadStep(dt) {
     if (!tgt && !door && (u.k !== 3 || u.march) && inBox(u.x, u.z, U.r + 0.45, keepBox)) { u.state = 'atk'; u.r = angLerp(u.r, Math.atan2(KEEP.x - u.x, KEEP.z - u.z), 0.3); if (u.cd <= 0) { u.cd = U.cd; u.ac++; S.keepHp -= U.kdmg * (S.rage || 1); S.keepHc++; } continue; }
     if (u.pin > 0) { u.state = 'stun'; continue; }
     const nx = u.x + dx / d * sp * dt, nz = u.z + dz / d * sp * dt;
-    const blk = blockingStruct(nx, nz, U.r);
+    let blk = blockingStruct(nx, nz, U.r);
+    if (blk && blk.slot != null && u.z > VN) blk = null;   // already inside: the north wall is just in the way, not something to break
     if (blk) { hitStruct(u, U, blk); continue; }
     u.state = 'walk';
     u.x = nx; for (const c of colliders) pushOut(u, U.r, c, 0);
     u.z = nz; for (const c of colliders) pushOut(u, U.r, c, 1);
+    if (u.z > VN) for (const s of S.structs) if (s.slot != null && s.built) pushOut(u, U.r, s);   // inside, the north wall is solid like any other
   }
   const a = S.undead;                            // keep them from standing inside each other
   for (let i = 0; i < a.length; i++) {

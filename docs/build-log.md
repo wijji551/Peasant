@@ -2,6 +2,18 @@
 
 The design lives in the doc "Defend the Village! — Game Design". This log records what each build actually contains and how it was made, so the next build can start from it.
 
+## Moving to Godot, stage 2: the map and models (8 Oct 2026)
+
+### What moved
+- **Every model from the web version**, shape for shape (`godot/scripts/view/models.gd`): peasants, their weapons, armour and buckets, the shambler, skeleton, skeleton archer and the Steward, every defence, the outcrop, mine, jetty, rubble, trees and stumps, and the priest outside his chapel. Each model is one mesh, flat-shaded like the web version, and the dead are drawn two hundred at a time with one draw per kind.
+- **The see-through keep:** it fades when the dead are close to it or a friend, a body or a dropped thing is just north of it.
+- **Effects:** wood chips, stone and ore, splashes, coins, sparks, bones and rot when the dead are hit and put down, ghosts when the Steward raises the fallen, rings for Smash, Clang, Reap, Trip, the handbell and the slop bucket, arrows, stones and buckets in flight, felled trees toppling and chopped ones shivering, defences popping up and shuddering when struck, the gate opening for friends when none of the dead are near, health bars, sweating peasants who are losing their nerve, a glow on holy things.
+- **The map in the corner, the signs over places, and other players' names.**
+- The 25 script warnings Godot showed are gone.
+
+### Tested
+- Rule checks 107 of 107; the careful bot holds all seven nights; screenshots by day and night with everything on show. Seen running on Forward+ with Direct3D 12 on Matt's computer (stage 1).
+
 ## Moving to Godot, stage 1: the rules (8 Oct 2026)
 
 **Where:** the `godot/` folder of the repository, and the Peasant Defence project on Matt's computer. The web version stays live at https://wijji551.github.io/Peasant/ until the Godot one has caught up.
@@ -21,7 +33,7 @@ The design lives in the doc "Defend the Village! — Game Design". This log reco
 - **Not tested:** the look on Forward+ with Direct3D 12 on Matt's computer.
 
 ### Still to move
-2. The map and models: the see-through keep, effects, better models for the dead, the minimap.
+2. (Done in stage 2.)
 3. Menus: the scroll look, the slot inventory, the handbook, changing keys, the home screen and the change log.
 4. Sound.
 5. Co-op.

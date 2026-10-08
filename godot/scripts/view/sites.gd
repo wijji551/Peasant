@@ -1,42 +1,47 @@
 extends Node3D
-## The things that move every morning: the rocky outcrop (stone), the mine (iron), the jetty (fish),
-## and the two outer ruins, which fall down differently every night. Rebuilt when the day changes.
-
-const Build := preload("res://scripts/build.gd")
-const C_STONE := Color("c3bcab")
-const C_STONE2 := Color("a69f90")
-const C_STONE3 := Color("8a8478")
-const C_TIMBER := Color("5b4130")
-const C_WOOD := Color("8b6b47")
+## The things that move every morning: the rocky outcrop (stone), the mine (iron), the jetty (fish), and the
+## two outer ruins, which fall down differently every night, with their heaps of rubble to search. And the
+## priest, who stands outside his chapel whatever the day.
 
 var _key := ""
-var _quarry: Node3D
-var _mine: Node3D
-var _jetty: Node3D
+var _quarry: MeshInstance3D
+var _mine: MeshInstance3D
+var _jetty: MeshInstance3D
 var _ruins: Node3D
-var _marks: Array = []          # one small marker over each heap of rubble with something left in it
+var _spots: Array = []          # one heap of rubble per search spot, paler while something is left in it
+var _spot_mats: Array = []
 
 
 func _ready() -> void:
-	_quarry = Node3D.new(); add_child(_quarry)
-	for r in [[-1.1, -0.5, 2.1, 2.4, 1.8, 0.3, C_STONE], [0.9, 0.5, 1.9, 1.7, 1.6, 1.1, C_STONE2], [0.3, -1.1, 1.5, 1.1, 1.3, 2.0, C_STONE3], [-0.6, 1.1, 1.4, 0.9, 1.2, 0.7, C_STONE2], [1.9, -0.7, 1.0, 0.7, 0.9, 2.6, C_STONE]]:
-		Build.box(_quarry, Vector3(r[2], r[3], r[4]), Vector3(r[0], 0, r[1]), r[6], r[5])
-	_mine = Node3D.new(); add_child(_mine)            # a grassy mound with a dark mouth on one side
-	Build.cyl(_mine, 1.9, 3.1, 2.3, Vector3.ZERO, Color("93a064"), 8)
-	Build.box(_mine, Vector3(0.7, 1.9, 1.8), Vector3(-2.75, 0, 0), Color("2a2420"))
-	for sz in [-1.0, 1.0]:
-		Build.box(_mine, Vector3(0.3, 2.1, 0.3), Vector3(-3.05, 0, sz * 1.02), C_TIMBER)
-	Build.box(_mine, Vector3(0.4, 0.3, 2.6), Vector3(-3.05, 2.1, 0), C_TIMBER)
-	_jetty = Node3D.new(); add_child(_jetty)
-	Build.box(_jetty, Vector3(1.8, 0.2, 7), Vector3(0, 0.25, 4.1), C_WOOD)
-	for sx in [-1.0, 1.0]:
-		for zz in [1.6, 4.6, 7.1]:
-			Build.box(_jetty, Vector3(0.25, 1, 0.25), Vector3(sx * 0.8, -0.2, zz), C_TIMBER)
-	_ruins = Node3D.new(); add_child(_ruins)
+	_quarry = _mi("outcrop")
+	_mine = _mi("mine")
+	_jetty = _mi("jetty")
+	_ruins = Node3D.new()
+	add_child(_ruins)
+	var pr := _mi("priest")                          # the priest, outside his chapel
+	var st: Dictionary = D.STATIONS[6]
+	pr.position = Vector3(st.x + 0.9, 0, st.z - 0.5)
+	pr.rotation.y = -2.2
+	pr.scale = Vector3.ONE * 1.08
+
+
+func _mi(mesh: String, parent: Node3D = null) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = Models.get_mesh(mesh)
+	(parent if parent else self).add_child(mi)
+	return mi
+
+
+static func _tinted(c: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = c
+	m.roughness = 1.0
+	return m
 
 
 func sync(R: Rules) -> void:
-	var key := "%d:%d:%s" % [R.seed, R.day, R.sites]
+	var key := "%d:%d:%s" % [R.gseed, R.day, R.sites]
 	if key != _key:
 		_key = key
 		_quarry.position = Vector3(R.QUARRY.x, 0, R.QUARRY.z)
@@ -44,17 +49,29 @@ func sync(R: Rules) -> void:
 		_mine.rotation.y = 0.0 if R.MINE.dir > 0 else PI    # the mouth faces back towards the village
 		_jetty.position = Vector3(R.JETTY.x, 0, R.JETTY.z)
 		for c in _ruins.get_children(): c.queue_free()
-		var L := Map.ruin_layout(R.seed, R.day)
+		var L := Map.ruin_layout(R.gseed, R.day)
+		var light := _tinted(Color(0.65, 0.62, 0.56))
+		var dark := _tinted(Color(0.54, 0.52, 0.47))
 		for b in L.rub:
-			Build.box(_ruins, Vector3(b.w, b.h, b.d), Vector3(b.x, 0, b.z), C_STONE2 if b.c else C_STONE3, b.rot)
+			var m := _mi("rub", _ruins)
+			m.material_override = light if b.c else dark
+			m.position = Vector3(b.x, 0, b.z)
+			m.rotation.y = b.rot
+			m.scale = Vector3(b.w, b.h, b.d)
 		for p in L.pil:
-			Build.cyl(_ruins, 0.36, 0.42, p.h, Vector3(p.x, 0, p.z), C_STONE2, 6)
-		_marks.clear()
-		for sp in L.spots:                               # a heap of rubble, and a small sign of something in it
-			Build.box(_ruins, Vector3(1.3, 0.45, 1.0), Vector3(sp.x, 0, sp.z), C_STONE3, sp.x)
-			var m := Build.box(_ruins, Vector3(0.22, 0.22, 0.22), Vector3(sp.x, 0.7, sp.z), Color("ffe08a"))
-			m.material_override = Build.mat(Color("ffe08a"), 1.6)
-			_marks.append(m)
-	for i in _marks.size():
-		_marks[i].visible = R.spots[i] > 0
-		_marks[i].rotation.y += 0.02
+			var m := _mi("pillar", _ruins)
+			m.position = Vector3(p.x, 0, p.z)
+			m.scale = Vector3(1, p.h, 1)
+		_spots.clear(); _spot_mats.clear()
+		for i in L.spots.size():
+			var sp: Dictionary = L.spots[i]
+			var m := _mi("spot", _ruins)
+			m.position = Vector3(sp.x, 0, sp.z)
+			m.rotation.y = i * 1.7
+			var mat := _tinted(Color(0.9, 0.86, 0.74))
+			m.material_override = mat
+			_spots.append(m); _spot_mats.append(mat)
+	for i in _spots.size():
+		var full: bool = R.spots[i] > 0
+		_spots[i].scale = Vector3(1, 1.0 if full else 0.55, 1)
+		_spot_mats[i].albedo_color = Color(0.9, 0.86, 0.74) if full else Color(0.5, 0.48, 0.44)

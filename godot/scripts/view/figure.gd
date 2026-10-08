@@ -1,181 +1,295 @@
 extends Node3D
-## A peasant on screen: a player, one of a posse, or a villager. It only shows what the rules say:
-## the game tells it where to stand, what it holds and wears, and when it swung or was hit.
+## A peasant on screen: a player, one of a posse, a villager or a body. It only shows what the rules say:
+## where they are, what they hold and wear, what they are working at, and when they swung or were hit.
 
-const Build := preload("res://scripts/build.gd")
+const HOLYT := Color(1.3, 1.2, 0.75)
+const CORPSE := Color(0.6, 0.56, 0.5)
 
-var tunic := Color("c8443a")
 var is_player := false
-var down := false                  # knocked down, dead, or a body on the ground
-var moving := 0.0
-var facing := 0.0
-var carry := 0                     # bodies carried, drawn on the back
+var fx: Node3D
 
-var _want := Vector3.ZERO
+var _x := 0.0
+var _z := 0.0
+var _r := 0.0
 var _first := true
 var _walk := 0.0
-var _jab := 0.0
+var _mv := 0.0
+var _atk := 0.0
 var _flash := 0.0
 var _fall := 0.0
+var _seen := [-1, -1, -1]            # ac, hc, cc last time
 var _model: Node3D
 var _leg_l: Node3D
 var _leg_r: Node3D
-var _hand: Node3D                  # what is held hangs off this
-var _held := -2
-var _gear_sig := ""
-var _gear: Node3D
+var _hand: Node3D
+var _held_mi: MeshInstance3D
+var _held := ""
 var _tunic_mat: StandardMaterial3D
-var _banner: Node3D
+var _body_mat: StandardMaterial3D
+var _held_mat: StandardMaterial3D
+var _banner_mat: StandardMaterial3D
+var _gear: Node3D
+var _gear_sig := ""
+var _carry: Node3D
+var _carry_sig := ""
+var _bar: Node3D
+var _bar_fill: MeshInstance3D
+var _bar_mat: StandardMaterial3D
+var _tool := ""
 
 
 func _ready() -> void:
 	_model = Node3D.new()
-	var sc := 1.2 if is_player else 1.0
-	_model.scale = Vector3(sc, sc, sc)
 	add_child(_model)
-	var legs := Color("4a3a2c")
+	_body_mat = _mat(Color.WHITE)
+	_tunic_mat = _mat(Color.WHITE)
+	_held_mat = _mat(Color.WHITE)
 	_leg_l = Node3D.new(); _leg_l.position = Vector3(-0.14, 0.46, 0); _model.add_child(_leg_l)
-	Build.box(_leg_l, Vector3(0.2, 0.46, 0.22), Vector3(0, -0.46, 0), legs)
 	_leg_r = Node3D.new(); _leg_r.position = Vector3(0.14, 0.46, 0); _model.add_child(_leg_r)
-	Build.box(_leg_r, Vector3(0.2, 0.46, 0.22), Vector3(0, -0.46, 0), legs)
-	_tunic_mat = StandardMaterial3D.new()
-	_tunic_mat.albedo_color = tunic
-	_tunic_mat.roughness = 1.0
-	for part in [[Vector3(0.66, 0.6, 0.42), Vector3(0, 0.44, 0)], [Vector3(0.17, 0.5, 0.2), Vector3(-0.42, 0.52, 0)], [Vector3(0.17, 0.5, 0.2), Vector3(0.42, 0.52, 0)]]:
-		Build.box(_model, part[0], part[1], tunic).material_override = _tunic_mat
-	Build.box(_model, Vector3(0.67, 0.09, 0.43), Vector3(0, 0.5, 0), Color("9a8a78"))
-	Build.box(_model, Vector3(0.42, 0.4, 0.4), Vector3(0, 1.03, 0.02), Color("e8b98f"))
-	Build.box(_model, Vector3(0.1, 0.1, 0.06), Vector3(0, 1.15, 0.24), Color("d9a279"))
-	Build.cyl(_model, 0.34, 0.34, 0.07, Vector3(0, 1.42, 0), Color("dcbc62"), 8)
-	Build.cyl(_model, 0.17, 0.2, 0.2, Vector3(0, 1.49, 0), Color("dcbc62"), 8)
+	_mi(_leg_l, "leg", _body_mat)
+	_mi(_leg_r, "leg", _body_mat)
+	_mi(_model, "torso", _body_mat)
+	_mi(_model, "tunic", _tunic_mat)
+	if is_player:
+		_banner_mat = _mat(Color.WHITE)
+		_mi(_model, "banner", _banner_mat)
 	_hand = Node3D.new()
 	_hand.position = Vector3(0.42, 0.6, 0.14)
 	_model.add_child(_hand)
-	_gear = Node3D.new()
-	_model.add_child(_gear)
-	if is_player:                      # a tall banner in the player's colour, so you can tell who is who
-		_banner = Node3D.new()
-		_model.add_child(_banner)
-		Build.box(_banner, Vector3(0.06, 2.7, 0.06), Vector3(-0.3, 0.55, -0.27), Color("5b4130"))
-		Build.box(_banner, Vector3(1.0, 0.7, 0.06), Vector3(0.22, 2.55, -0.27), tunic)
-		Build.box(_banner, Vector3(0.9, 0.1, 0.07), Vector3(0.22, 2.5, -0.27), tunic.lightened(0.4))
-	hold(0)
+	_held_mi = MeshInstance3D.new()
+	_held_mi.material_override = _held_mat
+	_hand.add_child(_held_mi)
+	_gear = Node3D.new(); _model.add_child(_gear)
+	_carry = Node3D.new(); add_child(_carry)
+	_bar = Node3D.new(); add_child(_bar); _bar.visible = false; _bar.top_level = true
+	var bg := MeshInstance3D.new(); var q := QuadMesh.new(); q.size = Vector2(1, 0.26); bg.mesh = q
+	bg.material_override = _bar_material(Color(0.14, 0.1, 0.1)); _bar.add_child(bg)
+	_bar_fill = MeshInstance3D.new(); var q2 := QuadMesh.new(); q2.size = Vector2(1, 0.14); _bar_fill.mesh = q2
+	_bar_mat = _bar_material(Color(0.56, 0.78, 0.36)); _bar_fill.material_override = _bar_mat; _bar.add_child(_bar_fill)
+	_bar_fill.position.z = 0.01
 
 
-## Where the rules say it is. The figure eases towards it, so a 30-a-second rule step still looks smooth.
-func place(x: float, z: float, r: float, snap: bool = false) -> void:
-	_want = Vector3(x, 0, z)
-	if _first or snap or position.distance_to(_want) > 6.0:
-		position = _want
-		_first = false
-	facing = r
+static func _mat(c: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = c
+	m.roughness = 1.0
+	m.metallic_specular = 0.15
+	return m
 
 
-func swing() -> void:
-	_jab = 1.0
-
-func hit() -> void:
-	_flash = 1.0
-
-
-## What it holds (an item number from D.IT, or -1 for nothing) and wears.
-func hold(id: int) -> void:
-	if id == _held:
-		return
-	_held = id
-	for c in _hand.get_children(): c.queue_free()
-	if id < 0:
-		return
-	var I: Dictionary = D.IT[id]
-	var tint := Color(I.tint[0], I.tint[1], I.tint[2]) if I.tier == "relic" else Color.WHITE
-	var wood := Color("8b6b47") * tint
-	var iron := Color("70757f") * tint
-	var h := _hand
-	match I.pool:
-		"fork":
-			Build.box(h, Vector3(0.07, 1.75, 0.07), Vector3(0, -0.55, 0), wood)
-			Build.box(h, Vector3(0.36, 0.06, 0.06), Vector3(0, 1.2, 0), iron)
-			for x in [-0.15, 0.0, 0.15]: Build.box(h, Vector3(0.05, 0.32, 0.05), Vector3(x, 1.22, 0), iron)
-		"sword":
-			Build.box(h, Vector3(0.08, 0.3, 0.08), Vector3(0, -0.1, 0), Color("4a3a2c"))
-			Build.box(h, Vector3(0.3, 0.06, 0.08), Vector3(0, 0.2, 0), iron)
-			Build.box(h, Vector3(0.1, 0.95, 0.04), Vector3(0, 0.26, 0), Color("c9ccd4") * tint)
-		"spear":
-			Build.box(h, Vector3(0.07, 2.3, 0.07), Vector3(0, -0.7, 0), wood)
-			Build.cone(h, 0.09, 0.4, Vector3(0, 1.6, 0), iron, 4)
-		"mace":
-			Build.box(h, Vector3(0.08, 0.95, 0.08), Vector3(0, -0.2, 0), wood)
-			Build.box(h, Vector3(0.26, 0.26, 0.26), Vector3(0, 0.72, 0), iron)
-		"bill":
-			Build.box(h, Vector3(0.07, 2.1, 0.07), Vector3(0, -0.6, 0), wood)
-			Build.box(h, Vector3(0.3, 0.42, 0.05), Vector3(0.1, 1.3, 0), iron)
-		"hammer":
-			Build.box(h, Vector3(0.08, 1.3, 0.08), Vector3(0, -0.35, 0), wood)
-			Build.box(h, Vector3(0.5, 0.26, 0.26), Vector3(0, 0.92, 0), iron)
-		"club":
-			Build.cyl(h, 0.14, 0.06, 1.0, Vector3(0, -0.2, 0), Color("6b4a2f"), 6)
-		"spade":
-			Build.box(h, Vector3(0.07, 1.5, 0.07), Vector3(0, -0.5, 0), wood)
-			Build.box(h, Vector3(0.3, 0.38, 0.04), Vector3(0, 0.95, 0), iron)
-		"rake":
-			Build.box(h, Vector3(0.06, 1.9, 0.06), Vector3(0, -0.6, 0), wood)
-			Build.box(h, Vector3(0.5, 0.06, 0.06), Vector3(0, 1.3, 0), wood)
-		"scythe":
-			Build.box(h, Vector3(0.07, 1.9, 0.07), Vector3(0, -0.6, 0), wood)
-			Build.box(h, Vector3(0.9, 0.1, 0.03), Vector3(0.4, 1.25, 0), iron, 0, 0, -0.25)
-		"dagger":
-			Build.box(h, Vector3(0.06, 0.45, 0.03), Vector3(0, 0.02, 0), Color("c9ccd4"))
-		"pan":
-			Build.box(h, Vector3(0.06, 0.5, 0.06), Vector3(0, -0.05, 0), Color("2e2a28"))
-			Build.cyl(h, 0.24, 0.22, 0.08, Vector3(0, 0.55, 0), Color("2e2a28"), 10, 0, PI / 2)
-		"sling":
-			Build.box(h, Vector3(0.03, 0.55, 0.03), Vector3(0, -0.1, 0), Color("a08562"))
-		"bow":
-			Build.box(h, Vector3(0.06, 1.5, 0.06), Vector3(0, -0.25, 0.12), wood, 0, 0.12)
-			Build.box(h, Vector3(0.02, 1.45, 0.02), Vector3(0, -0.22, 0), Color("e8e0c8"))
-		"xbow":
-			Build.box(h, Vector3(0.1, 0.1, 0.8), Vector3(0, 0.1, 0.2), wood)
-			Build.box(h, Vector3(0.8, 0.07, 0.07), Vector3(0, 0.12, 0.5), iron)
+static func _bar_material(c: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.no_depth_test = true
+	m.render_priority = 2
+	m.albedo_color = c
+	return m
 
 
-func wear(head: int, body: int, off: int, trk: int, bodies: int) -> void:
-	var sig := "%d|%d|%d|%d|%d" % [head, body, off, trk, bodies]
-	if sig == _gear_sig:
-		return
+func _mi(parent: Node3D, mesh: String, m: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = Models.get_mesh(mesh)
+	mi.material_override = m
+	parent.add_child(mi)
+	return mi
+
+
+func _counts(ac: int, hc: int, cc: int) -> Array:   # [swung, was hit, worked] since last time
+	var out := [ac != _seen[0] and _seen[0] >= 0, hc != _seen[1] and _seen[1] >= 0, cc != _seen[2] and _seen[2] >= 0]
+	_seen = [ac, hc, cc]
+	return out
+
+
+func _place(x: float, z: float, r: float, snap: bool) -> void:
+	if _first or snap or Vector2(x - _x, z - _z).length() > 6:
+		_x = x; _z = z; _r = r; _first = false
+	_x = x; _z = z; _r = r
+
+
+## Show a player, as the rules have them now.
+func player(p: E.Player, is_me: bool) -> void:
+	visible = p.state != "inn" and p.state != "hide"
+	_place(p.x, p.z, p.r, false)
+	var kind: String = D.GK[p.gk] if p.gk < D.GK.size() else ""
+	var c := _counts(p.ac, p.hc, p.cc)
+	if c[2] and p.state != "inn": _work_fx(kind if kind != "" else "tree")
+	if c[0]: _atk = 1.0
+	if c[2]: _atk = 1.0
+	if c[1] and p.state != "dead":
+		_flash = 1.0
+		if fx: fx.puff(p.x, 1, p.z, 3, fx.C_BLOOD, 2)
+	var tint := Color(D.PCOL[p.col % 8])
+	_down = p.state == "down" or p.state == "dead"
+	_dim = 0.6 if p.state == "dead" else 1.0
+	_tunic_mat.albedo_color = tint
+	_banner_mat.albedo_color = tint
+	_wobble = p.hang > 0
+	_set_work(kind)
+	_set_held(p.wpn, (p.bless & 1) != 0)
+	_set_gear([p.head, p.body, p.off, p.trk])
+	_set_carry(p.bodies, p.bbod)
+	if fx:
+		var dt := get_process_delta_time()
+		if p.charge > 0 and randf() < dt * 30: fx.puff(p.x, 0.3, p.z, 1, fx.C_ALE, 1.5)
+		if ((p.bless & 1) or D.IT[p.wpn].holy) and p.state == "ok" and randf() < dt * 3: fx.puff(p.x + sin(p.r) * 0.6, 1.9, p.z + cos(p.r) * 0.6, 1, fx.C_HOLY, 0.4)
+		if p.parry > 0 and randf() < dt * 14: fx.puff(p.x + sin(p.r) * 0.7, 1.2, p.z + cos(p.r) * 0.7, 1, fx.C_SPARK, 0.8)
+	var mx := Rules.max_hp(p)
+	if p.state == "down":
+		_show_bar(1.4, 1.3, p.downT / (30.0 if Rules.rk(p, 9) >= 5 else 15.0), Color(0.86, 0.36, 0.26))
+	elif p.hp < mx and p.state == "ok" and not is_me:
+		_show_bar(2.5, 1.1, p.hp / mx, Color(0.56, 0.78, 0.36))
+	else:
+		_bar.visible = false
+	_model.scale = Vector3.ONE * 1.2
+
+
+## Show a villager, one of a posse, or a body. own is their leader, or null.
+func peasant(q: E.Peasant, own: E.Player) -> void:
+	visible = q.state != "gone" and q.state != "inn"
+	_place(q.x, q.z, q.r, false)
+	var kind := ""
+	if q.state == "chop" and own:
+		kind = D.GK[own.gk] if own.gk > 0 else own.workK
+		if kind == "fish" or kind == "search": kind = ""
+	var c := _counts(q.ac, q.hc, -1)
+	if c[0]:
+		_atk = 1.0
+		if q.state == "chop": _work_fx(kind if kind != "" else "tree")
+	if c[1]:
+		_flash = 1.0
+		if fx and q.state != "body": fx.puff(q.x, 1, q.z, 3, fx.C_BLOOD, 2)
+	_down = q.state == "body"
+	_dim = 0.6 if _down else 1.0
+	_tunic_mat.albedo_color = CORPSE if _down else Color(D.PCOL[own.col % 8]) if own else Color(0.72, 0.62, 0.46)
+	_wobble = false
+	_set_work(kind)
+	_set_held(2 if q.armed else 0, false)
+	_set_gear([])
+	if q.hp < D.PEASANT_HP and not _down:
+		_show_bar(2.1, 0.9, q.hp / D.PEASANT_HP, Color(0.56, 0.78, 0.36))
+	else:
+		_bar.visible = false
+	if fx and q.nv < 45 and not _down and q.state != "hide" and randf() < get_process_delta_time() * 5:
+		fx.puff(q.x, 2, q.z, 1, fx.C_SPLASH, 0.8)            # sweating
+	_model.scale = Vector3.ONE
+
+
+var _down := false
+var _bar_y := 2.0
+var _dim := 1.0
+var _wobble := false
+
+
+func _show_bar(y: float, w: float, frac: float, col: Color) -> void:
+	_bar.visible = true
+	_bar_y = y
+	var f := clampf(frac, 0, 1)
+	_bar.get_child(0).scale = Vector3(w + 0.12, 1, 1)
+	_bar_fill.scale = Vector3(maxf(0.02, w * f), 1, 1)
+	_bar_fill.position.x = -(w - w * f) / 2.0
+	_bar_mat.albedo_color = col
+
+
+func _set_work(kind: String) -> void:
+	_tool = kind
+
+
+func _set_held(id: int, holy: bool) -> void:
+	var pool: String = D.IT[id].pool
+	if _tool == "fish": pool = "rod"
+	elif _tool != "" and _tool != "food" and _tool != "search": pool = "axe"
+	if pool != _held:
+		_held = pool
+		_held_mi.mesh = Models.get_mesh(pool)
+	var t: Array = D.IT[id].tint
+	_held_mat.albedo_color = HOLYT if holy else Color(t[0], t[1], t[2]) if pool != "axe" and pool != "rod" else Color.WHITE
+	_held_swing = (D.IT[id].swing or pool == "sling") and pool != "axe"
+	if pool == "axe": _held_swing = true
+	_held_pool = pool
+
+
+var _held_swing := false
+var _held_pool := ""
+
+
+func _set_gear(ids: Array) -> void:
+	var sig := str(ids)
+	if sig == _gear_sig: return
 	_gear_sig = sig
 	for c in _gear.get_children(): c.queue_free()
-	var tint := func(id: int, base: Color) -> Color:
+	for id in ids:
+		if id < 0: continue
 		var t: Array = D.IT[id].tint
-		return base * Color(t[0], t[1], t[2])
-	if head >= 0:
-		Build.cyl(_gear, 0.26, 0.28, 0.24, Vector3(0, 1.27, 0.02), tint.call(head, Color.WHITE), 8)
-	if body >= 0:
-		Build.box(_gear, Vector3(0.7, 0.5, 0.46), Vector3(0, 0.52, 0), tint.call(body, Color.WHITE))
-	if off >= 0:
-		Build.cyl(_gear, 0.36, 0.36, 0.08, Vector3(-0.48, 0.75, 0.12), tint.call(off, Color.WHITE), 10, PI / 2, PI / 2)
-	if trk >= 0:
-		Build.cyl(_gear, 0.18, 0.14, 0.3, Vector3(-0.46, 0.25, 0.1), tint.call(trk, Color.WHITE), 7)
-	for i in bodies:
-		Build.box(_gear, Vector3(0.55, 0.3, 0.3), Vector3(0, 0.75 + i * 0.28, -0.4), Color("b8b09a"), i * 0.5)
+		var mi := _mi(_gear, Models.gear_pool(id), _mat(Color(t[0], t[1], t[2])))
+		mi.set_meta("slot", D.IT[id].s)
+
+
+func _set_carry(n: int, blessed: int) -> void:   # bodies carried on the back, the blessed ones paler
+	var sig := "%d|%d" % [n, blessed]
+	if sig == _carry_sig: return
+	_carry_sig = sig
+	for c in _carry.get_children(): c.queue_free()
+	for i in n:
+		var b := Node3D.new()
+		_carry.add_child(b)
+		b.position = Vector3(0, 1.75 + i * 0.36, -0.25)
+		b.rotation = Vector3(-1.45, PI / 2, 0)
+		b.scale = Vector3.ONE * 0.9
+		_mi(b, "body", _mat(Color(0.6, 0.6, 0.6)))
+		_mi(b, "tunic", _mat(Color(1.1, 1.05, 0.75) if i < blessed else CORPSE))
+
+
+func _work_fx(kind: String) -> void:   # a blow landed on a tree, a rock, the ore, or the turnips
+	if fx == null or kind == "fish": return
+	var x := _x + sin(_r) * 0.9
+	var z := _z + cos(_r) * 0.9
+	match kind:
+		"tree": fx.puff(_x + sin(_r) * 1.2, 1, _z + cos(_r) * 1.2, 4, fx.C_WOOD, 2.5); get_parent().shake_tree_near(_x, _z)
+		"search": fx.puff(x, 0.4, z, 4, fx.C_DUST, 2.2)
+		"stone": fx.puff(x, 0.6, z, 3, fx.C_STONE, 2)
+		"iron": fx.puff(x, 0.6, z, 3, fx.C_IRON, 2)
+		_: fx.puff(x, 0.6, z, 3, fx.C_FOOD, 2)
 
 
 func _process(delta: float) -> void:
 	var before := position
-	position = position.lerp(_want, minf(1.0, delta * 14.0))
+	var want := Vector3(_x, 0, _z)
+	position = want if before.distance_to(want) > 6 else before.lerp(want, minf(1.0, delta * 14.0))
 	var sp := (position - before).length() / maxf(delta, 1e-4)
-	moving = lerpf(moving, minf(1.0, sp / 2.2), minf(1.0, delta * 9.0))
-	_jab = maxf(0.0, _jab - delta * 4.2)
-	_flash = maxf(0.0, _flash - delta * 6.0)
-	_fall = lerpf(_fall, 1.0 if down else 0.0, minf(1.0, delta * 9.0))
-	if moving > 0.06:
-		_walk += delta * (5.0 + sp * 1.5)
-	var swing_ := sin(_walk) * 0.7 * moving
+	_mv = lerpf(_mv, minf(1.0, sp / 2.2), minf(1.0, delta * 9.0))
+	if _mv > 0.06: _walk += delta * (5.0 + sp * 1.5)
+	_atk = maxf(0.0, _atk - delta * 4.2)
+	_flash = maxf(0.0, _flash - delta * 7.0)
+	_fall = lerpf(_fall, 1.0 if _down else 0.0, minf(1.0, delta * 9.0))
+	var now := Time.get_ticks_msec() / 1000.0
+	var stoop := 0.5 + sin(now / 0.18 + get_instance_id()) * 0.12 if _tool == "food" or _tool == "search" else 0.0
+	var wob := sin(now / 0.17) * 0.22 if _wobble else 0.0
+	var swing_ := sin(_walk) * 0.7 * _mv
 	_leg_l.rotation.x = swing_
 	_leg_r.rotation.x = -swing_
-	_model.rotation = Vector3(-1.45 * _fall, lerp_angle(_model.rotation.y, facing, minf(1.0, delta * 16.0)), sin(_walk) * 0.07 * moving)
-	_model.position.y = absf(sin(_walk)) * 0.14 * moving + _fall * 0.2
-	var s := sin(_jab * PI)
-	_hand.position.z = 0.14 + s * 0.55
-	_hand.rotation.x = 0.12 + s * 1.4
-	_hand.visible = not down
-	_tunic_mat.albedo_color = tunic.lerp(Color.WHITE, _flash * 0.8).darkened(0.35 * _fall)
+	rotation.y = lerp_angle(rotation.y, _r, minf(1.0, delta * 16.0))
+	_model.rotation = Vector3(-1.45 * _fall + stoop, 0, sin(_walk) * 0.07 * _mv + wob)
+	_model.position.y = absf(sin(_walk)) * 0.14 * _mv + _fall * 0.2
+	var f := (1.0 + _flash * 1.2) * _dim
+	_body_mat.albedo_color = Color(f, f, f)
+	_hand.visible = not _down and stoop == 0.0
+	for g in _gear.get_children():                       # a body on the ground keeps its hat and its coat
+		var s: String = g.get_meta("slot")
+		g.visible = not _down or s == "h" or s == "b"
+	# the hand: a jab, a swing, a bow held out, or a rod held still
+	var s2 := sin(_atk * PI)
+	if _held_pool == "rod":
+		_hand.position = Vector3(0.42, 0.7, 0.2); _hand.rotation = Vector3(1.15 + sin(now / 0.5) * 0.04, 0, 0)
+	elif _held_pool == "axe":
+		_hand.position = Vector3(0.42, 0.62, 0.16); _hand.rotation = Vector3(-1.0 + (1.0 - _atk) * 2.4 if _atk > 0 else 0.3, 0, 0)
+	elif _held_pool == "bow":
+		_hand.position = Vector3(0.36, 0.72, 0.42 - s2 * 0.12); _hand.rotation = Vector3(0.12, 0, 0)
+	elif _held_pool == "xbow":
+		_hand.position = Vector3(0.3, 0.62, 0.2 - s2 * 0.14); _hand.rotation = Vector3(-s2 * 0.2, 0, 0)
+	else:
+		_hand.position = Vector3(0.42, 0.6, 0.14 + s2 * (0.25 if _held_swing else 0.55))
+		_hand.rotation = Vector3(0.12 + s2 * (1.7 if _held_swing else 1.4), -s2 * 0.9 if _held_swing else 0.0, 0)
+	_carry.visible = not _down
+	_bar.global_position = global_position + Vector3(0, _bar_y, 0)

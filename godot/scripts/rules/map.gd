@@ -100,8 +100,8 @@ static func trees() -> Array:
 static var _ruin_key := ""
 static var _ruin_now := {}
 
-static func ruin_layout(seed: int, day: int) -> Dictionary:   # the same on every computer, from the game's seed and the day
-	var key := str(seed) + ":" + str(day)
+static func ruin_layout(game_seed: int, day: int) -> Dictionary:   # the same on every computer, from the game's seed and the day
+	var key := str(game_seed) + ":" + str(day)
 	if key == _ruin_key:
 		return _ruin_now
 	var rub := []
@@ -110,7 +110,7 @@ static func ruin_layout(seed: int, day: int) -> Dictionary:   # the same on ever
 	for side in [1, 2]:
 		var R: Dictionary = D.RUINS[side]
 		var rng := RandomNumberGenerator.new()
-		rng.seed = seed * 31 + day * 977 + side * 131
+		rng.seed = game_seed * 31 + day * 977 + side * 131
 		var n := 8 + rng.randi_range(0, 4)
 		for i in n:
 			var tall := rng.randf() < 0.25

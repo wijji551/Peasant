@@ -7,13 +7,13 @@ var R: Rules
 var m: E.Player
 var keys := {}
 var clock := 0.0
-var log := []
+var lines := []
 var saved = null
 const STEP := 1.0 / 30.0
 
 
 func ok(name: String, cond: bool, extra = null) -> void:
-	log.append(("PASS " if cond else "FAIL ") + name + ("" if extra == null else "  [" + str(extra) + "]"))
+	lines.append(("PASS " if cond else "FAIL ") + name + ("" if extra == null else "  [" + str(extra) + "]"))
 
 func tick() -> void:
 	clock += STEP
@@ -42,17 +42,17 @@ func at(x: float, z: float) -> void:
 
 func hold(sec: float, stop: Callable = Callable()) -> void:
 	keys.interact = true
-	fast(sec, func(): return false if stop.is_valid() and stop.call() else null)
+	fast(sec, func(): return not (stop.is_valid() and stop.call()))
 	keys.interact = false
 	fast(0.1)
 
 func clear_u() -> void:
 	R.undead.clear()
 
-func mob(n: int, k: int = 0, dist: float = 1.6) -> Array:
+func mob(n: int, k: int = 0, away: float = 1.6) -> Array:
 	var a := []
 	for i in n:
-		var u := R.spawn_undead(k, m.x + sin(m.r) * dist + (i - (n - 1) / 2.0) * 0.7, m.z + cos(m.r) * dist)
+		var u := R.spawn_undead(k, m.x + sin(m.r) * away + (i - (n - 1) / 2.0) * 0.7, m.z + cos(m.r) * away)
 		u.state = "walk"; u.t = 0
 		a.append(u)
 	return a
@@ -70,9 +70,9 @@ func _init() -> void:
 	R.new_game([{"id": 1, "name": "Matt", "col": 0}])
 	m = R.players[0]
 	run()
-	for l in log: print(l)
-	var fails := log.filter(func(l): return not l.begins_with("PASS")).size()
-	print("\n%d passed, %d failed" % [log.size() - fails, fails])
+	for l in lines: print(l)
+	var fails := lines.filter(func(l): return not l.begins_with("PASS")).size()
+	print("\n%d passed, %d failed" % [lines.size() - fails, fails])
 	quit(1 if fails else 0)
 
 
@@ -108,7 +108,7 @@ func run() -> void:
 	at(60, -8); keys.up = true; fast(0.2); keys.up = false; ok("walking out of the outcrop pushes you clear", not Rules.in_box(m.x, m.z, 0.3, R.QUARRY), "%.1f,%.1f" % [m.x, m.z])
 
 	# ---------- searching the ruins
-	var RL := Map.ruin_layout(R.seed, R.day)
+	var RL := Map.ruin_layout(R.gseed, R.day)
 	ok("eight heaps of rubble to search", RL.spots.size() == 8 and R.spots.all(func(n): return n == 2))
 	at(RL.spots[0].x + 0.8, RL.spots[0].z)
 	var si = X.find_interact(m); ok("prompt to search the old ruins", si != null and si.type == "search" and si.ok, si.label if si else null)
@@ -129,9 +129,9 @@ func run() -> void:
 	ok("armour found goes straight on", m.head >= 0 or m.body >= 0 or m.off >= 0, [m.head, m.body, m.off])
 	ok("relics are rare by day", R.relics.size() <= 14, R.relics.size())
 	var spots1: Array = RL.spots.duplicate(true)
-	var l2 := Map.ruin_layout(R.seed, 2)
+	var l2 := Map.ruin_layout(R.gseed, 2)
 	ok("the outer ruins are different tomorrow, the old ruins the same", l2.spots[0].x == spots1[0].x and (l2.spots[3].x != spots1[3].x or l2.spots[3].z != spots1[3].z))
-	Map.ruin_layout(R.seed, R.day)
+	Map.ruin_layout(R.gseed, R.day)
 
 	# ---------- pack, arms rack, forge
 	m.inv = [6, 10]; m.wpn = 0; m.head = -1; m.body = -1; m.off = -1; m.trk = -1; R.relics.clear()
@@ -149,14 +149,14 @@ func run() -> void:
 	var res := []
 	for id in 18:
 		clear_u(); m.wpn = id; m.abCd = 0; m.atkCd = 0; m.r = 0; m.parry = 0
-		var us := mob(3, 0, 6.0 if D.IT[id].rng else 1.5)
-		var hp0 := us.map(func(u): return u.hp)
+		var ms := mob(3, 0, 6.0 if D.IT[id].rng else 1.5)
+		var hp0 := ms.map(func(u): return u.hp)
 		X.do_ability(m)
 		var hurt := 0
 		var st := 0
 		for i in 3:
-			if us[i].hp < hp0[i] or us[i].dead: hurt += 1
-			if us[i].stun > 0 or us[i].pin > 0 or us[i].vuln > 0 or us[i].tauntT > 0: st += 1
+			if ms[i].hp < hp0[i] or ms[i].dead: hurt += 1
+			if ms[i].stun > 0 or ms[i].pin > 0 or ms[i].vuln > 0 or ms[i].tauntT > 0: st += 1
 		res.append("%s:%d/%d%s" % [D.IT[id].ab, hurt, st, "P" if m.parry > 0 else ""])
 		if not (hurt > 0 or st > 0 or m.parry > 0) or not (m.abCd > 0): ok("trick of " + D.IT[id].n, false, res[-1])
 	ok("all eighteen weapons have a working trick", true, " ".join(res))
@@ -223,13 +223,13 @@ func run() -> void:
 		q.owner = m.id; q.state = "follow"
 	fast(0.5)
 	ok("posse of four", m.posse == 4, m.posse)
-	X.do_order(m); ok("orders: hold", m.ord == 1)
+	X.do_order(m); ok("orders: hold", m.order == 1)
 	var q0: E.Peasant = R.peasants[0]
 	var px := q0.x
 	var pz := q0.z
 	at(-7.5, -16); fast(4)
 	ok("a holding posse stays where it was put", Vector2(q0.x - px, q0.z - pz).length() < 1.5, "%.1f" % Vector2(q0.x - px, q0.z - pz).length())
-	X.do_order(m); X.do_order(m); ok("orders cycle back to follow", m.ord == 0)
+	X.do_order(m); X.do_order(m); ok("orders cycle back to follow", m.order == 0)
 	fast(6)
 	ok("a following posse comes along", dist(q0, m) < 7, "%.1f" % dist(q0, m))
 	m.r = PI
@@ -279,7 +279,7 @@ func run() -> void:
 	fast(11); ok("which passes", m.hang == 0)
 	at(-13.1, -4.7); X.do_act(m, "innin"); ok("back inside", m.state == "inn")
 	var du := X.spawn_undead(0, -8.0, -4.7)
-	du.state = "walk"; fast(40, func(): return false if R.innHp <= 0 else null)
+	du.state = "walk"; fast(40, func(): return not (R.innHp <= 0))
 	ok("the dead break the door down and everyone is thrown out", R.innHp == 0 and m.state == "ok", "%d %s" % [R.innHp, m.state])
 	clear_u()
 	X.do_act(m, "innin"); ok("no going back in tonight", m.state == "ok")
@@ -287,20 +287,20 @@ func run() -> void:
 	# ---------- dawn: trees, sites, relics dropped
 	var tr0: E.Trunk = R.trees.filter(func(t): return t.alive and t.x < -34)[0]
 	at(tr0.x + 1.4, tr0.z); m.wood = 0; R.phase = "night"
-	var tr: E.Trunk = X.find_interact(m).target
-	hold(30, func(): return not tr.alive); ok("a felled tree leaves a stump", tr.st == 1 and not tr.alive)
-	var tx0 := tr.x
-	var tz0 := tr.z
+	var felled: E.Trunk = X.find_interact(m).target
+	hold(30, func(): return not felled.alive); ok("a felled tree leaves a stump", felled.st == 1 and not felled.alive)
+	var tx0 := felled.x
+	var tz0 := felled.z
 	m.inv = [15, 6]; m.wpn = 17; m.trk = -1; R.relics = [15, 17]; m.state = "dead"
 	var sites0: Array = R.sites.duplicate()
-	var key0 := str(Map.ruin_layout(R.seed, R.day).spots.slice(2))
+	var key0 := str(Map.ruin_layout(R.gseed, R.day).spots.slice(2))
 	R.night.q = []; clear_u(); fast(1)
 	ok("dawn of day 2", R.day == 2 and R.phase == "day", "%d %s" % [R.day, R.phase])
 	ok("a dead player loses gear but relics lie where they fell", m.wpn == 0 and m.inv.is_empty() and R.drops.size() == 2 and R.drops.all(func(x): return D.IT[x.it].tier == "relic"))
-	ok("the stump has rotted and a sapling has come up beside it", tr.st == 2 and not tr.alive and (tr.x != tx0 or tr.z != tz0 or (not tr.dx and not tr.dz)), "%d moved %.1f" % [tr.st, Vector2(tr.x - tx0, tr.z - tz0).length()])
+	ok("the stump has rotted and a sapling has come up beside it", felled.st == 2 and not felled.alive and (felled.x != tx0 or felled.z != tz0 or (not felled.dx and not felled.dz)), "%d moved %.1f" % [felled.st, Vector2(felled.x - tx0, felled.z - tz0).length()])
 	ok("stone, iron and fishing have all moved", R.sites != sites0 and range(3).all(func(i): return R.sites[i] != sites0[i]), "%s -> %s" % [sites0, R.sites])
 	ok("today’s sites are where the game says", R.QUARRY.x == D.SITES[0][R.sites[0]].x and R.JETTY.x == D.SITES[2][R.sites[2]].x)
-	ok("the outer ruins fell down differently, and the heaps are full again", str(Map.ruin_layout(R.seed, R.day).spots.slice(2)) != key0 and R.spots.all(func(n): return n == 2))
+	ok("the outer ruins fell down differently, and the heaps are full again", str(Map.ruin_layout(R.gseed, R.day).spots.slice(2)) != key0 and R.spots.all(func(n): return n == 2))
 	ok("dawn notice says where things are", " ".join(R.dawn.lines).contains("stone is"), R.dawn.lines[-1])
 	ok("the posse lines up outside the door, not in the keep", not R.peasants.any(func(q): return q.state != "body" and in_keep(q)))
 	at(R.drops[0].x, R.drops[0].z + 0.5); hold(1, func(): return R.drops.size() < 2); ok("a relic can be picked up again", R.drops.size() == 1 and (m.wpn >= 15 or m.inv.size() == 1))
@@ -315,9 +315,9 @@ func run() -> void:
 	var skip := func():
 		X.dusk_falls(); fast(21); R.night.q = []; clear_u(); fast(1)
 	skip.call()
-	var d3 := tr.st
+	var d3 := felled.st
 	skip.call()
-	ok("the sapling is a tree again by day 3 or 4", tr.st == 0 and tr.alive and R.day == 4, "day 3: %d, day 4: %d" % [d3, tr.st])
+	ok("the sapling is a tree again by day 3 or 4", felled.st == 0 and felled.alive and R.day == 4, "day 3: %d, day 4: %d" % [d3, felled.st])
 
 	# ---------- the horde
 	var tot := func(dd: int, n: int) -> int:
@@ -333,7 +333,7 @@ func run() -> void:
 	var nq := X.night_queue(Rules.night_plan(5, 4))
 	var gaps := []
 	for i in range(1, nq.size()): gaps.append(nq[i].t - nq[i - 1].t)
-	var third := gaps.size() / 3
+	var third := floori(gaps.size() / 3.0)
 	var avg := func(a: Array) -> float:
 		var s := 0.0
 		for v in a: s += v
@@ -350,8 +350,8 @@ func run() -> void:
 		if q.state != "body": q.state = "gone"
 	var ar := X.spawn_undead(2, 6.0, -30.0)
 	ar.state = "walk"
-	var t := fast(900, func(): return false if R.phase != "night" else null)
-	ok("with everyone dead, the night is settled quickly", R.phase == "lost" and t < 200, "%s after %ds" % [R.phase, t])
+	var took := fast(900, func(): return not (R.phase != "night"))
+	ok("with everyone dead, the night is settled quickly", R.phase == "lost" and took < 200, "%s after %ds" % [R.phase, took])
 	R.phase = "day"; R.timeLeft = 300; R.keepHp = 1000; m.state = "ok"; clear_u()
 	# a lurker from the west ruins must find its way to the keep
 	at(80, 40); m.state = "hide"

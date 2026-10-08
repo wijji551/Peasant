@@ -67,11 +67,11 @@ func _ready() -> void:
 	_label(hv, "YOUR HEALTH", 13)
 	_hp_bar = _bar(hv, Color("a8362c"))
 
-	var tr := _chip(root)
-	_pin(tr, Control.PRESET_TOP_RIGHT, -330, 12, -14, 12)
-	tr.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	var top_right := _chip(root)
+	_pin(top_right, Control.PRESET_TOP_RIGHT, -330, 12, -14, 12)
+	top_right.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	var rv := VBoxContainer.new()
-	tr.add_child(rv)
+	top_right.add_child(rv)
 	_res = _label(rv, "", 15)
 	_chips = _label(rv, "", 13)
 	_chips.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

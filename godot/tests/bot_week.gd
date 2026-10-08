@@ -20,8 +20,8 @@ func _init() -> void:
 	R = Rules.new()
 	R.new_game([{"id": 1, "name": "Bot", "col": 0}])
 	me = R.players[0]
-	var log := run()
-	for l in log: print(l)
+	var lines := run()
+	for l in lines: print(l)
 	quit()
 
 
@@ -63,7 +63,7 @@ func go(x: float, z: float) -> void:
 
 func hold(sec: float, stop: Callable = Callable()) -> void:
 	keys.interact = true
-	fast(sec, func(): return false if (stop.is_valid() and stop.call()) or not day_ok() else null)
+	fast(sec, func(): return not ((stop.is_valid() and stop.call()) or not day_ok()))
 	keys.interact = false
 	fast(0.1)
 
@@ -116,6 +116,11 @@ func fight() -> Dictionary:
 		var m := me
 		if R.phase != "night": return false
 		st.t += STEP
+		if st.t > 300 and not st.has("told"):         # a long night: say where the last of the dead are
+			st.told = true
+			print("LONG NIGHT %d: " % R.day, R.undead.map(func(u): return "%d:%s@%.1f,%.1f hp%d cd%.1f taunt%.1f" % [u.k, u.state, u.x, u.z, u.hp, u.cd, u.tauntT]), " to rise ", R.night.q.size(), " me@%.1f,%.1f %s hp%d" % [me.x, me.z, me.state, me.hp],
+				" posse ", R.peasants.filter(func(q): return q.owner == me.id).map(func(q): return "%s@%.1f,%.1f hp%d" % [q.state, q.x, q.z, q.hp]),
+				" structs ", R.structs.filter(func(s): return s.slot < 0 or s.built).map(func(s): return "%s@%.0f,%.0f hp%d" % [s.k, s.x, s.z, s.hp]))
 		st.min = minf(st.min, m.hp if m.state == "ok" else 0.0)
 		if m.state != "ok": return null
 		if m.hp < 55 and m.food > 0: R.do_eat(m)
@@ -147,7 +152,7 @@ func fight() -> Dictionary:
 
 
 func run() -> Array:
-	var log := []
+	var lines := []
 	var n := 1
 	while n <= 7 and R.phase == "day":
 		var did := []
@@ -201,21 +206,21 @@ func run() -> Array:
 		var t_used := roundi(360 - R.timeLeft)
 		me.ready = true; fast(0.3); fast(21, func(): return R.phase == "dusk")
 		if R.phase != "night":
-			log.append("day %d: did not reach night, phase %s" % [n, R.phase]); break
+			lines.append("day %d: did not reach night, phase %s" % [n, R.phase]); break
 		me.x = 0; me.z = -19
 		var plan := "%s over %ds" % ["/".join(R.night.c.map(func(v): return str(v))), R.night.dur]
 		var p0 := posse()
 		var keep0 := R.keepHp
-		var r := fight()
+		var res_ := fight()
 		var north := ""
 		for s in slots(): north += ("S" if s.re else "w") if s.built else "_"
-		log.append("night %d: %s in %ds | horde %s | day took %ds: %s | posse %d->%d | player low %d %s food %d | keep %d->%d | north %s | %s, wpn %d armour %d/%d/%d books %s" % [
-			n, "held" if R.phase == "day" or R.phase == "won" else R.phase.to_upper(), roundi(r.t), plan, t_used, ", ".join(did) if did.size() else "-",
-			p0, posse(), roundi(r.min), "" if me.state == "ok" else "(" + me.state + ")", me.food, roundi(keep0), roundi(R.keepHp), north,
+		lines.append("night %d: %s in %ds | horde %s | day took %ds: %s | posse %d->%d | player low %d %s food %d | keep %d->%d | north %s | %s, wpn %d armour %d/%d/%d books %s" % [
+			n, "held" if R.phase == "day" or R.phase == "won" else R.phase.to_upper(), roundi(res_.t), plan, t_used, ", ".join(did) if did.size() else "-",
+			p0, posse(), roundi(res_.min), "" if me.state == "ok" else "(" + me.state + ")", me.food, roundi(keep0), roundi(R.keepHp), north,
 			me.dn, me.wpn, me.head, me.body, me.off, "".join(me.books.map(func(v): return str(v)))])
 		if R.phase != "day": break
 		n += 1
 	if R.phase == "night":
-		log.append("STUCK NIGHT: undead %d, still to rise %d" % [R.undead.size(), R.night.q.size()])
-	log.append("end: %s day %d, kills %d, peasants lost %d" % [R.phase, R.day, R.stats.kills, R.stats.lost])
-	return log
+		lines.append("STUCK NIGHT: undead %d, still to rise %d" % [R.undead.size(), R.night.q.size()])
+	lines.append("end: %s day %d, kills %d, peasants lost %d" % [R.phase, R.day, R.stats.kills, R.stats.lost])
+	return lines

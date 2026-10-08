@@ -1,113 +1,106 @@
 extends Node3D
-## One of the dead on screen: a shambler, a skeleton, a skeleton archer or the Steward.
-## Like the peasants, it only shows what the rules say.
+## The dead on screen. Two hundred of them at once is normal by the end of the week, so each kind is one
+## MultiMesh: every one of them is a transform and a colour, as in the web version. A flash when hit, a lean
+## back when stunned or pinned, greener when frightened, redder when cracked open by a Shatter.
 
-const Build := preload("res://scripts/build.gd")
+const KINDS := ["shamb", "skel", "archer", "steward"]
+const SCALE := [1.1, 1.05, 1.05, 1.65]
+const MAX := [260, 260, 160, 4]
 
-var kind := 0
-var state := "rise"
-var facing := 0.0
-var dying := false
-
-var _want := Vector3.ZERO
-var _first := true
-var _walk := 0.0
-var _swipe := 0.0
-var _flash := 0.0
-var _die_t := 0.0
-var _up := 0.0
-var _model: Node3D
-var _skin: StandardMaterial3D
-var _base := Color("8bab86")
+var fx: Node3D                       # for the puffs when they are hit and when they go
+var _body := []                      # MultiMesh per kind
+var _eyes := []
+var _v := {}                         # undead id -> what the view remembers: [x, z, r, walk, atk, flash, ac, hc, rise, pile, mv]
 
 
 func _ready() -> void:
-	_model = Node3D.new()
-	add_child(_model)
-	_skin = StandardMaterial3D.new()
-	_skin.roughness = 1.0
-	var eye := StandardMaterial3D.new()
-	eye.emission_enabled = true
-	eye.emission_energy_multiplier = 2.5
-	match kind:
-		0:                                               # a shambler: hunched, green-grey, arms out
-			_base = Color("8bab86")
-			_model.scale = Vector3.ONE * 1.1
-			var dark := Color("3d4138")
-			Build.box(_model, Vector3(0.24, 0.5, 0.26), Vector3(-0.17, 0, 0), dark)
-			Build.box(_model, Vector3(0.24, 0.5, 0.26), Vector3(0.17, 0, 0), dark)
-			Build.box(_model, Vector3(0.72, 0.74, 0.46), Vector3(0, 0.48, 0.04), Color("5e6455"), 0.0, 0.22)
-			for part in [[Vector3(0.46, 0.42, 0.44), Vector3(0.04, 1.14, 0.22), 0.15], [Vector3(0.16, 0.16, 0.72), Vector3(-0.43, 0.92, 0.44), -0.12], [Vector3(0.16, 0.16, 0.72), Vector3(0.43, 0.86, 0.44), 0.1]]:
-				Build.box(_model, part[0], part[1], _base, 0.0, part[2]).material_override = _skin
-			eye.albedo_color = Color("e4ffb0"); eye.emission = Color("c8ff70")
-			Build.glow_box(_model, Vector3(0.09, 0.07, 0.05), Vector3(-0.07, 1.3, 0.47), eye)
-			Build.glow_box(_model, Vector3(0.09, 0.07, 0.05), Vector3(0.15, 1.33, 0.46), eye)
-		1, 2:                                            # a skeleton (with a bow, for an archer): thin and quick
-			_base = Color("e6dfc8")
-			var bone := _base
-			for x in [-0.12, 0.12]:
-				Build.box(_model, Vector3(0.1, 0.62, 0.1), Vector3(x, 0, 0), bone).material_override = _skin
-			Build.box(_model, Vector3(0.42, 0.12, 0.2), Vector3(0, 0.62, 0), bone).material_override = _skin
-			Build.box(_model, Vector3(0.08, 0.5, 0.08), Vector3(0, 0.72, 0), bone).material_override = _skin
-			for y in [0.85, 0.98, 1.1]:
-				Build.box(_model, Vector3(0.44, 0.05, 0.26), Vector3(0, y, 0), bone).material_override = _skin
-			for x in [-0.3, 0.3]:
-				Build.box(_model, Vector3(0.08, 0.08, 0.6), Vector3(x, 1.08, 0.25), bone).material_override = _skin
-			Build.box(_model, Vector3(0.34, 0.34, 0.34), Vector3(0, 1.24, 0.04), bone).material_override = _skin
-			eye.albedo_color = Color("ffd0a0"); eye.emission = Color("ff7a3a")
-			Build.glow_box(_model, Vector3(0.08, 0.06, 0.04), Vector3(-0.08, 1.4, 0.21), eye)
-			Build.glow_box(_model, Vector3(0.08, 0.06, 0.04), Vector3(0.08, 1.4, 0.21), eye)
-			if kind == 2:
-				Build.box(_model, Vector3(0.05, 1.3, 0.05), Vector3(-0.32, 0.5, 0.55), Color("5b4130"), 0, 0.1)
-		3:                                               # the Steward: tall, robed, crowned, in no hurry
-			_base = Color("6a5a86")
-			_model.scale = Vector3.ONE * 1.6
-			Build.box(_model, Vector3(0.8, 1.1, 0.6), Vector3(0, 0, 0), _base).material_override = _skin
-			Build.box(_model, Vector3(0.7, 0.4, 0.5), Vector3(0, 1.1, 0), Color("4d3b69"))
-			Build.box(_model, Vector3(0.4, 0.4, 0.4), Vector3(0, 1.5, 0.04), Color("cfd6c0"))
-			Build.cyl(_model, 0.24, 0.24, 0.18, Vector3(0, 1.9, 0.04), Color("d8b040"), 6)
-			Build.box(_model, Vector3(0.06, 2.2, 0.06), Vector3(0.5, 0, 0.3), Color("2a2420"))
-			eye.albedo_color = Color("d0c0ff"); eye.emission = Color("a080ff")
-			Build.glow_box(_model, Vector3(0.08, 0.06, 0.04), Vector3(-0.08, 1.66, 0.25), eye)
-			Build.glow_box(_model, Vector3(0.08, 0.06, 0.04), Vector3(0.08, 1.66, 0.25), eye)
-	_skin.albedo_color = _base
-	_model.position.y = -1.7
+	for k in 4:
+		_body.append(_mm(Models.get_mesh(KINDS[k]), MAX[k], null))
+		_eyes.append(_mm(Models.get_mesh(KINDS[k] + "_eyes"), MAX[k], Models.glow()))
 
 
-func place(x: float, z: float, r: float) -> void:
-	_want = Vector3(x, 0, z)
-	if _first or position.distance_to(_want) > 6.0:
-		position = _want
-		_first = false
-	facing = r
-
-func swing() -> void:
-	_swipe = 1.0
-
-func hit() -> void:
-	_flash = 1.0
-
-func die() -> void:
-	dying = true
+func _mm(mesh: Mesh, n: int, mat: Material) -> MultiMesh:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = mesh
+	mm.instance_count = n
+	mm.visible_instance_count = 0
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = mm
+	if mat: mi.material_override = mat
+	add_child(mi)
+	return mm
 
 
-func _process(delta: float) -> void:
-	_flash = maxf(0.0, _flash - delta * 6.0)
-	_swipe = maxf(0.0, _swipe - delta * 3.5)
-	_skin.albedo_color = _base.lerp(Color.WHITE, _flash * 0.85)
-	if dying:
-		_die_t += delta
-		_model.rotation.x = -minf(1.4, _die_t * 6.0)
-		_model.position.y = -maxf(0.0, _die_t - 0.5) * 1.6
-		if _die_t > 1.5:
-			queue_free()
-		return
-	var before := position
-	position = position.lerp(_want, minf(1.0, delta * 12.0))
-	if (position - before).length() > delta * 0.2:
-		_walk += delta * (5.0 if kind != 1 else 8.0)
-	_up = minf(1.0, _up + delta / 1.2)                  # climbing out of the ground takes as long as the rules say
-	var pile := state == "pile"
-	_model.position.y = -1.7 * (1.0 - _up) if not pile else -0.55
-	var wob := sin(Time.get_ticks_msec() * 0.02) * 0.15 if state == "stun" else 0.0
-	_model.rotation = Vector3((1.2 if pile else 0.08 + sin(_swipe * PI) * 0.5), lerp_angle(_model.rotation.y, facing, minf(1.0, delta * 10.0)), sin(_walk * 0.8) * 0.11 + wob)
+func gone(id: int, x: float, z: float, k: int) -> void:   # put down for good: a burst of bits
+	_v.erase(id)
+	if fx:
+		fx.puff(x, 0.5, z, 40 if k == 3 else 12, fx.C_STEWARD if k == 3 else fx.C_BONE if k else fx.C_ROT, 6.0 if k == 3 else 3.5)
+
+
+func sync(R: Rules, delta: float) -> void:
+	var n := [0, 0, 0, 0]
+	var seen := {}
+	var now := Time.get_ticks_msec() / 1000.0
+	for u: E.Undead in R.undead:
+		seen[u.id] = true
+		var v: Array = _v.get(u.id, [])
+		if v.is_empty():
+			v = [u.x, u.z, u.r, randf() * 6, 0.0, 0.0, u.ac, u.hc, 0.0, 0.0, 0.0]
+			_v[u.id] = v
+		var px: float = v[0]
+		var pz: float = v[1]
+		v[0] = lerpf(v[0], u.x, minf(1.0, delta * 14)); v[1] = lerpf(v[1], u.z, minf(1.0, delta * 14))
+		v[2] = lerp_angle(v[2], u.r, minf(1.0, delta * 12))
+		var sp := Vector2(v[0] - px, v[1] - pz).length() / maxf(delta, 1e-3)
+		v[10] = lerpf(v[10], minf(1.0, sp / 2.2), minf(1.0, delta * 9))
+		if v[10] > 0.06: v[3] += delta * (5 + sp * 1.5)
+		var did_atk: bool = u.ac != v[6]
+		if did_atk: v[6] = u.ac; v[4] = 1.0
+		if u.hc != v[7]:
+			v[7] = u.hc; v[5] = 1.0
+			if fx and u.state != "rise":
+				fx.puff(u.x, 1, u.z, 3, fx.C_BONE if u.k == 1 or u.k == 2 else fx.C_ROT, 2.5)
+		v[4] = maxf(0, v[4] - delta * 4.2); v[5] = maxf(0, v[5] - delta * 7)
+		v[8] = minf(1.0, v[8] + delta / 1.2) if u.state == "rise" else 1.0
+		var k := u.k
+		if n[k] >= MAX[k]: continue
+		var f: float = 1 + v[5] * 1.5
+		var dz := -0.45 if u.stun > 0 or u.pin > 0 else 0.0           # dazed ones lean back
+		var col := Color(f * (1.5 if u.vuln > 0 else 1.0), f * (1.25 if u.fear > 0 else 0.75 if u.vuln > 0 else 1.0), f * (0.7 if u.fear > 0 or u.vuln > 0 else 1.0))
+		if u.stun > 0 and fx and randf() < delta * 5: fx.puff(u.x, 2, u.z, 1, fx.C_SPARK, 0.7)
+		var y: float = -1.6 * (1 - v[8])
+		var walk: float = v[3]
+		var atk: float = v[4]
+		var mv: float = v[10]
+		var xf: Transform3D
+		var s: float = SCALE[k]
+		if k == 0:
+			xf = _xf(v[0], y, v[1], v[2], 0.08 + dz + sin(atk * PI) * 0.5, sin(walk * 0.8) * 0.11, Vector3(s, s, s))
+		elif k == 3:
+			var cast := sin(now / 0.26) * 0.06 if u.state == "atk" and mv < 0.1 else 0.0
+			if did_atk and fx: fx.puff(u.x, 2.6, u.z, 8, fx.C_GHOST, 2.5)
+			xf = _xf(v[0], y * 1.6 + absf(sin(walk * 0.7)) * 0.08 * mv, v[1], v[2], dz * 0.5 + sin(atk * PI) * 0.3, cast, Vector3(s, s + cast, s))
+		elif u.state == "pile":                                     # a heap of bones, which shivers before it gets up
+			v[9] += delta
+			var sh := sin(v[9] * 45) * 0.05 if v[9] > 2.4 else 0.0
+			xf = _xf(v[0] + sh, 0, v[1], v[2], 0, 0, Vector3(1.35, 0.2, 1.35))
+			col = Color(f * 0.85, f * 0.85, f * 0.85)
+		else:
+			v[9] = 0.0
+			xf = _xf(v[0], y + absf(sin(walk)) * 0.1 * mv, v[1], v[2], dz + sin(atk * PI) * (-0.2 if k == 2 else 0.45), sin(walk) * 0.08, Vector3(s, s, s))
+		_body[k].set_instance_transform(n[k], xf)
+		_body[k].set_instance_color(n[k], col)
+		_eyes[k].set_instance_transform(n[k], xf)
+		_eyes[k].set_instance_color(n[k], Color(1, 1, 1) if u.state != "pile" else Color(0, 0, 0, 0))
+		n[k] += 1
+	for k in 4:
+		_body[k].visible_instance_count = n[k]
+		_eyes[k].visible_instance_count = n[k]
+	for id in _v.keys():
+		if not seen.has(id): _v.erase(id)
+
+
+static func _xf(x: float, y: float, z: float, ry: float, rx: float, rz: float, sc: Vector3) -> Transform3D:
+	return Transform3D(Basis.from_euler(Vector3(rx, ry, rz)).scaled_local(sc), Vector3(x, y, z))

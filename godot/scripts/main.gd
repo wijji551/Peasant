@@ -8,6 +8,9 @@ extends Node3D
 const World := preload("res://scripts/world.gd")
 const Figure := preload("res://scripts/view/figure.gd")
 const Dead := preload("res://scripts/view/dead.gd")
+const Fx := preload("res://scripts/view/fx.gd")
+const Minimap := preload("res://scripts/ui/minimap.gd")
+const Labels := preload("res://scripts/ui/labels.gd")
 const TreesView := preload("res://scripts/view/trees.gd")
 const SitesView := preload("res://scripts/view/sites.gd")
 const DefencesView := preload("res://scripts/view/defences.gd")
@@ -48,10 +51,12 @@ var _acc := 0.0
 var _clock := 0.0
 var _atk_cd := 0.0
 var _figs := {}                  # "p<id>" or "q<id>" -> figure
-var _seen := {}                  # figure key -> [ac, hc]
-var _deads := {}                 # undead id -> node
 var _drops := {}                 # drop id -> node
-var _fx: Node3D                  # shots, arrows and the like, which fade on their own
+var _fx: Node3D                  # bits, and things in flight
+var dead_view: Node3D
+var _keep_a := 1.0
+var minimap: Control
+var labels: Control
 var _focus := Vector3(0, 0, -4)
 var _zoom := 1.0
 var _prev_phase := ""
@@ -82,10 +87,11 @@ func _ready() -> void:
 	camera.make_current()
 	R = Rules.new()
 	R.save_hook = _save
-	trees_view = TreesView.new(); add_child(trees_view)
+	_fx = Fx.new(); add_child(_fx)
+	trees_view = TreesView.new(); trees_view.fx = _fx; add_child(trees_view)
 	sites_view = SitesView.new(); add_child(sites_view)
-	defences_view = DefencesView.new(); add_child(defences_view)
-	_fx = Node3D.new(); add_child(_fx)
+	defences_view = DefencesView.new(); defences_view.fx = _fx; add_child(defences_view)
+	dead_view = Dead.new(); dead_view.fx = _fx; add_child(dead_view)
 	_ghost = MeshInstance3D.new(); _ghost.mesh = BoxMesh.new(); add_child(_ghost); _ghost.visible = false
 	var gm := StandardMaterial3D.new()
 	gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -100,6 +106,14 @@ func _ready() -> void:
 	hud = Hud.new()
 	add_child(hud)
 	hud.option.connect(_option)
+	labels = Labels.new()
+	labels.camera = camera
+	hud.add_child(labels)
+	hud.move_child(labels, 0)                            # under the readouts
+	minimap = Minimap.new()
+	hud.add_child(minimap)
+	minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	minimap.offset_left = -16 - 210; minimap.offset_top = -16 - 210; minimap.offset_right = -16; minimap.offset_bottom = -16
 	_bot = OS.get_environment("DTV_BOT") != ""
 	_start()
 
@@ -119,8 +133,32 @@ func _start() -> void:
 	me = R.players[0]
 	if OS.get_environment("DTV_PHASE") == "night":       # for testing: go straight to night
 		R.dusk_falls(); R.timeLeft = 0.5
+	if OS.get_environment("DTV_DEMO") != "":            # for testing: a village with a bit of everything in it, for pictures
+		_demo()
 	_focus = Vector3(me.x, 0, me.z)
+	minimap.R = R; minimap.me = me
+	labels.R = R; labels.me = me
 	_started = true
+
+
+func _demo() -> void:
+	_dawn_seen = R.dawn.seq
+	for s in R.structs:
+		s.built = true; s.mhp = D.SHP[s.k]; s.hp = s.mhp * (0.6 if s.slot == 2 else 1.0); s.re = s.slot == 4
+	me.wood = 40; me.bodies = 2; me.bbod = 1
+	R.try_place(me, "barricade", me.x - 3, me.z - 8, 0)
+	R.try_place(me, "spikes", me.x + 3, me.z - 8, 0)
+	me.bodies = 2
+	me.wpn = 4; me.head = 19; me.body = 22; me.off = 25; me.trk = 28
+	for i in 4:
+		var q: E.Peasant = R.peasants[i]
+		q.owner = me.id; q.state = "follow"; q.armed = i % 2
+	R.drop_item(15, me.x + 2, me.z + 2); R.drop_item(7, me.x - 2, me.z + 2)
+	for t in R.trees.slice(0, 40): t.set_state(1 if t.i % 3 else 2, 0)
+	R.tv += 1
+	for i in 8:
+		var u := R.spawn_undead(i % 4 if i % 4 != 3 else 0, -2.0 + i * 0.8, -6.0)
+		u.state = "walk"
 
 
 func _save(d: Dictionary) -> void:
@@ -210,7 +248,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif Keys.is_act(e, "orders"):
 		if Rules.rk(p, 6) < 3: hud.banner("No orders yet", "Orders need rank 3 of How to Win Peasants and Lead Them.", 1.7)
 		else:
-			R.do_order(p); hud.banner(["Follow me", "Hold here", "Charge!"][p.ord], "", 0.9)
+			R.do_order(p); hud.banner(["Follow me", "Hold here", "Charge!"][p.order], "", 0.9)
 	elif Keys.is_act(e, "build"):
 		var b := _builds_now()
 		var i := b.find(_build_sel)
@@ -268,7 +306,7 @@ func _option(i: int) -> void:   # a numbered option in the open notice
 	var d := Notices.data(R, _panel, me, _page)
 	if d.is_empty():
 		return
-	var opts: Array = d.o.filter(func(o): return not o.has("head"))
+	var opts: Array = d.o.filter(func(x): return not x.has("head"))
 	if i < 0 or i >= opts.size():
 		return
 	var o: Dictionary = opts[i]
@@ -342,83 +380,65 @@ func _bot_move() -> Vector2:
 
 
 # ---------------------------------------------------------------- what happened
-func _event(ev: Array) -> void:
+func _event(ev: Array) -> void:   # things that happened this moment, from the rules
+	var F = _fx
 	match ev[0]:
-		"msg":
-			hud.feed(ev[1])
-		"shot":                                          # a stone, an arrow, a bolt, a bucket
-			_tracer(Vector3(ev[1], 1.2, ev[2]), Vector3(ev[3], 1.0, ev[4]), [Color("d8cfb8"), Color("f0e2b0"), Color("c2a46a"), Color("8a6a40")][clampi(ev[5], 0, 3)])
-		"arrow":
-			_tracer(Vector3(ev[1], 1.3, ev[2]), Vector3(ev[3], 1.0, ev[4]), Color("ff9a5a"))
-		"found":
-			if ev[1] == me.id:
-				hud.banner("Found: " + str(ev[2]), "", 2.4)
+		"msg": hud.feed(ev[1])
+		"arrow": F.fly(ev[1], ev[2], ev[3], ev[4], 0)
+		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1)
+		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3)
+		"coin": F.puff(ev[1], 1.4, ev[2], 6, F.C_COIN, 2)
+		"forge": F.puff(ev[1], 1.2, ev[2], 10, F.C_SPARK, 3.5)
+		"build": F.puff(ev[1], 0.8, ev[2], 8, F.C_WOOD, 3)
+		"eat": F.puff(ev[1], 1.7, ev[2], 4, F.C_FOOD, 1.5)
+		"fish": F.puff(ev[1], 0.3, ev[2], 10, F.C_SPLASH, 3)
 		"bite":
+			F.puff(R.JETTY.x, 0.2, R.JETTY.z + 2.6, 4, F.C_SPLASH, 1.5)
+			if ev[1] == me.id: hud.banner("A bite!", "Press %s" % Keys.name("attack"), 1.0)
+		"abl":                                           # a weapon's trick: show where it landed
+			var k: String = ev[1]
+			var x: float = ev[2]
+			var z: float = ev[3]
+			var fx_ := sin(ev[4])
+			var fz := cos(ev[4])
+			match k:
+				"smash": F.ring(x + fx_ * 1.6, z + fz * 1.6, 3.2, 22, F.C_DUST)
+				"clang": F.ring(x, z, 4, 18, F.C_SPARK)
+				"reap", "trip": F.ring(x, z, 2.6, 16, F.C_DUST if k == "trip" else F.C_WOOD)
+				"parry": F.puff(x + fx_ * 0.6, 1.3, z + fz * 0.6, 5, F.C_SPARK, 1.5)
+				_: F.puff(x + fx_ * 1.8, 1, z + fz * 1.8, 8, F.C_DUST if k == "bury" else F.C_SPARK, 3)
+		"parry": F.puff(ev[1], 1.3, ev[2], 10, F.C_SPARK, 4)
+		"miss": F.puff(ev[1], 1.6, ev[2], 3, F.C_DUST, 2)
+		"splat":
+			F.ring(ev[1], ev[2], 4, 24, F.C_HOLY if ev[3] else F.C_POO)
+			F.puff(ev[1], 0.4, ev[2], 14, F.C_POO, 4)
+		"ring": F.ring(ev[1], ev[2], 8, 30, F.C_HOLY)
+		"holy": F.puff(ev[1], 1.4, ev[2], 12, F.C_HOLY, 2.5)
+		"burst":
+			F.ring(ev[1], ev[2], 3, 20, F.C_ALE)
+			F.puff(ev[1], 1, ev[2], 14, F.C_WOOD, 5)
+		"found":
+			F.puff(ev[3], 0.5, ev[4], 20 if ev[5] else 6, F.C_HOLY if ev[5] else F.C_DUST, 3)
 			if ev[1] == me.id:
-				hud.banner("A bite!", "Press %s" % Keys.name("attack"), 1.0)
+				hud.banner("A find!" if ev[5] else "You found", str(ev[2]) + (". It is in your pack: %s opens it." % Keys.name("pack") if ev[6] else ""), 3.8 if ev[5] else 2.8)
 		"gone":
-			var n = _deads.get(ev[2])
-			if n:
-				n.die()
-				_deads.erase(ev[2])
-		"abl":
-			_puff(Vector3(ev[2], 0.2, ev[3]), Color("fff0c0"), 2.2)
-		"ring":
-			_puff(Vector3(ev[1], 0.2, ev[2]), Color("ffe080"), 8.0)
-		"burst", "holy":
-			_puff(Vector3(ev[1], 0.2, ev[2]), Color("fff4c8"), 2.5)
-		"raise":
-			_puff(Vector3(ev[1], 0.2, ev[2]), Color("b4a0ff"), 1.5)
-
-
-func _tracer(a: Vector3, b: Vector3, c: Color) -> void:
-	var m := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	var l := a.distance_to(b)
-	bm.size = Vector3(0.08, 0.08, maxf(0.1, l))
-	m.mesh = bm
-	m.material_override = Build.mat(c, 1.2)
-	_fx.add_child(m)
-	m.position = (a + b) / 2
-	if l > 0.01:
-		m.look_at_from_position((a + b) / 2, b, Vector3.UP)
-	m.set_meta("t", 0.18)
-
-
-func _puff(at: Vector3, c: Color, r: float) -> void:
-	var m := MeshInstance3D.new()
-	var tm := TorusMesh.new()
-	tm.inner_radius = 0.8; tm.outer_radius = 1.0; tm.rings = 24; tm.ring_segments = 4
-	m.mesh = tm
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = c
-	m.material_override = mat
-	_fx.add_child(m)
-	m.position = at
-	m.set_meta("t", 0.5)
-	m.set_meta("grow", r)
+			dead_view.gone(ev[2], ev[3], ev[4], ev[5])
 
 
 # ---------------------------------------------------------------- drawing
-func _fig(key: String, tunic: Color, player: bool) -> Node3D:
+func shake_tree_near(x: float, z: float) -> void:   # a figure chopped: the tree it is chopping shivers
+	trees_view.shake_near(x, z)
+
+
+func _fig(key: String, player: bool) -> Node3D:
 	var f = _figs.get(key)
 	if f == null:
 		f = Figure.new()
-		f.tunic = tunic
 		f.is_player = player
+		f.fx = _fx
 		add_child(f)
 		_figs[key] = f
-		_seen[key] = [-1, -1]
 	return f
-
-
-func _counts(key: String, f: Node3D, ac: int, hc: int) -> void:   # a new swing or a new hit since last time
-	var s: Array = _seen[key]
-	if s[0] >= 0 and ac != s[0]: f.swing()
-	if s[1] >= 0 and hc != s[1]: f.hit()
-	_seen[key] = [ac, hc]
 
 
 func _draw(delta: float) -> void:
@@ -426,79 +446,53 @@ func _draw(delta: float) -> void:
 	for p: E.Player in R.players:
 		var key := "p%d" % p.id
 		live[key] = true
-		var f := _fig(key, Color(D.PCOL[p.col % 8]), true)
-		f.visible = p.state != "inn" and p.state != "hide"
-		f.place(p.x, p.z, p.r)
-		f.down = p.state == "down" or p.state == "dead"
-		f.hold(p.wpn)
-		f.wear(p.head, p.body, p.off, p.trk, p.bodies)
-		_counts(key, f, p.ac + p.cc, p.hc)
+		_fig(key, true).player(p, p == me)
 	for q: E.Peasant in R.peasants:
 		var key := "q%d" % q.id
 		live[key] = true
-		var own := R.player_by_id(q.owner)
-		var tunic := Color(D.PCOL[own.col % 8]).lerp(Color("b79e75"), 0.35) if own else Color("b79e75")
-		var f := _fig(key, tunic, false)
-		if f.tunic != tunic:                          # changed hands: build it again in the new colour
-			f.queue_free(); _figs.erase(key)
-			f = _fig(key, tunic, false)
-		f.visible = q.state != "inn" and q.state != "gone"
-		f.place(q.x, q.z, q.r)
-		f.down = q.state == "body"
-		f.hold(-1 if q.state == "body" else 2 if q.armed else 0)
-		_counts(key, f, q.ac, q.hc)
+		_fig(key, false).peasant(q, R.player_by_id(q.owner))
 	for key in _figs.keys():
 		if not live.has(key):
 			_figs[key].queue_free()
 			_figs.erase(key)
-			_seen.erase(key)
-	var seen_u := {}
-	for u: E.Undead in R.undead:
-		seen_u[u.id] = true
-		var n = _deads.get(u.id)
-		if n == null:
-			n = Dead.new()
-			n.kind = u.k
-			add_child(n)
-			_deads[u.id] = n
-			n.set_meta("c", [u.ac, u.hc])
-		n.place(u.x, u.z, u.r)
-		n.state = u.state
-		var c: Array = n.get_meta("c")
-		if u.ac != c[0]: n.swing()
-		if u.hc != c[1]: n.hit()
-		n.set_meta("c", [u.ac, u.hc])
-	for id in _deads.keys():
-		if not seen_u.has(id):                        # cleared without a death (dawn, or a test)
-			_deads[id].queue_free()
-			_deads.erase(id)
+	dead_view.sync(R, delta)
+	# things lying on the ground, which glint
 	var seen_d := {}
 	for d: E.Drop in R.drops:
 		seen_d[d.id] = true
+		var I: Dictionary = D.IT[d.it]
 		if not _drops.has(d.id):
-			var n := Node3D.new()
+			var n := MeshInstance3D.new()
+			n.mesh = Models.get_mesh(Models.gear_pool(d.it))
+			var m := StandardMaterial3D.new()
+			m.vertex_color_use_as_albedo = true
+			m.albedo_color = Color(I.tint[0], I.tint[1], I.tint[2])
+			n.material_override = m
 			add_child(n)
-			n.position = Vector3(d.x, 0, d.z)
-			var I: Dictionary = D.IT[d.it]
-			var col := Color(I.tint[0], I.tint[1], I.tint[2]) * Color("c9b98a") if I.tier == "relic" else Color("9a8a70")
-			var b := Build.box(n, Vector3(0.6, 0.18, 0.4), Vector3.ZERO, col, randf() * 3)
-			if I.tier == "relic": b.material_override = Build.mat(col, 1.2)
+			if I.s == "w":
+				n.position = Vector3(d.x, 0.12, d.z - 0.5); n.rotation = Vector3(PI / 2, d.id, 0)
+			else:
+				n.position = Vector3(d.x + (0.0 if I.s == "h" else 0.5), -1.25 if I.s == "h" else -0.4 if I.s == "t" else -0.3, d.z); n.rotation.y = d.id
 			_drops[d.id] = n
+		if randf() < delta * (6.0 if I.tier == "relic" else 1.5):
+			_fx.puff(d.x, 0.3, d.z, 1, _fx.C_HOLY if I.tier == "relic" else _fx.C_SPARK, 0.5)
 	for id in _drops.keys():
 		if not seen_d.has(id):
 			_drops[id].queue_free()
 			_drops.erase(id)
 	trees_view.sync(R, delta)
 	sites_view.sync(R)
-	defences_view.sync(R)
-	for m in _fx.get_children():
-		var t: float = m.get_meta("t") - delta
-		m.set_meta("t", t)
-		if m.has_meta("grow"):
-			var s: float = m.get_meta("grow") * (1.0 - t / 0.5) + 0.3
-			m.scale = Vector3(s, 1, s)
-			m.material_override.albedo_color.a = clampf(t / 0.5, 0, 1)
-		if t <= 0: m.queue_free()
+	defences_view.sync(R, delta)
+	# the keep hides whatever is just north of it from this camera: it goes see-through when there is something there to see
+	var see := false
+	if D.d2(_focus.x, _focus.z, D.KEEP_X, D.KEEP_Z) < 400:
+		var hid := func(e) -> bool: return absf(e.x - D.KEEP_X) < D.KEEP_H + 2 and e.z < D.KEEP_Z + D.KEEP_H and e.z > D.KEEP_Z - D.KEEP_H - 9
+		see = R.undead.any(func(u): return D.d2(u.x, u.z, D.KEEP_X, D.KEEP_Z) < 90) \
+			or R.players.any(func(p): return (p.state == "ok" or p.state == "down") and hid.call(p)) \
+			or R.drops.any(hid) or R.peasants.any(func(q): return q.state == "body" and hid.call(q))
+	_keep_a = lerpf(_keep_a, 0.3 if see else 1.0, minf(1.0, delta * 7))
+	if not see and _keep_a > 0.985: _keep_a = 1.0
+	world.keep_alpha(_keep_a)
 	# the ring under whatever holding E would work on, and the ghost of a thing being placed
 	var it = R.find_interact(me) if _build_sel == "" and R.live() and me.state == "ok" else null
 	_ring.visible = it != null
@@ -506,7 +500,7 @@ func _draw(delta: float) -> void:
 		var rad: float = it.rad
 		_ring.position = Vector3(it.x, 0.12, it.z)
 		_ring.rotation.y = it.get("rot", 0.0)
-		_ring.scale = Vector3(rad, 1, rad if not it.get("wide", false) else 1.0)
+		_ring.scale = Vector3(rad, 1, 1.0 if it.get("wide", false) else rad)
 		(_ring.material_override as StandardMaterial3D).albedo_color = Color(1, 0.95, 0.72) if it.ok else Color(0.9, 0.5, 0.4)
 		if it.type == "station" and Keys.held("interact") and _panel != it.st.id:
 			_panel = it.st.id; _page = ""
@@ -523,6 +517,7 @@ func _draw(delta: float) -> void:
 		(_ghost.material_override as StandardMaterial3D).albedo_color = Color(0.6, 0.95, 0.5, 0.45) if ok else Color(0.95, 0.4, 0.35, 0.45)
 	_apply_light(R.nf)
 	_camera(delta)
+	labels.focus = _focus
 
 
 func _apply_light(nf: float) -> void:
@@ -539,6 +534,10 @@ func _apply_light(nf: float) -> void:
 	var lit := smoothstep(0.3, 0.8, nf)                  # windows and lanterns come on as it gets dark
 	world.window_mat.emission_energy_multiplier = 2.6 * lit
 	world.window_mat.albedo_color = Color("3a3f52").lerp(Color("ffe6a8"), lit)
+	world.keep_window_mat.emission_energy_multiplier = 2.6 * lit
+	var kw := Color("3a3f52").lerp(Color("ffe6a8"), lit)
+	kw.a = world.keep_window_mat.albedo_color.a
+	world.keep_window_mat.albedo_color = kw
 	for l in world.lanterns:
 		l.light_energy = 2.4 * lit
 
@@ -554,7 +553,7 @@ func _camera(delta: float) -> void:
 # ---------------------------------------------------------------- the readouts
 func _fmt(s: float) -> String:
 	var n := maxi(0, ceili(s))
-	return "%d:%02d" % [n / 60, n % 60]
+	return "%d:%02d" % [floori(n / 60.0), n % 60]
 
 
 func _hud_update(delta: float) -> void:
@@ -607,7 +606,7 @@ func _hud_update(delta: float) -> void:
 	var worn := [p.head, p.body, p.off].filter(func(id): return id >= 0).map(func(id): return D.IT[id].n)
 	if worn.size(): lines.append("Wearing: " + ", ".join(worn))
 	if p.trk >= 0: lines.append("Carrying (%s): %s%s" % [Keys.name("carry"), D.IT[p.trk].n, " (blessed)" if p.bless & 2 else ""])
-	lines.append("Posse %d / %d%s%s · Pack %d / %d (%s)" % [p.posse, R.posse_max(p), (" · " + ["following", "holding", "charging"][p.ord]) if Rules.rk(p, 6) >= 3 and p.posse else "",
+	lines.append("Posse %d / %d%s%s · Pack %d / %d (%s)" % [p.posse, R.posse_max(p), (" · " + ["following", "holding", "charging"][p.order]) if Rules.rk(p, 6) >= 3 and p.posse else "",
 		" · about to run" if p.posse and nv < 40 else " · uneasy" if p.posse and nv < 70 else "", p.inv.size(), D.PACK_MAX, Keys.name("pack")])
 	if p.bodies: lines.append("Bodies %d / %d%s" % [p.bodies, D.MAX_BODIES, " (%d blessed)" % p.bbod if p.bbod else ""])
 	if p.state == "inn" or p.cg > 0 or p.charge > 0 or p.hang > 0:
@@ -651,7 +650,7 @@ func _hud_update(delta: float) -> void:
 func _test_hook() -> void:
 	_frame += 1
 	if OS.get_environment("DTV_LOG") != "" and _frame % 600 == 0:
-		print("t=", _frame / 60, "s ", R.phase, " day ", R.day, " undead ", R.undead.size(), " to rise ", R.wave, " kills ", R.stats.kills, " keep ", roundi(R.keepHp), " player ", me.state, " hp ", roundi(me.hp), " posse ", me.posse)
+		print("t=", floori(_frame / 60.0), "s ", R.phase, " day ", R.day, " undead ", R.undead.size(), " to rise ", R.wave, " kills ", R.stats.kills, " keep ", roundi(R.keepHp), " player ", me.state, " hp ", roundi(me.hp), " posse ", me.posse)
 	var shot := OS.get_environment("DTV_SHOT")
 	if shot == "":
 		return

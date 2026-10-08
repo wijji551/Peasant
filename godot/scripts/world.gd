@@ -29,13 +29,16 @@ const C := {
 	dead = Color("8c9a70"), dead2 = Color("7f8d68"), hedge = Color("3f6b3a"), hedge2 = Color("39603a"), hedge3 = Color("47753f"),
 }
 
-## Everything solid. One body, many shapes.
-var body: StaticBody3D
 ## Windows share one material, so the whole village lights up together at dusk.
 var window_mat: StandardMaterial3D
 ## Lanterns that come on at night.
 var lanterns: Array[OmniLight3D] = []
 var rng := RandomNumberGenerator.new()
+## The keep, which goes see-through when something is behind it (main.gd says when).
+var keep: Node3D
+var keep_window_mat: StandardMaterial3D
+var _keep_mats: Array[StandardMaterial3D] = []
+var _keep_alpha := 1.0
 
 var _log_xf: Array[Transform3D] = []
 var _log_col: Array[Color] = []
@@ -43,10 +46,6 @@ var _log_col: Array[Color] = []
 
 func _ready() -> void:
 	rng.seed = 1337
-	body = StaticBody3D.new()
-	body.collision_layer = 1
-	body.collision_mask = 0
-	add_child(body)
 	window_mat = StandardMaterial3D.new()
 	window_mat.albedo_color = Color("3a3f52")
 	window_mat.emission_enabled = true
@@ -154,13 +153,13 @@ func _graveyard_and_edges() -> void:
 		Build.box(self, Vector3(0.14, 1.3, 0.14), Vector3(p.x + 0.4, 1.9, p.y), Color("4a3b33"), 0.0, 0.0, -0.8)
 		Build.box(self, Vector3(0.12, 1.1, 0.12), Vector3(p.x - 0.35, 2.1, p.y), Color("4a3b33"), 0.0, 0.0, 0.7)
 	# north: a line of warning stakes
-	var x := -90.0
-	while x <= 90.0:
-		if absf(x) >= 4.0:
+	var sx_ := -90.0
+	while sx_ <= 90.0:
+		if absf(sx_) >= 4.0:
 			var lean := rr(-0.16, 0.16)
-			Build.cyl(self, 0.09, 0.13, 2, Vector3(x, 0, -62.8), Color("4a3b33"), 5, rr(0, 3), 0.0, lean)
-			Build.box(self, Vector3(0.34, 0.3, 0.32), Vector3(x - lean * 1.9, 1.95, -62.8), Color("e9e4cf"), rr(-0.5, 0.5))
-		x += 4.5
+			Build.cyl(self, 0.09, 0.13, 2, Vector3(sx_, 0, -62.8), Color("4a3b33"), 5, rr(0, 3), 0.0, lean)
+			Build.box(self, Vector3(0.34, 0.3, 0.32), Vector3(sx_ - lean * 1.9, 1.95, -62.8), Color("e9e4cf"), rr(-0.5, 0.5))
+		sx_ += 4.5
 	# west and east: the thorn hedge the village is named for
 	for sx in [-1.0, 1.0]:
 		var z := -64.0
@@ -170,9 +169,6 @@ func _graveyard_and_edges() -> void:
 			Build.box(self, Vector3(rr(2.6, 3.6), h, 3.3), Vector3(hx, 0, z), [C.hedge, C.hedge2, C.hedge3][int(absf(z)) % 3], rr(-0.12, 0.12))
 			Build.cone(self, 0.55, 1.1, Vector3(hx - sx * rr(0.2, 1.1), h - 0.2, z + rr(-1, 1)), C.hedge2, 4, rr(0, 3))
 			z += 2.9
-	Build.solid(body, Vector3(X_MIN - 2.0, 0, -4), 1.5, 62)
-	Build.solid(body, Vector3(X_MAX + 2.0, 0, -4), 1.5, 62)
-	Build.solid(body, Vector3(0, 0, Z_MAX + 1.6), 96, 1.0)      # the river bank
 
 
 ## A run of sharpened palisade logs, gathered up and drawn in one go at the end.
@@ -189,7 +185,6 @@ func _logs(x0: float, z0: float, x1: float, z1: float) -> void:
 
 func _wall(x0: float, z0: float, x1: float, z1: float) -> void:
 	_logs(x0, z0, x1, z1)
-	Build.solid(body, Vector3((x0 + x1) / 2.0, 0, (z0 + z1) / 2.0), absf(x1 - x0) / 2.0 + 0.42, absf(z1 - z0) / 2.0 + 0.42)
 
 
 func _gateway(pos: Vector3, rot_y: float, lit_side: float) -> void:
@@ -266,6 +261,8 @@ func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color]) -> void:
 func _keep() -> void:
 	var n := Node3D.new()
 	add_child(n)
+	keep = n
+	keep_window_mat = window_mat.duplicate()
 	Build.box(n, Vector3(6.6, 0.8, 6.6), Vector3.ZERO, C.stone3)
 	Build.box(n, Vector3(5.6, 7, 5.6), Vector3(0, 0.8, 0), C.stone)
 	for sx in [-1.0, 1.0]:
@@ -282,12 +279,28 @@ func _keep() -> void:
 	Build.box(n, Vector3(1.7, 2.5, 0.2), Vector3(0, 0.8, -2.85), C.timber)
 	Build.box(n, Vector3(2.2, 0.32, 0.3), Vector3(0, 3.3, -2.85), C.stone3)
 	for s in [-1.0, 1.0]:
-		Build.glow_box(n, Vector3(0.45, 1, 0.1), Vector3(s * 1.4, 4.4, -2.83), window_mat)
-		Build.glow_box(n, Vector3(0.45, 1, 0.1), Vector3(s * 1.4, 4.4, 2.83), window_mat)
-		Build.glow_box(n, Vector3(0.1, 1, 0.45), Vector3(-2.83, 4.4, s * 1.4), window_mat)
-		Build.glow_box(n, Vector3(0.1, 1, 0.45), Vector3(2.83, 4.4, s * 1.4), window_mat)
+		Build.glow_box(n, Vector3(0.45, 1, 0.1), Vector3(s * 1.4, 4.4, -2.83), keep_window_mat)
+		Build.glow_box(n, Vector3(0.45, 1, 0.1), Vector3(s * 1.4, 4.4, 2.83), keep_window_mat)
+		Build.glow_box(n, Vector3(0.1, 1, 0.45), Vector3(-2.83, 4.4, s * 1.4), keep_window_mat)
+		Build.glow_box(n, Vector3(0.1, 1, 0.45), Vector3(2.83, 4.4, s * 1.4), keep_window_mat)
 	lantern(Vector3(1.25, 2.6, -3.1), 12.0)
-	Build.solid(body, Vector3.ZERO, KEEP_H, KEEP_H, 9.0)
+	# its own copies of its materials, so it can fade without fading every stone building in the village
+	for c in n.get_children():
+		if c is MeshInstance3D and c.material_override != keep_window_mat:
+			var m: StandardMaterial3D = c.material_override.duplicate()
+			c.material_override = m
+			_keep_mats.append(m)
+	_keep_mats.append(keep_window_mat)
+
+
+## How solid the keep looks: 1 solid, 0.3 mostly see-through.
+func keep_alpha(a: float) -> void:
+	if absf(a - _keep_alpha) < 0.001:
+		return
+	_keep_alpha = a
+	for m in _keep_mats:
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if a < 0.985 else BaseMaterial3D.TRANSPARENCY_DISABLED
+		m.albedo_color.a = a
 
 
 ## A house. w is across its front, d its depth; its door is on the side it faces (rot_y 0 faces south).
@@ -322,15 +335,13 @@ func house(x: float, z: float, rot_y: float, w: float, d: float, h: float, wall_
 		Build.glow_box(n, Vector3(0.1, 0.6, 0.6), Vector3(sx * (w / 2 + 0.04), wy + 0.01, 0), window_mat)
 	if chimney:
 		Build.box(n, Vector3(0.7, rh + 1, 0.7), Vector3(w * 0.28, f + h, -d * 0.12), C.stone2)
-	var sideways := absf(sin(rot_y)) > 0.5
-	Build.solid(body, Vector3(x, 0, z), (d if sideways else w) / 2.0 + 0.25, (w if sideways else d) / 2.0 + 0.25, h + 2.0)
 	return n
 
 
 ## Where player number i lives: two rows of four cottages south of the keep.
 static func cottage(i: int) -> Dictionary:
 	var col := i % 4
-	var row := i / 4
+	var row := floori(i / 4.0)
 	var x := -7.5 + col * 5.0
 	var z := 15.2 if row else 9.0
 	var dir := 1.0 if row else -1.0
@@ -403,7 +414,6 @@ func _buildings() -> void:
 		Build.box(n, Vector3(2.6, 0.14, 1.2), Vector3(0, 0.85, 0), C.wood3)
 		Build.box(n, Vector3(0.5, 0.35, 0.5), Vector3(-0.6, 0.99, 0), C.straw)
 		Build.box(n, Vector3(0.5, 0.3, 0.5), Vector3(0.5, 0.99, 0.1), C.roof3)
-		Build.solid(body, n.position, 1.4, 0.8, 2.0)
 	# the library
 	house(17.5, 20.4, -PI / 2, 6.6, 6, 4.6, C.stone, C.roof2, false, false, 3.4)
 	# the bell and the notice board in the square

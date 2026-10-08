@@ -52,7 +52,7 @@ class Player:
 	var r := 0.0
 	var tx := 0.0
 	var tz := 0.0
-	var tr := 0.0
+	var goal_r := 0.0
 	var hp := 100.0
 	var wood := 0
 	var stone := 0
@@ -83,7 +83,7 @@ class Player:
 	var abCd := 0.0
 	var useCd := 0.0
 	var tbCd := 0.0
-	var ord := 0            # 0 follow, 1 hold, 2 charge
+	var order := 0            # 0 follow, 1 hold, 2 charge
 	var parry := 0.0
 	var guard := 0.0
 	var combo := 0

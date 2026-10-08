@@ -13,7 +13,7 @@ The game saves itself every morning and carries on from there next time. Startin
 ## Where the move has got to
 
 1. **The rules: done.** Everything the web version's rules do now runs in Godot, with the same numbers: days, dusk and nights, the continuous stream of the dead, gathering, the moving outcrop, mine and fishing, tree regrowth, building and repairs, barricade rot, stone facings and iron bands, the ten books with seven ranks, weapons and their tricks, armour, the pack and the arms rack, the forge, the market, the slum, the Thorny Rose and Dutch courage, the priest and holy studies, blessings, the ruins and relics, the posse with its nerve and orders, the toilet break, the slop bucket and the handbell, the Steward, deaths and relatives, and saving.
-2. **The map and models: started.** The village from the trial, now with the moving outcrop, mine and jetty, the outer ruins falling down differently every night, the north wall's foundations and everything you build, trees that are felled and grow back, gear in the peasants' hands. Still to come: the see-through keep, proper effects, and nicer models for the dead.
+2. **The map and models: done.** Every model from the web version, copied shape for shape: peasants and their gear, the four kinds of the dead, every defence, the moving outcrop, mine and jetty, the outer ruins falling down differently every night, trees that topple and grow back, the priest. The keep goes see-through when something is behind it. The effects: chips, sparks, splashes, bones, coins, arrows and stones in flight, rings for the big tricks, the gate opening for friends, defences popping up and shuddering, health bars. The map in the corner, the signs over places, and other players' names.
 3. **Menus and HUD: started.** The notices for every place and your pack work, as plain parchment boxes. Still to come: the scroll look, the slot inventory, the handbook, changing keys, the home screen and the change log.
 4. **Sound:** not started.
 5. **Co-op:** not started. The rules are written so the host runs them and the others are sent the result, as in the web version.
@@ -27,8 +27,8 @@ The same as the web version: **W A S D** move, **Space** or left click attacks, 
 - `scripts/rules/`: the rules, with nothing on screen. `data.gd` is the numbers, items and books; `map.gd` is what is solid, where the trees grow and how the ruins fall; `ents.gd` is the things that move; `rules.gd` is everything that happens.
 - `scripts/main.gd`: runs the rules thirty times a second with the player's keys, and shows the result.
 - `scripts/world.gd`: the fixed map, built from boxes, cylinders and cones.
-- `scripts/view/`: the peasants, the dead, the trees, the defences, and the things that move each morning.
-- `scripts/ui/`: the notices, and the keys.
+- `scripts/view/`: the models (`models.gd`, built by `mesher.gd`), the peasants, the dead, the trees, the defences, the things that move each morning, and the effects.
+- `scripts/ui/`: the notices, the keys, the map in the corner, and the signs and names over the world.
 - `scripts/hud.gd`: the readouts.
 - `tests/`: `rules_test.gd` (107 checks, the same as the web version's) and `bot_week.gd` (a bot plays the whole week).
 
