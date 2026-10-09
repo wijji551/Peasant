@@ -17,6 +17,7 @@ var me: E.Player
 var camera: Camera3D
 var hud: CanvasLayer
 var _zones: Array[Rect2] = []
+var _taken: Array[Rect2] = []       # where this frame's signs are, so that no sign sits on another when the view is turned
 var focus := Vector3.ZERO
 var _signs: Array[Label] = []
 var _names: Array[Label] = []
@@ -57,7 +58,7 @@ func _label(text: String, size_: int, ink: Color, bg: Color) -> Label:
 	return l
 
 
-func _put(l: Label, at: Vector3) -> void:   # centred over the point, sitting on it
+func _put(l: Label, at: Vector3, sign_: bool = false) -> void:   # centred over the point, sitting on it
 	if camera.is_position_behind(at):
 		l.visible = false
 		return
@@ -68,12 +69,19 @@ func _put(l: Label, at: Vector3) -> void:   # centred over the point, sitting on
 		if z.intersects(r):
 			l.visible = false
 			return
+	if sign_:
+		for z in _taken:
+			if z.intersects(r):
+				l.visible = false
+				return
+		_taken.append(r)
 	l.visible = true
 
 
 func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 	if R == null or camera == null: return
 	_zones = hud.zones() if hud else []
+	_taken.clear()
 	for i in PLACES.size():
 		var p: Array = PLACES[i]
 		var x: float = p[1] if not (p[1] is String) else 0.0
@@ -102,7 +110,7 @@ func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 					continue
 		var l := _signs[i]
 		if D.d2(focus.x, focus.z, x, z) < 30 * 30 and R.live():
-			_put(l, Vector3(x, p[3], z))
+			_put(l, Vector3(x, p[3], z), true)
 		else:
 			l.visible = false
 	for qid in _bubbles.keys():                       # what peasants are saying

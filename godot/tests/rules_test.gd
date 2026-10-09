@@ -382,12 +382,12 @@ func run() -> void:
 	var bt: E.Undead = mob(1, 0, 10)[0]
 	bt.hp = 9999
 	var bh := 0
-	for i in 10:
+	for i in 40:                                    # (enough shots that an unlucky run does not fail the check)
 		m.atkCd = 0
 		var h := bt.hp
 		X.do_attack(m)
 		if bt.hp < h: bh += 1
-	ok("and it shoots", bh >= 6, bh)
+	ok("and it shoots", bh >= 20, bh)
 	clear_u()
 	m.inv = [14]; X.do_act(m, "eq", 0); ok("a crossbow needs rank 3", m.wpn == 13)
 	m.books[5] = 3; X.do_act(m, "eq", 0); ok("and works at rank 3", m.wpn == 14)

@@ -5,7 +5,8 @@ extends RefCounted
 ## whatever E has been changed to.
 
 const ACTIONS := [
-	["up", "Move north"], ["left", "Move west"], ["down", "Move south"], ["right", "Move east"],
+	["up", "Move up the screen"], ["left", "Move left"], ["down", "Move down the screen"], ["right", "Move right"],
+	["cam_left", "Turn the view left"], ["cam_right", "Turn the view right"], ["look", "Look around: hold, and move the mouse"], ["cam_reset", "Put the view back: north up"],
 	["attack", "Attack, and land a fish"], ["trick", "Your weapon’s trick"],
 	["interact", "Gather, build, search, rally, use a place (hold)"], ["eat", "Eat"], ["pack", "Open your backpack"], ["skills", "Your skills: books and ranks"],
 	["carry", "Use what you carry: bucket or handbell"], ["swap", "Swap to the next weapon in your backpack"],
@@ -18,6 +19,7 @@ const DEF := {
 	"attack": [KEY_SPACE], "trick": [KEY_SHIFT], "interact": [KEY_E], "eat": [KEY_F], "pack": [KEY_I], "skills": [KEY_K],
 	"carry": [KEY_G], "swap": [KEY_X], "orders": [KEY_Q], "toilet": [KEY_T], "build": [KEY_TAB], "power1": [KEY_Z], "power2": [KEY_C],
 	"ready": [KEY_R], "mute": [KEY_M],
+	"cam_left": [KEY_COMMA], "cam_right": [KEY_PERIOD], "look": [KEY_V], "cam_reset": [KEY_N],
 }
 
 
@@ -93,6 +95,8 @@ static func key_name(k: int) -> String:
 		KEY_DOWN: return "Down arrow"
 		KEY_LEFT: return "Left arrow"
 		KEY_RIGHT: return "Right arrow"
+		KEY_COMMA: return ","
+		KEY_PERIOD: return "."
 	return OS.get_keycode_string(k)
 
 

@@ -13,6 +13,7 @@ const SC := 1.16                  # wider than the web version's: the map grew e
 
 var R: Rules
 var me: E.Player
+var view := 0.0                     # which way the player's camera is turned (0: north up)
 var _bg: ImageTexture
 var _t := 0.0
 
@@ -108,6 +109,9 @@ func _draw() -> void:
 	for p: E.Player in R.players:
 		if p.state == "hide" or p.state == "inn": continue
 		var c := Vector2(mx(p.x), mz(p.z))
+		if p == me:                                    # which way you are looking: a fan from your dot
+			var f := Vector2(-sin(view), -cos(view))
+			draw_colored_polygon(PackedVector2Array([c, c + f.rotated(-0.42) * 17, c + f * 19, c + f.rotated(0.42) * 17]), Color(1, 0.98, 0.85, 0.42))
 		draw_circle(c, 4.2 if p == me else 3.4, Color("2f2318"))
 		draw_circle(c, 3.0 if p == me else 2.3, Color(D.PCOL[p.col % 8]))
 	draw_rect(Rect2(Vector2.ZERO, size), Color("4a2a12"), false, 2.0)

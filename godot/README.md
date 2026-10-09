@@ -30,7 +30,7 @@ What is left is play-testing: the numbers for weeks 2 to 4, and for more than fo
 
 ## Controls
 
-**W A S D** move, **Space** or left click attacks, **Shift** or right click is your weapon's trick, hold **E** to do things (gather, build, rally, search, open a place's notice), **F** eats, **I** opens your backpack, **K** your skills, **Z** and **C** are an apprentice priest's powers, **X** swaps weapon, **G** uses what you carry, **Q** gives orders, **T** is the toilet break, **Tab** or **1** to **5** picks something to place (5 steps through the contraptions), **R** says you are ready for the night, **Esc** closes things (or quits). In a notice, press the number or click.
+**W A S D** move (up the screen, whichever way the view is turned); press the **mouse wheel** in and drag, or hold **V** and move the mouse, to look around; roll the wheel to zoom; **,** and **.** turn the view and **N** puts it back; **Space** or left click attacks, **Shift** or right click is your weapon's trick, hold **E** to do things (gather, build, rally, search, open a place's notice), **F** eats, **I** opens your backpack, **K** your skills, **Z** and **C** are an apprentice priest's powers, **X** swaps weapon, **G** uses what you carry, **Q** gives orders, **T** is the toilet break, **Tab** or **1** to **5** picks something to place (5 steps through the contraptions), **R** says you are ready for the night, **Esc** closes things (or quits). In a notice, press the number or click.
 
 ## How it is laid out
 

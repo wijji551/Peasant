@@ -67,6 +67,16 @@ var _fx: Node3D                  # bits, and things in flight
 var _keep_a := 1.0
 var _focus := Vector3(0, 0, -4)
 var _zoom := 1.0
+# The view can be turned round the player, tilted and brought closer. Each has where it is and where it is going, so it glides.
+const CAM_PITCH0 := 0.8672          # the tilt the game began with: looking down from 66 up and 56 back
+const CAM_PITCH_MIN := 0.56         # as low as it goes (about 32 degrees), and as near overhead (about 78)
+const CAM_PITCH_MAX := 1.36
+var _cam_yaw := 0.0                 # 0: from the south, with north up the screen
+var _cam_pitch := CAM_PITCH0
+var _cam_zoom := 1.0
+var _yaw_goal := 0.0
+var _pitch_goal := CAM_PITCH0
+var _zoom_goal := 1.0
 var _prev_phase := ""
 var _dawn_seen := -1
 var _dawn_t := 0.0
@@ -345,6 +355,10 @@ func _input(e: InputEvent) -> void:
 	if win.is_open("menu") and menus.rebinding != "" and e is InputEventKey and e.pressed and not e.echo:
 		get_viewport().set_input_as_handled()
 		menus.take_key(e.physical_keycode)
+	# looking around: the mouse wheel pressed in, or the look key held, and the mouse moved
+	if screen == "game" and e is InputEventMouseMotion and ((e.button_mask & MOUSE_BUTTON_MASK_MIDDLE) or Keys.held("look")) and not win.is_open("menu"):
+		_yaw_goal -= e.relative.x * 0.006
+		_pitch_goal = clampf(_pitch_goal + e.relative.y * 0.004, CAM_PITCH_MIN, CAM_PITCH_MAX)
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -363,6 +377,12 @@ func _unhandled_input(e: InputEvent) -> void:
 		elif screen == "game": menus.menu()
 		return
 	if screen != "game":
+		return
+	if e is InputEventMouseButton and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+		if not win.visible: _zoom_goal = clampf(_zoom_goal * (0.9 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 0.9), 0.5, 1.4)   # the wheel: nearer, further
+		return
+	if Keys.is_act(e, "cam_reset") and not win.visible:
+		_yaw_goal = roundf(_yaw_goal / TAU) * TAU; _pitch_goal = CAM_PITCH0; _zoom_goal = 1.0
 		return
 	var dg := -1
 	if e is InputEventKey and e.physical_keycode >= KEY_0 and e.physical_keycode <= KEY_9:
@@ -622,8 +642,10 @@ func _tick() -> void:
 			var v := _bot_move()
 			mx = v.x; mz = v.y
 		else:
-			mx = (1.0 if Keys.held("right") else 0.0) - (1.0 if Keys.held("left") else 0.0)
-			mz = (1.0 if Keys.held("down") else 0.0) - (1.0 if Keys.held("up") else 0.0)
+			var ix := (1.0 if Keys.held("right") else 0.0) - (1.0 if Keys.held("left") else 0.0)
+			var iz := (1.0 if Keys.held("down") else 0.0) - (1.0 if Keys.held("up") else 0.0)
+			mx = ix * cos(_cam_yaw) + iz * sin(_cam_yaw)      # up is away from the camera, whichever way the view is turned
+			mz = iz * cos(_cam_yaw) - ix * sin(_cam_yaw)
 		var e := R.move_player(p, mx, mz, STEP, _clock)
 		if e != "":
 			_edge = e; _edge_t = 0.5
@@ -792,7 +814,11 @@ func _draw(delta: float) -> void:
 	# the keep hides whatever is just north of it from this camera: it goes see-through when there is something there to see
 	var see := false
 	if Settings.see_keep and D.d2(_focus.x, _focus.z, D.KEEP_X, D.KEEP_Z) < 400:
-		var hid := func(e) -> bool: return absf(e.x - D.KEEP_X) < D.KEEP_H + 2 and e.z < D.KEEP_Z + D.KEEP_H and e.z > D.KEEP_Z - D.KEEP_H - 9
+		var fwd := Vector2(-sin(_cam_yaw), -cos(_cam_yaw))     # the way the camera looks, along the ground
+		var hid := func(e) -> bool:
+			var v := Vector2(e.x - D.KEEP_X, e.z - D.KEEP_Z)
+			var back := v.dot(fwd)
+			return absf(v.dot(Vector2(-fwd.y, fwd.x))) < D.KEEP_H + 2 and back > -D.KEEP_H and back < D.KEEP_H + 9
 		see = R.undead.any(func(u): return D.d2(u.x, u.z, D.KEEP_X, D.KEEP_Z) < 90) \
 			or R.players.any(func(p): return (p.state == "ok" or p.state == "down") and hid.call(p)) \
 			or R.drops.any(hid) or R.peasants.any(func(q): return q.state == "body" and hid.call(q))
@@ -850,8 +876,9 @@ func _apply_light(nf: float) -> void:
 	env.ambient_light_color = AMB_DAY.lerp(AMB_NIGHT, nf).lerp(AMB_DUSK, k * 0.7)
 	env.ambient_light_energy = lerpf(0.32 - gl * 0.06, 0.5, nf) + fl * 0.5
 	var fog := FOG_DAY.lerp(Color(0.48, 0.52, 0.54), gl).lerp(FOG_NIGHT, nf).lerp(FOG_DUSK, k * 0.7).lerp(Color(0.6, 0.65, 0.8), fl * 0.6)
-	env.fog_depth_begin = lerpf(95.0 - gl * 15.0, 70.0 - foggy * 50.0, nf)
-	env.fog_depth_end = lerpf(250.0 - gl * 40.0, 190.0 - foggy * 130.0, nf)
+	var back := 108.2 * _zoom * (_cam_zoom - 1.0) if screen == "game" else 0.0   # the haze keeps its distance from the player, not from the camera, when the view is brought nearer or taken further off
+	env.fog_depth_begin = maxf(5.0, lerpf(95.0 - gl * 15.0, 70.0 - foggy * 50.0, nf) + back)
+	env.fog_depth_end = lerpf(250.0 - gl * 40.0, 190.0 - foggy * 130.0, nf) + back
 	env.adjustment_saturation = lerpf(1.1 - gl * 0.25, 0.8, nf)
 	env.background_color = fog
 	env.fog_light_color = fog
@@ -866,12 +893,19 @@ func _apply_light(nf: float) -> void:
 		l.light_energy = 2.4 * lit
 
 
-## The view: looking down on the player from the south, as in the web version.
+## The view: looking down on the player, from the south to begin with (as in the web version). It can be turned
+## round the player (the turn keys, or the mouse with the wheel pressed or the look key held), tilted, and zoomed.
 func _camera(delta: float) -> void:
 	_focus = _focus.lerp(Vector3(me.x, 0, me.z), minf(1.0, delta * 6.0))
 	_zoom = lerpf(_zoom, 1.0 + 0.12 * R.nf, minf(1.0, delta * 3.0))
-	camera.position = _focus + Vector3(0, 66, 56) * 1.25 * _zoom
+	if not win.is_open("menu"):
+		_yaw_goal += ((1.0 if Keys.held("cam_right") else 0.0) - (1.0 if Keys.held("cam_left") else 0.0)) * delta * 2.2
+	var k := minf(1.0, delta * 14.0)
+	_cam_yaw = lerpf(_cam_yaw, _yaw_goal, k); _cam_pitch = lerpf(_cam_pitch, _pitch_goal, k); _cam_zoom = lerpf(_cam_zoom, _zoom_goal, k)
+	var dist := 108.2 * _zoom * _cam_zoom
+	camera.position = _focus + Vector3(sin(_cam_yaw) * cos(_cam_pitch), sin(_cam_pitch), cos(_cam_yaw) * cos(_cam_pitch)) * dist
 	camera.look_at(_focus + Vector3(0, 1, 0))
+	minimap.view = _cam_yaw
 
 
 # ---------------------------------------------------------------- the readouts and the window
@@ -951,6 +985,9 @@ func _hud_update(delta: float) -> void:
 ## DTV_AT=x,z puts the player there first. DTV_LOG=1 prints how the night is going every ten seconds.
 func _test_hook() -> void:
 	_frame += 1
+	if OS.get_environment("DTV_VIEW") != "":        # for pictures: DTV_VIEW=turn,tilt,zoom (degrees, degrees, times) turns the player's view
+		var vw := OS.get_environment("DTV_VIEW").split(",")
+		_yaw_goal = deg_to_rad(float(vw[0])); _pitch_goal = deg_to_rad(float(vw[1])); _zoom_goal = float(vw[2])
 	if OS.get_environment("DTV_CAM") != "":         # for pictures: DTV_CAM=x,y,z,lookx,looky,lookz puts the camera there
 		var c := OS.get_environment("DTV_CAM").split(",")
 		camera.fov = 40.0
