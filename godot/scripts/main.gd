@@ -122,7 +122,10 @@ func _ready() -> void:
 	add_child(hud)
 	win = hud.window
 	win.closed.connect(_window_closed)
-	hud.build_pressed.connect(func(k): if screen == "game" and me.state == "ok": _build_sel = "" if _build_sel == k else k)
+	hud.build_pressed.connect(func(k):
+		if screen == "game" and me.state == "ok":
+			if k == "contr": _next_contraption()
+			else: _build_sel = "" if _build_sel == k else k)
 	hud.pack_pressed.connect(func(): if screen == "game" and me.state == "ok": _open_pack())
 	hud.menu_pressed.connect(func(): menus.menu())
 	hud.skills_pressed.connect(func(): if screen == "game": _open_skills())
@@ -289,6 +292,14 @@ func _demo() -> void:
 	for i in 8:
 		var u := R.spawn_undead(i % 4 if i % 4 != 3 else 0, -2.0 + i * 0.8, -6.0)
 		u.state = "walk"
+	if OS.get_environment("DTV_CONTR") != "":           # for pictures: one of every contraption, in a row
+		me.books[2] = 7; me.holy = 1
+		var xs := [-14.0, -9.0, -4.0, 4.0, 9.0, 14.0]
+		for i in D.CONTRAPTIONS.size():
+			var k: String = D.CONTRAPTIONS[i]
+			var s := R.mk_struct(k, xs[i], -12.0 if k != "logs" else -30.0, 0, true, D.SHP[k], D.SHP[k], -1)
+			R.structs.append(s)
+		R.sv += 1
 	if OS.get_environment("DTV_DEAD") != "":            # for pictures: one of every kind of dead, in a row, standing still
 		R.undead.clear()
 		var ks := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -435,6 +446,8 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 	elif dg >= 1 and dg <= D.BUILDS.size():
 		var k: String = D.BUILDS[dg - 1]
 		_build_sel = "" if _build_sel == k or not _builds_now().has(k) else k
+	elif dg == D.BUILDS.size() + 1:
+		_next_contraption()
 	elif (Keys.is_act(e, "interact") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT)) and _build_sel != "":
 		_place_ghost()
 	elif Keys.is_act(e, "eat"):
@@ -445,7 +458,22 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 
 
 func _builds_now() -> Array:
-	return D.BUILDS.filter(func(k): return not D.COST[k].has("bodies") or me.bodies >= D.COST[k].bodies)
+	return D.BUILDS.filter(func(k): return not D.COST[k].has("bodies") or me.bodies >= D.COST[k].bodies) + _contraptions_now()
+
+
+func _contraptions_now() -> Array:
+	return D.CONTRAPTIONS.filter(func(k): return Rules.can_contr(me, k))
+
+
+## 5 (or the fifth card): the next contraption you can build, then none.
+func _next_contraption() -> void:
+	var c := _contraptions_now()
+	if c.is_empty():
+		Sound.play("no"); hud.banner("No contraptions yet", "Barricades for Beginners teaches them, from rank 1. A box of cogs from the tinker builds one without.", 2.0)
+		_build_sel = ""
+		return
+	var i := c.find(_build_sel)
+	_build_sel = c[i + 1] if i + 1 < c.size() else ""
 
 
 func _ghost_pos() -> Dictionary:
@@ -640,6 +668,12 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1); Sound.play("swing", 0.5, Vector2(ev[1], ev[2]))
 		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3); Sound.play("raise", 0.7, Vector2(ev[1], ev[2]))
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
+		"pit": F.puff(ev[1], 0.2, ev[2], 14, F.C_WOOD, 3); Sound.play("thump", 1.0, Vector2(ev[1], ev[2])); Sound.play("groan%d" % (randi() % 3), 0.7, Vector2(ev[1], ev[2]))
+		"logs":
+			for i in 8:
+				var f := i / 7.0
+				F.puff(lerpf(ev[1], ev[3], f), 0.5, lerpf(ev[2], ev[4], f), 6, F.C_WOOD, 4)
+			Sound.play("thump", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder0", 0.5, Vector2(ev[1], ev[2]))
 		"smite": F.beam(ev[1], ev[2]); Sound.play("holy", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder1", 0.25, Vector2(ev[1], ev[2]))
 		"pray": F.ring(ev[1], ev[2], 7, 40, F.C_HOLY); F.puff(ev[1], 1.8, ev[2], 18, F.C_GLAD, 2.5); Sound.play("holy", 0.9, Vector2(ev[1], ev[2])); Sound.play("ring", 0.4, Vector2(ev[1], ev[2]))
 		"mist": F.puff(ev[1], 1.0, ev[2], 18, F.C_GHOST, 3.5); Sound.play("raise", 0.5, Vector2(ev[1], ev[2]))

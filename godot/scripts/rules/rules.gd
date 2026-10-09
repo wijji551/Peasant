@@ -235,6 +235,12 @@ static func scale(c: Dictionary, f: float, only: String = "") -> Dictionary:
 		o[r] = maxi(1, ceili(c[r] * f)) if only == "" or r == only else c[r]
 	return o
 
+## Can this player build a contraption: learned from the book, or with a box of cogs (and holy water for the trough)?
+static func can_contr(p: E.Player, k: String) -> bool:
+	if not D.CONTR.has(k): return true
+	if k == "trough" and p.holy < 1 and rk(p, D.B_HOLY) < 1: return false
+	return rk(p, 2) >= D.CONTR[k].rank or p.cogs > 0
+
 static func cost_of(p: E.Player, k: String) -> Dictionary:
 	var c: Dictionary = D.COST[k]
 	var r := rk(p, 2)
@@ -714,7 +720,7 @@ func wall_between(ax: float, az: float, bx: float, bz: float) -> bool:
 
 func blocking_struct(x: float, z: float, r: float) -> E.Struct:
 	for s in structs:
-		if s.built and s.k != "spikes" and in_box(x, z, r, s):
+		if s.built and D.BLOCKERS.has(s.k) and in_box(x, z, r, s):
 			return s
 	return null
 
@@ -875,6 +881,7 @@ func valid_place(k: String, x: float, z: float, rot: float) -> bool:
 	if x < D.X0 + 2 or x > D.X1 - 2 or z < D.Z0 + 2 or z > D.Z1 - 2: return false
 	if absf(z - D.VN) < 1.7 and absf(x) < 21.5: return false                          # keep the foundations clear
 	if (k == "bodywall" or k == "decoy") and D.inside_village(x, z): return false     # the fallen go outside the wall
+	if k == "logs" and (z > D.VN - 4 or absf(x) > 30): return false                  # the log roller goes up the road, north of the wall
 	var c := E.Box.new(x, z, D.SDIM[k].x, D.SDIM[k].y, rot)
 	for o in colliders:
 		if in_box(o.x, o.z, maxf(o.hw, o.hd) * 0.2, c) or in_box(x, z, 0.9, o): return false
@@ -950,13 +957,21 @@ func gather_one(kind: String, t: E.Trunk, p: E.Player) -> bool:
 	return true
 
 func try_place(p: E.Player, k: String, x: float, z: float, rot: float) -> bool:
-	if not D.BUILDS.has(k) or p.state != "ok" or not live():
+	if not (D.BUILDS.has(k) or D.CONTR.has(k)) or p.state != "ok" or not live() or not can_contr(p, k):
 		return false
 	var c := cost_of(p, k)
 	var r := rk(p, 2)
 	if not has(p, c) or D.d2(p.x, p.z, x, z) > 144 or not valid_place(k, x, z, rot):   # generous on distance, to allow for a laggy connection
 		return false
 	pay(p, c); stats.built += 1; add_xp(p, 2, 1)
+	if D.CONTR.has(k) and r < D.CONTR[k].rank: p.cogs -= 1     # built from a box of cogs
+	if D.CONTR.has(k):
+		var s := mk_struct(k, x, z, rot, true, D.SHP[k], D.SHP[k], -1)
+		s.tick = 1.0 if k == "logs" else 0.0                     # the log roller is stacked and ready
+		structs.append(s)
+		sv += 1
+		say("%s has built %s." % [p.dn, ("the " if k == "thresher" else "a ") + D.SNAME[k]])
+		return true
 	var mul := (2.0 if r >= 5 else 1.0) if k == "spikes" else 1.0 if k == "decoy" else 1.5 if r >= 6 else 1.25 if r >= 3 else 1.0
 	var mx := float(roundi(D.SHP[k] * mul))
 	var s := mk_struct(k, x, z, rot, true, mx, mx, -1)
@@ -1678,7 +1693,7 @@ func step(dt: float) -> void:
 		player_step(p, dt)
 	for q in peasants:
 		peasant_step(q, dt)
-	undead_step(dt); spikes_step(dt)
+	undead_step(dt); spikes_step(dt); contraptions_step(dt)
 	if undead.any(func(u): return u.dead):
 		var keep := []
 		for u in undead:
@@ -1692,6 +1707,8 @@ func dusk_falls() -> void:
 		if q.state == "idle": q.state = "hide"
 	for p in players:
 		p.ready = false; p.coward = false
+	for s in structs:
+		if s.k == "logs": s.tick = 1.0                 # the log roller is stacked again for the night
 	var rot := 0
 	var gone := 0                                  # every evening the damp takes half of what is left of an old barricade
 	for s in structs.duplicate():
@@ -2314,6 +2331,7 @@ func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void
 func undead_step(dt: float) -> void:
 	var keep_box := E.Box.new(D.KEEP_X, D.KEEP_Z, D.KEEP_H, D.KEEP_H)
 	var decoys := structs.filter(func(s): return s.k == "decoy")
+	var chickens := structs.filter(func(s): return s.k == "chicken" and s.built)
 	var censers := players.filter(func(p): return p.trk == 27 and p.state == "ok")
 	var captain: E.Undead = boss if boss and boss.k == D.U_CAPTAIN else null
 	var ws := wspeed()
@@ -2436,6 +2454,12 @@ func undead_step(dt: float) -> void:
 					var d := D.d2(u.x, u.z, s.x, s.z)
 					if d < dd:
 						dd = d; dc = s
+			if not U.boss and not U.fly and not U.ghost and not U.ram and u.tauntT <= 0:   # nobody can ignore a chicken
+				var cd := 100.0
+				for s in chickens:
+					var d := D.d2(u.x, u.z, s.x, s.z)
+					if d < cd:
+						cd = d; dc = s
 			if dc:                                # a propped-up body is more interesting than anyone further off
 				gx = dc.x; gz = dc.z; tgt = null
 			elif tgt:
@@ -2532,6 +2556,59 @@ func undead_step(dt: float) -> void:
 						var l := sqrt(d)
 						var k := (rr - l) * 0.5 / l
 						u.x += dx * k; u.z += dz * k; v.x -= dx * k; v.z -= dz * k
+
+## The contraptions at work. (The chicken decoy works through the dead's own minds: see undead_step.)
+func contraptions_step(dt: float) -> void:
+	for s in structs.duplicate():
+		if not s.built: continue
+		match s.k:
+			"tar":                                     # the dead wade; so do the living, a little
+				for u in undead:
+					if u.dead or u.state == "rise" or u.state == "dig" or D.UN[u.k].fly or D.UN[u.k].ghost: continue
+					if in_box(u.x, u.z, D.UN[u.k].r * 0.5, s):
+						u.slow = maxf(u.slow, 0.3); s.hp -= 0.25 * dt
+				if s.hp <= 0:
+					destroy_struct(s); say("A tar pit has been trodden flat.")
+			"pitfall":                                 # the first four in go down for good
+				for u in undead:
+					if u.dead or u.state != "walk" and u.state != "atk": continue
+					var U: Dictionary = D.UN[u.k]
+					if U.boss or U.fly or U.ghost or U.ram: continue
+					if in_box(u.x, u.z, 0.0, s):
+						u.revived = true; kill_undead(u); ev.append(["pit", r1(s.x), r1(s.z)])
+						s.hp -= 1; s.hc += 1; sv += 1
+						if s.hp <= 0:
+							destroy_struct(s)
+							break
+			"trough", "thresher":
+				s.tick -= dt
+				if s.tick > 0: continue
+				s.tick = 0.5 if s.k == "trough" else 0.4
+				if s.k == "thresher":                  # it only turns while someone turns the handle
+					var crank := players.any(func(p): return p.state == "ok" and D.d2(p.x, p.z, s.x, s.z) < 9) or peasants.any(func(q): return active(q) and D.d2(q.x, q.z, s.x, s.z) < 9)
+					if not crank: continue
+					var any := false
+					for u in undead:
+						if u.dead or u.state == "rise" or u.state == "pile" or u.state == "dig" or D.UN[u.k].fly: continue
+						if D.d2(u.x, u.z, s.x, s.z) < 2.6 * 2.6:
+							hit_u(u, 7, {"x": s.x, "z": s.z, "blunt": true, "farm": false}); any = true
+					if any: s.hc += 1; sv += 1
+				else:
+					for u in undead:
+						if u.dead or u.state == "rise" or u.state == "dig" or D.UN[u.k].fly: continue
+						if in_box(u.x, u.z, D.UN[u.k].r * 0.5, s):
+							hit_u(u, 8, {"holy": 1.5}); s.hp -= 1; ev.append(["holy", r1(u.x), r1(u.z)])
+					if s.hp <= 0:
+						destroy_struct(s); say("A holy water trough has run dry.")
+			"logs":                                    # once a night: when a crowd (or a ram) has come down the road past it, roll
+				if phase != "night" or s.tick <= 0: continue
+				var lane := undead.filter(func(u): return not u.dead and u.state != "rise" and u.state != "dig" and not D.UN[u.k].fly and absf(u.x - s.x) < 2.2 and u.z > s.z and u.z < s.z + 24)
+				if lane.size() >= 5 or lane.any(func(u): return D.UN[u.k].ram):
+					s.tick = 0.0; s.hc += 1; sv += 1
+					ev.append(["logs", r1(s.x), r1(s.z), r1(s.x), r1(minf(s.z + 24, D.VN - 1))])
+					for u in lane:
+						hit_u(u, 120, {"x": s.x, "z": s.z - 1, "kb": 3.0, "blunt": true, "heavy": true, "farm": false}); stun_u(u, 2)
+					say("The log roller has gone, and taken %d of the dead with it." % lane.size())
 
 func spikes_step(dt: float) -> void:
 	for s in structs.duplicate():

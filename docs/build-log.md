@@ -252,3 +252,17 @@ The web version is no longer updated; from here on, changes are made in Godot on
 - **Mercenaries** (the Thorny Rose): 8s, one a day each, `kind` 2 in your posse: 160 health, take 70%, 20 damage. At dawn each goes; one in seven first demands 2s more, and a player who cannot pay loses a random thing they carry.
 - Guards wear Robert Bailiff's green with a cap, mail and a spear; mercenaries mail, a shield and a mace. A fallen guard or mercenary leaves a body like anyone else (its kind is saved).
 - Tests: new `tests/merchant_test.gd` (38 checks). Rules 115, month 41, Holy Book 32, UI 31, clicks 14, co-op 23.
+
+## Build 4, stage 4: contraptions (Build 4 finished)
+
+- Six contraptions (`D.CONTRAPTIONS`, `D.CONTR`), placed like barricades. Learned from Barricades for Beginners (the ranks say which: chicken decoy 1, pitfall 3, tar pit 4, holy water trough 5, log roller 6, Thresher 7, replacing rank VII's "contraptions in a later build"), or built with a box of cogs (`p.cogs`, used up when the rank is missing). The trough also needs a class of holy studies or the Holy Book. Costs (before the book's discount): chicken 3 wood 2 food, pitfall 6 wood 4 stone, tar 6 wood 3 stone, trough 8 wood 2 iron, log roller 25 wood 4 iron, Thresher 15 wood 6 iron.
+- `Rules.contraptions_step`: the chicken decoy (40 health, `D.BLOCKERS`) draws every ordinary dead thing within 10 (not bosses, bats, wraiths or rams), which then attack it. The pitfall kills the first four to walk or fight on it (not bosses, bats, wraiths or rams; no reassembling), then it is full and gone. Tar slows the dead wading through (not bats or wraiths) and is trodden flat after 400 wading-seconds. The trough burns 8 holy every half second to whatever is in it (wraiths included), 60 burns. The log roller, only north of the wall (`valid_place`), is stacked at dusk and, at night, rolls once when 5 of the dead or a coffin ram are in its lane (2.2 either side, 24 south): 120 heavy, blunt damage each and a stun. The Thresher hits everything within 2.6 for 7 every 0.4 s while a player or posse member stands within 3.
+- Only walls, gates, barricades, body walls, decoys and the chicken stop the dead now (`D.BLOCKERS`); the rest are walked over. The hearse still smashes anything wooden.
+- View: a model for each (the Thresher's arm spins while it works), effects for the pitfall and the logs. One build card for all contraptions, key 5, stepping through the ones you can build; the build cards are narrower and the bottom bar sits a little left of centre to make room.
+- Tests: new `tests/contr_test.gd` (21 checks). Rules 115, month 41, Holy Book 32, merchants 38, UI 31, clicks 14, co-op 23.
+
+### Build 4, for the designer to confirm
+- The month's numbers (horde growth, toughness, boss health, prices, the job's length, guard and mercenary strength) are starting values from the design, not yet play-tested. The careful bot still holds week 1 with nobody lost; nothing has played weeks 2 to 4 yet.
+- Contraptions were spread over Barricades for Beginners' ranks; the design only said they come from that book.
+- The bookseller's job pays An Index of Further Reading, or a rank of your least-read book; the brewer's pays the Brewer's Reserve. Not in the design.
+- Mercenaries take one of your posse places.

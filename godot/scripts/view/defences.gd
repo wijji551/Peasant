@@ -3,8 +3,10 @@ extends Node3D
 ## A new defence pops up, a struck one shudders, the gate swings open for friends when none of the dead are near,
 ## and anything damaged shows how much is left.
 
-const SH := {"wall": 3.9, "gate": 5.6, "barricade": 2.1, "spikes": 1.6, "bodywall": 1.8, "decoy": 2.6}   # bar height
-const SW := {"wall": 3.0, "gate": 3.0, "barricade": 1.8, "spikes": 1.8, "bodywall": 1.8, "decoy": 1.0}   # bar width
+const SH := {"wall": 3.9, "gate": 5.6, "barricade": 2.1, "spikes": 1.6, "bodywall": 1.8, "decoy": 2.6,
+	"chicken": 2.2, "pitfall": 0.8, "tar": 0.8, "trough": 1.4, "logs": 1.9, "thresher": 2.2}   # bar height
+const SW := {"wall": 3.0, "gate": 3.0, "barricade": 1.8, "spikes": 1.8, "bodywall": 1.8, "decoy": 1.0,
+	"chicken": 0.8, "pitfall": 1.4, "tar": 1.8, "trough": 1.6, "logs": 1.6, "thresher": 1.2}   # bar width
 const IRONED := Color(0.72, 0.76, 0.86)
 
 var fx: Node3D
@@ -57,6 +59,7 @@ func _make(s: E.Struct) -> Dictionary:
 	else:
 		_mi(body, s.k, _tinted(IRONED) if s.re and (s.k == "barricade" or s.k == "spikes") else null)
 		if s.k == "wall" and s.re: _mi(body, "wallRe")
+		if s.k == "thresher": e.arm = _mi(body, "thresher_arm")
 	# a small health bar, which faces the camera
 	var bar := Node3D.new()
 	bar.top_level = true
@@ -96,7 +99,13 @@ func sync(R: Rules, delta: float) -> void:
 				Sound.play("thump", 0.9, Vector2(s.x, s.z))
 		if s.hc != e.hc:
 			e.hc = s.hc; e.shake = 0.18
-			Sound.play("chop", 0.45, Vector2(s.x, s.z))
+			if s.k == "thresher": e.spin = 0.6
+			elif s.k == "pitfall": Sound.play("thump", 0.8, Vector2(s.x, s.z))
+			else: Sound.play("chop", 0.45, Vector2(s.x, s.z))
+		if e.has("arm"):                                 # the Thresher's arm spins while it is working
+			e.spin = maxf(0.0, e.get("spin", 0.0) - delta)
+			e.arm.rotation.y += delta * (14.0 if e.spin > 0 else 0.3)
+			if e.spin > 0: e.shake = 0.0
 		e.pop = maxf(0, e.pop - delta * 3.5)
 		e.shake = maxf(0, e.shake - delta)
 		var pp: float = 1 + sin(e.pop * PI) * 0.22 - ((e.pop - 0.7) * 1.5 if e.pop > 0.7 else 0.0)

@@ -301,6 +301,38 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.6, 0.62, 0.38, 0, 0.72, 0, 0x8f7f63, 0, 0.1, 0).box(0.2, 0.5, 0.22, -0.14, 0.2, 0.04, 0x4a3a2c).box(0.2, 0.5, 0.22, 0.14, 0.2, 0.04, 0x4a3a2c, 0, 0, 0.2)
 			b.box(0.4, 0.38, 0.38, 0, 1.36, 0.06, 0xc9b79a, 0, 0.3, 0.2).cyl(0.36, 0.36, 0.07, 7, 0, 1.74, 0.02, P.straw, 0, 0.2, 0.2)
 			b.box(0.16, 0.5, 0.16, -0.52, 0.86, -0.1, 0x8f7f63, 0, 0, 0.5).box(0.16, 0.5, 0.16, 0.52, 0.86, -0.1, 0x8f7f63, 0, 0, -0.5)
+		# --- contraptions
+		"chicken":                                           # a chicken in a wicker cage on a post
+			b.box(0.12, 0.9, 0.12, 0, 0, 0, P.wood2)
+			b.box(0.8, 0.06, 0.8, 0, 0.9, 0, P.wood3)
+			for c in [[-0.38, -0.38], [0.38, -0.38], [-0.38, 0.38], [0.38, 0.38], [0, -0.38], [0, 0.38], [-0.38, 0], [0.38, 0]]: b.box(0.04, 0.7, 0.04, c[0], 0.96, c[1], 0xb08850)
+			b.box(0.8, 0.06, 0.8, 0, 1.66, 0, P.wood3)
+			b.box(0.34, 0.3, 0.42, 0, 1.0, 0, 0xf4f0e6).box(0.18, 0.22, 0.18, 0, 1.28, 0.2, 0xf4f0e6).box(0.06, 0.1, 0.12, 0, 1.44, 0.24, 0xd8302a).box(0.08, 0.05, 0.1, 0, 1.3, 0.34, 0xe0a020)
+			b.box(0.2, 0.22, 0.12, 0, 1.08, -0.24, 0xe8e2d4, 0.5)
+		"pitfall":                                           # a hole, badly hidden under sticks and leaves
+			b.box(2.4, 0.04, 2.4, 0, 0, 0, 0x2a2018)
+			for i in 7: b.box(0.1, 0.08, 2.5, -1.05 + i * 0.35, 0.04, 0, P.wood2 if i % 2 else P.wood3, 0.08 * (i % 3 - 1))
+			for i in 9: b.box(0.3, 0.05, 0.3, -0.9 + (i * 0.73) - floorf(i / 3.0) * 2.1, 0.1, -0.7 + floorf(i / 3.0) * 0.7, P.leaf if i % 2 else 0x8a7a40, i * 0.7)
+		"tar":                                               # a shallow pit of black tar in a ring of stones
+			b.box(3.4, 0.05, 2.2, 0, 0, 0, 0x14110e)
+			b.box(2.6, 0.03, 1.4, 0.1, 0.05, 0.05, 0x2a2420, 0.2)
+			for i in 10:
+				var a := TAU * i / 10.0
+				b.box(0.4, 0.22, 0.34, cos(a) * 1.75, 0, sin(a) * 1.15, P.stone2 if i % 2 else P.stone3, a)
+		"trough":                                            # a long stone trough of holy water, with a little cross
+			b.box(3.2, 0.5, 0.9, 0, 0, 0, P.stone).box(2.9, 0.06, 0.6, 0, 0.44, 0, 0x8fd0e8)
+			b.box(0.08, 0.7, 0.08, 1.5, 0.5, 0, 0xe2b54a).box(0.34, 0.08, 0.08, 1.5, 0.95, 0, 0xe2b54a)
+		"logs":                                              # a stack of logs held back by two stakes, up the road
+			for i in 5: b.cyl(0.32, 0.32, 3.0, 7, -1.5, 0.32 + (0.55 if i >= 3 else 0.0), -0.66 + (i % 3) * 0.6 + (0.3 if i >= 3 else 0.0), P.trunk if i % 2 else P.wood, 0, 0, PI / 2)
+			for sx in [-1.7, 1.7]: b.box(0.16, 1.5, 0.16, sx, 0, 0.95, P.timber, 0, -0.2, 0)
+			b.box(3.6, 0.12, 0.12, 0, 1.1, 1.0, P.timber)
+		"thresher":                                          # a post, a crank, and a spinning arm of flails
+			b.box(1.4, 0.14, 1.4, 0, 0, 0, P.wood2).box(0.24, 1.3, 0.24, 0, 0.1, 0, P.timber)
+			b.box(0.08, 0.45, 0.08, 0.35, 0.6, 0, P.iron).box(0.3, 0.06, 0.06, 0.5, 0.82, 0, P.iron)
+		"thresher_arm":
+			b.box(2.8, 0.12, 0.12, 0, 1.3, 0, P.wood).box(0.12, 0.12, 2.8, 0, 1.3, 0, P.wood)
+			for c in [[1.4, 0], [-1.4, 0], [0, 1.4], [0, -1.4]]:
+				b.box(0.05, 0.5, 0.05, c[0], 0.85, c[1], 0x8a8a8a).ico(0.16, c[0], 0.8, c[1], P.iron)
 		# --- places that move
 		"outcrop":
 			b.box(6.4, 0.06, 5.4, 0, 0, 0, 0xcfc9bb, 0.2)

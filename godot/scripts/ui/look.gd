@@ -40,6 +40,7 @@ const ICON := {
 	"keep": "M5 21V8h3V5h3v3h2V5h3v3h3v13zM10 21v-5h4v5", "barricade": "M3 10l18 6M3 16l18-6M6 7v13M18 7v13",
 	"spikes": "M3 20l3-10l3 10l3-10l3 10l3-10l3 10", "bodywall": "M3 18h18M4 18c0-2 2-4 4-4s4 2 4 4M12 18c0-2 2-4 4-4s4 2 4 4M8 10a2 2 0 1 0 0.01 0zM16 10a2 2 0 1 0 0.01 0z",
 	"decoy": "M12 3v18M7 8h10M12 6a2 2 0 1 0 0.01 0zM9 12h6v5H9z",
+	"contr": "M12 8a4 4 0 1 0 .01 0zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2",
 }
 
 # the readouts' pictures in colour, so each looks like what it is (24 by 24)

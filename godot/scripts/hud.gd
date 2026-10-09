@@ -155,15 +155,15 @@ func _ready() -> void:
 	_pin(_builds, Control.PRESET_BOTTOM_RIGHT, -14, -14, -14, -14)
 	_builds.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_builds.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_builds.add_theme_constant_override("separation", 6)
-	var bn := {"barricade": "Barricade", "spikes": "Spikes", "bodywall": "Body wall", "decoy": "Decoy"}
-	for i in D.BUILDS.size():
-		var k: String = D.BUILDS[i]
+	_builds.add_theme_constant_override("separation", 4)
+	var bn := {"barricade": "Barricade", "spikes": "Spikes", "bodywall": "Body wall", "decoy": "Decoy", "contr": "Contraption"}
+	for i in D.BUILDS.size() + 1:
+		var k: String = D.BUILDS[i] if i < D.BUILDS.size() else "contr"
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(76, 70)
-		b.tooltip_text = "Place a %s (%d, or %s steps through these)" % [D.SNAME[k], i + 1, "{build}"]
+		b.custom_minimum_size = Vector2(64, 70)
+		b.tooltip_text = "Place a %s (%d, or %s steps through these)" % [D.SNAME.get(k, "contraption"), i + 1, "{build}"]
 		b.pressed.connect(func(): build_pressed.emit(k))
 		var bv := VBoxContainer.new()
 		bv.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -177,16 +177,17 @@ func _ready() -> void:
 		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var ic := TextureRect.new(); ic.texture = Look.icon(k, 22); ic.mouse_filter = Control.MOUSE_FILTER_IGNORE; top.add_child(ic)
 		var nm := Look.label(bv, bn[k], 12, Look.INK); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var cost := Look.label(bv, "", 11, Look.INK_SOFT); cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		for l in [nm, cost]: l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_builds.add_child(b)
-		_build_cards[k] = {"b": b, "cost": cost}
+		_build_cards[k] = {"b": b, "cost": cost, "name": nm, "icon": ic}
 	_zones.append(_builds)
 
 	# --- bottom middle: your hand and the rest, and above them what holding E would do
 	_hotbar = HBoxContainer.new()
 	root.add_child(_hotbar)
-	_pin(_hotbar, Control.PRESET_CENTER_BOTTOM, 0, -14, 0, -14)
+	_pin(_hotbar, Control.PRESET_CENTER_BOTTOM, -56, -14, -56, -14)   # a little left of centre, to leave room for the five things you can place
 	_hotbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_hotbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_hotbar.add_theme_constant_override("separation", 3)
@@ -468,6 +469,18 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 	# what you can place
 	for k in _build_cards:
 		var e: Dictionary = _build_cards[k]
+		if k == "contr":                             # one card for every contraption: 5 steps through the ones you can build
+			var avail := D.CONTRAPTIONS.filter(func(c): return Rules.can_contr(p, c))
+			e.b.visible = avail.size() > 0
+			var cur: String = build_sel if D.CONTR.has(build_sel) else avail[0] if avail.size() else ""
+			e.b.button_pressed = D.CONTR.has(build_sel)
+			if cur != "":
+				var nm_: String = D.SNAME[cur]
+				e.name.text = {"chicken": "Chicken", "pitfall": "Pitfall", "tar": "Tar pit", "trough": "Holy water", "logs": "Log roller", "thresher": "Thresher"}[cur]
+				e.cost.text = D.cost_text(Rules.cost_of(p, cur)).replace(" and ", ", ")
+				e.b.tooltip_text = Keys.fill("%s. %s. Press %d to step through your contraptions%s." % [nm_[0].to_upper() + nm_.substr(1), D.CONTR[cur].d, D.BUILDS.size() + 1,
+					" (a box of cogs will be used: you have %d)" % p.cogs if Rules.rk(p, 2) < D.CONTR[cur].rank else ""])
+			continue
 		var need_bodies: bool = D.COST[k].has("bodies")
 		e.b.visible = not need_bodies or p.bodies >= D.COST[k].bodies
 		e.b.button_pressed = build_sel == k

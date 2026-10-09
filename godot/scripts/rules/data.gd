@@ -51,17 +51,32 @@ const GATHER := {
 	"fish": {"res": "food", "time": 0.0, "verb": "fish", "book": 1},
 }
 const GK := ["", "tree", "stone", "iron", "food", "fish", "search"]
-const COST := {"barricade": {"wood": 5}, "spikes": {"wood": 8}, "wall": {"wood": 15}, "gate": {"wood": 20}, "bodywall": {"bodies": 3}, "decoy": {"bodies": 1}}
+const COST := {"barricade": {"wood": 5}, "spikes": {"wood": 8}, "wall": {"wood": 15}, "gate": {"wood": 20}, "bodywall": {"bodies": 3}, "decoy": {"bodies": 1},
+	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}}
 const REINF := {
 	"wall": {"cost": {"stone": 10}, "mul": 3.0, "name": "face it with stone", "smith": 0},
 	"gate": {"cost": {"iron": 8}, "mul": 2.0, "name": "band it with iron", "smith": 0},
 	"barricade": {"cost": {"iron": 3}, "mul": 2.0, "name": "brace it with iron", "smith": 0},
 	"spikes": {"cost": {"iron": 4}, "mul": 1.0, "name": "tip them with iron", "smith": 2},
 }
-const SHP := {"barricade": 90.0, "spikes": 40.0, "wall": 260.0, "gate": 220.0, "bodywall": 110.0, "decoy": 70.0}
-const SDIM := {"barricade": Vector2(1.7, 0.45), "spikes": Vector2(1.7, 0.8), "wall": Vector2(3, 0.45), "gate": Vector2(3, 0.45), "bodywall": Vector2(1.7, 0.5), "decoy": Vector2(0.45, 0.45)}
-const SNAME := {"barricade": "barricade", "spikes": "spike row", "wall": "palisade wall", "gate": "gate", "bodywall": "body wall", "decoy": "decoy"}
-const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy"]
+const SHP := {"barricade": 90.0, "spikes": 40.0, "wall": 260.0, "gate": 220.0, "bodywall": 110.0, "decoy": 70.0,
+	"chicken": 40.0, "pitfall": 4.0, "tar": 100.0, "trough": 60.0, "logs": 1.0, "thresher": 160.0}   # a pitfall: how many it swallows; tar and the trough wear out with use
+const SDIM := {"barricade": Vector2(1.7, 0.45), "spikes": Vector2(1.7, 0.8), "wall": Vector2(3, 0.45), "gate": Vector2(3, 0.45), "bodywall": Vector2(1.7, 0.5), "decoy": Vector2(0.45, 0.45),
+	"chicken": Vector2(0.5, 0.5), "pitfall": Vector2(1.2, 1.2), "tar": Vector2(1.8, 1.2), "trough": Vector2(1.7, 0.5), "logs": Vector2(1.6, 1.0), "thresher": Vector2(0.9, 0.9)}
+const SNAME := {"barricade": "barricade", "spikes": "spike row", "wall": "palisade wall", "gate": "gate", "bodywall": "body wall", "decoy": "decoy",
+	"chicken": "chicken decoy", "pitfall": "pitfall", "tar": "tar pit", "trough": "holy water trough", "logs": "log roller", "thresher": "Thresher"}
+const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy", "chicken", "pitfall", "tar", "trough", "logs", "thresher"]
+const BLOCKERS := ["wall", "gate", "barricade", "bodywall", "decoy", "chicken"]   # what the dead have to break, or go round
+## Contraptions: the peasant community's inventions, learned from Barricades for Beginners (or built with a box of cogs).
+const CONTRAPTIONS := ["chicken", "pitfall", "tar", "trough", "logs", "thresher"]
+const CONTR := {
+	"chicken": {"rank": 1, "d": "A caged chicken. The dead nearby cannot leave it alone, and it does not last long"},
+	"pitfall": {"rank": 3, "d": "Swallows the first four of the dead to cross it, for good. Good inside the wall, for gravediggers"},
+	"tar": {"rank": 4, "d": "Everything that wades through it is slowed, the dead most of all"},
+	"trough": {"rank": 5, "d": "Holy water: burns the dead that cross it, wraiths too. Needs water blessed at the chapel (a class of holy studies, or the Holy Book)"},
+	"logs": {"rank": 6, "d": "A stack of logs north of the wall. Once a night, when a crowd or a coffin ram comes down the road past it, it rolls them flat"},
+	"thresher": {"rank": 7, "d": "A spinning flail. Hits everything round it, as long as someone is near enough to turn the handle"},
+}
 const BUILDS := ["barricade", "spikes", "bodywall", "decoy"]
 
 # --- everything a peasant can hold or wear. s: w weapon, h head, b body, o off hand, t carried.
@@ -143,7 +158,7 @@ const SPARE_PAY := 12                # past rank VII, each further first step's 
 const BOOKS := [
 	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material"]},
 	{"name": "Field, Hook and Pot", "what": "Food", "base": 40, "by": "fishing and foraging", "ranks": ["Fish and forage faster (and faster again with every rank)", "Meals heal 35", "A catch is 4 fish", "One meal feeds your whole posse", "Meals heal 50", "Slum recruits cost 3 food", "Meals heal 65 and steady your posse’s nerve"]},
-	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank)", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger", "Your barricades do not rot at dusk", "Your spike rows last twice as long", "Your barricades and body walls are half as strong again", "Contraptions (they arrive in a later build)"]},
+	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank). Contraption: the chicken decoy", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger. Contraption: the pitfall", "Your barricades do not rot at dusk. Contraption: the tar pit", "Your spike rows last twice as long. Contraption: the holy water trough", "Your barricades and body walls are half as strong again. Contraption: the log roller", "Contraption: the Thresher, a spinning flail"]},
 	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["Forging takes a third less iron (and a little less with every rank)", "Forge heavy arms and iron tips for spikes", "Arm your whole posse at once", "Forged weapons hit a tenth harder in your hands", "Your armour takes a further 5% off every blow", "Your posse’s spears hit harder", "Reinforcing a defence costs half"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["Hit harder up close (and harder again with every rank)", "One blow in eight misses you", "Your weapon’s trick is ready a fifth sooner", "Your swings reach wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow lands twice as hard"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "You never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also strikes a second enemy", "Aimed stones, volleys and piercing bolts are ready in half the time"]},
