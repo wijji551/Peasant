@@ -28,6 +28,7 @@ const ICON := {
 	"helm": "M4 16v-3a8 8 0 0 1 16 0v3zM12 9v7", "mail": "M7 3L2 7l3 4l2-1v11h10V10l2 1l3-4l-5-4c-1 2-9 2-10 0z",
 	"shield": "M12 2l8 3v6c0 6-4 9-8 11c-4-2-8-5-8-11V5z", "bucket": "M5 8h14l-2 13H7zM5 8c2-7 12-7 14 0",
 	"bell": "M12 2v3M6 17c0-9 2-12 6-12s6 3 6 12zM4 17h16M12 17v3", "censer": "M12 2v6M7 12a5 5 0 0 0 10 0zM7 12h10M10 20h4M12 17v3M9 6c-2-1 0-3-2-4M15 6c2-1 0-3 2-4",
+	"smite": "M13 2L6 13h5l-2 9l9-12h-5l3-8z", "pray": "M12 4v17M7 9h10M5 3c4 2 10 2 14 0",
 	# for the readouts
 	"wood": "M4 18l14-12M7 21l14-12M4 18l3 3M18 6l3 3", "stone": "M3 18l4-8l5-3l6 2l3 9z", "iron": "M4 15l4-6h8l4 6zM4 15h16v3H4z",
 	"food": "M12 21c-5 0-8-4-8-8c0-3 2-5 5-5c1 0 2 1 3 1s2-1 3-1c3 0 5 2 5 5c0 4-3 8-8 8zM12 8c0-3 1-5 3-6",
@@ -56,6 +57,8 @@ const ICON_COL := {
 	# a backpack
 	"pack": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M9 6V5a3 3 0 0 1 6 0v1" fill="none"/><path d="M5 9a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v12H5z" fill="#8a5a2b"/><path d="M7 12h10v5H7z" fill="#a8743a"/><path d="M5 10h14" stroke="#5e3b1a" fill="none"/><rect x="11" y="13" width="2" height="2" fill="#d9a62e"/></g>',
 	# an open book, for the skills
+	"smite": '<path d="M13 1L5 13h5.5l-2 10L19 10h-5.5l3-9z" fill="#f2c94c" stroke="#7a5212" stroke-width="1.1" stroke-linejoin="round"/>',
+	"pray": '<g stroke="#7a5212" stroke-width="1.1"><ellipse cx="12" cy="3.6" rx="6" ry="2" fill="none" stroke="#f2c94c" stroke-width="1.6"/><path d="M10.5 7h3v4h4v3h-4v8h-3v-8h-4v-3h4z" fill="#f6e3a0"/></g>',
 	"book": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M2 6c3-1 7-1 10 1v14c-3-2-7-2-10-1z" fill="#f3e2b0"/><path d="M22 6c-3-1-7-1-10 1v14c3-2 7-2 10-1z" fill="#ead39a"/><path d="M4 9c2-.5 4-.4 6 .4M4 12c2-.5 4-.4 6 .4M14 9.4c2-.8 4-.9 6-.4M14 12.4c2-.8 4-.9 6-.4" stroke="#8a6a45" fill="none"/><path d="M12 7v14" stroke="#7a1e18"/></g>',
 	# a tankard
 	"ale": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M16 10h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-3" fill="none"/><path d="M5 8h11v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z" fill="#9a6532"/><path d="M5 8c0-3 3-4 5-3c1-2 5-2 6 1c1 0 1 2 0 2z" fill="#fbf3dc"/><path d="M8 11v7M11 11v7M14 11v7" stroke="#5e3b1a" fill="none"/></g>',

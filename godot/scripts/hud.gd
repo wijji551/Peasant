@@ -28,6 +28,8 @@ var _boss: Control
 var _boss_bar: ProgressBar
 var _boss_num: Label
 var _boss_name: Label
+var _title: Label
+var _powers: HBoxContainer
 var _res := {}                       # name -> Label
 var _carry: Label
 var _hp_bar: ProgressBar
@@ -63,6 +65,8 @@ func _ready() -> void:
 	var v := _vbox(tl, 0)
 	_phase = Look.label(v, "Day 1", 30, Look.INK, true)
 	_timer = Look.label(v, "", 15, Look.INK_SOFT)
+	_title = Look.label(v, "", 13, Color("5d2a6e"))
+	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_ready_lab = Look.label(v, "", 13, Look.RUST)
 	_ready_lab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
@@ -189,6 +193,15 @@ func _ready() -> void:
 	for c in ["hand", "carry", "posse", "pack", "skills", "toilet", "courage"]:
 		_chip(c)
 	_zones.append(_hotbar)
+	# a calling's two powers: their own little bar, above your health
+	_powers = HBoxContainer.new()
+	root.add_child(_powers)
+	_pin(_powers, Control.PRESET_BOTTOM_LEFT, 14, -80, 14, -80)
+	_powers.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_powers.add_theme_constant_override("separation", 3)
+	_chip("power1", _powers)
+	_chip("power2", _powers)
+	_zones.append(_powers)
 	_prompt_box = VBoxContainer.new()
 	root.add_child(_prompt_box)
 	_pin(_prompt_box, Control.PRESET_CENTER_BOTTOM, -280, -96, 280, -96)
@@ -262,7 +275,7 @@ func _bar(parent: Control, fill: Color, h: float) -> ProgressBar:
 	return b
 
 
-func _chip(name_: String) -> void:   # one slot in the bar at the bottom: a picture, a word or two, and its key
+func _chip(name_: String, parent: Control = null) -> void:   # one slot in the bar at the bottom: a picture, a word or two, and its key
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(96, 58)
@@ -289,7 +302,7 @@ func _chip(name_: String) -> void:   # one slot in the bar at the bottom: a pict
 	h.add_child(v)
 	var key := Look.label(v, "", 12, Look.ROSE)
 	var text := Look.label(v, "", 15, Look.INK)
-	_hotbar.add_child(b)
+	(parent if parent else _hotbar).add_child(b)
 	_chips[name_] = {"box": b, "icon": ic, "text": text, "key": key}
 
 
@@ -391,9 +404,10 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		"day": timer = "Dusk in " + _fmt(R.timeLeft)
 		"dusk": timer = "Night falls in " + _fmt(R.timeLeft)
 		"night": timer = ("%d undead left · %d still to rise" % [R.left, R.wave] if R.wave > 0 else "%d undead left · the last have risen" % R.left) if R.left > 0 else "The graveyard is quiet"
-		"won": timer = "The week is over"
+		"won": timer = "It is over. You held."
 		"lost": timer = "The keep has fallen"
 	_timer.text = timer
+	_title.text = "%s, %s" % [p.dn, Rules.title_of(p)]
 	_ready_lab.text = ready_line
 	_ready_lab.visible = ready_line != ""
 	_keep_bar.value = maxf(0, R.keepHp) / D.KEEP_HP
@@ -422,6 +436,20 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 	var A: Dictionary = D.AB[W.ab]
 	_set_chip("hand", true, str(p.wpn), Keys.name("trick"), A.n + (" %ds" % ceili(p.abCd) if p.abCd > 0 else ""),
 		"In your hand: %s%s. {trick} or right-click: %s, %s." % [W.n, " (blessed)" if p.bless & 1 else "", A.n, A.d], p.abCd > 0)
+	var cl := Rules.class_of(p)
+	for i in 2:
+		var shown := false
+		if cl >= 0:
+			var pw: Dictionary = D.CLASSES[cl].powers[i]
+			var has_it: bool = Rules.rk(p, D.CLASSES[cl].book) >= pw.rank
+			var cd: float = p.p1Cd if i == 0 else p.p2Cd
+			shown = true
+			_set_chip("power%d" % (i + 1), true, pw.icon, Keys.name("power%d" % (i + 1)) if has_it else "rank %d" % pw.rank, pw.n + (" %ds" % ceili(cd) if cd > 0 else ""),
+				"%s: %s. %s" % [pw.full, pw.d, "{power%d}." % (i + 1) if has_it else "It comes at rank %d of %s." % [pw.rank, D.BOOKS[D.CLASSES[cl].book].name]], cd > 0 or not has_it)
+		if not shown: _set_chip("power%d" % (i + 1), false, "", "", "", "")
+	_powers.visible = cl >= 0 and not _covered
+	_feed.offset_top = -148 if cl >= 0 else -76
+	_feed.offset_bottom = _feed.offset_top
 	_set_chip("carry", p.trk >= 0, str(p.trk) if p.trk >= 0 else "pack", Keys.name("carry"), (["Handbell", "Censer", "Bucket"][p.trk - 26] if p.trk >= 26 else D.IT[p.trk].n) if p.trk >= 0 else "",
 		(D.IT[p.trk].note if p.trk >= 0 else ""), p.trk == 26 and p.useCd > 0)
 	var nv := 100.0

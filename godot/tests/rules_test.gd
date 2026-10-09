@@ -87,7 +87,7 @@ func run() -> void:
 		for j in 8:
 			if in_keep(Rules.home_spot(s, j, 7)): bad += 1
 	ok("no cottage lines its people up inside the keep", bad == 0, bad)
-	ok("pitchfork, empty pack, ten books", m.wpn == 0 and m.inv.is_empty() and m.books.size() == 10 and D.BOOKS.size() == 10 and D.BOOKS.all(func(b): return b.ranks.size() == 7))
+	ok("pitchfork, empty pack, eleven books", m.wpn == 0 and m.inv.is_empty() and m.books.size() == 11 and D.BOOKS.size() == 11 and D.BOOKS.all(func(b): return b.ranks.size() == 7))
 
 	# ---------- books: ten of them, seven ranks
 	at(13.4, 20.4)
@@ -305,7 +305,7 @@ func run() -> void:
 	ok("the posse lines up outside the door, not in the keep", not R.peasants.any(func(q): return q.state != "body" and in_keep(q)))
 	at(R.drops[0].x, R.drops[0].z + 0.5); hold(1, func(): return R.drops.size() < 2); ok("a relic can be picked up again", R.drops.size() == 1 and (m.wpn >= 15 or m.inv.size() == 1))
 	var sv = saved
-	ok("the save holds the new things", sv != null and sv.v == 3 and sv.sites == R.sites and sv.trees.size() >= 1 and sv.drops.size() == 2 and sv.players[0].books.size() == 10)
+	ok("the save holds the new things", sv != null and sv.v == 3 and sv.sites == R.sites and sv.trees.size() >= 1 and sv.drops.size() == 2 and sv.players[0].books.size() == 11)
 	# a save survives the trip to text and back
 	var back = JSON.parse_string(JSON.stringify(sv))
 	var R2 := Rules.new()

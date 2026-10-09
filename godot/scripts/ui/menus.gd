@@ -11,11 +11,18 @@ const GUIDE := [
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
 	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: shared materials and a shared arms rack. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
 	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "With a village server set (Options), villages go through it: a five-letter code that works from anywhere, and nobody's router matters. Without one, the host's computer asks its router to let friends in; if the router says no, that code only works on the same home network, unless the host opens port 24565 (UDP). The game does not pause for the handbook when others are playing."]],
+	["The Holy Book", ["The last book on the library shelf makes you an apprentice priest: a peasant's version of a mage, which is to say not much of one. {power1} is Smite, a bolt of holy light on the nearest of the dead; from rank 2, {power2} is Pray, a third less harm for ten seconds for you and everyone near you, posse included. Later ranks make the prayer bless weapons and mend wounds, and the smite burst and strike three at once. Smites are holy, so they hurt wraiths.", "One calling at a time. You learn the book by smiting and praying.", "Your title: the village names you after the two books you know best, the one you know best last (the Sooty Ringleader, the Holy Apprentice Priest). It shows top left.", "A fourth book: An Index of Further Reading turns up, rarely, in the ruins. Read it and the library lets you take up one more.", "Every relic goes with a book. Read the book and the relic does a little more: the Silvered Sword hits harder with The Art of Hitting Things, the Chapel Handbell smites with the Holy Book, and so on. Your backpack says which."]],
 	["The month", ["Four weeks, each ending with a boss: the Steward on night 7, the Coachman and his hearse on 14, the Captain of the Guard on 21, and the Lord of Ashhollow himself on 30. Each week the dead last a little longer and hit a little harder, and new kinds come down. The dawn notice warns you the morning before.", "Ghouls (from night 8) are fast and climb over barricades, but not walls. Gravediggers (10) tunnel under the north wall and come up inside. Bat swarms (12) fly over everything for the keep: slings, bows and the handbell bring them down. The Lord's guard (15) is armoured: farm tools barely dent it, maces and hammers do. Wraiths (18) drift through walls, and only holy things hurt them: relics, blessed weapons, blessed slop. A coffin ram (20) goes for the north gate: a warhammer, or a very strong gate.", "The weather changes the night. Rain makes mud, and the dead wade slower. Fog hides the castle road. Snow slows everyone. Night 15 is the full moon: relics are easier to find, and the dead are quicker."]],
 	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the boss when one comes. Top right: the map. Left: what you carry. Bottom: your hand, bucket, posse, backpack, skills and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your backpack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
 ]
 
 const CHANGES := [
+	["Build 4, stage 2: the Holy Book", [
+		"A new book on the library shelf, The Holy Book (Abridged). It makes you an apprentice priest, with two powers on their own keys: Z for Smite (holy light on the nearest of the dead) and C for Pray (protection for you and everyone near you, from rank 2). Higher ranks bless everyone's weapons, mend wounds, and make the smite burst and strike three at once. Smites are holy, so they hurt wraiths.",
+		"Titles: the village names you after the books you know best, from the Splintery Woodcutter to the Holy Master Apprentice Priest. Yours shows top left, and in your skills.",
+		"A fourth book: An Index of Further Reading turns up, rarely, in the ruins.",
+		"Relics and books lean on each other: every relic does something more if you have read the book it goes with. Your backpack and the arms rack say which book.",
+	]],
 	["Build 4, stage 1: the month", [
 		"Thirty nights now, in four weeks. The home screen offers a new month, or a short game of seven nights that squeezes it all in, with the Lord on the seventh.",
 		"Six new kinds of dead: ghouls that climb barricades, gravediggers that tunnel under the north wall, bat swarms that fly straight for the keep, the Lord's armoured guard, wraiths that walk through walls and only mind holy things, and a coffin ram for the gate.",
@@ -458,8 +465,8 @@ const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII"]
 func skills(force: bool = false) -> void:
 	var p: E.Player = m.me
 	var owned: Array = []
-	for i in 10:
-		if p.books[i] > 0: owned.append(i)
+	for i in D.BOOKS.size():
+		if Rules.rk(p, i) > 0: owned.append(i)
 	if skill_book < 0 or not owned.has(skill_book):
 		skill_book = owned[0] if owned.size() else -1
 	var sig := str(p.books) + str(p.xp.map(func(x): return floori(x))) + str(floori(p.spare)) + str(skill_book) + str(p.coward)
@@ -467,7 +474,7 @@ func skills(force: bool = false) -> void:
 		return
 	_skills_sig = sig
 	var slots := Rules.book_slots(p)
-	w.open("skills", "Your skills", "Every book is learned by doing what it teaches, and each rank takes more practice than the last." + (" You can take %s more from the library." % ("one" if slots == 1 else str(slots)) if slots > 0 else ""), 940, 640, true, true)
+	w.open("skills", "Your skills", "%s, %s. " % [p.dn, Rules.title_of(p)] + "Every book is learned by doing what it teaches, and each rank takes more practice than the last." + (" You can take %s more from the library." % ("one" if slots == 1 else str(slots)) if slots > 0 else ""), 940, 640, true, true)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 18)
 	w.body.add_child(cols)
@@ -476,16 +483,19 @@ func skills(force: bool = false) -> void:
 	left.custom_minimum_size.x = 270
 	left.add_theme_constant_override("separation", 4)
 	cols.add_child(left)
-	for i in 10:
+	for i in D.BOOKS.size():
 		var bk: Dictionary = D.BOOKS[i]
 		var bt := Button.new()
 		bt.focus_mode = Control.FOCUS_NONE
 		bt.toggle_mode = true
 		bt.button_pressed = i == skill_book
-		bt.disabled = p.books[i] == 0
+		var rr := Rules.rk(p, i)
+		bt.disabled = rr == 0
 		bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		bt.text = ("%s   %s" % [ROMAN[p.books[i]], bk.what]) if p.books[i] else "—   " + bk.what
-		bt.tooltip_text = bk.name if p.books[i] else bk.name + ". In the library."
+		bt.text = ("%s   %s" % [ROMAN[rr], bk.what]) if rr else "—   " + bk.what
+		bt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		bt.clip_text = true
+		bt.tooltip_text = bk.name if rr else bk.name + ". In the library."
 		bt.add_theme_font_size_override("font_size", 16)
 		var bi := i
 		bt.pressed.connect(func(): skill_book = bi; skills.call_deferred(true))
@@ -500,7 +510,7 @@ func skills(force: bool = false) -> void:
 	else:
 		var b := skill_book
 		var bk: Dictionary = D.BOOKS[b]
-		var rank: int = p.books[b]
+		var rank: int = Rules.rk(p, b)
 		Look.label(right, bk.name, 26, Look.INK, true)
 		Look.para(right, "%s. You learn it by %s.%s" % [bk.what, bk.by, " Halved while you are a coward." if p.coward else ""], 15, Look.INK_SOFT)
 		var gap := Control.new(); gap.custom_minimum_size.y = 8; right.add_child(gap)

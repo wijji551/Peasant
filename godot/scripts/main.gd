@@ -410,6 +410,19 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 		if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
 		elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
 		else: cmd({"t": "tb"})
+	elif Keys.is_act(e, "power1") or Keys.is_act(e, "power2"):
+		var i := 0 if Keys.is_act(e, "power1") else 1
+		var c := Rules.class_of(p)
+		if c < 0:
+			Sound.play("no"); hud.banner("No calling", "Powers come from a calling. The Holy Book, in the library, makes you an apprentice priest.", 2.0)
+		else:
+			var pw: Dictionary = D.CLASSES[c].powers[i]
+			var cd: float = p.p1Cd if i == 0 else p.p2Cd
+			if Rules.rk(p, D.CLASSES[c].book) < pw.rank: Sound.play("no"); hud.banner("Not yet", "%s comes at rank %d of %s." % [pw.full, pw.rank, D.BOOKS[D.CLASSES[c].book].name], 1.8)
+			elif cd > 0: Sound.play("no"); hud.banner("Not yet", "%s is ready again in %d seconds." % [pw.n, ceili(cd)], 1.2)
+			else:
+				if i == 0: R.aim_assist(p)
+				cmd({"t": "pw", "i": i, "r": p.r})
 	elif Keys.is_act(e, "orders"):
 		if Rules.rk(p, 6) < 3: Sound.play("no"); hud.banner("No orders yet", "Orders need rank 3 of How to Win Peasants and Lead Them.", 1.7)
 		else:
@@ -627,6 +640,8 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1); Sound.play("swing", 0.5, Vector2(ev[1], ev[2]))
 		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3); Sound.play("raise", 0.7, Vector2(ev[1], ev[2]))
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
+		"smite": F.beam(ev[1], ev[2]); Sound.play("holy", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder1", 0.25, Vector2(ev[1], ev[2]))
+		"pray": F.ring(ev[1], ev[2], 7, 40, F.C_HOLY); F.puff(ev[1], 1.8, ev[2], 18, F.C_GLAD, 2.5); Sound.play("holy", 0.9, Vector2(ev[1], ev[2])); Sound.play("ring", 0.4, Vector2(ev[1], ev[2]))
 		"mist": F.puff(ev[1], 1.0, ev[2], 18, F.C_GHOST, 3.5); Sound.play("raise", 0.5, Vector2(ev[1], ev[2]))
 		"smash": F.puff(ev[1], 0.8, ev[2], 16, F.C_WOOD, 5); Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
 		"coin": F.puff(ev[1], 1.4, ev[2], 6, F.C_COIN, 2); Sound.play("coin", 1.0, Vector2(ev[1], ev[2]))
@@ -900,6 +915,11 @@ func _test_hook() -> void:
 	if shot == "":
 		return
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
+	if OS.get_environment("DTV_PRIEST") != "" and me:     # for pictures: an apprentice priest, smiting and praying
+		if _frame == 2:
+			me.books[D.B_HOLY] = 6; me.books[6] = 3; me.xp[D.B_HOLY] = 700.0; me.xslot = true
+		if _frame == at + 24:
+			me.p1Cd = 0; me.p2Cd = 0; R.do_power(me, 0); R.do_power(me, 1)
 	if _frame == at and OS.get_environment("DTV_AT") != "" and me:
 		var xz := OS.get_environment("DTV_AT").split(",")
 		me.x = float(xz[0]); me.z = float(xz[1])

@@ -151,7 +151,36 @@ const BOOKS := [
 	{"name": "The Landlord’s Ledger", "what": "Dutch courage", "base": 4, "by": "drinking at the Thorny Rose Inn", "ranks": ["Every tankard goes further (and further again with every rank)", "A longer charge: 26 seconds", "Half the hangover", "No hangover", "When you drink, everyone in the inn gets a mouthful", "A longer charge: 32 seconds", "The charge hits twice as hard"]},
 	{"name": "Relics and Where They Were Left", "what": "Relic lore", "base": 4, "by": "searching the ruins", "ranks": ["Search faster (and faster again with every rank)", "Your map marks the rubble that still hides something", "Relics turn up half as often again", "You find twice the materials and coins", "Holy things hit harder in your hands", "Relics turn up far more often", "Nothing lurking in the ruins notices you"]},
 	{"name": "Granny’s Remedies", "what": "Healing", "base": 4, "by": "bandaging and reviving", "ranks": ["Bandage a hurt ally: hold {interact} beside them (it heals more with every rank)", "Revive twice as fast, and to better health", "Each of your posse survives one fatal blow a night", "You mend slowly all the time, even in a fight", "You last twice as long when down", "A bandage heals completely", "Once a night you get back up by yourself"]},
+	{"name": "The Holy Book (Abridged)", "what": "Divine powers: the apprentice priest", "base": 30, "by": "smiting and praying", "class": 0, "ranks": [
+		"Minor Smiting: {power1} calls down a bolt of holy light on the nearest of the dead (it hits harder with every rank)",
+		"A Word of Protection: {power2} prays over you and everyone near you, your posse included: a third less harm for ten seconds",
+		"The Blessing of Mild Improvement: the prayer also makes everyone’s weapons holy while it lasts",
+		"Smiting, With Feeling: a smite bursts, and scorches everything near what it hits",
+		"Smites and prayers come round a third sooner",
+		"Hallowed Ground (Mostly): the prayer also mends 25 health and steadies your posse’s nerve",
+		"Divine Intervention, Probably: a smite strikes three of the dead at once, and wraiths and bosses twice as hard"]},
 ]
+## Callings: a book that makes you something more than a peasant, with two powers on their own keys. One calling at a
+## time. The Holy Book is the first; more can follow (each needs its book, and its two powers in rules.gd).
+const CLASSES := [
+	{"name": "Apprentice Priest", "book": 10, "powers": [
+		{"n": "Smite", "full": "Minor Smiting", "rank": 1, "icon": "smite", "d": "a bolt of holy light on the nearest of the dead"},
+		{"n": "Pray", "full": "A Word of Protection", "rank": 2, "icon": "pray", "d": "a third less harm for you and everyone near you, for ten seconds"}]},
+]
+const B_HOLY := 10
+## A title from the books you have read: the one you know best, and the next best.
+const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest"]
+const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy"]
+## Each relic has a book it goes with. Carrying the relic with that book read does something more.
+const RELIC_LORE := {
+	15: [1, "Every Bury feeds you: 10 health"],
+	16: [6, "Your posse’s blows are holy too"],
+	17: [4, "It hits a quarter harder"],
+	20: [7, "Your Dutch courage charge lasts half as long again"],
+	23: [9, "Every burn it gives mends you a little"],
+	26: [10, "Its ring smites everything it stuns"],
+	27: [8, "The dead it slows smoulder"],
+}
 # --- the dead. first: the night of the month they first come down. cost: how much of a night's horde one of them is
 # worth (a shambler is 1). Flags: bony (reassembles once), boss, climb (over barricades), dig (under the north wall),
 # fly (over everything, for the keep), armour (shrugs off farm tools), ghost (through walls; only holy things hurt it),

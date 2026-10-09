@@ -24,6 +24,9 @@ static func item_sub(p: E.Player, id: int) -> String:   # one line about a thing
 		t = "Takes %d%% off every blow%s%s." % [roundi(I.cut * 100), (" and stops %d%% of arrows" % roundi(I.arrow * 100)) if I.arrow else "", ", and slows you a little" if I.slow else ""]
 	if I.note != "" and I.s != "w":
 		t += (" " if t != "" else "") + I.note + "."
+	if D.RELIC_LORE.has(id):                         # what it does with the book it goes with
+		var L: Array = D.RELIC_LORE[id]
+		t += " With %s: %s.%s" % [D.BOOKS[L[0]].name, lower(L[1]), " (You have it.)" if Rules.rk(p, L[0]) > 0 else ""]
 	if not I.need.is_empty() and not Rules.can_use(p, id):
 		t += " You cannot use it yet: it needs %s." % book_need(I.need)
 	return t
@@ -91,10 +94,12 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var owned: int = p.books.filter(func(r): return r > 0).size()
 			for b in D.BOOKS.size():
 				var B: Dictionary = D.BOOKS[b]
-				var r: int = p.books[b]
-				var sub := ("%s. %s." % [B.what, B.ranks[0]]) if not r else ("Latest: %s." % lower(B.ranks[r - 1])) + ((" Next: %s (%d of %d, by %s)." % [lower(B.ranks[r]), floori(p.xp[b]), Rules.need_xp(b, r), B.by]) if r < 7 else " You have finished it.")
-				o.append({"label": B.name + (" · rank %d of 7" % r if r else ""), "sub": sub, "ok": not r and slots > 0, "a": "book", "arg": b})
-			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of ten books, with seven ranks in each. Choose your first.") if slots > 0 else ("You have your three books." if owned >= 3 else "Reach rank 2 in a book to take up a second, and rank 3 in two books to take up a third.")
+				var r: int = Rules.rk(p, b)
+				var other_call: bool = Rules.is_class_book(b) and not r and Rules.class_of(p) >= 0
+				var sub := "One calling at a time." if other_call else ("%s. %s." % [B.what, Keys.fill(B.ranks[0])]) if not r else ("Latest: %s." % lower(B.ranks[r - 1])) + ((" Next: %s (%d of %d, by %s)." % [lower(B.ranks[r]), floori(p.xp[b]), Rules.need_xp(b, r), B.by]) if r < 7 else " You have finished it.")
+				o.append({"label": B.name + (" · rank %d of 7" % r if r else ""), "sub": sub, "ok": not r and slots > 0 and not other_call, "a": "book", "arg": b})
+			var most := 4 if p.xslot else 3
+			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of eleven books, with seven ranks in each. Choose your first. The Holy Book, at the end, makes you an apprentice priest.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four"][most] if owned >= most else "Reach rank 2 in a book to take up a second, and rank 3 in two books to take up a third." + (" Your Index of Further Reading allows a fourth." if p.xslot else " A fourth needs An Index of Further Reading, which turns up in the ruins."))
 			return {"title": "The library", "intro": intro + (" Cowards learn at half speed today." if p.coward else ""), "o": o}
 		"slum":
 			var c := {"food": Rules.slum_food(p)}

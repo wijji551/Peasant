@@ -27,6 +27,34 @@ const C_STEWARD := [Color(0.15, 0.13, 0.18), Color(0.8, 0.84, 0.78)]
 var _bits := []            # [pos, vel, life, colour, size]
 var _mm: MultiMesh
 var _flying := []          # [from, to, t, kind, node]
+var _beams := []           # [node, life]: smites, columns of holy light
+
+
+## A column of holy light coming down from the sky: a smite.
+func beam(x: float, z: float) -> void:
+	var n := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.45; cm.bottom_radius = 0.95; cm.height = 16.0; cm.radial_segments = 12; cm.rings = 1
+	n.mesh = cm
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_color = Color(1.0, 0.85, 0.4, 1.0)
+	m.disable_fog = true
+	n.material_override = m
+	n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	n.position = Vector3(x, 8.0, z)
+	var l := OmniLight3D.new()                    # and the ground lit gold for a moment
+	l.light_color = Color(1.0, 0.85, 0.45)
+	l.light_energy = 5.0
+	l.omni_range = 8.0
+	l.position = Vector3(0, -7.0, 0)
+	n.add_child(l)
+	add_child(n)
+	_beams.append([n, 0.55])
+	puff(x, 0.4, z, 14, C_HOLY, 4.0)
+	ring(x, z, 2.2, 14, C_HOLY)
 
 
 func _ready() -> void:
@@ -104,6 +132,20 @@ func _process(delta: float) -> void:
 		var s: float = b[4] * minf(1.0, b[2] * 4)
 		_mm.set_instance_transform(j, Transform3D(Basis.from_euler(Vector3(b[2] * 7, b[2] * 9, 0)).scaled(Vector3(s, s, s)), b[0]))
 		_mm.set_instance_color(j, b[3])
+	i = _beams.size() - 1
+	while i >= 0:
+		var bm: Array = _beams[i]
+		bm[1] -= delta
+		var node: MeshInstance3D = bm[0]
+		if bm[1] <= 0:
+			node.queue_free()
+			_beams.remove_at(i)
+		else:
+			var f: float = bm[1] / 0.55
+			node.scale = Vector3(f, 1.0, f)
+			(node.material_override as StandardMaterial3D).albedo_color.a = f
+			(node.get_child(0) as OmniLight3D).light_energy = 5.0 * f
+		i -= 1
 	i = _flying.size() - 1
 	while i >= 0:
 		var a: Array = _flying[i]

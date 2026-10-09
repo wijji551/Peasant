@@ -29,7 +29,7 @@ const QSTATE := ["idle", "follow", "chop", "fight", "hide", "body", "gone", "inn
 const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
 const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
-	"bless", "holy", "holyT", "study", "gab", "spare", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
+	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "p1Cd", "p2Cd", "prot", "hb", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT"]
 
 static var me: Net
@@ -498,6 +498,7 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 		"abl": p.r = float(m.r); p.goal_r = p.r; R.do_ability(p)
 		"use": p.r = float(m.r); p.goal_r = p.r; R.do_use(p)
 		"tb": R.do_toilet(p)
+		"pw": p.r = float(m.get("r", p.r)); p.goal_r = p.r; R.do_power(p, int(m.i))
 		"ord": R.do_order(p)
 		"bld": R.try_place(p, str(m.k), float(m.x), float(m.z), float(m.rot))
 		"rdy": if R.phase == "day": p.ready = bool(m.v)
@@ -560,7 +561,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 	var pe := PackedFloat32Array()
 	for q in R.peasants:
 		if q.state == "gone" or q.state == "inn": continue
-		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv])
+		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot])
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
 		"al": R.ale, "ih": R.innHp, "wx": R.weather, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]),
@@ -690,13 +691,13 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 	for q in R.peasants: by[q.id] = q
 	var pe: PackedFloat32Array = m.pe
 	var out := []
-	for i in range(0, pe.size(), 12):
+	for i in range(0, pe.size(), 13):
 		var id := int(pe[i])
 		var q: E.Peasant = by.get(id)
 		if q == null:
 			q = E.Peasant.new(); q.id = id; q.x = pe[i + 1]; q.z = pe[i + 2]; q.r = pe[i + 3]
 		q.tx = pe[i + 1]; q.tz = pe[i + 2]; q.tr = pe[i + 3]; q.hp = pe[i + 4]; q.owner = int(pe[i + 5]); q.state = QSTATE[int(pe[i + 6])]
-		q.ac = int(pe[i + 7]); q.hc = int(pe[i + 8]); q.ni = int(pe[i + 9]); q.armed = int(pe[i + 10]); q.nv = pe[i + 11]
+		q.ac = int(pe[i + 7]); q.hc = int(pe[i + 8]); q.ni = int(pe[i + 9]); q.armed = int(pe[i + 10]); q.nv = pe[i + 11]; q.prot = pe[i + 12]
 		out.append(q)
 	R.peasants = out
 	if m.has("un"):

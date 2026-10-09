@@ -72,8 +72,13 @@ class Player:
 	var holyT := 0.0
 	var study := false
 	var gab := false
-	var books: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	var xp: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+	var books: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	var xp: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+	var xslot := false      # read An Index of Further Reading: a fourth book
+	var p1Cd := 0.0         # a calling's two powers (the Holy Book: Smite and Pray)
+	var p2Cd := 0.0
+	var prot := 0.0         # prayed over: a third less harm
+	var hb := 0.0           # prayed over at rank 3: the weapon is holy
 	var spare := 0.0        # learning past rank VII, in points; sold for coin in the skills window
 	var coward := false
 	var deaths := 0
@@ -138,6 +143,7 @@ class Peasant:
 	var tr := 0.0
 	var px := 0.0           # where they were told to hold
 	var pz := 0.0
+	var prot := 0.0         # prayed over: a third less harm
 	var hurtT := 99.0
 
 

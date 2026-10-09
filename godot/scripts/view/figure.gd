@@ -134,13 +134,15 @@ func player(p: E.Player, is_me: bool) -> void:
 	_banner_mat.albedo_color = tint
 	_wobble = p.hang > 0
 	_set_work(kind)
-	_set_held(p.wpn, (p.bless & 1) != 0)
+	_set_held(p.wpn, (p.bless & 1) != 0 or p.hb > 0)
 	_set_gear([p.head, p.body, p.off, p.trk])
 	_set_carry(p.bodies, p.bbod)
 	if fx:
 		var dt := get_process_delta_time()
 		if p.charge > 0 and randf() < dt * 30: fx.puff(p.x, 0.3, p.z, 1, fx.C_ALE, 1.5)
 		if ((p.bless & 1) or D.IT[p.wpn].holy) and p.state == "ok" and randf() < dt * 3: fx.puff(p.x + sin(p.r) * 0.6, 1.9, p.z + cos(p.r) * 0.6, 1, fx.C_HOLY, 0.4)
+		if p.prot > 0 and randf() < dt * 10: fx.puff(p.x + randf_range(-0.5, 0.5), 0.4, p.z + randf_range(-0.5, 0.5), 1, fx.C_GLAD, 0.6)   # prayed over
+		if Rules.class_of(p) >= 0 and p.state == "ok" and randf() < dt * 1.5: fx.puff(p.x, 2.1, p.z, 1, fx.C_HOLY, 0.2)   # an apprentice priest, faintly glowing
 		if p.parry > 0 and randf() < dt * 14: fx.puff(p.x + sin(p.r) * 0.7, 1.2, p.z + cos(p.r) * 0.7, 1, fx.C_SPARK, 0.8)
 	var mx := Rules.max_hp(p)
 	if p.state == "down":
@@ -180,6 +182,7 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 	_set_work(kind)
 	_set_held(2 if q.armed else 0, false)
 	_set_gear([])
+	if fx and q.prot > 0 and randf() < get_process_delta_time() * 8: fx.puff(q.x + randf_range(-0.4, 0.4), 0.4, q.z + randf_range(-0.4, 0.4), 1, fx.C_GLAD, 0.5)
 	if q.hp < D.PEASANT_HP and not _down:
 		_show_bar(2.1, 0.9, q.hp / D.PEASANT_HP, Color(0.56, 0.78, 0.36))
 	else:
