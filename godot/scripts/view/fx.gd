@@ -29,6 +29,139 @@ var _bits := []            # [pos, vel, life, colour, size]
 var _mm: MultiMesh
 var _flying := []          # [from, to, t, kind, node]
 var _beams := []           # [node, life]: smites, columns of holy light
+var _arcs := []            # [node, age, life, kind, facing, half angle, size]: the sweep of a blade, a thrust, a shockwave
+var _arc_spare: Array[MeshInstance3D] = []
+var _arc_n := 0
+
+const MAX_ARCS := 72
+const WHITE := Color(1.0, 0.97, 0.88)
+
+
+## The sweep of a weapon through the air: a crescent in front of whoever swung, there for a fifth of a second.
+## half is half the angle swept; a narrow one (a pitchfork, a spear) is drawn as a thrust. must: draw it even if
+## that means taking an older one away (for the players; the crowd goes without when there are too many).
+func slash(x: float, z: float, r: float, reach: float, half: float, col: Color = WHITE, must: bool = false, y: float = 1.25) -> void:
+	var thrust := half < 0.3
+	var n := _arc_node(_arc_mesh(half, 0.2 if thrust else 0.62), col, must)
+	if n == null: return
+	n.position = Vector3(x, y, z)
+	n.rotation = Vector3(0, r, 0) if thrust else Vector3(0, r, randf_range(-0.22, 0.22))
+	_arcs.append([n, 0.0, 0.16 if thrust else 0.21, 1 if thrust else 0, r, half, reach])
+	_arc_step(_arcs[-1], 0.0)
+
+
+## A ring racing outwards along the ground: something heavy has landed.
+func shock(x: float, z: float, rad: float, col: Color = WHITE, life: float = 0.42) -> void:
+	var n := _arc_node(_ring_mesh(), col, true)
+	if n == null: return
+	n.position = Vector3(x, 0.14, z)
+	n.rotation = Vector3.ZERO
+	_arcs.append([n, 0.0, life, 2, 0.0, 0.0, rad])
+	_arc_step(_arcs[-1], 0.0)
+
+
+func _arc_node(mesh: Mesh, col: Color, must: bool) -> MeshInstance3D:
+	var n: MeshInstance3D
+	if not _arc_spare.is_empty():
+		n = _arc_spare.pop_back()
+	elif _arc_n < MAX_ARCS:
+		_arc_n += 1
+		n = MeshInstance3D.new()
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.vertex_color_use_as_albedo = true
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		m.disable_fog = true
+		m.disable_receive_shadows = true
+		n.material_override = m
+		n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(n)
+	elif must and not _arcs.is_empty():
+		var old: Array = _arcs.pop_front()
+		n = old[0]
+	else:
+		return null
+	n.mesh = mesh
+	n.set_meta("col", col)
+	n.visible = true
+	return n
+
+
+func _arc_step(a: Array, delta: float) -> void:
+	a[1] += delta
+	var n: MeshInstance3D = a[0]
+	var k: float = clampf(a[1] / a[2], 0.0, 1.0)
+	var e := 1.0 - (1.0 - k) * (1.0 - k)                      # fast, then easing
+	var col: Color = n.get_meta("col")
+	var size: float = a[6]
+	match a[3]:
+		0:                                                    # a swing: the crescent follows the blade round
+			n.rotation.y = a[4] + lerpf(0.4, -0.08, e)
+			var s := size * (0.92 + 0.12 * e)
+			n.scale = Vector3(s, 1, s)
+			col.a *= (1.0 - k) * minf(1.0, k * 9.0 + 0.35)
+		1:                                                    # a thrust: it darts out
+			var s := size * (0.5 + 0.62 * e)
+			n.scale = Vector3(size * 0.9, 1, s)
+			col.a *= (1.0 - k * k)
+		_:                                                    # a shockwave
+			var s := size * (0.2 + 0.8 * e)
+			n.scale = Vector3(s, 1, s)
+			col.a *= (1.0 - k) * (1.0 - k)
+	(n.material_override as StandardMaterial3D).albedo_color = col
+
+
+static var _arc_cache := {}
+## A crescent lying flat, pointing along +Z, one unit long: no width at its two ends, soft on the inside, and
+## brightest at the end the blade finishes at.
+static func _arc_mesh(half: float, inner: float) -> ArrayMesh:
+	var key := "%d:%d" % [roundi(half * 16), roundi(inner * 20)]
+	if _arc_cache.has(key): return _arc_cache[key]
+	var n := clampi(int(half * 2.0 / 0.13), 6, 40)
+	var vs := PackedVector3Array()
+	var cs := PackedColorArray()
+	var ix := PackedInt32Array()
+	for i in n + 1:
+		var t := float(i) / n
+		var a := lerpf(-half, half, t)
+		var w := lerpf(1.0, inner, pow(sin(t * PI), 0.6))
+		vs.append(Vector3(sin(a) * w, 0, cos(a) * w)); cs.append(Color(1, 1, 1, 0.0))
+		vs.append(Vector3(sin(a), 0, cos(a))); cs.append(Color(1, 1, 1, 0.38 + 0.62 * pow(1.0 - t, 1.3)))      # (the weapon hand is on that side)
+	for i in n:
+		var b := i * 2
+		ix.append_array(PackedInt32Array([b, b + 1, b + 2, b + 1, b + 3, b + 2]))
+	_arc_cache[key] = _mesh_of(vs, cs, ix)
+	return _arc_cache[key]
+
+
+## A flat ring, one unit across: clear in the middle, bright near the rim, and soft at the very edge.
+static func _ring_mesh() -> ArrayMesh:
+	if _arc_cache.has("ring"): return _arc_cache["ring"]
+	var n := 40
+	var vs := PackedVector3Array()
+	var cs := PackedColorArray()
+	var ix := PackedInt32Array()
+	for i in n + 1:
+		var a := float(i) / n * TAU
+		for band in [[0.62, 0.0], [0.93, 0.9], [1.0, 0.0]]:
+			vs.append(Vector3(sin(a) * band[0], 0, cos(a) * band[0])); cs.append(Color(1, 1, 1, band[1]))
+	for i in n:
+		var b := i * 3
+		ix.append_array(PackedInt32Array([b, b + 1, b + 3, b + 1, b + 4, b + 3, b + 1, b + 2, b + 4, b + 2, b + 5, b + 4]))
+	_arc_cache["ring"] = _mesh_of(vs, cs, ix)
+	return _arc_cache["ring"]
+
+
+static func _mesh_of(vs: PackedVector3Array, cs: PackedColorArray, ix: PackedInt32Array) -> ArrayMesh:
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = vs
+	arr[Mesh.ARRAY_COLOR] = cs
+	arr[Mesh.ARRAY_INDEX] = ix
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
 
 
 ## A column of holy light coming down from the sky: a smite.
@@ -133,6 +266,15 @@ func _process(delta: float) -> void:
 		var s: float = b[4] * minf(1.0, b[2] * 4)
 		_mm.set_instance_transform(j, Transform3D(Basis.from_euler(Vector3(b[2] * 7, b[2] * 9, 0)).scaled(Vector3(s, s, s)), b[0]))
 		_mm.set_instance_color(j, b[3])
+	i = _arcs.size() - 1
+	while i >= 0:
+		var ar: Array = _arcs[i]
+		_arc_step(ar, delta)
+		if ar[1] >= ar[2]:
+			(ar[0] as MeshInstance3D).visible = false
+			_arc_spare.append(ar[0])
+			_arcs.remove_at(i)
+		i -= 1
 	i = _beams.size() - 1
 	while i >= 0:
 		var bm: Array = _beams[i]

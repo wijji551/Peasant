@@ -270,6 +270,14 @@ def sfx():
             add(gal, noise(0.035, 0.3 * g, 700), at)
     S["hooves"] = reverb(gal * V, 0.5, 0.12)
     S["nail"] = mix(0.8, *[(tone(1150, 0.05, "square", 0.16, 760), t) for t in (0, 0.2, 0.4)], *[(noise(0.03, 0.4, 2600), t) for t in (0, 0.2, 0.4)], *[(tone(210, 0.07, "sine", 0.5, 150), t) for t in (0, 0.2, 0.4)])
+    # blows that land: a meaty one, a lucky double, one that glances off armour, and a heavy weapon going round
+    S["thwack"] = mix(0.16, (noise(0.035, 0.9, 2600), 0), (noise(0.08, 0.6, 700), 0.005), (tone(150, 0.12, "sine", 0.8, 55), 0))
+    S["crit"] = mix(0.5, (noise(0.04, 0.9, 3200), 0), (tone(170, 0.16, "sine", 0.9, 48), 0), (noise(0.1, 0.5, 600), 0.01),
+                    (tone(1180, 0.4, "sine", 0.16), 0.01), (tone(1770, 0.3, "sine", 0.08), 0.01))
+    S["tink"] = mix(0.14, (tone(2100, 0.1, "sine", 0.22, 1900), 0), (tone(3150, 0.06, "sine", 0.1), 0), (noise(0.02, 0.4, 5000), 0))
+    wh = bandpass(rng.standard_normal(int(SR * 0.22)), 500, 2200)
+    wh = wh / (np.abs(wh).max() + 1e-9) * np.sin(np.linspace(0, np.pi, len(wh))) ** 1.5 * 0.45
+    S["whoosh"] = mix(0.24, (wh, 0))
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)

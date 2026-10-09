@@ -318,3 +318,68 @@ The web version is no longer updated; from here on, changes are made in Godot on
   | 14 (the Coachman) | held | lost | lost | lost |
   | 21 (the Captain; steel and blessed weapons) | held | held | held | held |
 - Tests: new `tests/letters_test.gd` (22). Month 50 (nine new, for the cap, the pair's posse, stout walls, the Steward and the Captain's march). Rules 117, Holy Book 32, merchants 38, contraptions 21, village 11, smithy 18, UI 31, clicks 14, co-op 23.
+
+## After Build 5: a camera you can turn
+
+- The view orbits the player. `,` and `.` turn it, holding `V` (or the middle mouse button) and moving the mouse looks round, the wheel zooms, `N` puts it back (`cam_left`, `cam_right`, `look`, `cam_reset` in `ui/keys.gd`). State in `main.gd`: `_cam_yaw`, `_cam_pitch`, `_cam_zoom` with goal values they ease towards.
+- Movement is relative to the view: `mx = ix*cos(yaw) + iz*sin(yaw)`, `mz = iz*cos(yaw) - ix*sin(yaw)`. The key labels say "Move up the screen" and so on. The minimap shows a fan for which way the view faces (`minimap.view`).
+
+## A new name: Thornhallow, Thirty Nights
+
+- The name is one constant, `D.GAME`. The designer's message said "Thornvale 30 Nights" and the three pictures he sent all say "Thornhallow, Thirty Nights"; the pictures won, and it is one line to change.
+- The title screen is his key art (`art/title.jpg`) on its own canvas layer under the HUD, with a small scroll pinned on the left under the title (`window.pin`): name and colour, Thirty nights, Seven nights, Host and Join, What is new, Handbook.
+- The Lord is remodelled after the lore sheet: white, beaked, a tall hat with a gold band, a chain and a goblet.
+- Place-name signs no longer overlap each other, and fade to about half when the player is near, so what is under them can be seen.
+
+## Tidying up
+
+- Steel is listed under Iron in what you carry.
+- Things dropped on the ground go after two days (`D.DROP_DAYS`; a drop is stamped with its day). A backpack slot has a flame: press it twice to destroy what is in it (action `destroy`).
+- **The posse**: followers find their way round walls and through gateways (`Rules.way_to`, `seg_hits`), hop a fence they are wedged against (event `hop`), and when their leader is cutting wood they work within 7 of the leader and share trees rather than wandering off.
+
+## The castle
+
+- As night falls the view lifts to the castle and comes back (`_pan_t` in `main._camera`: 2.6 s up, 3.4 s held, 2.2 s down; Space or Esc skips it; `Settings.castle_pan` turns it off). Thunder as it comes into view.
+- The castle grows more evil through the month (`world.set_evil(level)`): green fires and banners in week 2, thorns in week 3, a spire, red windows and a turning storm in week 4.
+
+## Days with something in them
+
+- **The Previous Tenant** (`D.U_TENANT`, kind 13): searching one of the outer ruins by day, from day 2, has a 5% chance a search (`D.TENANT_CHANCE`, once a day) of bringing him up out of the rubble. 260 health, hits for 16, does not follow far. Beating him pays his back rent.
+- **The chest that never arrived** (`R.chest`, `Rules.chest_day`, `new_chest`, `open_chest`): once a week a chest sent to the village by a neighbouring mayor or noble lies beside a dead messenger somewhere outside the walls. It holds a good sum of money, and sometimes a relic or a library card. It goes to whoever opens it, who can drop it for a friend.
+- **The library card** (item 47, `D.I_CARD`): hand it in at the library to give up one of your three books and choose another, which starts one rank behind the old one (`p.card_rank`).
+
+## Fire, and what is under the mine
+
+- **The burning torch** (item 48, `D.I_TORCH`): three wood at the smithy, anyone can make one. 8 damage, but what it hits burns for `D.BURN_TIME` (4 s) at `D.BURN_DMG` (3) every half second (`Rules.ignite`, the burn tick in `undead_step`). Its trick, Flare, lights everything round you. Rain halves the burning; wraiths do not burn. It is a light at night (an `OmniLight3D` on the figure).
+- **Rooms** (`D.ROOMS`, `p.room`, `enter_room`, `leave_room`, `room_interact`): interiors are built far to the south (z about 240) and the player is moved there through a door. `collide_friend` keeps them inside the room's box and off its furniture. Stations with a `room` are only offered indoors.
+- **The old workings**: the mine is a room. It is dark without a torch. Three rune veins (`D.RUNE_VEINS`, two runes each, `R.rune_left`) can be worked only with a torch in hand.
+- **Runes** are a new thing to carry. Three (`D.ETCH_RUNES`) cut a weapon at the smithy (action `etch`, `p.etch`): 20% more damage, and it hurts wraiths.
+
+## Inside the Thorny Rose
+
+- The inn is a room. The innkeeper keeps his old trade at the bar (food for ale, a mercenary, a seat after dark).
+- **Three locals** (`D.LOCALS`: Old Marge, Tam the Carter, the stranger): each can be asked three things, and stood a drink once a day (`D.TREAT`, 6d; action `treat`) for a good turn: a pie, word of where the chest or the ruins are, or how to deal with the next boss (`D.BOSS_HINT`).
+- **The gambler** (`Rules.gamble`, stakes `D.BETS`): twenty-one (`total21`), higher or lower (`hl_pays`: the bolder the guess the more it pays, 8% to the house), and the pea under the cups (`cups_end`; `ui/cups.gd` draws and shuffles them). The cups are skill, not luck, and he gets quicker each time you win. He packs up when he has lost ten shillings to a player in a day (`D.GAMBLE_DAY`). Walking away forfeits a game in progress.
+- The bookshelf has one book on it, for the Jester, in the next big update.
+- Tests: new `tests/inn_test.gd` (30).
+
+## One file, and updates from GitHub
+
+- The game exports to a single Windows file, `Thornhallow.exe` (about 113 MB; `export_presets.cfg`, the pack embedded, the icon from the logo).
+- **A release is made by putting `godot/version.json` up by one and pushing.** `.github/workflows/release.yml` then runs two tests, exports the file and a pack of the same build, and publishes a GitHub release `build-N` with `Thornhallow.exe`, `thornhallow.pck` (about 4 MB) and `version.json` (build, a line saying what is in it, the engine, the pack's size and SHA-256; written by `tools/release_info.py`).
+- **The game updates itself** (`scripts/update.gd`). Only the exported game does this. At the title screen it reads `releases/latest/download/version.json`; if that build is newer it downloads the pack to `user://update/build-N.pck`, checks its size and hash, and the corner of the title screen offers to restart into it.
+- **`scripts/boot.gd` is the first scene.** It loads the newest good pack over the game the file was born with (`ProjectSettings.load_resource_pack`) and then opens `main.tscn`. It stays as it was in the file people were first given, so it is small, names no other script, and should not need to change.
+- **Safety**: a pack that does not reach the title screen (`Update.mark_ok`) is marked bad the next time the game starts, the game goes back to the last pack that worked, and the bad one is not fetched again. A newer engine (`"engine"` in the note differs) cannot be loaded as a pack, so the corner offers the download page instead.
+- Co-op: the host sends its build with the welcome; a joining game on another build is told which of the two is behind.
+- Found on the way: Godot's official export templates refuse `--main-pack`, so starting the game again from a pack is not possible; loading the pack over the top is, and a pack that adds new named classes loads correctly (tested).
+- Tested here with the Linux export: fetch, restart, new build, a pack that failed last time, a corrupt pack. **Not tested: the Windows file itself**, which cannot be run here.
+
+## Blows that feel like something
+
+- **The rules report each blow** (`Rules.hit_u`): event `["hit", x, z, how much, how it told, whose, what kind, did it finish them, was it a shot]`. How it told: 0 ordinary, 1 telling (the damage came to 1.45 times the blow or more: the right tool), 2 feeble (0.8 or less: the wrong one), 3 a lucky double, 4 burning. Reported for players, the posse and fire; not for spikes and the like.
+- **Sweeps** (`Fx.slash`): a crescent where the blade went, as wide as the weapon's arc; a dart for a thrusting weapon. Coloured for the torch, holy things, a rune-cut blade and Dutch courage. The posse and the dead have small ones. **Shockwaves** (`Fx.shock`): a ring racing out along the ground for Smash, Clang, Flare, prayers, the bell and smites. Both come from a pool of 72 meshes.
+- **Numbers** (`ui/pops.gd`): gold and big for a telling blow, grey and small for a feeble one, orange with a mark for a double, small orange for burning. A shot's number waits for the shot to arrive.
+- **Noises** (`tools/make_sounds.py`): `thwack`, `tink` (off armour), `crit`, and `whoosh` for heavy weapons and sweeping tricks.
+- The view is knocked a little along your own blows and jolted when you are hit (`main._kick`). Whatever is hit leans back for a moment; figures lunge into a blow.
+- Options: "Numbers when a blow lands" and "Your own blows knock the view a little".
+- Tests: new `tests/blow_test.gd` (14). Rules 117, month 50, Holy Book 32, merchants 38, contraptions 21, village 11, smithy 18, letters 22, tidy 13, ruins 23, torch 27, inn 30, UI 31, clicks 18, co-op 23.

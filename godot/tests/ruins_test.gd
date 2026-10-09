@@ -124,7 +124,7 @@ func _init() -> void:
 	# a card dropped for a friend
 	m.inv = [D.I_CARD]
 	R.do_act(m, "dropi", 0)
-	ok("it can be dropped for somebody else", R.drops.size() == 1 and R.drops[0].it == D.I_CARD and m.inv.is_empty())
+	ok("it can be dropped for somebody else", R.drops.any(func(dr): return dr.it == D.I_CARD) and m.inv.is_empty())   # (other finds may be lying about)
 	var fails := 0
 	for l in lines:
 		if l.begins_with("FAIL"): fails += 1

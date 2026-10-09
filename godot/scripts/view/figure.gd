@@ -123,7 +123,11 @@ func player(p: E.Player, is_me: bool) -> void:
 	if c[2] and p.state == "inn" and is_me: Sound.play("gulp")
 	if c[0]:
 		_atk = 1.0
-		Sound.play("swing", 0.7, Vector2(p.x, p.z))
+		var I: Dictionary = D.IT[p.wpn]
+		Sound.play("whoosh" if I.heavy and not I.rng else "swing", 0.7, Vector2(p.x, p.z))
+		if fx and not I.rng and kind == "" and p.state == "ok":            # the sweep of the blade, or the dart of the fork
+			var col: Color = Color(1.0, 0.62, 0.2) if I.fire else Color(0.72, 0.6, 1.0) if p.etch == p.wpn else Color(1.0, 0.88, 0.45) if I.holy or (p.bless & 1) or p.hb > 0 else Color(1.0, 0.8, 0.4) if p.charge > 0 else fx.WHITE
+			fx.slash(p.x, p.z, p.r, I.reach * (1.12 if I.heavy else 1.0), clampf(acos(clampf(I.arc, -1.0, 1.0)), 0.5, 2.6) if I.swing else 0.17, col, true)
 	if c[2]: _atk = 1.0
 	if c[1] and p.state != "dead":
 		Sound.play("hurt" if is_me else "hit", 0.8, Vector2(p.x, p.z))
@@ -179,7 +183,11 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 	if c[0]:
 		_atk = 1.0
 		if q.state == "chop": _work_fx(kind if kind != "" else "tree")
-		else: Sound.play("swing", 0.35, Vector2(q.x, q.z))
+		else:
+			Sound.play("swing", 0.35, Vector2(q.x, q.z))
+			if fx and q.state != "body":
+				if q.kind == 1 or (q.kind == 0 and q.armed): fx.slash(q.x, q.z, q.r, 2.1, 0.17, Color(1.0, 0.97, 0.88, 0.7))   # a spear, or a pitchfork
+				else: fx.slash(q.x, q.z, q.r, 1.6, 0.8, Color(1.0, 0.97, 0.88, 0.7))
 	var oid: int = q.owner
 	if oid != _owner_seen:
 		if _owner_seen == 0 and oid != 0 and own: Sound.play("rally", 0.8, Vector2(q.x, q.z))   # rallied to a posse
@@ -302,6 +310,7 @@ func _process(delta: float) -> void:
 	rotation.y = lerp_angle(rotation.y, _r, minf(1.0, delta * 16.0))
 	_model.rotation = Vector3(-1.45 * _fall + stoop, 0, sin(_walk) * 0.07 * _mv + wob)
 	_model.position.y = absf(sin(_walk)) * 0.14 * _mv + _fall * 0.2
+	_model.position.z = sin(_atk * PI) * 0.22 if _tool == "" and not _down else 0.0     # into the blow, and back
 	var f := (1.0 + _flash * 1.2) * _dim
 	_body_mat.albedo_color = Color(f, f, f)
 	_hand.visible = not _down and stoop == 0.0

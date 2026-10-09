@@ -11,6 +11,7 @@ const Dead := preload("res://scripts/view/dead.gd")
 const Fx := preload("res://scripts/view/fx.gd")
 const Minimap := preload("res://scripts/ui/minimap.gd")
 const Labels := preload("res://scripts/ui/labels.gd")
+const Pops := preload("res://scripts/ui/pops.gd")
 const TreesView := preload("res://scripts/view/trees.gd")
 const SitesView := preload("res://scripts/view/sites.gd")
 const DefencesView := preload("res://scripts/view/defences.gd")
@@ -54,6 +55,10 @@ var defences_view: Node3D
 var dead_view: Node3D
 var minimap: Control
 var labels: Control
+var pops: Control                    # numbers that jump off the dead when they are hit
+var _kick := Vector3.ZERO            # the camera, knocked a little by a blow, on its way back
+var _later := []                     # [seconds to go, event]: a shot's blow, shown when the shot arrives
+var _my_hc := -1                     # to notice when I am hit
 var atmos: Node3D                # mist, rain, wisps, crows and lightning (only for looking at)
 
 var screen := "home"             # "home" or "game"
@@ -149,6 +154,10 @@ func _ready() -> void:
 	labels.hud = hud
 	hud.root.add_child(labels)
 	hud.root.move_child(labels, 0)                       # under the readouts
+	pops = Pops.new()
+	pops.camera = camera
+	hud.root.add_child(pops)
+	hud.root.move_child(pops, 1)
 	minimap = Minimap.new()
 	hud.map_slot.add_child(minimap)
 	minimap.R = R
@@ -747,6 +756,47 @@ func _bot_move() -> Vector2:
 	return to
 
 
+## A blow has landed on one of the dead: the number, the noise, the chips, and (if it was mine) a knock to the camera.
+## ev: ["hit", x, z, how much, how it told, whose (a player's id, or 0), what kind of dead, did it finish them]
+func _blow(ev: Array) -> void:
+	var x: float = ev[1]
+	var z: float = ev[2]
+	var how: int = ev[4]
+	var k: int = clampi(int(ev[6]), 0, D.UN.size() - 1)
+	var mine: bool = me != null and int(ev[5]) == me.id
+	var crowd: bool = int(ev[5]) == 0                         # a posse, or the fire
+	var at := Vector2(x, z)
+	if Settings.numbers:
+		var y: float = 2.7 if k == D.U_BATS else 1.9 * float(Dead.SCALE[k]) + 0.3
+		var txt := str(int(ev[3]))
+		var size := 21.0
+		var col := Color(1.0, 0.96, 0.84)
+		match how:
+			1: size = 27.0; col = Color(1.0, 0.82, 0.3)
+			2: size = 16.0; col = Color(0.7, 0.74, 0.8)
+			3: size = 35.0; col = Color(1.0, 0.5, 0.22); txt += "!"
+			4: size = 15.0; col = Color(1.0, 0.62, 0.2)
+		if crowd and how != 4: size *= 0.72; col = col.darkened(0.12)
+		elif not mine and how != 4: size *= 0.86
+		pops.pop(Vector3(x, y, z), txt, col, int(size), 0.95 if how == 3 else 0.7)
+	if how == 4: return
+	var U: Dictionary = D.UN[k]
+	var loud := 0.8 if mine else 0.3 if crowd else 0.45
+	if how == 3:
+		Sound.play("crit", loud, at); _fx.puff(x, 1.4, z, 12, _fx.C_SPARK, 5.5); _fx.shock(x, z, 2.2, Color(1.0, 0.8, 0.4, 0.8), 0.3)
+	elif how == 2 and (U.armour or U.lord):
+		Sound.play("tink", loud * 0.8, at); _fx.puff(x, 1.5, z, 4, _fx.C_SPARK, 4.5)
+	else:
+		Sound.play("thwack", loud, at)
+		if how == 1: _fx.puff(x, 1.3, z, 6, _fx.C_BONE if U.bony else _fx.C_SPARK if U.armour else _fx.C_ROT, 4.5)
+	if ev[7] and not crowd: _fx.shock(x, z, 1.7, Color(1.0, 0.95, 0.8, 0.55), 0.28)        # that one finished it
+	if mine and Settings.shake:
+		var a := me.r + randf_range(-0.5, 0.5)
+		var push := (0.75 if how == 3 else 0.42 if how == 1 else 0.26) + (0.25 if ev[7] else 0.0)
+		_kick += Vector3(sin(a), 0, cos(a)) * push
+		if _kick.length() > 1.4: _kick = _kick.normalized() * 1.4
+
+
 # ---------------------------------------------------------------- what happened
 func _event(ev: Array) -> void:   # things that happened this moment, from the rules
 	var F = _fx
@@ -765,6 +815,9 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"gamble":
 			if ev[1] == me.id: Sound.play("coin" if ev[2] else "no", 0.9)
 		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
+		"hit":
+			if ev.size() > 8 and ev[8]: _later.append([0.36, ev.slice(0, 8)])   # a shot: when it gets there
+			else: _blow(ev)
 		"door": Sound.play("door", 0.8, Vector2(ev[1], ev[2]))
 		"tenant":
 			Sound.play("steward", 1.0, Vector2(ev[1], ev[2])); F.ring(ev[1], ev[2], 3.0, 20, F.C_DUST)
@@ -786,8 +839,8 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 				var f := i / 7.0
 				F.puff(lerpf(ev[1], ev[3], f), 0.5, lerpf(ev[2], ev[4], f), 6, F.C_WOOD, 4)
 			Sound.play("thump", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder0", 0.5, Vector2(ev[1], ev[2]))
-		"smite": F.beam(ev[1], ev[2]); Sound.play("holy", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder1", 0.25, Vector2(ev[1], ev[2]))
-		"pray": F.ring(ev[1], ev[2], 7, 40, F.C_HOLY); F.puff(ev[1], 1.8, ev[2], 18, F.C_GLAD, 2.5); Sound.play("holy", 0.9, Vector2(ev[1], ev[2])); Sound.play("ring", 0.4, Vector2(ev[1], ev[2]))
+		"smite": F.beam(ev[1], ev[2]); F.shock(ev[1], ev[2], 2.6, Color(1.0, 0.9, 0.5, 0.9), 0.35); Sound.play("holy", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder1", 0.25, Vector2(ev[1], ev[2]))
+		"pray": F.shock(ev[1], ev[2], 7.5, Color(1.0, 0.92, 0.55, 0.8), 0.6); F.ring(ev[1], ev[2], 7, 40, F.C_HOLY); F.puff(ev[1], 1.8, ev[2], 18, F.C_GLAD, 2.5); Sound.play("holy", 0.9, Vector2(ev[1], ev[2])); Sound.play("ring", 0.4, Vector2(ev[1], ev[2]))
 		"mist": F.puff(ev[1], 1.0, ev[2], 18, F.C_GHOST, 3.5); Sound.play("raise", 0.5, Vector2(ev[1], ev[2]))
 		"smash": F.puff(ev[1], 0.8, ev[2], 16, F.C_WOOD, 5); Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
 		"coin": F.puff(ev[1], 1.4, ev[2], 6, F.C_COIN, 2); Sound.play("coin", 1.0, Vector2(ev[1], ev[2]))
@@ -805,12 +858,14 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			var fx_ := sin(ev[4])
 			var fz := cos(ev[4])
 			match k:
-				"smash": F.ring(x + fx_ * 1.6, z + fz * 1.6, 3.2, 22, F.C_DUST); Sound.play("thump", 1.0, Vector2(x, z))
-				"flare": F.ring(x, z, 3.4, 30, F.C_FIRE); F.puff(x, 1.4, z, 16, F.C_FIRE, 4.5); Sound.play("swing", 1.0, Vector2(x, z))
-				"clang": F.ring(x, z, 4, 18, F.C_SPARK); Sound.play("clang", 1.0, Vector2(x, z))
-				"reap", "trip": F.ring(x, z, 2.6, 16, F.C_DUST if k == "trip" else F.C_WOOD); Sound.play("swing", 1.0, Vector2(x, z))
+				"smash":
+					F.ring(x + fx_ * 1.6, z + fz * 1.6, 3.2, 22, F.C_DUST); F.shock(x + fx_ * 1.6, z + fz * 1.6, 3.6, Color(0.95, 0.9, 0.78, 0.85)); Sound.play("thump", 1.0, Vector2(x, z))
+					if me and D.d2(me.x, me.z, x, z) < 100.0 and Settings.shake: _kick += Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized() * 0.7
+				"flare": F.ring(x, z, 3.4, 30, F.C_FIRE); F.puff(x, 1.4, z, 16, F.C_FIRE, 4.5); F.shock(x, z, 3.6, Color(1.0, 0.6, 0.15, 0.9)); F.slash(x, z, ev[4], 3.2, PI, Color(1.0, 0.7, 0.25), true); Sound.play("whoosh", 1.0, Vector2(x, z))
+				"clang": F.ring(x, z, 4, 18, F.C_SPARK); F.shock(x, z, 4.4, Color(1.0, 0.9, 0.6, 0.8)); Sound.play("clang", 1.0, Vector2(x, z))
+				"reap", "trip": F.ring(x, z, 2.6, 16, F.C_DUST if k == "trip" else F.C_WOOD); F.slash(x, z, ev[4], 2.9, PI, F.WHITE, true, 0.7 if k == "trip" else 1.25); Sound.play("whoosh", 1.0, Vector2(x, z))
 				"parry": F.puff(x + fx_ * 0.6, 1.3, z + fz * 0.6, 5, F.C_SPARK, 1.5); Sound.play("pop", 0.5, Vector2(x, z))
-				_: F.puff(x + fx_ * 1.8, 1, z + fz * 1.8, 8, F.C_DUST if k == "bury" else F.C_SPARK, 3); Sound.play("swing", 0.8, Vector2(x, z))
+				_: F.puff(x + fx_ * 1.8, 1, z + fz * 1.8, 8, F.C_DUST if k == "bury" else F.C_SPARK, 3); F.slash(x, z, ev[4], 3.0, 0.2, F.WHITE, true); Sound.play("whoosh", 0.8, Vector2(x, z))
 		"parry": F.puff(ev[1], 1.3, ev[2], 10, F.C_SPARK, 4); Sound.play("clang", 0.7, Vector2(ev[1], ev[2]))
 		"miss": F.puff(ev[1], 1.6, ev[2], 3, F.C_DUST, 2)
 		"splat":
@@ -818,10 +873,10 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			F.puff(ev[1], 0.4, ev[2], 14, F.C_POO, 4)
 			Sound.play("splat", 1.0, Vector2(ev[1], ev[2]))
 			if ev[3]: Sound.play("holy", 0.7, Vector2(ev[1], ev[2]))
-		"ring": F.ring(ev[1], ev[2], 8, 30, F.C_HOLY); Sound.play("ring", 1.0, Vector2(ev[1], ev[2]))
+		"ring": F.shock(ev[1], ev[2], 8.5, Color(1.0, 0.92, 0.55, 0.8), 0.6); F.ring(ev[1], ev[2], 8, 30, F.C_HOLY); Sound.play("ring", 1.0, Vector2(ev[1], ev[2]))
 		"holy": F.puff(ev[1], 1.4, ev[2], 12, F.C_HOLY, 2.5); Sound.play("holy", 1.0, Vector2(ev[1], ev[2]))
 		"burst":
-			F.ring(ev[1], ev[2], 3, 20, F.C_ALE)
+			F.ring(ev[1], ev[2], 3, 20, F.C_ALE); F.shock(ev[1], ev[2], 3.4, Color(1.0, 0.8, 0.35, 0.8))
 			F.puff(ev[1], 1, ev[2], 14, F.C_WOOD, 5)
 			Sound.play("cheer", 1.0, Vector2(ev[1], ev[2]))
 		"found":
@@ -997,6 +1052,18 @@ func _apply_light(nf: float) -> void:
 ## The view: looking down on the player, from the south to begin with (as in the web version). It can be turned
 ## round the player (the turn keys, or the mouse with the wheel pressed or the look key held), tilted, and zoomed.
 func _camera(delta: float) -> void:
+	var li := _later.size() - 1                          # blows from shots still in the air
+	while li >= 0:
+		_later[li][0] -= delta
+		if _later[li][0] <= 0:
+			_blow(_later[li][1])
+			_later.remove_at(li)
+		li -= 1
+	if me.hc != _my_hc:                                  # hit: the view jolts
+		if _my_hc >= 0 and Settings.shake and me.state != "dead":
+			var ja := randf() * TAU
+			_kick += Vector3(sin(ja), 0, cos(ja)) * 0.6
+		_my_hc = me.hc
 	var indoors: bool = me.room != ""
 	if Vector2(me.x - _focus.x, me.z - _focus.z).length() > 60.0:      # through a door: the view goes with you at once
 		_focus = Vector3(me.x, 0, me.z); _zoom = 0.38 if indoors else 1.0 + 0.12 * R.nf
@@ -1031,6 +1098,8 @@ func _camera(delta: float) -> void:
 		dist = lerpf(dist, 158.0, pk)
 	labels.visible = pk < 0.05
 	_fog_back = dist - 108.2 * _zoom + 70.0 * pk
+	_kick = _kick.lerp(Vector3.ZERO, minf(1.0, delta * 11.0))            # a blow knocks the view a little; it comes straight back
+	look += _kick
 	camera.position = look + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist
 	camera.look_at(look)
 	minimap.view = _cam_yaw
@@ -1144,6 +1213,17 @@ func _test_hook() -> void:
 		me.coin = 200
 		R.do_act(me, "gstart", OS.get_environment("DTV_GAME") + ":12")
 		if OS.get_environment("DTV_GAME") == "21": R.do_act(me, "ghit")
+	if OS.get_environment("DTV_FIGHT") != "" and me:     # for pictures: a fight, slowed right down. DTV_FIGHT=weapon id
+		if _frame == at + 2:
+			Engine.time_scale = 0.03                     # (pictures are drawn very slowly here: this keeps a swing on the screen)
+			me.wpn = int(OS.get_environment("DTV_FIGHT")); me.r = PI; me.goal_r = PI; me.combo = 3
+			for i in 6:
+				var fu := R.spawn_undead([0, 1, 7, 0, 4, 1][i], me.x - 2.0 + i * 0.8, me.z - 1.7 - (i % 2) * 0.5)
+				fu.state = "walk"; fu.stun = 999; fu.hp = 400; fu.mhp = 400
+		elif _frame in [at + 10, at + 18, at + 25, at + 27]:
+			me.atkCd = 0; me.r = PI; me.goal_r = PI; R.do_attack(me)
+		elif _frame == at + 26 and OS.get_environment("DTV_FIGHT_ABL") != "":
+			me.abCd = 0; R.do_ability(me)
 	if OS.get_environment("DTV_BURN") != "" and _frame == at + 2 and me:      # for pictures: a few of the dead, alight
 		for i in 5:
 			var bu := R.spawn_undead(i % 2, me.x - 4.0 + i * 2.0, me.z - 3.0 - (i % 2))

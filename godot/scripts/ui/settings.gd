@@ -14,6 +14,8 @@ static var muted := false            # M
 static var relay := ""               # the village server's address, if not the usual one
 static var tags := true              # names over the other players
 static var castle_pan := true        # look up at the castle as night falls
+static var numbers := true           # numbers that jump off the dead when they are hit
+static var shake := true             # the view is knocked a little by your own blows
 static var see_keep := true          # see through the keep when something is behind it
 static var binds := {}               # action -> [physical keycodes]; empty means the usual keys
 static var _loaded := false
@@ -36,6 +38,8 @@ static func load_all() -> void:
 	tags = bool(d.get("tags", true))
 	see_keep = bool(d.get("see_keep", true))
 	castle_pan = bool(d.get("castle_pan", true))
+	numbers = bool(d.get("numbers", true))
+	shake = bool(d.get("shake", true))
 	var b = d.get("binds", {})
 	if b is Dictionary:
 		for a in b:
@@ -63,4 +67,4 @@ static func set_volume(k: String, v: int) -> void:
 
 static func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
-	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "relay": relay, "tags": tags, "see_keep": see_keep, "castle_pan": castle_pan, "binds": binds}))
+	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "relay": relay, "tags": tags, "see_keep": see_keep, "castle_pan": castle_pan, "numbers": numbers, "shake": shake, "binds": binds}))

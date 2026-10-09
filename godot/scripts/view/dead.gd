@@ -74,7 +74,9 @@ func sync(R: Rules, delta: float) -> void:
 		v[10] = lerpf(v[10], minf(1.0, sp / 2.2), minf(1.0, delta * 9))
 		if v[10] > 0.06: v[3] += delta * (5 + sp * 1.5)
 		var did_atk: bool = u.ac != v[6]
-		if did_atk: v[6] = u.ac; v[4] = 1.0
+		if did_atk:
+			v[6] = u.ac; v[4] = 1.0
+			if fx and (k0(u.k) == 0) and u.state != "rise": fx.slash(u.x, u.z, u.r, 1.5 * SCALE[u.k], 0.75, Color(0.8, 0.14, 0.1, 0.75), false, 1.2 * SCALE[u.k])   # a claw, or a rusty blade
 		if u.hc != v[7]:
 			v[7] = u.hc; v[5] = 1.0
 			if fx and u.state != "rise":
@@ -85,7 +87,7 @@ func sync(R: Rules, delta: float) -> void:
 		var k := u.k
 		if n[k] >= MAX[k]: continue
 		var f: float = 1 + v[5] * 1.5
-		var dz := -0.45 if u.stun > 0 or u.pin > 0 else 0.0           # dazed ones lean back
+		var dz: float = (-0.45 if u.stun > 0 or u.pin > 0 else 0.0) - float(v[5]) * 0.4   # dazed ones lean back; so, for a moment, do the ones just hit
 		var col := Color(f * (1.5 if u.vuln > 0 else 1.0), f * (1.25 if u.fear > 0 else 0.75 if u.vuln > 0 else 1.0), f * (0.7 if u.fear > 0 or u.vuln > 0 else 1.0))
 		if u.stun > 0 and fx and randf() < delta * 5: fx.puff(u.x, 2, u.z, 1, fx.C_SPARK, 0.7)
 		if u.burn > 0:                                              # alight: glowing, with flames coming off
@@ -131,6 +133,11 @@ func sync(R: Rules, delta: float) -> void:
 		_eyes[k].visible_instance_count = n[k]
 	for id in _v.keys():
 		if not seen.has(id): _v.erase(id)
+
+
+## 0 for the dead that fight hand to hand (they get a slash drawn when they strike); 1 for the rest.
+static func k0(k: int) -> int:
+	return 1 if k == 2 or k == 3 or k == D.U_BATS or k == D.U_RAM or k == D.U_COACH or k == D.U_CAPTAIN or k == D.U_LORD or k == D.U_WRAITH else 0
 
 
 static func _xf(x: float, y: float, z: float, ry: float, rx: float, rz: float, sc: Vector3) -> Transform3D:

@@ -11,10 +11,10 @@ extends Node
 const EFFECTS := ["bell", "bone", "build", "caw0", "caw1", "cheer", "chop", "clang", "coin", "dawn", "door", "eat",
 	"find", "forge", "groan0", "groan1", "groan2", "gulp", "hit", "holy", "hooves", "hurt", "iron", "jeer", "keep", "knock",
 	"lost", "nail", "no", "owl", "page", "pick", "pluck", "pop", "raise", "rally", "rattle", "relic", "ring", "splash", "splat",
-	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won"]
+	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won", "thwack", "crit", "tink", "whoosh"]
 const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "castle": "amb_castle",
 	"music_day": "music_day", "music_night": "music_night"}
-const VARY := ["chop", "hit", "bone", "swing", "stone", "pick", "build", "splash", "thump", "splat", "groan0", "groan1", "groan2", "rattle", "caw0", "caw1"]
+const VARY := ["chop", "hit", "bone", "swing", "stone", "pick", "build", "splash", "thump", "splat", "groan0", "groan1", "groan2", "rattle", "caw0", "caw1", "thwack", "tink", "whoosh"]
 const HEAR := 34.0               # further from the camera than this, an effect is not heard
 
 static var me: Sound

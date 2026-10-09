@@ -1273,6 +1273,7 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if U.ghost and not holy and not s.get("rune", false):   # ordinary weapons pass straight through a wraith (rune-cut ones do not)
 		ev.append(["miss", r1(u.x), r1(u.z)])
 		return
+	var d0 := d                                      # what the blow was worth before what it landed on is counted
 	if holy: d *= holy
 	if u.vuln > 0: d *= 1.5
 	if bony and s.get("blunt", false): d *= 2
@@ -1282,6 +1283,10 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if U.ram and s.get("heavy", false): d *= 2
 	if U.lord and not holy: d *= 0.6
 	u.hp -= d
+	if s.get("p") or s.get("q") or s.get("dot", false):          # for the view: where, how much, and how it told
+		# 0 an ordinary blow, 1 a telling one, 2 a feeble one (wrong tool for the job), 3 a lucky double, 4 burning
+		var how := 4 if s.get("dot", false) else 3 if s.get("crit", false) else 1 if d >= d0 * 1.45 else 2 if d <= d0 * 0.8 else 0
+		ev.append(["hit", r1(u.x), r1(u.z), maxi(1, roundi(d)), how, s.p.id if s.get("p") else 0, u.k, u.hp <= 0, s.get("ranged", false)])
 	if not s.get("dot", false): u.cd = minf(U.cd, u.cd + 0.25)   # a hit delays its next swing a little; it does not stop it
 	if U.lord: lord_stage(u)
 	if s.has("x") and not big(u):
@@ -1407,6 +1412,7 @@ func shoot(p: E.Player, I: Dictionary, mul: float, o: Dictionary = {}) -> E.Unde
 	if t == null or (o.is_empty() and rk(p, 5) < 2 and randf() > 0.85):   # an aimed stone does not miss
 		return null
 	var src := src_of(p, I)
+	if mul > 1.0: src["crit"] = true
 	src.erase("x")                                     # a shot does not shove anyone
 	hit_u(t, dmg_of(p, I, mul), src)
 	if o.has("stun"): t.stun = maxf(t.stun, o.stun * 0.4 if big(t) else o.stun)
@@ -1431,6 +1437,7 @@ func do_attack(p: E.Player) -> void:
 		if shoot(p, I, mul) == null: drill(p, I.rng, 0.3, 5)
 		return
 	var src := src_of(p, I)
+	if mul > 1.0: src["crit"] = true
 	var hit := false
 	for u in targets(p, I.reach, I.arc - 0.35 if rk(p, 4) >= 4 else I.arc):
 		hit_u(u, dmg_of(p, I, mul), src); hit = true
