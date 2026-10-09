@@ -19,7 +19,7 @@ const PORT := 24565
 const RELAY_PORT := 24566
 ## The village server (relay) everyone uses unless the options say otherwise: "address" or "address:port".
 ## Empty: no server, and hosting is direct (the host's router has to let friends in).
-const DEFAULT_RELAY := ""
+const DEFAULT_RELAY := "132.145.58.190"
 const MAX_PLAYERS := 8
 const SEND_RATE := 1.0 / 12.0
 const INPUT_RATE := 1.0 / 15.0

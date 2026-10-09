@@ -18,7 +18,9 @@ for example). It cannot be changed later.
 - Image: **Canonical Ubuntu** (24.04).
 - Shape: one marked **Always Free-eligible**: either *VM.Standard.A1.Flex* (Ampere; 1 OCPU and 6 GB is plenty) or
   *VM.Standard.E2.1.Micro*. If Oracle says there is no room for the Ampere one, try the Micro, or another time.
-- Networking: leave it to create a new network, with a **public IPv4 address**.
+- Networking: make the network first (Networking, Virtual cloud networks, **Create VCN** with its wizard's internet
+  connectivity), then here pick that network and its **public subnet**, and check **Automatically assign public IPv4
+  address** is on. (Making a new subnet from this page can leave that switch greyed out, and the machine with no address.)
 - SSH keys: **Generate a key pair for me**, and **Save private key**. Keep that file safe: it is how you get in.
 - Create. After a minute or two it says *Running*, with a **Public IP address**. Note it down.
 
@@ -42,6 +44,10 @@ Say `yes` the first time. If Windows complains that the key is *unprotected*, ru
     curl -fsSL https://raw.githubusercontent.com/wijji551/Peasant/main/relay/setup.sh | bash
 
 It takes a minute, and ends by saying *The village server is running* and its address.
+
+**Or skip steps 4 and 5:** before Create, under the shape's *Advanced options*, *Initialization script*, choose *Paste
+cloud-init script* and paste `relay/cloud-init.sh`. The machine sets itself up a few minutes after it starts, and
+*SSH keys* can be *No SSH keys*. (This is how the game's own server was made.)
 
 **6. Tell the game.** Either put the address in the game (the handbook, Options, *Village server*), or give it to
 Claude and it becomes the game's own default, so nobody has to type it.

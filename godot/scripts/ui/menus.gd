@@ -15,6 +15,10 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Godot: the village server is open", [
+		"The game now has its own village server, always on, in London. Host and Join use it by themselves: nothing to type, no routers to fiddle with. Hosting gives a five-letter code; send it to your friends.",
+		"Your own server can still go in the handbook's Options, if you ever want one.",
+	]],
 	["Godot: the village server", [
 		"Playing together can now go through a village server: a small program on an always-on machine (a free Oracle Cloud one will do) that introduces players and passes their messages on. Nobody's router has to let anyone in, and your friends can host their own villages when you are not on.",
 		"A village on the server has a five-letter code. Older codes (with a dash) still work, straight to the host.",
