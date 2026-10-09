@@ -27,7 +27,7 @@ func _init() -> void:
 	await frames(10)
 	var m = current_scene
 	var relay := OS.get_environment("DTV_RELAY")
-	Settings.relay = relay
+	Settings.relay = relay if relay != "" else "none"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_code.txt"))
 	var why: String = Net.me.host("Hosty", 0)
 	ok("hosting starts", why == "" and Net.me.is_host(), why)

@@ -57,6 +57,7 @@ var labels: Control
 var atmos: Node3D                # mist, rain, wisps, crows and lightning (only for looking at)
 
 var screen := "home"             # "home" or "game"
+static var next_len := D.MONTH   # how long the next new game is: the month (30 nights) or the short game (7)
 var _acc := 0.0
 var _clock := 0.0
 var _atk_cd := 0.0
@@ -69,6 +70,7 @@ var _zoom := 1.0
 var _prev_phase := ""
 var _dawn_seen := -1
 var _dawn_t := 0.0
+var _weather_forced := false
 var _panel := ""                 # which notice is open: a place's id, or "pack"
 var _page := ""
 var _build_sel := ""
@@ -234,7 +236,7 @@ func begin(save) -> void:
 		info[0].col = int(save.players[0].get("col", Settings.col))
 		R.load_game(save, info)
 	else:
-		R.new_game(info)
+		R.new_game(info, D.WEEK if OS.get_environment("DTV_SHORT") != "" else next_len)
 	_go_save = null
 	me = R.player_by_id(Net.me.my_id) if Net.me.is_host() else R.players[0]
 	minimap.me = me
@@ -251,6 +253,21 @@ func begin(save) -> void:
 	if OS.get_environment("DTV_DEMO") != "":            # for testing: a village with a bit of everything in it, for pictures
 		_demo()
 	_focus = Vector3(me.x, 0, me.z)
+
+
+func _dusk_line() -> String:
+	match Rules.boss_of(R.day, R.last_day):
+		D.U_STEWARD: return "The bell rings. Somebody at the castle is polishing the silver."
+		D.U_COACH: return "The bell rings. Far off, a whip cracks, and wheels start to turn."
+		D.U_CAPTAIN: return "The bell rings. Up at the castle, someone is shouting orders."
+		D.U_LORD: return "The bell rings for the last time this month. The castle doors are open."
+	return "The bell rings. A full moon is up, and something at Ashhollow is howling." if R.weather == "moon" else "The bell rings. Something is stirring at Ashhollow Castle."
+
+
+## Start a new game of the given length (D.MONTH or D.WEEK).
+func begin_new(nights: int) -> void:
+	next_len = nights
+	begin(null)
 
 
 func _demo() -> void:
@@ -272,6 +289,13 @@ func _demo() -> void:
 	for i in 8:
 		var u := R.spawn_undead(i % 4 if i % 4 != 3 else 0, -2.0 + i * 0.8, -6.0)
 		u.state = "walk"
+	if OS.get_environment("DTV_DEAD") != "":            # for pictures: one of every kind of dead, in a row, standing still
+		R.undead.clear()
+		var ks := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+		for i in ks.size():
+			var u := R.spawn_undead(ks[i], 36.0 + i * 2.7 if ks[i] < 10 else 42.0 + (ks[i] - 10) * 7.0, -8.0 if ks[i] < 10 else -16.0)
+			u.state = "walk"; u.stun = 999; u.r = 0
+		R.boss = null
 
 
 func _lights() -> void:
@@ -602,6 +626,9 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"arrow": F.fly(ev[1], ev[2], ev[3], ev[4], 0); Sound.play("swing", 0.5, Vector2(ev[1], ev[2]))
 		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1); Sound.play("swing", 0.5, Vector2(ev[1], ev[2]))
 		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3); Sound.play("raise", 0.7, Vector2(ev[1], ev[2]))
+		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
+		"mist": F.puff(ev[1], 1.0, ev[2], 18, F.C_GHOST, 3.5); Sound.play("raise", 0.5, Vector2(ev[1], ev[2]))
+		"smash": F.puff(ev[1], 0.8, ev[2], 16, F.C_WOOD, 5); Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
 		"coin": F.puff(ev[1], 1.4, ev[2], 6, F.C_COIN, 2); Sound.play("coin", 1.0, Vector2(ev[1], ev[2]))
 		"forge": F.puff(ev[1], 1.2, ev[2], 10, F.C_SPARK, 3.5); Sound.play("forge", 1.0, Vector2(ev[1], ev[2]))
 		"build": F.puff(ev[1], 0.8, ev[2], 8, F.C_WOOD, 3); Sound.play("build", 1.0, Vector2(ev[1], ev[2]))
@@ -737,6 +764,7 @@ func _draw(delta: float) -> void:
 		(_ghost.material_override as StandardMaterial3D).albedo_color = Color(0.6, 0.95, 0.5, 0.45) if ok else Color(0.95, 0.4, 0.35, 0.45)
 	_camera(delta)
 	_apply_light(R.nf)
+	if not _weather_forced: atmos.weather = R.weather
 	atmos.update(delta, R.nf, _focus)
 	var near := 0
 	for u: E.Undead in R.undead:
@@ -753,14 +781,17 @@ func _apply_light(nf: float) -> void:
 	var gl: float = atmos.gloom() if atmos else 0.0      # the weather: overcast, rain or mist take the shine off the day
 	var fl: float = atmos.flash if atmos else 0.0        # lightning over the castle
 	sun.light_color = SUN_DAY.lerp(SUN_NIGHT, nf).lerp(SUN_DUSK, k * 0.7).lerp(Color(0.78, 0.8, 0.84), gl * (1 - nf)).lerp(Color(0.85, 0.9, 1.0), fl)
-	sun.light_energy = lerpf(0.8 - gl * 0.45, 0.34, nf) + fl * 1.6
+	var moon := 1.0 if atmos and atmos.weather == "moon" else 0.0   # the full moon lights the night up silver
+	var foggy := 1.0 if atmos and atmos.weather == "fog" else 0.0   # fog closes in at night: the castle road disappears
+	sun.light_color = sun.light_color.lerp(Color(0.75, 0.85, 1.0), moon * nf)
+	sun.light_energy = lerpf(0.8 - gl * 0.45, 0.34 + moon * 0.3, nf) + fl * 1.6
 	sun.position = SUN_FROM_DAY.lerp(SUN_FROM_NIGHT, nf)
 	sun.look_at(Vector3.ZERO)
 	env.ambient_light_color = AMB_DAY.lerp(AMB_NIGHT, nf).lerp(AMB_DUSK, k * 0.7)
 	env.ambient_light_energy = lerpf(0.32 - gl * 0.06, 0.5, nf) + fl * 0.5
 	var fog := FOG_DAY.lerp(Color(0.48, 0.52, 0.54), gl).lerp(FOG_NIGHT, nf).lerp(FOG_DUSK, k * 0.7).lerp(Color(0.6, 0.65, 0.8), fl * 0.6)
-	env.fog_depth_begin = lerpf(95.0 - gl * 15.0, 70.0, nf)
-	env.fog_depth_end = lerpf(250.0 - gl * 40.0, 190.0, nf)
+	env.fog_depth_begin = lerpf(95.0 - gl * 15.0, 70.0 - foggy * 50.0, nf)
+	env.fog_depth_end = lerpf(250.0 - gl * 40.0, 190.0 - foggy * 130.0, nf)
 	env.adjustment_saturation = lerpf(1.1 - gl * 0.25, 0.8, nf)
 	env.background_color = fog
 	env.fog_light_color = fog
@@ -794,7 +825,7 @@ func _hud_update(delta: float) -> void:
 				_end_shown = false
 			"dusk":
 				Sound.play("bell")
-				hud.banner("Dusk", "The bell rings. Somebody at the castle is polishing the silver." if R.day == D.LAST_DAY else "The bell rings. Something is stirring at Ashhollow Castle.", 5.0)
+				hud.banner("Dusk", _dusk_line(), 5.0)
 				if win.is_open("dawn"): win.close()
 			"night":
 				hud.banner("Night %d" % R.day, "The dead are rising all along the graveyard, and some have brought bows." if R.day >= 4 else "The dead are rising all along the graveyard.", 4.5)
@@ -814,7 +845,7 @@ func _hud_update(delta: float) -> void:
 			_panel = ""
 			atmos.pick(R.gseed, R.dawn.day)
 			if R.dawn.day > 1: Sound.play("dawn")
-			menus.dawn(R.dawn.day, R.dawn.lines + ([atmos.weather_line()] if atmos.weather_line() != "" else []))
+			menus.dawn(R.dawn.day, R.dawn.lines + ([D.WEATHER_LINE[R.weather]] if D.WEATHER_LINE.get(R.weather, "") != "" else []))
 			_dawn_t = 15.0
 	if win.is_open("dawn"):
 		_dawn_t -= delta
@@ -878,7 +909,7 @@ func _test_hook() -> void:
 		elif o == "skills": _open_skills()
 		elif o == "host": Net.me.host("Matt", 2); menus.lobby()
 		elif o == "none": win.close()
-		elif o.begins_with("weather:"): atmos.weather = o.substr(8); win.close()
+		elif o.begins_with("weather:"): R.weather = o.substr(8); atmos.weather = R.weather; _weather_forced = true; win.close()
 		elif o == "menu": menus.menu()
 		elif o == "keys": menus.menu("keys")
 		elif o == "dawn": menus.dawn(R.day, R.dawn.lines); _dawn_t = 99.0

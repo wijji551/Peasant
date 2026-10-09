@@ -27,6 +27,7 @@ var _keep_num: Label
 var _boss: Control
 var _boss_bar: ProgressBar
 var _boss_num: Label
+var _boss_name: Label
 var _res := {}                       # name -> Label
 var _carry: Label
 var _hp_bar: ProgressBar
@@ -80,6 +81,7 @@ func _ready() -> void:
 	kv.add_child(_boss)
 	var br := HBoxContainer.new(); _boss.add_child(br)
 	var bl := Look.label(br, "The Steward", 14, Color("5d2a6e")); bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_boss_name = bl
 	_boss_num = Look.label(br, "", 14, Look.INK_SOFT)
 	_boss_bar = _bar(_boss, Color("8e3fa0"), 10)
 	_boss.visible = false
@@ -383,7 +385,7 @@ func _process(delta: float) -> void:
 func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool, build_sel: String, ready_line: String) -> void:
 	var p := me
 	var ph := R.phase
-	_phase.text = "Dusk" if ph == "dusk" else "Night %d" % R.day if ph == "night" or ph == "lost" else "Day %d of %d" % [R.day, D.LAST_DAY]
+	_phase.text = "Dusk" if ph == "dusk" else "Night %d" % R.day if ph == "night" or ph == "lost" else "Day %d of %d" % [R.day, R.last_day]
 	var timer := ""
 	match ph:
 		"day": timer = "Dusk in " + _fmt(R.timeLeft)
@@ -398,6 +400,8 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 	_keep_num.text = "%d / %d" % [maxi(0, roundi(R.keepHp)), roundi(D.KEEP_HP)]
 	_boss.visible = R.boss != null
 	if R.boss:
+		var bn: String = D.UN[R.boss.k].name
+		_boss_name.text = bn[0].to_upper() + bn.substr(1)
 		_boss_bar.value = maxf(0, R.boss.hp) / maxf(1, R.boss.mhp)
 		_boss_num.text = "%d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)]
 	# what you carry

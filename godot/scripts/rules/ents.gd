@@ -172,6 +172,9 @@ class Undead:
 	var dead := false
 	var revived := false
 	var march := false
+	var side := 0           # the Captain's guard: -1 the west gateway, 1 the east, 0 the north gate
+	var stage := 0          # the Lord: 0 watching, 1 coming down, 2 going for the keep door
+	var dug := false        # a gravedigger that has already come up inside
 	var dd := 0.0           # scratch: distance when sorting
 	var tx := 0.0           # in a joined game: where the host last said it was
 	var tz := 0.0

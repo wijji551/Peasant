@@ -1,7 +1,8 @@
 extends Node3D
 ## The weather and the mood: mist that creeps over the ground at night and never quite leaves the castle,
 ## rain on some days, will-o'-wisps over the graveyard and round the castle at night, crows circling the
-## towers, and now and then lightning over Ashhollow. Only for looking at: the rules know nothing of this.
+## towers, and now and then lightning over Ashhollow. Only for looking at. The weather itself is the rules'
+## (it changes the night): main.gd sets `weather` from them every frame.
 ##
 ## main.gd calls update() every frame with how dark it is (0 day, 1 night) and where the camera is looking.
 
@@ -30,18 +31,12 @@ void fragment() {
 }
 """
 
-const WEATHER := ["clear", "clear", "clear", "overcast", "rain", "clear", "mist", "overcast", "rain", "clear"]
-const WEATHER_LINE := {
-	"clear": "",
-	"overcast": "The sky is the colour of old porridge today.",
-	"rain": "It is raining. The dead do not mind; the peasants do.",
-	"mist": "A thick mist has come up off the river. Mind where you put your feet.",
-}
-
 var weather := "clear"
 var flash := 0.0                    # lightning: 1 at the strike, fading; main.gd brightens the sky by it
 var _mists: Array[ShaderMaterial] = []
 var _rain: CPUParticles3D
+var _snow: CPUParticles3D
+var _moon: MeshInstance3D
 var _wisps: Array[CPUParticles3D] = []
 var _crows: Array[Node3D] = []
 var _t := 0.0
@@ -90,6 +85,20 @@ func _ready() -> void:
 		_mists.append(m)
 	_rain = _make_rain()
 	add_child(_rain)
+	_snow = _make_snow()
+	add_child(_snow)
+	_moon = MeshInstance3D.new()             # the full moon, low over the castle
+	var sm := SphereMesh.new(); sm.radius = 7.0; sm.height = 14.0
+	_moon.mesh = sm
+	var mm := StandardMaterial3D.new()
+	mm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mm.albedo_color = Color(1.0, 0.97, 0.86)
+	mm.disable_fog = true
+	_moon.material_override = mm
+	_moon.position = Vector3(-60, 70, -190)
+	_moon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_moon.visible = false
+	add_child(_moon)
 	# will-o'-wisps: over the graveyard, and up round the castle
 	for area in [[Vector3(0, 1.2, -68.5), Vector3(36, 0.8, 4.5)], [Vector3(0, 6.0, -100), Vector3(30, 3, 14)]]:
 		var w := _make_wisps(area[0], area[1])
@@ -101,25 +110,20 @@ func _ready() -> void:
 		_crows.append(c)
 
 
-## The weather for a day: the same on every computer, from the game's seed.
+## A new day: lightning and the like are seeded from the game, so they differ from day to day.
 func pick(game_seed: int, day: int) -> void:
 	_rng.seed = game_seed * 7 + day * 191
-	weather = "clear" if day == 1 else WEATHER[_rng.randi() % WEATHER.size()]
-
-
-func weather_line() -> String:
-	return WEATHER_LINE.get(weather, "")
 
 
 ## How much darker and greyer the day is for the weather, for main.gd's lighting.
 func gloom() -> float:
-	return {"clear": 0.0, "overcast": 0.35, "rain": 0.55, "mist": 0.3}.get(weather, 0.0)
+	return {"clear": 0.0, "overcast": 0.35, "rain": 0.55, "fog": 0.3, "snow": 0.3, "moon": 0.0}.get(weather, 0.0)
 
 
 func update(delta: float, nf: float, focus: Vector3) -> void:
 	_t += delta
 	var night := smoothstep(0.35, 0.9, nf)
-	var amount := 0.06 + night * 0.36 + (0.38 if weather == "mist" else 0.0) + (0.1 if weather == "rain" else 0.0)
+	var amount := 0.06 + night * 0.36 + ((0.38 + night * 0.2) if weather == "fog" else 0.0) + (0.1 if weather == "rain" else 0.0)
 	for m in _mists:
 		m.set_shader_parameter("amount", amount)
 		m.set_shader_parameter("haunt", 0.3 + night * 0.4)
@@ -127,6 +131,9 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 		m.set_shader_parameter("haunt_tint", Color(0.62, 0.66, 0.6).lerp(Color(0.3, 0.52, 0.36), night))
 	_rain.emitting = weather == "rain"
 	_rain.global_position = focus + Vector3(0, 26, 4)
+	_snow.emitting = weather == "snow"
+	_snow.global_position = focus + Vector3(0, 18, 4)
+	_moon.visible = weather == "moon" and night > 0.2
 	for w in _wisps:
 		w.emitting = night > 0.4
 	# crows wheel round the towers, flapping now and then
@@ -176,6 +183,30 @@ func _make_rain() -> CPUParticles3D:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.albedo_color = Color(0.82, 0.88, 1.0, 0.6)
+	m.material = mat
+	p.mesh = m
+	p.emitting = false
+	return p
+
+
+func _make_snow() -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = 1600
+	p.lifetime = 5.0
+	p.preprocess = 4.0
+	p.local_coords = false
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	p.emission_box_extents = Vector3(48, 1, 40)
+	p.direction = Vector3(0.2, -1, 0.1)
+	p.spread = 25.0
+	p.gravity = Vector3(0.3, -1.2, 0)
+	p.initial_velocity_min = 2.5
+	p.initial_velocity_max = 4.0
+	var m := SphereMesh.new()
+	m.radius = 0.09; m.height = 0.18; m.radial_segments = 4; m.rings = 2
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.97, 0.98, 1.0)
 	m.material = mat
 	p.mesh = m
 	p.emitting = false

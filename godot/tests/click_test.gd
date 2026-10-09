@@ -74,7 +74,7 @@ func _init() -> void:
 	await click("✕")
 	await frames(4)
 	ok("back home", m.win.is_open("home"), m.win.kind)
-	ok("new village clicked (mouse held down as the game starts)", await click("New village", 30))
+	ok("a new month clicked (mouse held down as the game starts)", await click("A new month", 30))
 	await frames(20)
 	m = current_scene
 	ok("game started", m != null and m.screen == "game", m.screen if m else "no scene")

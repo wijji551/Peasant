@@ -25,7 +25,7 @@ func _init() -> void:
 	change_scene_to_file("res://main.tscn")
 	await frames(30)                                       # give the host a moment to open
 	var relay := OS.get_environment("DTV_RELAY")
-	Settings.relay = relay
+	Settings.relay = relay if relay != "" else "none"
 	var where := Net.local_ip()
 	if relay != "":                                         # the host's code, as if read out
 		await wait_for(func(): return FileAccess.file_exists("user://test_code.txt"), 20.0)

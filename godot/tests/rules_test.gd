@@ -186,11 +186,11 @@ func run() -> void:
 	X.do_act(m, "bless", "w"); ok("the priest blesses a sword for two shillings", (m.bless & 1) == 1 and m.coin == 6, m.coin)
 	var hu: E.Undead = mob(1, 0, 1.4)[0]
 	m.atkCd = 0; m.r = 0; m.combo = 0; X.do_attack(m)
-	var holy_dmg := D.UN[0].hp - hu.hp
+	var holy_dmg: float = D.UN[0].hp - hu.hp
 	clear_u(); m.bless = 0
 	var pu2: E.Undead = mob(1, 0, 1.4)[0]
 	m.atkCd = 0; m.combo = 0; X.do_attack(m)
-	var plain := D.UN[0].hp - pu2.hp
+	var plain: float = D.UN[0].hp - pu2.hp
 	clear_u()
 	ok("a blessed blow does half as much again", absf(holy_dmg / plain - 1.5) < 0.02, "%.1f vs %.1f" % [holy_dmg, plain])
 	X.do_act(m, "bless", "w"); ok("no blessing without the fee", m.bless == 0 and m.coin == 6)
@@ -322,7 +322,9 @@ func run() -> void:
 	# ---------- the horde
 	var tot := func(dd: int, n: int) -> int:
 		var c: Array = Rules.night_plan(dd, n).c
-		return c[0] + c[1] + c[2]
+		var t := 0
+		for v in c: t += v
+		return t
 	ok("hordes are bigger, most of all in co-op", tot.call(1, 1) >= 28 and tot.call(1, 4) >= 100 and tot.call(7, 4) >= 320, [tot.call(1, 1), tot.call(7, 1), tot.call(1, 4), tot.call(7, 4), tot.call(7, 8)])
 	clear_u()
 	var xs := []

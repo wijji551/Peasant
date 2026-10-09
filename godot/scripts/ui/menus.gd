@@ -3,7 +3,7 @@ extends RefCounted
 ## your backpack, the dawn notice, and the end of the week. main.gd says which; this fills it in.
 
 const GUIDE := [
-	["The short version", ["By day, gather and build. At dusk the bell rings. At night the dead rise along the graveyard to the north, one after another without a pause and faster as the night goes on, and make for the keep, where the families are hiding. If the keep falls, Thornhallow is lost. Hold for seven nights.", "Nearly everything is done by walking up to it and holding {interact}."]],
+	["The short version", ["By day, gather and build. At dusk the bell rings. At night the dead rise along the graveyard to the north, one after another without a pause and faster as the night goes on, and make for the keep, where the families are hiding. If the keep falls, Thornhallow is lost. Hold for the month: thirty nights (or seven, in the short game).", "Nearly everything is done by walking up to it and holding {interact}."]],
 	["The day", ["A day lasts six minutes, or until everyone presses {ready}.", "Wood comes from trees, stone from the rocky outcrop, iron from the mine, food from the farms to the west or the jetty on the river. The stone, the iron and the fishing move every morning: the dawn notice says where, and the map marks them. You carry 20 of each.", "At the jetty, hold {interact} and press {attack} when something bites."]],
 	["Defences", ["The north wall has seven foundations: six walls and a gate. Stand on one and hold {interact}. Barricades and spike rows go anywhere: press {build} or 1 to 4 (or click one, bottom right), then {interact} or click.", "Hold {interact} at a damaged defence to repair it with wood. Carrying stone or iron, hold {interact} again to face a wall with stone, band the gate or brace a barricade. An unbraced barricade rots by half every evening after its first night.", "Nobody can be hit through a standing wall or gate, in either direction. Go out through the gate, or shoot over."]],
 	["Your posse", ["Hold {interact} beside a neighbour to rally them. They gather when you gather and fight when you fight. The slum has more, for food. The smithy gives them spears.", "They can die, and they have nerve: when friends fall they may run for the keep until dawn. {toilet} is the emergency toilet break, which sends the dead nearby running. With rank 3 of the leadership book, {orders} tells them to follow, hold or charge."]],
@@ -11,10 +11,18 @@ const GUIDE := [
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
 	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: shared materials and a shared arms rack. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
 	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "With a village server set (Options), villages go through it: a five-letter code that works from anywhere, and nobody's router matters. Without one, the host's computer asks its router to let friends in; if the router says no, that code only works on the same home network, unless the host opens port 24565 (UDP). The game does not pause for the handbook when others are playing."]],
-	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the Steward when he comes. Top right: the map. Left: what you carry. Bottom: your hand, bucket, posse, backpack, skills and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your backpack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
+	["The month", ["Four weeks, each ending with a boss: the Steward on night 7, the Coachman and his hearse on 14, the Captain of the Guard on 21, and the Lord of Ashhollow himself on 30. Each week the dead last a little longer and hit a little harder, and new kinds come down. The dawn notice warns you the morning before.", "Ghouls (from night 8) are fast and climb over barricades, but not walls. Gravediggers (10) tunnel under the north wall and come up inside. Bat swarms (12) fly over everything for the keep: slings, bows and the handbell bring them down. The Lord's guard (15) is armoured: farm tools barely dent it, maces and hammers do. Wraiths (18) drift through walls, and only holy things hurt them: relics, blessed weapons, blessed slop. A coffin ram (20) goes for the north gate: a warhammer, or a very strong gate.", "The weather changes the night. Rain makes mud, and the dead wade slower. Fog hides the castle road. Snow slows everyone. Night 15 is the full moon: relics are easier to find, and the dead are quicker."]],
+	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the boss when one comes. Top right: the map. Left: what you carry. Bottom: your hand, bucket, posse, backpack, skills and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your backpack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
 ]
 
 const CHANGES := [
+	["Build 4, stage 1: the month", [
+		"Thirty nights now, in four weeks. The home screen offers a new month, or a short game of seven nights that squeezes it all in, with the Lord on the seventh.",
+		"Six new kinds of dead: ghouls that climb barricades, gravediggers that tunnel under the north wall, bat swarms that fly straight for the keep, the Lord's armoured guard, wraiths that walk through walls and only mind holy things, and a coffin ram for the gate.",
+		"Three new bosses: the Coachman drives his hearse through anything wooden on night 14; the Captain of the Guard leads the guard against one gate on night 21; and on night 30 the Lord of Ashhollow comes down in person, in three stages, ending at the keep door.",
+		"The dead are a bit tougher from the start, and a tenth tougher each week after.",
+		"Weather that matters: rain slows the dead, fog hides the castle road, snow slows everyone, and night 15 is the full moon. The dawn notice warns you what is coming tonight.",
+	]],
 	["Godot: the village server is open", [
 		"The game now has its own village server, always on, in London. Host and Join use it by themselves: nothing to type, no routers to fiddle with. Hosting gives a five-letter code; send it to your friends.",
 		"Your own server can still go in the handbook's Options, if you ever want one.",
@@ -82,7 +90,7 @@ func _init(main_, window_) -> void:
 
 # ---------------------------------------------------------------- home
 func home() -> void:
-	var b: VBoxContainer = w.open("home", "Defend the Village!", "", 820, 560, false, false)
+	var b: VBoxContainer = w.open("home", "Defend the Village!", "", 820, 610, false, false)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 26)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -91,7 +99,7 @@ func home() -> void:
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_theme_constant_override("separation", 10)
 	cols.add_child(left)
-	Look.para(left, "Every night the dead walk down from Ashhollow Castle to the keep, where Thornhallow’s families are hiding. Robert Bailiff has bolted his door. Hold for seven nights.", 15, Look.INK_SOFT)
+	Look.para(left, "Every night the dead walk down from Ashhollow Castle to the keep, where Thornhallow’s families are hiding. Robert Bailiff has bolted his door. Hold for a month.", 15, Look.INK_SOFT)
 	Look.label(left, "YOUR NAME AND COLOUR", 13, Look.RUST)
 	var name := LineEdit.new()
 	name.text = Settings.name
@@ -122,7 +130,17 @@ func home() -> void:
 		var who: Array = saved.players.map(func(p): return p.dn)
 		var cb := _big(left, "Carry on from day %d" % int(saved.day), func(): m.begin(saved), true)
 		cb.tooltip_text = "Saved: " + ", ".join(who) + "."
-	_big(left, "New village", func(): m.begin(null), saved == null)
+	var nr := HBoxContainer.new()
+	nr.add_theme_constant_override("separation", 8)
+	left.add_child(nr)
+	var nm := _big(nr, "A new month", func(): m.begin_new(D.MONTH), saved == null)
+	nm.tooltip_text = "Thirty nights, four bosses, and every kind of dead. Saved every morning."
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.custom_minimum_size.x = 0
+	var ns := _big(nr, "A short game", func(): m.begin_new(D.WEEK), false)
+	ns.tooltip_text = "The month squeezed into seven nights: new dead every night, and the Lord on the seventh."
+	ns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ns.custom_minimum_size.x = 0
 	# playing together
 	Look.label(left, "PLAY TOGETHER (UP TO 8)", 13, Look.RUST)
 	var row := HBoxContainer.new()
@@ -235,7 +253,7 @@ func menu(tab: String = "") -> void:
 			Look.label(g, "Village server, for playing together", 15)
 			var rv := LineEdit.new()
 			rv.text = Settings.relay
-			rv.placeholder_text = Net.DEFAULT_RELAY if Net.DEFAULT_RELAY != "" else "none: host from this computer"
+			rv.placeholder_text = "the game's own (type none to host from here)" if Net.DEFAULT_RELAY != "" else "none: host from this computer"
 			rv.custom_minimum_size.x = 260
 			rv.text_changed.connect(func(t): Settings.relay = t.strip_edges(); Settings.save())
 			g.add_child(rv)
@@ -424,8 +442,9 @@ func lobby() -> void:
 		w.foot_button("Close the village", func(): N.leave(); home())
 		if N.saved_day > 0:
 			w.foot_button("Carry on from day %d" % N.saved_day, func(): m.begin(m.read_save()))
-		w.foot_button("Start a new week", func(): m.begin(null), true)
-		w.hint("Start when everyone is in. Nobody can join once the week has begun.")
+		w.foot_button("A short game", func(): m.begin_new(D.WEEK))
+		w.foot_button("Start a new month", func(): m.begin_new(D.MONTH), true)
+		w.hint("Start when everyone is in. Nobody can join once the month has begun. The short game is seven nights.")
 	else:
 		w.foot_button("Leave", func(): N.leave(); home())
 		w.hint("Waiting for the host to start." if N.my_id != 0 else "")
@@ -611,7 +630,7 @@ func _slot(parent: Control, id: int, label: String, num: String, tip: String, bl
 
 # ---------------------------------------------------------------- dawn, and the end
 func dawn(day: int, lines: Array) -> void:
-	w.open("dawn", "Day %d of %d" % [day, D.LAST_DAY], "", 620, minf(560, 250 + 52 * lines.size()), true)
+	w.open("dawn", "Day %d of %d" % [day, m.R.last_day], "", 620, minf(560, 250 + 52 * lines.size()), true)
 	for l in lines:
 		w.para("•  " + l, 16)
 	w.foot_button("To work", func(): w.close(), true)
@@ -620,16 +639,19 @@ func dawn(day: int, lines: Array) -> void:
 
 func ending(won: bool) -> void:
 	var R: Rules = m.R
-	w.open("end", "The first week is over" if won else "The keep has fallen", "", 620, 520, false)
-	w.para("Thornhallow has held for seven nights, and the Steward has gone back up the hill in several pieces. Robert Bailiff has opened an upstairs window to say that it all went exactly as he planned." if won else "The dead reached the families in the keep. Robert Bailiff’s door remains bolted.", 16)
+	var month: bool = R.last_day >= D.MONTH
+	w.open("end", ("The month is over" if month else "The short game is won") if won else "The keep has fallen", "", 620, 520, false)
+	w.para(("Thornhallow has held for thirty nights. The Lord of Ashhollow has been put back in his box, and the castle is to let again. Robert Bailiff has opened an upstairs window to say that it all went exactly as he planned." if month
+		else "Thornhallow has held for seven very long nights, and the Lord of Ashhollow has gone back up the hill in several pieces. Robert Bailiff has opened an upstairs window to say that it all went exactly as he planned.") if won
+		else "The dead reached the families in the keep. Robert Bailiff’s door remains bolted.", 16)
 	if won:
 		for l in R.dawn.lines: w.para("•  " + l, 14, Look.INK_SOFT)
 	w.para("Undead put down: %d  ·  Peasants lost: %d  ·  Defences built: %d  ·  Keep: %d of %d" % [R.stats.kills, R.stats.lost, R.stats.built, maxi(0, roundi(R.keepHp)), roundi(D.KEEP_HP)], 15, Look.RUST)
-	w.para("That was the first week of the month. Nights 8 to 30 arrive in later builds." if won else "Day %d was saved at dawn, so you can have it again." % R.day, 14, Look.INK_SOFT)
+	w.para("Well done. The bookshelf has been dusted for next time." if won else "Day %d was saved at dawn, so you can have it again." % R.day, 14, Look.INK_SOFT)
 	w.foot_button("Home", func(): m.to_home())
 	if Net.me.is_client():
 		w.hint("The host chooses what happens next.")
 	elif won:
-		w.foot_button("Start a new week", func(): m.begin(null), true)
+		w.foot_button("Start a new month", func(): m.begin_new(D.MONTH), true)
 	else:
 		w.foot_button("Try day %d again" % R.day, func(): m.begin(m.read_save()), true)

@@ -23,7 +23,6 @@ const SLOTX := [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0]   # north wall foundat
 # --- rules
 const DAY_LEN := 360.0
 const DUSK_LEN := 20.0
-const LAST_DAY := 7
 const NIGHT_BASE := 28.0
 const NIGHT_PER_PLAYER := 1.0
 const NIGHT_GROWTH := 1.24
@@ -153,12 +152,53 @@ const BOOKS := [
 	{"name": "Relics and Where They Were Left", "what": "Relic lore", "base": 4, "by": "searching the ruins", "ranks": ["Search faster (and faster again with every rank)", "Your map marks the rubble that still hides something", "Relics turn up half as often again", "You find twice the materials and coins", "Holy things hit harder in your hands", "Relics turn up far more often", "Nothing lurking in the ruins notices you"]},
 	{"name": "Granny’s Remedies", "what": "Healing", "base": 4, "by": "bandaging and reviving", "ranks": ["Bandage a hurt ally: hold {interact} beside them (it heals more with every rank)", "Revive twice as fast, and to better health", "Each of your posse survives one fatal blow a night", "You mend slowly all the time, even in a fight", "You last twice as long when down", "A bandage heals completely", "Once a night you get back up by yourself"]},
 ]
-const UN := [
-	{"name": "shambler", "hp": 46.0, "spd": 1.5, "dmg": 8.0, "sdmg": 7.0, "kdmg": 3.0, "cd": 1.3, "r": 0.5, "rng": 0.0},
-	{"name": "skeleton", "hp": 16.0, "spd": 2.9, "dmg": 5.0, "sdmg": 3.0, "kdmg": 2.0, "cd": 0.9, "r": 0.4, "rng": 0.0},
-	{"name": "skeleton archer", "hp": 14.0, "spd": 2.4, "dmg": 6.0, "sdmg": 2.0, "kdmg": 2.0, "cd": 2.4, "r": 0.4, "rng": 11.0},
-	{"name": "the Steward", "hp": 520.0, "spd": 1.3, "dmg": 10.0, "sdmg": 8.0, "kdmg": 5.0, "cd": 1.2, "r": 0.75, "rng": 0.0},
+# --- the dead. first: the night of the month they first come down. cost: how much of a night's horde one of them is
+# worth (a shambler is 1). Flags: bony (reassembles once), boss, climb (over barricades), dig (under the north wall),
+# fly (over everything, for the keep), armour (shrugs off farm tools), ghost (through walls; only holy things hurt it),
+# ram (goes for the gate), hearse (the Coachman), lord.
+const _UN := [
+	{"name": "shambler", "hp": 50.0, "spd": 1.5, "dmg": 9.0, "sdmg": 7.0, "kdmg": 3.0, "cd": 1.3, "r": 0.5, "first": 1},
+	{"name": "skeleton", "hp": 16.0, "spd": 2.9, "dmg": 6.0, "sdmg": 3.0, "kdmg": 2.0, "cd": 0.9, "r": 0.4, "bony": true, "first": 2, "cost": 0.6},
+	{"name": "skeleton archer", "hp": 14.0, "spd": 2.4, "dmg": 6.0, "sdmg": 2.0, "kdmg": 2.0, "cd": 2.4, "r": 0.4, "rng": 11.0, "bony": true, "first": 4, "cost": 0.8},
+	{"name": "the Steward", "hp": 520.0, "spd": 1.3, "dmg": 10.0, "sdmg": 8.0, "kdmg": 5.0, "cd": 1.2, "r": 0.75, "boss": true, "first": 7},
+	{"name": "ghoul", "hp": 34.0, "spd": 4.2, "dmg": 8.0, "sdmg": 5.0, "kdmg": 2.0, "cd": 0.8, "r": 0.45, "climb": true, "first": 8, "cost": 1.2},
+	{"name": "gravedigger", "hp": 44.0, "spd": 1.8, "dmg": 9.0, "sdmg": 6.0, "kdmg": 3.0, "cd": 1.1, "r": 0.5, "dig": true, "first": 10, "cost": 1.5},
+	{"name": "bat swarm", "hp": 18.0, "spd": 4.8, "dmg": 3.0, "sdmg": 0.0, "kdmg": 4.0, "cd": 0.7, "r": 0.6, "fly": true, "first": 12, "cost": 0.8},
+	{"name": "the Lord’s guard", "hp": 130.0, "spd": 1.35, "dmg": 13.0, "sdmg": 24.0, "kdmg": 6.0, "cd": 1.4, "r": 0.55, "armour": true, "first": 15, "cost": 4.0},
+	{"name": "wraith", "hp": 55.0, "spd": 2.0, "dmg": 10.0, "sdmg": 0.0, "kdmg": 5.0, "cd": 1.2, "r": 0.5, "ghost": true, "first": 18, "cost": 3.0},
+	{"name": "coffin ram", "hp": 320.0, "spd": 1.25, "dmg": 12.0, "sdmg": 70.0, "kdmg": 30.0, "cd": 2.6, "r": 1.2, "ram": true, "first": 20, "cost": 10.0},
+	{"name": "the Coachman", "hp": 1100.0, "spd": 6.0, "dmg": 22.0, "sdmg": 999.0, "kdmg": 40.0, "cd": 1.5, "r": 1.3, "boss": true, "hearse": true, "first": 14},
+	{"name": "the Captain of the Guard", "hp": 1500.0, "spd": 1.45, "dmg": 24.0, "sdmg": 45.0, "kdmg": 10.0, "cd": 1.3, "r": 0.8, "boss": true, "armour": true, "first": 21},
+	{"name": "the Lord", "hp": 2600.0, "spd": 1.6, "dmg": 30.0, "sdmg": 60.0, "kdmg": 25.0, "cd": 1.2, "r": 0.8, "boss": true, "lord": true, "first": 30},
 ]
+const _UN_DEF := {"rng": 0.0, "bony": false, "boss": false, "climb": false, "dig": false, "fly": false, "armour": false, "ghost": false,
+	"ram": false, "hearse": false, "lord": false, "first": 1, "cost": 1.0}
+static var UN: Array = _fill(_UN, _UN_DEF)
+const U_STEWARD := 3
+const U_GHOUL := 4
+const U_DIGGER := 5
+const U_BATS := 6
+const U_GUARD := 7
+const U_WRAITH := 8
+const U_RAM := 9
+const U_COACH := 10
+const U_CAPTAIN := 11
+const U_LORD := 12
+const BOSS_NIGHTS := {7: 3, 14: 10, 21: 11, 30: 12}   # the night of the month: which boss comes down
+const MONTH := 30
+const WEEK := 7
+const SHORT_NIGHTS := [1, 4, 8, 12, 18, 20, 30]     # the short game: which night of the month each of its 7 nights is like
+
+# --- weather. Most nights are clear. Night 15 is always the full moon.
+const WEATHER := ["clear", "clear", "clear", "overcast", "rain", "clear", "fog", "overcast", "rain", "clear", "snow", "clear"]
+const WEATHER_LINE := {
+	"clear": "",
+	"overcast": "The sky is the colour of old porridge today.",
+	"rain": "It is raining. Tonight the ground will be mud, and the dead will wade.",
+	"fog": "A thick fog has come up off the river. Tonight you will hear the dead before you see them.",
+	"snow": "It is snowing. Everyone will be slower tonight, the dead included.",
+	"moon": "Tonight is the full moon. Relics glint in the rubble, and the dead are restless and quick.",
+}
 const RELS := ["{n}’s twin", "{n}’s cousin", "{n}’s second cousin", "{n}’s cousin’s lodger", "{n}’s great-aunt’s godchild", "someone who once met {n} at a fair", "a creditor of {n}’s", "a passer-by mistaken for {n}"]
 const JUNK := ["a dead rat", "somebody else’s left shoe", "one button", "a rude carving of Robert Bailiff", "a jar of what used to be jam", "nothing but spiders", "a note reading “IOU one relic”"]
 

@@ -26,7 +26,7 @@ const INPUT_RATE := 1.0 / 15.0
 const ALPHA := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # no I, O, 0 or 1: they are too easy to mix up
 const PSTATE := ["ok", "down", "dead", "hide", "inn"]
 const QSTATE := ["idle", "follow", "chop", "fight", "hide", "body", "gone", "inn"]
-const USTATE := ["rise", "walk", "atk", "pile", "stun"]
+const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
 const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
 	"bless", "holy", "holyT", "study", "gab", "spare", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
@@ -136,7 +136,7 @@ static func local_ip() -> String:
 # ---------------------------------------------------------------- the village server
 static func relay_address() -> String:
 	var a: String = Settings.relay.strip_edges() if Settings.relay.strip_edges() != "" else DEFAULT_RELAY
-	return a
+	return "" if a.to_lower() == "none" else a   # "none": host straight from this computer
 
 
 func _relay_connect() -> String:
@@ -312,7 +312,7 @@ func send_lobby() -> void:
 func send_roster() -> void:
 	if role != "host" or main == null: return
 	var R: Rules = main.R
-	_send({"t": "ros", "pm": R.pm, "sd": R.gseed, "pl": R.players.map(func(p): return [p.id, p.name, p.col, p.slot])})
+	_send({"t": "ros", "pm": R.pm, "sd": R.gseed, "ln": R.last_day, "pl": R.players.map(func(p): return [p.id, p.name, p.col, p.slot])})
 	_sent_sv = -1
 	_sent_tv = -1
 	_sent_dawn = -1
@@ -563,12 +563,12 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv])
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
-		"al": R.ale, "ih": R.innHp, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]),
+		"al": R.ale, "ih": R.innHp, "wx": R.weather, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]),
 		"pl": pl, "pe": pe, "ev": ev_out}
 	if with_undead:
 		var un := PackedFloat32Array()
 		for u in R.undead:
-			var fl := (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0)
+			var fl: int = (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0) | (16 * u.stage) | (64 if u.march else 0)
 			un.append_array([u.id, u.k, u.x, u.z, u.r, u.hp, u.mhp, USTATE.find(u.state), u.ac, u.hc, fl])
 		o.un = un
 	return o
@@ -612,7 +612,7 @@ func _client_msg(m: Dictionary) -> void:
 		"restart":
 			main.client_restart()
 		"ros":
-			R.pm = int(m.pm); R.gseed = int(m.sd)
+			R.pm = int(m.pm); R.gseed = int(m.sd); R.last_day = int(m.get("ln", D.MONTH))
 			var keep := {}
 			for a in m.pl:
 				var p: E.Player = R.player_by_id(int(a[0]))
@@ -656,7 +656,7 @@ func _client_msg(m: Dictionary) -> void:
 func _snapshot(R: Rules, m: Dictionary) -> void:
 	R.phase = str(m.ph); R.day = int(m.d); R.timeLeft = m.tl; R.nf = m.nf; R.keepHp = m.k; R.keepHc = int(m.kc)
 	R.wave = int(m.w[0]); R.waves = int(m.w[1]); R.left = int(m.w[2])
-	R.stats = m.stt; R.store = m.so; R.spots = m.sp; R.ruins_seen = m.rs; R.ale = int(m.al); R.innHp = m.ih; R.items = m.it
+	R.stats = m.stt; R.store = m.so; R.spots = m.sp; R.ruins_seen = m.rs; R.ale = int(m.al); R.innHp = m.ih; R.items = m.it; R.weather = str(m.get("wx", "clear"))
 	if str(m.si) != str(R.sites):
 		R.sites = m.si
 		R.set_sites(R.sites)
@@ -713,11 +713,12 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 			u.state = USTATE[int(un[i + 7])]; u.ac = int(un[i + 8]); u.hc = int(un[i + 9])
 			var fl := int(un[i + 10])
 			u.stun = 1.0 if fl & 1 else 0.0; u.pin = 1.0 if fl & 2 else 0.0; u.fear = 1.0 if fl & 4 else 0.0; u.vuln = 1.0 if fl & 8 else 0.0
+			u.stage = (fl >> 4) & 3; u.march = (fl & 64) != 0
 			uo.append(u)
 		R.undead = uo
 		R.boss = null
 		for u in uo:
-			if u.k == 3: R.boss = u
+			if D.UN[u.k].boss: R.boss = u
 	R.ev.append_array(m.ev)
 	if main.screen != "game" and R.player_by_id(my_id) != null:
 		main.client_enter()
