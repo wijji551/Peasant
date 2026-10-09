@@ -70,6 +70,7 @@ var _zoom := 1.0
 var _pan_t := -1.0                   # the look up at the castle as night falls: how far through it (-1: not looking)
 var _fog_back := 0.0                 # how much further off than usual the camera is, so the haze can keep its distance
 var _title_art: TextureRect          # the title screen's picture
+var _upd: VBoxContainer              # the title screen's corner: which build this is, and a newer one if there is one
 # The view can be turned round the player, tilted and brought closer. Each has where it is and where it is going, so it glides.
 const CAM_PITCH0 := 0.8672          # the tilt the game began with: looking down from 66 up and 56 back
 const CAM_PITCH_MIN := 0.56         # as low as it goes (about 32 degrees), and as near overhead (about 78)
@@ -206,7 +207,47 @@ func _home(quiet: bool = false) -> void:
 		layer.layer = hud.layer - 1                      # under the readouts and the window
 		add_child(layer)
 		layer.add_child(_title_art)
+		_upd = VBoxContainer.new()
+		_upd.theme = Look.theme()
+		_upd.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		_upd.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		_upd.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		_upd.offset_right = -18; _upd.offset_bottom = -14
+		_upd.alignment = BoxContainer.ALIGNMENT_END
+		layer.add_child(_upd)
+		if not is_instance_valid(Update.me):             # it outlives the village being built again
+			Update.me = Update.new()
+			get_tree().root.add_child.call_deferred(Update.me)
+		Update.me.changed.connect(_update_corner)
+		_update_corner.call_deferred()
+	Update.mark_ok()
 	if not quiet: menus.home()
+
+
+## The corner of the title screen: which build this is; a button when a newer one has been fetched.
+func _update_corner() -> void:
+	if _upd == null or not is_instance_valid(Update.me): return
+	for c in _upd.get_children(): c.queue_free()
+	var u: Update = Update.me
+	if u.ready_build > 0 or u.need_full:
+		if u.what() != "":
+			var wl := Look.para(_upd, u.what(), 14, Color("f1e4c6"))
+			wl.custom_minimum_size.x = 330
+			wl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			wl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.size_flags_horizontal = Control.SIZE_SHRINK_END
+		if u.need_full:
+			b.text = "Open the download page"
+			b.pressed.connect(func(): OS.shell_open(Update.PAGE))
+		else:
+			b.text = "Restart into build %d" % u.ready_build
+			b.pressed.connect(func(): u.restart())
+		_upd.add_child(b)
+	var l := Look.label(_upd, u.line if u.line != "" else "Build %d" % Update.build(), 14, Color("f1e4c6"))
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 
 
 ## Hosting or joined: the lobby, or what is happening, has changed.
@@ -628,7 +669,7 @@ func inv_do(a: String, arg) -> void:
 # ---------------------------------------------------------------- the loop
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.25)
-	if _title_art: _title_art.visible = screen == "home"
+	if _title_art: _title_art.visible = screen == "home"; _upd.visible = screen == "home"
 	if screen == "home":                                 # behind the home screen: a slow look round the village
 		_home_t += delta
 		var a := _home_t * 0.05

@@ -27,6 +27,12 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["The game keeps itself up to date", [
+		"The game can now be handed out as one file, Thornhallow.exe, with nothing to install.",
+		"When it reaches the title screen it asks whether a newer build is out. If there is, it fetches it quietly (a few megabytes) and the corner of the title screen offers to restart into it. If you do not, you get it the next time you start the game anyway.",
+		"The corner of the title screen says which build you are on. Two builds cannot share a village, so if a friend cannot join, the game says which of you is behind.",
+		"A build that fails to start is given up on, and the game goes back to the last one that worked.",
+	]],
 	["Inside the Thorny Rose", [
 		"The inn is a room now. Hold E at its door on the square, day or night, and walk in. The innkeeper is behind the bar with his old business: food for ale, a mercenary for hire, and after dark a seat to drink yourself brave.",
 		"Three locals will talk: Old Marge by the fire, Tam the Carter, and a stranger in the corner. Ask each about three things. Stand one a drink (6d, once a day each) and you get a good turn: a pie, word of where the lost chest or the outer ruins are, or how to deal with the next boss.",

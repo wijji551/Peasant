@@ -1,0 +1,85 @@
+# Builds the game people are given (one Windows file) and the small update pack the game fetches for itself.
+#
+# It runs when godot/version.json changes on main: putting the build number up by one is how a release is made.
+# The result is a GitHub release "build-N" holding:
+#   Thornhallow.exe    the whole game in one file, for somebody who does not have it yet
+#   thornhallow.pck    the same build as a pack, which copies of the game already out there fetch and start from
+#   version.json       the note the game reads to see whether it is behind
+name: Release the game
+on:
+  push:
+    branches: [main]
+    paths: ['godot/version.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+env:
+  GODOT: 4.7.2
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Keep Godot between runs
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT }}-windows
+      - name: Fetch Godot and its Windows export template
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          B=https://github.com/godotengine/godot/releases/download/${GODOT}-stable
+          mkdir -p ~/godot ~/.local/share/godot/export_templates/${GODOT}.stable
+          curl -sSLf -o /tmp/godot.zip $B/Godot_v${GODOT}-stable_linux.x86_64.zip
+          unzip -q -o /tmp/godot.zip -d ~/godot
+          curl -sSLf -o /tmp/tpl.tpz $B/Godot_v${GODOT}-stable_export_templates.tpz
+          unzip -q -o -j /tmp/tpl.tpz templates/version.txt templates/windows_release_x86_64.exe templates/windows_debug_x86_64.exe -d ~/.local/share/godot/export_templates/${GODOT}.stable
+          rm /tmp/godot.zip /tmp/tpl.tpz
+      - name: Read the project in
+        run: |
+          ~/godot/Godot_v${GODOT}-stable_linux.x86_64 --headless --path godot --import || true
+      - name: Check the rules still hold
+        run: |
+          set -e
+          cd godot
+          for t in rules_test inn_test; do
+            timeout 600 ~/godot/Godot_v${GODOT}-stable_linux.x86_64 --headless --path . -s res://tests/$t.gd > /tmp/$t.txt 2>&1 || true
+            tail -1 /tmp/$t.txt
+            if grep -qE "^FAIL|SCRIPT ERROR" /tmp/$t.txt; then grep -E "^FAIL|SCRIPT ERROR" -A1 /tmp/$t.txt; exit 1; fi
+            grep -qE "passed, 0 failed" /tmp/$t.txt
+          done
+      - name: Build the file and the pack
+        run: |
+          set -e
+          mkdir -p out
+          G=~/godot/Godot_v${GODOT}-stable_linux.x86_64
+          $G --headless --path godot --export-release "Windows" ../out/Thornhallow.exe
+          $G --headless --path godot --export-pack "Windows" ../out/thornhallow.pck
+          test -s out/Thornhallow.exe && test -s out/thornhallow.pck
+          python3 tools/release_info.py ${GODOT%.*}
+          ls -la out
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          N=$(python3 -c "import json; print(json.load(open('out/version.json'))['build'])")
+          WHAT=$(python3 -c "import json; print(json.load(open('out/version.json'))['what'])")
+          {
+            echo "$WHAT"
+            echo
+            echo "**To play:** download **Thornhallow.exe** below and double-click it. There is nothing to install."
+            echo "The first time, Windows may say it protected your PC: choose *More info*, then *Run anyway*."
+            echo
+            echo "If you already have the game you do not need to download anything: start it, and it fetches this build by itself."
+          } > /tmp/notes.md
+          gh release delete "build-$N" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "build-$N" out/Thornhallow.exe out/thornhallow.pck out/version.json --draft --title "Thornhallow: Thirty Nights, build $N" --notes-file /tmp/notes.md --target "$GITHUB_SHA"
+          gh release edit "build-$N" --draft=false --latest

@@ -268,7 +268,7 @@ func _on_peer_joined(pid: int) -> void:
 	_next_id += 1
 	_conns[pid] = id
 	lobby.append({"id": id, "name": "Peasant", "col": _free_col(-1)})
-	_send({"t": "you", "id": id}, pid)
+	_send({"t": "you", "id": id, "b": Update.build()}, pid)
 	send_lobby()
 
 
@@ -596,6 +596,11 @@ func _client_msg(m: Dictionary) -> void:
 	var R: Rules = main.R
 	match str(m.t):
 		"you":
+			var hb := int(m.get("b", Update.build()))
+			if hb != Update.build():                    # two builds cannot share a village: say which of us is behind
+				kicked = ("That village is on build %d and this game is on build %d. " % [hb, Update.build()]) + ("Restart this game and it will fetch the newer build." if hb > Update.build() else "Ask the host to restart their game, which fetches the newer build.")
+				_on_server_gone.call_deferred()
+				return
 			my_id = int(m.id)
 			status = ""
 			var h: Array = get_meta("hello", ["Peasant", 0])
