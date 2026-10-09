@@ -915,6 +915,8 @@ func _test_hook() -> void:
 	if shot == "":
 		return
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
+	if OS.get_environment("DTV_MERCHANT") != "" and _frame == 2:   # for pictures: a merchant in
+		R.merchant = int(OS.get_environment("DTV_MERCHANT")); R.make_wares()
 	if OS.get_environment("DTV_PRIEST") != "" and me:     # for pictures: an apprentice priest, smiting and praying
 		if _frame == 2:
 			me.books[D.B_HOLY] = 6; me.books[6] = 3; me.xp[D.B_HOLY] = 700.0; me.xslot = true

@@ -80,6 +80,10 @@ class Player:
 	var prot := 0.0         # prayed over: a third less harm
 	var hb := 0.0           # prayed over at rank 3: the weapon is holy
 	var spare := 0.0        # learning past rank VII, in points; sold for coin in the skills window
+	var cogs := 0           # boxes of cogs, from the tinker: for contraptions
+	var job := false        # working on today's merchant's job
+	var jobT := 0.0         # how much of it they have done
+	var merc := false       # has hired a mercenary today
 	var coward := false
 	var deaths := 0
 	var cg := 0.0           # courage, from the inn
@@ -141,9 +145,10 @@ class Peasant:
 	var tx := 0.0           # in a joined game: where the host last said they were (the view eases towards it)
 	var tz := 0.0
 	var tr := 0.0
-	var px := 0.0           # where they were told to hold
+	var px := 0.0           # where they were told to hold (a guard: his post)
 	var pz := 0.0
 	var prot := 0.0         # prayed over: a third less harm
+	var kind := 0           # 0 a villager, 1 a village guard (hired for the night), 2 a mercenary (in a posse until dawn)
 	var hurtT := 99.0
 
 

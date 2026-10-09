@@ -240,7 +240,35 @@ const STATIONS := [
 	{"id": "slum", "x": -17.6, "z": 17.4, "r": 3.4, "name": "the slum", "verb": "recruit in the slum"},
 	{"id": "inn", "x": -13.1, "z": -4.7, "r": 2.5, "name": "the Thorny Rose Inn", "verb": "call at the Thorny Rose Inn"},
 	{"id": "priest", "x": 13.6, "z": -10.6, "r": 2.3, "name": "the priest", "verb": "speak to the priest"},
+	{"id": "cart", "x": 10.4, "z": 22.6, "r": 3.0, "name": "the merchant’s cart", "verb": "see what the merchant has"},
+	{"id": "bailiff", "x": -14.5, "z": -16.6, "r": 2.4, "name": "Robert Bailiff’s back door", "verb": "knock at Robert Bailiff’s back door"},
 ]
+# --- travelling merchants. One comes on about six days of the month, parks by the market, and leaves at dusk.
+# The best thing on the cart is not for sale: it is the pay for a job, which takes the whole day (half each with help).
+# where: the job is done standing near there ("cart", "stone" (the outcrop), or a station's id).
+const MERCHANTS := [
+	{"id": "tinker", "name": "the tinker", "sells": "tools and contraption parts", "job": "Fetch a new cart wheel from the quarry road", "where": "stone",
+		"doing": "searching the quarry road for a cart wheel", "pay": "boxes of cogs, for contraptions, and iron"},
+	{"id": "armourer", "name": "the armourer", "sells": "forged arms, without the smithy", "job": "Guard the cart while he sleeps", "where": "cart",
+		"doing": "guarding the cart. He snores", "pay": "his best piece: a warhammer"},
+	{"id": "brewer", "name": "the brewer", "sells": "ale for the inn, and food", "job": "Unload and stack forty barrels", "where": "cart",
+		"doing": "stacking barrels", "pay": "the Brewer’s Reserve: tonight every tankard at the inn counts double"},
+	{"id": "pedlar", "name": "the relic pedlar", "sells": "one real relic among several fakes", "job": "Carry a very heavy crate to the old chapel", "where": "priest",
+		"doing": "carrying the crate to the chapel, a step at a time", "pay": "the real relic"},
+	{"id": "bookseller", "name": "the bookseller", "sells": "loose pages that advance a book", "job": "Copy out his ledger by hand", "where": "library",
+		"doing": "copying out the ledger", "pay": "An Index of Further Reading, or a whole chapter of one of your books"},
+]
+const JOB_WORK := 240.0              # seconds of work: most of a day alone, half each with a team-mate
+const FAKES := ["a Splinter of the True Fence", "Saint Bob’s Left Toenail", "a Feather from the Holy Goose", "the Jawbone of a Very Small Martyr",
+	"a Vial of Saint Agatha’s Tears (water)", "a Genuine Halo, Slightly Bent", "the Shroud of Saint Nobody", "a Tooth of Saint Unknown (a horse’s)"]
+# --- hired help
+const GUARD_FEE := 96                # 8 shillings, at Robert Bailiff's back door: a guard holds a gate for the night
+const MERC_FEE := 96                 # 8 shillings, at the Thorny Rose: a mercenary in your posse until dawn
+const GUARDS := 6
+const POSTS := [[0.0, -19.4], [-25.4, 2.0], [25.4, 2.0]]   # the north gate, the west gateway, the east gateway
+const POST_NAMES := ["the north gate", "the west gateway", "the east gateway"]
+const GUARD_NAMES := ["Sergeant Pike", "Corporal Dunn", "Old Gerald", "Watchman Hobb", "Halbert", "Young Gerald"]
+const MERC_NAMES := ["Gunter the Unreliable", "Big Margery", "Swiss Hans", "Ulf (no surname)", "Sir Reginald (allegedly)", "Mad Agnes", "Two-Swords Tom", "the Bastard of Bruges"]
 const INN := {"x": -17.5, "z": -4.7, "dx": -13.6, "dz": -4.7}   # inside, and the door
 const FARM := {"x0": -70.0, "x1": -46.5, "z0": 20.4, "z1": 41.6}
 # --- the stone, the iron and the fish are somewhere new every morning
@@ -332,6 +360,13 @@ static func cottage(i: int) -> Dictionary:
 
 static func inside_village(x: float, z: float) -> bool:
 	return absf(x) < VW and z > VN and z < VS
+
+
+## A peasant's name: villagers from D.PNAMES, guards and mercenaries from their own lists.
+static func qname(q) -> String:
+	if q.kind == 1: return GUARD_NAMES[q.ni % GUARD_NAMES.size()]
+	if q.kind == 2: return MERC_NAMES[q.ni % MERC_NAMES.size()]
+	return PNAMES[q.ni % PNAMES.size()]
 
 
 static func station(id: String) -> Dictionary:

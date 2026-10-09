@@ -10,6 +10,9 @@ var _jetty: MeshInstance3D
 var _ruins: Node3D
 var _spots: Array = []          # one heap of rubble per search spot, paler while something is left in it
 var _spot_mats: Array = []
+var _cart: Node3D               # the merchant's cart, on a merchant's day
+var _cart_mat: StandardMaterial3D
+const MERCHANT_COL := [Color(0.42, 0.55, 0.32), Color(0.45, 0.47, 0.55), Color(0.72, 0.52, 0.2), Color(0.5, 0.28, 0.5), Color(0.3, 0.38, 0.6)]
 
 
 func _ready() -> void:
@@ -18,6 +21,19 @@ func _ready() -> void:
 	_jetty = _mi("jetty")
 	_ruins = Node3D.new()
 	add_child(_ruins)
+	_cart = Node3D.new()
+	add_child(_cart)
+	var st_c := D.station("cart")
+	_cart.position = Vector3(st_c.x, 0, st_c.z + 0.6)
+	_mi("cart", _cart)
+	var aw := _mi("awning", _cart)
+	_cart_mat = _tinted(Color.WHITE)
+	aw.material_override = _cart_mat
+	var mm := _mi("merchant", _cart)
+	mm.position = Vector3(-1.9, 0, -0.9)
+	mm.rotation.y = PI * 0.85
+	mm.scale = Vector3.ONE * 1.1
+	_cart.visible = false
 	var pr := _mi("priest")                          # the priest, outside his chapel
 	var st: Dictionary = D.STATIONS[6]
 	pr.position = Vector3(st.x + 0.9, 0, st.z - 0.5)
@@ -87,6 +103,10 @@ func sync(R: Rules) -> void:
 			var mat := _tinted(Color(0.9, 0.86, 0.74))
 			m.material_override = mat
 			_spots.append(m); _spot_mats.append(mat)
+	_cart.visible = R.merchant >= 0 and (R.phase == "day" or R.phase == "title")
+	if _cart.visible:
+		var c: Color = MERCHANT_COL[R.merchant % MERCHANT_COL.size()]
+		_cart_mat.albedo_color = c
 	for i in _spots.size():
 		var full: bool = R.spots[i] > 0
 		_spots[i].scale = Vector3(1, 1.0 if full else 0.55, 1)

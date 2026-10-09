@@ -233,6 +233,24 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.36, 0.08, 0.36, 0, 2.27, 0, 0x8f7a2e)                                    # a thin gold circlet
 		"lord_eyes":
 			b.box(0.08, 0.05, 0.03, -0.08, 1.88, 0.19, 0xff2a2a).box(0.08, 0.05, 0.03, 0.08, 1.88, 0.19, 0xff2a2a)
+		"cart":                                              # a merchant's cart: two wheels, an awning (white: tinted per merchant), crates and sacks
+			b.box(2.6, 0.18, 1.5, 0, 0.75, 0, P.wood2).box(2.6, 0.5, 0.08, 0, 0.93, 0.72, P.wood).box(2.6, 0.5, 0.08, 0, 0.93, -0.72, P.wood)
+			for sz in [-0.82, 0.82]:
+				b.cyl(0.55, 0.55, 0.1, 10, 0.2, 0.55, sz, P.timber, 0, PI / 2, 0).cyl(0.1, 0.1, 0.14, 6, 0.2, 0.55, sz, P.iron, 0, PI / 2, 0)
+			b.box(0.08, 0.08, 1.6, 1.6, 0.85, 0.3, P.wood3, 0.2).box(0.08, 0.08, 1.6, 1.6, 0.85, -0.3, P.wood3, -0.2)   # the shafts
+			for c in [[-1.2, -0.7], [1.2, -0.7], [-1.2, 0.7], [1.2, 0.7]]: b.box(0.08, 1.5, 0.08, c[0], 0.85, c[1], P.timber)
+			b.box(0.6, 0.5, 0.5, -0.7, 0.93, 0.2, 0x9a7a4a).box(0.5, 0.42, 0.42, -0.6, 1.43, 0.15, 0xa8885a).box(0.55, 0.6, 0.45, 0.6, 0.93, -0.2, 0xd8c8a0)
+			b.cyl(0.25, 0.28, 0.6, 8, 0.2, 0.93, 0.3, 0x7a4a2a)
+		"awning":                                            # white, tinted per merchant
+			b.box(2.9, 0.08, 1.9, 0, 2.38, 0, 0xffffff, 0, 0.08, 0)
+			for i in 6: b.box(0.44, 0.22, 0.04, -1.2 + i * 0.48, 2.18, 0.96, 0xffffff if i % 2 else 0xe8e0d0)
+		"merchant":                                          # a travelling merchant: a big hat, a long coat, a purse
+			b.box(0.2, 0.5, 0.22, -0.14, 0, 0, 0x3a2f28).box(0.2, 0.5, 0.22, 0.14, 0, 0, 0x3a2f28)
+			b.box(0.66, 0.8, 0.44, 0, 0.45, 0, 0x6a4a7a).box(0.68, 0.08, 0.46, 0, 0.75, 0, 0x5a3a20)
+			b.box(0.17, 0.55, 0.2, -0.42, 0.7, 0, 0x6a4a7a).box(0.17, 0.55, 0.2, 0.42, 0.7, 0.05, 0x6a4a7a)
+			b.box(0.42, 0.42, 0.4, 0, 1.25, 0.02, P.skin).box(0.1, 0.1, 0.06, 0, 1.37, 0.24, 0xd9a279)
+			b.cyl(0.46, 0.46, 0.05, 10, 0, 1.6, 0, 0x3a2a1a).cyl(0.2, 0.26, 0.3, 8, 0, 1.64, 0, 0x3a2a1a).box(0.06, 0.3, 0.2, 0.18, 1.8, 0, 0xd8b040)
+			b.box(0.2, 0.24, 0.12, 0.3, 0.6, 0.24, 0xc9a040)
 		# the glowing bits (eyes, the candle), drawn with their own bright material
 		"shamb_eyes":
 			b.box(0.09, 0.07, 0.05, -0.07, 1.3, 0.47, 0xe4ffb0).box(0.09, 0.07, 0.05, 0.15, 1.33, 0.46, 0xe4ffb0)

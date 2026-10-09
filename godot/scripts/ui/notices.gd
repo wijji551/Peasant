@@ -115,9 +115,45 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				o.append({"label": "Unbar the door and go out", "sub": "Sober, more or less.", "ok": true, "a": "innout"})
 				return {"title": "Inside the Thorny Rose Inn", "intro": "Dutch courage: %d%%. At 100 you burst out and charge for %d seconds: faster, stronger and tougher. Nothing can reach you in here until the door gives way (%d%% left)." % [p.cg, Rules.charge_len(p), roundi(R.innHp / D.INN_HP * 100)], "o": o}
 			var is_day := R.phase == "day"
+			o.append({"label": "Hire a mercenary until dawn", "sub": "You have one already. One is plenty." if p.merc else "%s. A hired fighter for your posse: stronger than a guard, and not to be trusted. About one in seven turns on his employer at dawn for two shillings more." % D.coins(D.MERC_FEE), "ok": not p.merc and p.coin >= D.MERC_FEE, "a": "merc"})
 			o.append({"label": "Give the innkeeper 5 food", "sub": "He turns each piece into a tankard for tonight. %d in the barrel. You carry %d." % [R.ale, p.food], "ok": p.food > 0, "a": "ale"})
 			o.append({"label": "Go in and bar the door", "sub": "The Rose opens at dusk." if is_day else "The door is in pieces until morning." if R.innHp <= 0 else "Your posse comes in with you. The dead will try the door.", "ok": not is_day and R.innHp > 0, "a": "innin"})
 			return {"title": "The Thorny Rose Inn", "intro": "Dutch courage: %d%%. Drink inside at night until you are brave enough to charge. The innkeeper only has as much ale as the village brings him food that day." % p.cg, "o": o}
+		"cart":
+			if R.merchant < 0:
+				return {"title": "An empty spot", "intro": "No merchant today.", "o": o}
+			var M: Dictionary = D.MERCHANTS[R.merchant]
+			var lore := Rules.rk(p, 8) >= 2
+			o.append({"head": "For sale"})
+			for i in R.wares.size():
+				var wv: Dictionary = R.wares[i]
+				var gone: bool = wv.left <= 0
+				if wv.give == "page":
+					for b in p.books.size():
+						var r := Rules.rk(p, b)
+						if r > 0 and r < 7:
+							o.append({"label": "A loose page of " + D.BOOKS[b].name, "sub": D.coins(wv.price) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= wv.price and p.jobT <= 0, "a": "mbuy", "arg": "%d:%d" % [i, b]})
+					continue
+				var sub: String = D.coins(wv.price) + (". Sold." if gone else ".")
+				if wv.give == "it": sub += " " + item_sub(p, wv.it)
+				elif wv.give == "relic":
+					sub += " He swears it is genuine." + ((" Your relic lore says: it is!" if wv.real >= 0 else " Your relic lore says: it is not.") if lore else "")
+				elif wv.give == "cogs": sub += " Lets you build a contraption you have not learned yet. You have %d." % p.cogs
+				elif wv.give == "index": sub += " A fourth book." if not p.xslot else " You have read it already."
+				o.append({"label": wv.n[0].to_upper() + wv.n.substr(1), "sub": sub, "ok": not gone and p.coin >= wv.price and not (wv.give == "index" and p.xslot), "a": "mbuy", "arg": str(i)})
+			o.append({"head": "The job"})
+			var pct := roundi(R.job.work / D.JOB_WORK * 100)
+			if R.job.done:
+				o.append({"label": M.job + ": done", "sub": "He is very pleased, in his way.", "ok": false, "a": "job"})
+			else:
+				var where: String = {"stone": "at the rocky outcrop", "cart": "here by the cart", "priest": "up at the chapel", "library": "in the library"}[M.where]
+				o.append({"label": ("Stop: " if p.job else "Take the job: ") + M.job, "sub": ("You are %s (%d%% done). Stay %s. " % [M.doing, pct, where] if p.job else "Pay: %s. It is done %s, and takes most of a day alone, or half a day each with a team-mate. %s" % [M.pay, where, "(%d%% done.) " % pct if pct > 0 else ""]) + "Nobody learns anything from a book on a day they work for a merchant.",
+					"ok": R.phase == "day", "a": "job"})
+			return {"title": M.name[0].to_upper() + M.name.substr(1), "intro": "Selling %s. You have %s. He leaves at dusk." % [M.sells, D.coins(p.coin)], "o": o}
+		"bailiff":
+			var left := D.GUARDS - R.guards
+			o.append({"label": "Hire a village guard for tonight", "sub": ("%s. He holds %s until dawn. %d of the %d guards are still free." % [D.coins(D.GUARD_FEE), D.POST_NAMES[R.guards % D.POSTS.size()], left, D.GUARDS]) if left > 0 else "Every guard is out tonight already.", "ok": left > 0 and p.coin >= D.GUARD_FEE, "a": "guard"})
+			return {"title": "Robert Bailiff’s back door", "intro": "You knock. After a while a voice says the Bailiff is not at home, and that his guards cost eight shillings a night, paid in advance, through the letterbox.", "o": o}
 		"priest", "pack":
 			var here := id == "priest"
 			var fee := func(f: bool) -> String: return "Free: you have the learning." if f else D.coins(D.BLESS_FEE) + "."

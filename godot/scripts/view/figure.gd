@@ -177,14 +177,14 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 		if fx and q.state != "body": fx.puff(q.x, 1, q.z, 3, fx.C_BLOOD, 2)
 	_down = q.state == "body"
 	_dim = 0.6 if _down else 1.0
-	_tunic_mat.albedo_color = CORPSE if _down else Color(D.PCOL[own.col % 8]) if own else Color(0.72, 0.62, 0.46)
+	_tunic_mat.albedo_color = CORPSE if _down else Color(0.22, 0.4, 0.28) if q.kind == 1 else Color(D.PCOL[own.col % 8]) if own else Color(0.72, 0.62, 0.46)
 	_wobble = false
 	_set_work(kind)
-	_set_held(2 if q.armed else 0, false)
-	_set_gear([])
+	_set_held(2 if q.kind == 1 else 3 if q.kind == 2 else 2 if q.armed else 0, false)   # a guard's spear, a mercenary's mace
+	_set_gear([19, 22] if q.kind == 1 else [22, 25] if q.kind == 2 else [])
 	if fx and q.prot > 0 and randf() < get_process_delta_time() * 8: fx.puff(q.x + randf_range(-0.4, 0.4), 0.4, q.z + randf_range(-0.4, 0.4), 1, fx.C_GLAD, 0.5)
-	if q.hp < D.PEASANT_HP and not _down:
-		_show_bar(2.1, 0.9, q.hp / D.PEASANT_HP, Color(0.56, 0.78, 0.36))
+	if q.hp < Rules.q_max(q) and not _down:
+		_show_bar(2.1, 0.9, q.hp / Rules.q_max(q), Color(0.56, 0.78, 0.36))
 	else:
 		_bar.visible = false
 	if fx and q.nv < 45 and not _down and q.state != "hide" and randf() < get_process_delta_time() * 5:
