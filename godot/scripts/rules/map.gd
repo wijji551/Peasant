@@ -39,6 +39,10 @@ static func colliders() -> Array:
 		var c := D.cottage(i)
 		out.append(house_box(c.x, c.z, 0.0 if c.dir > 0 else PI, 3.7, 3.3))
 	out.append(house_box(-47, 24, PI / 2, 5, 7))             # the farmhouse
+	out.append(E.Box.new(D.MILL.x, D.MILL.z, 2.6, 2.6))       # the old mill
+	out.append(E.Box.new(6.0, -14.4, 1.15, 1.15))             # the village green: the well,
+	out.append(E.Box.new(-6.2, -16.0, 0.35, 0.35))            # the maypole,
+	out.append(E.Box.new(-7.6, -20.0, 1.15, 0.3))             # and the stocks
 	return out
 
 
@@ -50,9 +54,10 @@ static func tree_ok(x: float, z: float) -> bool:
 	if x > -74 and x < -42 and z > 17 and z < 44: return false                           # farms
 	for c in D.RUIN_SITES:
 		if absf(x - c.x) < 10 and absf(z - c.z) < 6.5: return false                       # the clearings the outer ruins wander between
-	if absf(x) > 90.5 and absf(x) < 98: return false                                     # the thorn hedge
-	if absf(z + 62.8) < 1.6 and absf(x) < 93: return false                               # the line of stakes
+	if absf(x) > 122.5 and absf(x) < 130: return false                                   # the thorn hedge
+	if absf(z + 62.8) < 1.6 and absf(x) < 125: return false                              # the line of stakes
 	if Vector2(x - D.STEEL_MINE.x, z - D.STEEL_MINE.z).length() < 9: return false   # the old steel mine and its yard
+	if Vector2(x - D.MILL.x, z - D.MILL.z).length() < 10: return false               # the old mill
 	for k in 2:
 		for c in D.SITES[k]:
 			if Vector2(x - c.x, z - c.z).length() < 6.5: return false                     # every place the stone or the iron can turn up
@@ -93,8 +98,8 @@ static func trees() -> Array:
 			t.tint = Color(rng.randf_range(0.88, 1.08), rng.randf_range(0.92, 1.1), rng.randf_range(0.82, 1.02))
 			t.wood = D.TREE_WOOD
 			out.append(t)
-	place.call(-90.0, -34.0, -48.0, 17.0, 420, 2.5)
-	place.call(-125.0, 125.0, -95.0, 53.0, 520, 3.4)
+	place.call(-118.0, -34.0, -50.0, 17.0, 600, 2.5)
+	place.call(-165.0, 165.0, -95.0, 53.0, 760, 3.4)
 	return out
 
 

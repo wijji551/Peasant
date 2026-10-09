@@ -282,3 +282,14 @@ The web version is no longer updated; from here on, changes are made in Godot on
 - **Steel**: a fifth material (`D.RES`), mined at the old steel mine (`D.STEEL_MINE`, -82, -44, at the top of the forest; it does not move; 3.2 s a piece; the gathering book). The market pays 3d a piece and sells none. Shown in what you carry when you have some; saved; in the storehouse.
 - The careful bot now reads Hammer and Tongs second (and Barricades for Beginners third) and holds the week, one peasant lost. Without it (crude spears only) it fell on night 5.
 - Tests: new `tests/smithy_test.gd` (18). Rules 117 (forging checks updated).
+
+## Build 5, stage 3: a bigger map
+
+- **Wider**: the playable land runs x -124 to 124 (was ±92; `D.X0`, `D.X1`). North (the stakes) and south (the river) are unchanged, so the castle, the graveyard and where the dead rise are the same. The hedge, the stakes, the tree scatter (`Map.trees`, now -165..165 with more tries, the forest out to -118), and `tree_ok` follow the new edge.
+- **New places** in the new land: stone (far west, -110 16; the eastern downs, 106 -10), iron (under the downs, 112 8; deep west, -112 -16), fish (-112 and 110 on the river), and two more clearings for the outer ruins (-104 36, 100 -34). Appended to `D.SITES` and `D.RUIN_SITES`, so saves keep their indices.
+- **The old steel mine** moved to -108, -44 (still the top of the forest). **The old mill** (`D.MILL`, 104 30) on the eastern downs: a collider and a sign, sails that turn, a sheepfold with seven sheep, a worn track from the east gate. Scenery only.
+- **The river**: a shader that runs west (deeper in the middle, streaks of foam, a lighter edge), a ragged sandy bank, reeds in clumps on both banks, lily pads, stones, and bushes on the far side.
+- **The village green** north of the keep (x -9..8, z -21..-10): a maypole with ribbons (turns slowly), the well, a duck pond with two ducks, the stocks and a bench by Robert Bailiff's. The well, maypole and stocks are colliders (`Map.colliders`).
+- **Half-timbering**: houses with walls 1.9 or taller get a middle rail and braces. Cottages have cabbage patches and a wattle fence between the two rows.
+- The minimap is wider than tall now (x ±130, 227 by 174 pixels) and the top-right corner grew to fit.
+- Tests: rules 117 (the hedge check uses `D.X1`), month 41, Holy Book 32, merchants 38, contraptions 21, village 11, smithy 18, UI 31, clicks, co-op 23. The bot holds week 1 with nobody lost.

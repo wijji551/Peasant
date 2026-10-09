@@ -10,8 +10,8 @@ const VS := 26.0          # the south wall
 const GATE_Z := 2.0       # the west and east gateways
 const KEEP_H := 3.3       # half the keep's width
 const HILL := Vector3(0, 0, -116)
-const X_MIN := -92.0
-const X_MAX := 92.0
+const X_MIN := -124.0
+const X_MAX := 124.0
 const Z_MIN := -62.0
 const Z_MAX := 53.0
 
@@ -47,6 +47,8 @@ var haunt_mat: StandardMaterial3D
 var chimneys: Array[Vector3] = []
 var bell: Node3D                          # the village bell, which swings when rung
 var dummies: Array[Node3D] = []           # the straw dummies in the training yard, which wobble when hit
+var mill_sails: Node3D                    # the old mill's sails, turning slowly
+var maypole: Node3D                       # the maypole's ribbons and crown, which turn in the breeze
 var _bell_swing := 0.0
 var _dummy_hit: Array[float] = [0.0, 0.0, 0.0]
 
@@ -68,7 +70,9 @@ func _ready() -> void:
 	_walls()
 	_keep()
 	_buildings()
+	_green()
 	_farms()
+	_downs()
 
 
 func rr(a: float, b: float) -> float:
@@ -93,7 +97,7 @@ func _ground() -> void:
 	Build.box(self, Vector3(900, 1, 900), Vector3(0, -1, 0), C.grass)
 	for i in 300:
 		var s := rr(2.5, 7.5)
-		Build.box(self, Vector3(s, 0.01 + i * 0.0001, s * rr(0.6, 1.5)), Vector3(rr(-140, 140), 0, rr(-150, 95)), C.grass2 if i % 2 else C.grass3, rr(0, 3))
+		Build.box(self, Vector3(s, 0.01 + i * 0.0001, s * rr(0.6, 1.5)), Vector3(rr(-175, 175), 0, rr(-150, 95)), C.grass2 if i % 2 else C.grass3, rr(0, 3))
 	Build.box(self, Vector3(2 * VW, 0.045, VS - VN), Vector3(0, 0, (VS + VN) / 2.0), C.vill)
 	# dead ground: everything beyond the stakes belongs to the castle
 	Build.box(self, Vector3(420, 0.05, 104), Vector3(0, 0, -115.2), C.dead)
@@ -107,16 +111,7 @@ func _ground() -> void:
 	for i in 70:
 		var on_road := i % 2 == 1
 		Build.box(self, Vector3(rr(0.4, 0.9), 0.085, rr(0.4, 0.9)), Vector3(rr(-2.8, 2.8) if on_road else rr(-44, 44), 0, rr(-76, 24) if on_road else GATE_Z + rr(-2, 2)), C.path2, rr(0, 3))
-	# the river, south
-	Build.box(self, Vector3(300, 0.03, 4), Vector3(0, 0, 56.5), C.sand)
-	var river := Build.box(self, Vector3(300, 0.05, 14), Vector3(0, 0, 65), C.water)
-	var wm := StandardMaterial3D.new()
-	wm.albedo_color = C.water
-	wm.roughness = 0.15
-	wm.metallic = 0.2
-	river.material_override = wm
-	Build.box(self, Vector3(300, 0.06, 2.5), Vector3(0, 0, 62), C.water2)
-	Build.box(self, Vector3(300, 0.06, 1.5), Vector3(0, 0, 68), C.water2)
+	_river()
 	# (the jetty moves every morning: sites.gd draws it)
 
 
@@ -249,8 +244,8 @@ func _graveyard_and_edges() -> void:
 		Build.box(self, Vector3(0.14, 1.3, 0.14), Vector3(p.x + 0.4, 1.9, p.y), Color("4a3b33"), 0.0, 0.0, -0.8)
 		Build.box(self, Vector3(0.12, 1.1, 0.12), Vector3(p.x - 0.35, 2.1, p.y), Color("4a3b33"), 0.0, 0.0, 0.7)
 	# north: a line of warning stakes
-	var sx_ := -90.0
-	while sx_ <= 90.0:
+	var sx_ := -122.0
+	while sx_ <= 122.0:
 		if absf(sx_) >= 4.0:
 			var lean := rr(-0.16, 0.16)
 			Build.cyl(self, 0.09, 0.13, 2, Vector3(sx_, 0, -62.8), Color("4a3b33"), 5, rr(0, 3), 0.0, lean)
@@ -261,7 +256,7 @@ func _graveyard_and_edges() -> void:
 		var z := -64.0
 		while z <= 55.0:
 			var h := rr(1.7, 2.7)
-			var hx: float = sx * (94.3 + rr(-0.3, 0.3))
+			var hx: float = sx * (D.X1 + 2.3 + rr(-0.3, 0.3))
 			Build.box(self, Vector3(rr(2.6, 3.6), h, 3.3), Vector3(hx, 0, z), [C.hedge, C.hedge2, C.hedge3][int(absf(z)) % 3], rr(-0.12, 0.12))
 			Build.cone(self, 0.55, 1.1, Vector3(hx - sx * rr(0.2, 1.1), h - 0.2, z + rr(-1, 1)), C.hedge2, 4, rr(0, 3))
 			z += 2.9
@@ -413,6 +408,17 @@ func house(x: float, z: float, rot_y: float, w: float, d: float, h: float, wall_
 			for sz in [-1.0, 1.0]:
 				Build.box(n, Vector3(0.28, h, 0.28), Vector3(sx * (w / 2 - 0.08), f, sz * (d / 2 - 0.08)), C.timber)
 		Build.box(n, Vector3(w + 0.12, 0.22, d + 0.12), Vector3(0, f + h - 0.22, 0), C.timber)
+		if h >= 1.9:                                      # half-timbering: a rail round the middle, and braces up to it
+			var mid := f + h * 0.5
+			Build.box(n, Vector3(w + 0.08, 0.16, d + 0.08), Vector3(0, mid - 0.08, 0), C.timber)
+			var lean := 0.62
+			var blen := (h * 0.5) / cos(lean)
+			for sz in [-1.0, 1.0]:
+				for sx in [-1.0, 1.0]:
+					Build.box(n, Vector3(0.15, blen, 0.06), Vector3(sx * (w / 2 - 0.16), f, sz * (d / 2 + 0.03)), C.timber, 0.0, 0.0, -sx * lean)
+					Build.box(n, Vector3(0.15, h * 0.5, 0.06), Vector3(sx * w * 0.16, mid, sz * (d / 2 + 0.03)), C.timber)
+			for sx in [-1.0, 1.0]:
+				Build.box(n, Vector3(0.06, blen, 0.15), Vector3(sx * (w / 2 + 0.03), f, -d / 2 + 0.16), C.timber, 0.0, lean, 0.0)
 	if rh < 0.0:
 		rh = minf(w, d) * 0.5
 	if w >= d:
@@ -603,6 +609,191 @@ func _chapel() -> void:
 	lantern(Vector3(15.7, 1.85, -10.6), 8.0)
 
 
+## The river, south: a sandy bank, reeds and lily pads, and water that runs west (downstream).
+func _river() -> void:
+	Build.box(self, Vector3(420, 0.03, 4.2), Vector3(0, 0, 56.4), C.sand)
+	for i in 120:                                   # the bank is not a ruler: bites of sand and grass along it
+		var x := rr(-205, 205)
+		Build.box(self, Vector3(rr(2, 6), 0.035, rr(0.8, 2.2)), Vector3(x, 0, rr(54.2, 55.2)), C.sand if i % 3 else C.grass3, rr(-0.2, 0.2))
+	Build.box(self, Vector3(420, 0.03, 3.4), Vector3(0, 0, 73.4), C.sand)          # the far bank
+	var water := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(420, 15.6)
+	water.mesh = pm
+	water.position = Vector3(0, 0.05, 65)
+	var sh := Shader.new()
+	sh.code = """
+shader_type spatial;
+render_mode specular_schlick_ggx;
+uniform vec3 shallow : source_color = vec3(0.56, 0.80, 0.85);
+uniform vec3 deep : source_color = vec3(0.26, 0.55, 0.68);
+uniform vec3 foam : source_color = vec3(0.93, 0.97, 0.98);
+varying vec3 wp;
+void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+float wave(vec2 p, float t) {
+	return sin(p.x * 0.42 + t * 1.1 + sin(p.y * 0.9 + t * 0.4) * 1.6) * 0.5 + sin(p.x * 0.13 - p.y * 0.7 + t * 0.7) * 0.5;
+}
+void fragment() {
+	float across = clamp(abs(wp.z - 65.0) / 7.8, 0.0, 1.0);
+	vec3 c = mix(deep, shallow, across * across);
+	vec2 p = vec2(wp.x + TIME * 1.6, wp.z);                 // the current runs west
+	float r = wave(p, TIME);
+	float streak = smoothstep(0.80, 0.97, r) * (1.0 - across * 0.6);
+	float edge = smoothstep(0.86, 1.0, across) * (0.6 + 0.4 * sin(wp.x * 0.8 + TIME * 2.0));
+	c = mix(c, foam, clamp(streak * 0.5 + edge * 0.45, 0.0, 1.0));
+	ALBEDO = c;
+	ROUGHNESS = 0.16;
+	METALLIC = 0.12;
+	SPECULAR = 0.6;
+}
+"""
+	var wm := ShaderMaterial.new()
+	wm.shader = sh
+	water.material_override = wm
+	add_child(water)
+	# reeds in clumps on both banks, lily pads in the slack water, and a few stones
+	var reed := BoxMesh.new()
+	reed.size = Vector3(0.06, 1.0, 0.06)
+	var xf: Array[Transform3D] = []
+	var cols: Array[Color] = []
+	for i in 140:
+		var near := i % 3 != 0
+		var cx := rr(-200, 200)
+		var cz := rr(56.8, 58.2) if near else rr(71.6, 72.6)
+		for j in 7:
+			var h := rr(0.7, 1.6)
+			var b := Basis.from_euler(Vector3(rr(-0.18, 0.18), 0, rr(-0.18, 0.18))).scaled(Vector3(1, h, 1))
+			xf.append(Transform3D(b, Vector3(cx + rr(-0.6, 0.6), h * 0.5 - 0.05, cz + rr(-0.4, 0.4))))
+			cols.append([Color("6f8f3f"), Color("86a24a"), Color("a39352")][j % 3])
+	_multi(reed, xf, cols)
+	var pad := CylinderMesh.new()
+	pad.top_radius = 0.42
+	pad.bottom_radius = 0.42
+	pad.height = 0.03
+	pad.radial_segments = 9
+	var pxf: Array[Transform3D] = []
+	var pcol: Array[Color] = []
+	for i in 160:
+		var s := rr(0.6, 1.3)
+		pxf.append(Transform3D(Basis.from_euler(Vector3(0, rr(0, 6), 0)).scaled(Vector3(s, 1, s)), Vector3(rr(-200, 200), 0.075, rr(58.4, 59.8) if i % 2 else rr(70.2, 71.4))))
+		pcol.append(Color("5b8a3c") if i % 5 else Color("e8d6e4"))
+	_multi(pad, pxf, pcol)
+	for i in 40:
+		Build.box(self, Vector3(rr(0.4, 1.1), rr(0.2, 0.45), rr(0.4, 0.9)), Vector3(rr(-200, 200), 0, rr(55.6, 57.0)), C.stone3 if i % 2 else C.stone2, rr(0, 3))
+	for i in 60:                                    # bushes along the far side, which nobody has ever been to
+		var x := rr(-200, 200)
+		Build.cone(self, rr(1.2, 2.2), rr(1.6, 3.2), Vector3(x, 0, rr(75.5, 82)), [C.leaf, C.leaf2, C.hedge3][i % 3], 6, rr(0, 3))
+
+
+## The village green, north of the keep: grass, a maypole, the well, the stocks and a duck pond.
+func _green() -> void:
+	Build.box(self, Vector3(16.8, 0.05, 10.6), Vector3(-0.6, 0, -15.6), C.grass3)
+	for i in 26:                                    # daisies and buttercups
+		var x := rr(-8.6, 7.4)
+		if absf(x) < 3.6: x += 7.2 * signf(x if x != 0.0 else 1.0)
+		Build.box(self, Vector3(0.22, 0.06, 0.22), Vector3(clampf(x, -8.6, 7.6), 0.03, rr(-20.4, -11)), Color("f4f0e0") if i % 3 else Color("f0cd4a"))
+	# the maypole, its ribbons pegged out round it
+	var mp := Vector3(-6.2, 0, -16.0)
+	Build.cyl(self, 0.13, 0.17, 7.2, mp, Color("e9e1cc"), 8)
+	maypole = Node3D.new()
+	maypole.position = mp
+	add_child(maypole)
+	Build.cyl(maypole, 0.5, 0.5, 0.2, Vector3(0, 6.6, 0), Color("6aa04e"), 10)
+	var ribbon := [C.red, Color("3f77c4"), Color("e0a526"), Color("f0e3c3"), Color("4f9d57"), Color("8e55b5")]
+	for k in 6:
+		var a := k * TAU / 6.0
+		var foot := Vector3(cos(a) * 2.8, 0, sin(a) * 2.8)
+		var top := Vector3(cos(a) * 0.45, 6.6, sin(a) * 0.45)
+		var len := foot.distance_to(top)
+		var rb := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.12, len, 0.03)
+		rb.mesh = bm
+		rb.material_override = Build.mat(ribbon[k])
+		var up := (top - foot).normalized()
+		var side := up.cross(Vector3(-sin(a), 0, cos(a))).normalized()
+		rb.transform = Transform3D(Basis(side, up, side.cross(up)), (top + foot) * 0.5)
+		maypole.add_child(rb)
+		Build.box(maypole, Vector3(0.1, 0.35, 0.1), foot, C.wood2)
+	# the well
+	var wp := Vector3(6.0, 0, -14.4)
+	Build.cyl(self, 0.95, 1.05, 0.95, wp, C.stone2, 10)
+	Build.cyl(self, 0.72, 0.72, 0.02, wp + Vector3(0, 0.9, 0), Color("2c3a44"), 10)
+	for s in [-1.0, 1.0]:
+		Build.box(self, Vector3(0.16, 2.2, 0.16), wp + Vector3(s * 0.9, 0, 0), C.timber)
+	Build.box(self, Vector3(2.0, 0.1, 0.1), wp + Vector3(0, 1.85, 0), C.wood3)
+	Build.roof(self, 1.5, 0.7, 2.3, wp + Vector3(0, 2.15, 0), C.thatch, PI / 2)
+	Build.box(self, Vector3(0.36, 0.34, 0.36), wp + Vector3(0.3, 1.0, 0.0), C.wood2)
+	# the stocks, by Robert Bailiff's, for the improvement of the village
+	var sp := Vector3(-7.6, 0, -20.0)
+	for s in [-1.0, 1.0]:
+		Build.box(self, Vector3(0.18, 1.1, 0.18), sp + Vector3(s * 0.95, 0, 0), C.timber)
+	Build.box(self, Vector3(2.1, 0.44, 0.2), sp + Vector3(0, 0.55, 0), C.wood3)
+	for hx in [-0.5, 0.0, 0.5]:
+		Build.box(self, Vector3(0.16, 0.16, 0.22), sp + Vector3(hx, 0.7, 0), Color("3a2c22"))
+	Build.box(self, Vector3(1.4, 0.38, 0.4), sp + Vector3(0, 0, 0.9), C.wood2)               # a bench to watch from
+	# the duck pond
+	var pp := Vector3(5.6, 0, -19.0)
+	Build.cyl(self, 1.9, 1.9, 0.04, pp, C.sand, 14)
+	var pond := Build.cyl(self, 1.6, 1.6, 0.06, pp, C.water, 14)
+	var pm := StandardMaterial3D.new()
+	pm.albedo_color = Color("6aaec2")
+	pm.roughness = 0.12
+	pm.metallic = 0.2
+	pond.material_override = pm
+	for d in [Vector3(0.6, 0, -0.4), Vector3(-0.5, 0, 0.5)]:
+		Build.box(self, Vector3(0.38, 0.22, 0.24), pp + d + Vector3(0, 0.05, 0), Color("f2efe4"))
+		Build.box(self, Vector3(0.14, 0.18, 0.14), pp + d + Vector3(0.18, 0.25, 0), Color("3c6f43"))
+		Build.box(self, Vector3(0.12, 0.05, 0.08), pp + d + Vector3(0.3, 0.33, 0), Color("e0a526"))
+	# the cottages' back gardens: a wattle fence and rows of cabbages
+	for i in 4:
+		var gx := -7.5 + i * 5.0
+		for r in 2:
+			for c in 4:
+				Build.box(self, Vector3(0.36, 0.26, 0.36), Vector3(gx - 1.2 + c * 0.8, 0, 11.5 + r * 1.1), Color("6f9b45") if (c + r) % 2 else Color("82ab52"), rr(0, 1))
+	for z in [11.0, 13.2]:
+		Build.box(self, Vector3(19.4, 0.5, 0.08), Vector3(0, 0, z), C.wood2)
+
+
+## The eastern downs: the old mill, its sails turning, and a few sheep who do not care about any of it.
+func _downs() -> void:
+	var mp := Vector3(D.MILL.x, 0, D.MILL.z)
+	Build.cyl(self, 1.9, 2.5, 6.2, mp, C.stone, 10)
+	Build.cyl(self, 1.95, 1.95, 0.25, mp + Vector3(0, 6.2, 0), C.timber, 10)
+	Build.cone(self, 2.3, 2.4, mp + Vector3(0, 6.45, 0), C.thatch, 10)
+	Build.box(self, Vector3(0.16, 1.9, 1.1), mp + Vector3(-2.42, 0.1, 0), C.timber)      # the door, facing the village
+	for y in [2.4, 4.4]:
+		Build.box(self, Vector3(0.12, 0.7, 0.6), mp + Vector3(-2.25 + y * 0.06, y, 0), Color("3a3f52"))
+	mill_sails = Node3D.new()
+	mill_sails.position = mp + Vector3(-2.6, 5.6, 0)
+	add_child(mill_sails)
+	Build.cyl(mill_sails, 0.28, 0.28, 0.5, Vector3(0.1, 0, 0), C.timber, 8, 0.0, 0.0, PI / 2)
+	for k in 4:
+		Build.box(mill_sails, Vector3(0.14, 5.4, 0.14), Vector3.ZERO, C.timber, 0.0, k * PI / 2)
+		Build.box(mill_sails, Vector3(0.05, 4.4, 0.95), Vector3(-0.1, 0.6, 0).rotated(Vector3.RIGHT, k * PI / 2), C.cream, 0.0, k * PI / 2)
+	# a sheepfold, and its sheep
+	var fp := Vector3(D.MILL.x + 2, 0, D.MILL.z + 11)
+	for i in 8:
+		Build.box(self, Vector3(1.6, 0.8, 0.1), fp + Vector3(-5.6 + i * 1.6, 0, -3.5), C.wood2)
+		Build.box(self, Vector3(1.6, 0.8, 0.1), fp + Vector3(-5.6 + i * 1.6, 0, 3.5), C.wood2)
+	for i in 4:
+		Build.box(self, Vector3(0.1, 0.8, 1.6), fp + Vector3(-6.4, 0, -2.4 + i * 1.6), C.wood2)
+		Build.box(self, Vector3(0.1, 0.8, 1.6), fp + Vector3(6.4, 0, -2.4 + i * 1.6), C.wood2)
+	for i in 7:
+		var sh := Node3D.new()
+		sh.position = fp + Vector3(rr(-5, 5), 0, rr(-2.6, 2.6))
+		sh.rotation.y = rr(0, TAU)
+		add_child(sh)
+		Build.box(sh, Vector3(0.8, 0.55, 0.55), Vector3(0, 0.35, 0), Color("f1ede2"))
+		Build.box(sh, Vector3(0.28, 0.3, 0.26), Vector3(0.5, 0.6, 0), Color("2f2a26"))
+		for lx in [-0.25, 0.25]:
+			for lz in [-0.16, 0.16]:
+				Build.box(sh, Vector3(0.08, 0.36, 0.08), Vector3(lx, 0, lz), Color("2f2a26"))
+	# a track from the east gate out to the mill, worn by the miller and nobody else
+	for i in 26:
+		Build.box(self, Vector3(rr(0.4, 0.9), 0.08, rr(0.4, 0.9)), Vector3(lerpf(48.0, D.MILL.x - 4, i / 25.0) + rr(-0.6, 0.6), 0, lerpf(D.GATE_Z, D.MILL.z, i / 25.0) + rr(-1, 1)), C.path2, rr(0, 3))
+
+
 func _farms() -> void:
 	for i in 6:
 		Build.box(self, Vector3(24, 0.05, 3), Vector3(-58, 0, 22 + i * 3.6), [C.field1, C.field2, C.field3][i % 3])
@@ -650,3 +841,5 @@ func _process(delta: float) -> void:
 	for i in dummies.size():
 		_dummy_hit[i] = maxf(0.0, _dummy_hit[i] - delta * 2.5)
 		dummies[i].rotation.x = sin(_dummy_hit[i] * 14.0) * 0.25 * _dummy_hit[i]
+	if mill_sails: mill_sails.rotation.x += delta * 0.55
+	if maypole: maypole.rotation.y += delta * 0.12

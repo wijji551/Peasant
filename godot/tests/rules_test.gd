@@ -371,7 +371,7 @@ func run() -> void:
 		return null)
 	ok("something from the west ruins reaches the keep through the west gateway", reached.v, "%.1f,%.1f" % [lu.x, lu.z])
 	clear_u(); m.state = "ok"
-	at(91.9, 0); keys.right = true; fast(0.5); keys.right = false; ok("the hedge stops you, and says so", m.x <= 92 and edge == "hedge", m.x)
+	at(D.X1 - 0.1, 0); keys.right = true; fast(0.5); keys.right = false; ok("the hedge stops you, and says so", m.x <= D.X1 and edge == "hedge", m.x)
 	# ---------- bows: the book lets you use one, and comes with a sling
 	m.state = "ok"; R.phase = "day"; R.timeLeft = 300
 	m.books = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; m.xp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; m.inv = [13]; m.wpn = 0; at(13.4, 20.4)

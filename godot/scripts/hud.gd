@@ -94,10 +94,10 @@ func _ready() -> void:
 	# --- top right: the map, and the handbook
 	var top_right := VBoxContainer.new()
 	root.add_child(top_right)
-	_pin(top_right, Control.PRESET_TOP_RIGHT, -200, 12, -14, 12)
+	_pin(top_right, Control.PRESET_TOP_RIGHT, -241, 12, -14, 12)
 	top_right.add_theme_constant_override("separation", 6)
 	map_slot = Control.new()
-	map_slot.custom_minimum_size = Vector2(186, 186)
+	map_slot.custom_minimum_size = Vector2(227, 174)   # the minimap's size (it is wider than tall: the map grew east and west)
 	map_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_right.add_child(map_slot)
 	var mb := Button.new()

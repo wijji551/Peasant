@@ -14,8 +14,8 @@ const KEEP_H := 3.3
 const HILL := Vector2(0, -116)
 const SPAWN_Z := -69.0
 const SPAWN_W := 32.0                # the dead rise anywhere along the graveyard, 32 either side of the road
-const X0 := -92.0
-const X1 := 92.0
+const X0 := -124.0
+const X1 := 124.0
 const Z0 := -62.0
 const Z1 := 53.0
 const SLOTX := [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0]   # north wall foundations; the middle one is the gate
@@ -52,7 +52,8 @@ const GATHER := {
 	"steel": {"res": "steel", "time": 3.2, "verb": "mine steel ore", "book": 0},
 }
 const GK := ["", "tree", "stone", "iron", "food", "fish", "search", "steel"]
-const STEEL_MINE := {"x": -82.0, "z": -44.0}       # the old steel mine, at the top of the forest. It does not move.
+const STEEL_MINE := {"x": -108.0, "z": -44.0}      # the old steel mine, at the top of the forest. It does not move.
+const MILL := {"x": 104.0, "z": 30.0}              # the old mill, on the eastern downs: a landmark, and something to walk round
 const COST := {"barricade": {"wood": 5}, "spikes": {"wood": 8}, "wall": {"wood": 15}, "gate": {"wood": 20}, "bodywall": {"bodies": 3}, "decoy": {"bodies": 1},
 	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}}
 const REINF := {
@@ -359,16 +360,16 @@ const INN := {"x": -17.5, "z": -4.7, "dx": -13.6, "dz": -4.7}   # inside, and th
 const FARM := {"x0": -70.0, "x1": -46.5, "z0": 20.4, "z1": 41.6}
 # --- the stone, the iron and the fish are somewhere new every morning
 const SITES := [
-	[{"x": 60.0, "z": -8.0, "n": "east of the village"}, {"x": 44.0, "z": -38.0, "n": "in the north-east field"}, {"x": 72.0, "z": 26.0, "n": "far to the east"}, {"x": -40.0, "z": -54.0, "n": "north of the forest"}, {"x": 38.0, "z": 40.0, "n": "south-east, towards the river"}],
-	[{"x": 58.0, "z": 24.0, "n": "east, beyond the gate"}, {"x": 78.0, "z": -30.0, "n": "far to the north-east"}, {"x": -78.0, "z": -55.0, "n": "at the top of the forest"}, {"x": -34.0, "z": 46.0, "n": "south-west, by the river"}, {"x": 82.0, "z": 46.0, "n": "in the far south-east corner"}],
-	[{"x": 12.0, "z": 53.4, "n": "south of the village"}, {"x": -28.0, "z": 53.4, "n": "on the west reach"}, {"x": 34.0, "z": 53.4, "n": "on the east reach"}, {"x": -80.0, "z": 53.4, "n": "far downstream, to the west"}, {"x": 76.0, "z": 53.4, "n": "far upstream, to the east"}],
+	[{"x": 60.0, "z": -8.0, "n": "east of the village"}, {"x": 44.0, "z": -38.0, "n": "in the north-east field"}, {"x": 72.0, "z": 26.0, "n": "far to the east"}, {"x": -40.0, "z": -54.0, "n": "north of the forest"}, {"x": 38.0, "z": 40.0, "n": "south-east, towards the river"}, {"x": -110.0, "z": 16.0, "n": "out past the forest, in the far west"}, {"x": 106.0, "z": -10.0, "n": "up on the eastern downs"}],
+	[{"x": 58.0, "z": 24.0, "n": "east, beyond the gate"}, {"x": 78.0, "z": -30.0, "n": "far to the north-east"}, {"x": -78.0, "z": -55.0, "n": "at the top of the forest"}, {"x": -34.0, "z": 46.0, "n": "south-west, by the river"}, {"x": 82.0, "z": 46.0, "n": "in the far south-east corner"}, {"x": 112.0, "z": 8.0, "n": "under the eastern downs"}, {"x": -112.0, "z": -16.0, "n": "deep in the far west"}],
+	[{"x": 12.0, "z": 53.4, "n": "south of the village"}, {"x": -28.0, "z": 53.4, "n": "on the west reach"}, {"x": 34.0, "z": 53.4, "n": "on the east reach"}, {"x": -80.0, "z": 53.4, "n": "far downstream, to the west"}, {"x": 76.0, "z": 53.4, "n": "far upstream, to the east"}, {"x": -112.0, "z": 53.4, "n": "right down past the forest"}, {"x": 110.0, "z": 53.4, "n": "below the old mill"}],
 ]
 # --- the ruins. The old ruins by the chapel never change; the two outer ruins fall down differently every night.
 const RUINS := [{"x": 11.0, "z": -13.4, "name": "the old ruins"}, {"x": -58.0, "z": 47.6, "name": "the outer ruins"}, {"x": 58.0, "z": 47.6, "name": "the outer ruins"}]
 # the clearings where the two outer ruins can be. Every night they wander off to two of them; nobody is told which.
 const RUIN_SITES := [
 	{"x": -58.0, "z": 47.6}, {"x": 58.0, "z": 47.6}, {"x": -62.0, "z": -22.0}, {"x": -81.0, "z": -4.0},
-	{"x": 70.0, "z": -47.0}, {"x": 46.0, "z": 13.0}, {"x": -18.0, "z": 40.0}, {"x": 21.0, "z": 40.0},
+	{"x": 70.0, "z": -47.0}, {"x": 46.0, "z": 13.0}, {"x": -18.0, "z": 40.0}, {"x": 21.0, "z": 40.0}, {"x": -104.0, "z": 36.0}, {"x": 100.0, "z": -34.0},
 ]
 
 const PCOL := ["#c8443a", "#3f77c4", "#e0a526", "#4f9d57", "#8e55b5", "#e07a2f", "#3aa6a0", "#d46a9a"]

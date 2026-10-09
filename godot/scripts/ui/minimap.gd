@@ -3,13 +3,13 @@ extends Control
 ## the castle, trees, today's outcrop, mine and jetty, the rubble (marked if your relic lore can tell), things on
 ## the ground, the defences, the dead (blinking), peasants in their leader's colour, and the players.
 
-const X0 := -100.0
-const X1 := 100.0
+const X0 := -130.0
+const X1 := 130.0
 const Z0 := -128.0
 const Z1 := 72.0
-const W := 150.0
+const W := 195.0
 const H := 150.0
-const SC := 1.24                  # drawn a little larger than the web version's
+const SC := 1.16                  # wider than the web version's: the map grew east and west
 
 var R: Rules
 var me: E.Player
@@ -74,6 +74,7 @@ func _draw() -> void:
 	mark.call(R.QUARRY.x, R.QUARRY.z, Color("d8d2c2"))
 	mark.call(R.MINEC.x, R.MINEC.z, Color("b5653a"))
 	mark.call(D.STEEL_MINE.x, D.STEEL_MINE.z, Color("7d93b5"))
+	draw_circle(Vector2(mx(D.MILL.x), mz(D.MILL.z)), 3.0, Color("8b6b47"))
 	mark.call(R.JETTY.x, R.JETTY.z + 2, Color("8fd0e0"))
 	var L := Map.ruin_layout(R.gseed, R.day)
 	var lore := me != null and Rules.rk(me, 8) >= 2
