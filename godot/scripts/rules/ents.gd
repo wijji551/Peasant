@@ -84,6 +84,7 @@ class Player:
 	var job := false        # working on today's merchant's job
 	var jobT := 0.0         # how much of it they have done
 	var merc := false       # has hired a mercenary today
+	var drill := 0.0        # practice on the training dummies today
 	var coward := false
 	var deaths := 0
 	var cg := 0.0           # courage, from the inn

@@ -45,6 +45,10 @@ var haunt_lights: Array[OmniLight3D] = []
 var haunt_mat: StandardMaterial3D
 ## The tops of the chimneys, for atmos.gd's smoke.
 var chimneys: Array[Vector3] = []
+var bell: Node3D                          # the village bell, which swings when rung
+var dummies: Array[Node3D] = []           # the straw dummies in the training yard, which wobble when hit
+var _bell_swing := 0.0
+var _dummy_hit: Array[float] = [0.0, 0.0, 0.0]
 
 var _log_xf: Array[Transform3D] = []
 var _log_col: Array[Color] = []
@@ -478,9 +482,16 @@ func _buildings() -> void:
 	Build.box(self, Vector3(10, 0.12, 0.1), Vector3(-17, 0.75, 14), C.wood3)
 	Build.box(self, Vector3(10, 0.06, 6.6), Vector3(-17, 0, 10.7), C.path2)
 	for x in [-20.0, -17.0, -14.0]:
-		Build.box(self, Vector3(0.18, 1.7, 0.18), Vector3(x, 0, 10.8), C.timber)
-		Build.box(self, Vector3(1.1, 0.16, 0.16), Vector3(x, 1.15, 10.8), C.timber)
-		Build.box(self, Vector3(0.5, 0.7, 0.4), Vector3(x, 0.75, 10.8), C.straw)
+		var dm := Node3D.new()                     # a dummy, on a post that leans when it is hit
+		dm.position = Vector3(x, 0, 10.8)
+		add_child(dm)
+		Build.box(dm, Vector3(0.18, 1.7, 0.18), Vector3(0, 0, 0), C.timber)
+		Build.box(dm, Vector3(1.1, 0.16, 0.16), Vector3(0, 1.15, 0), C.timber)
+		Build.box(dm, Vector3(0.5, 0.7, 0.4), Vector3(0, 0.75, 0), C.straw)
+		Build.box(dm, Vector3(0.36, 0.36, 0.34), Vector3(0, 1.5, 0), C.straw)
+		Build.box(dm, Vector3(0.08, 0.08, 0.04), Vector3(-0.08, 1.7, 0.18), Color("2a2018"))
+		Build.box(dm, Vector3(0.08, 0.08, 0.04), Vector3(0.08, 1.7, 0.18), Color("2a2018"))
+		dummies.append(dm)
 	# the storehouse
 	house(17.5, 10.6, -PI / 2, 7, 5.6, 3.6, C.cream2, C.thatch, false, false, 2.8)
 	for p in [Vector3(13.3, 0.9, 8.2), Vector3(13.1, 0.9, 9.2), Vector3(13.6, 1.0, 13)]:
@@ -510,7 +521,12 @@ func _buildings() -> void:
 		Build.box(self, Vector3(0.22, 2.6, 0.22), Vector3(5.5 + s * 0.8, 0, -9.5), C.timber)
 		Build.box(self, Vector3(0.18, 1.9, 0.18), Vector3(-5.5 + s * 0.9, 0, -9.5), C.timber)
 	Build.box(self, Vector3(2.1, 0.22, 0.26), Vector3(5.5, 2.6, -9.5), C.timber)
-	Build.cyl(self, 0.2, 0.42, 0.6, Vector3(5.5, 1.85, -9.5), Color("c9962f"), 7)
+	bell = Node3D.new()                            # hung from the beam, so it can swing
+	bell.position = Vector3(5.5, 2.6, -9.5)
+	add_child(bell)
+	Build.cyl(bell, 0.2, 0.42, 0.6, Vector3(0, -0.75, 0), Color("c9962f"), 7)
+	Build.box(bell, Vector3(0.05, 0.3, 0.05), Vector3(0, -0.3, 0), C.iron)
+	Build.box(bell, Vector3(0.04, 0.9, 0.04), Vector3(0, -1.6, 0), Color("a08562"))       # the rope
 	Build.box(self, Vector3(2, 1.2, 0.12), Vector3(-5.5, 0.75, -9.5), C.wood3)
 	Build.box(self, Vector3(0.6, 0.8, 0.14), Vector3(-5.9, 0.95, -9.5), C.cream)
 	# the cottages, one per player
@@ -617,3 +633,20 @@ func _farms() -> void:
 		Build.box(self, Vector3(0.04, 0.56, 0.64), Vector3(bx + 0.2, row * 0.55, 29.4), Color("8a6a3c"))
 	# (the rocky outcrop and the mine move every morning: sites.gd draws them)
 
+
+
+func ring_bell() -> void:
+	_bell_swing = 1.0
+
+
+func hit_dummy(i: int) -> void:
+	if i >= 0 and i < _dummy_hit.size(): _dummy_hit[i] = 1.0
+
+
+func _process(delta: float) -> void:
+	if bell:
+		_bell_swing = maxf(0.0, _bell_swing - delta * 0.45)
+		bell.rotation.x = sin(Time.get_ticks_msec() / 1000.0 * 7.0) * 0.55 * _bell_swing
+	for i in dummies.size():
+		_dummy_hit[i] = maxf(0.0, _dummy_hit[i] - delta * 2.5)
+		dummies[i].rotation.x = sin(_dummy_hit[i] * 14.0) * 0.25 * _dummy_hit[i]

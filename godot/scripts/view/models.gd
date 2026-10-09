@@ -301,6 +301,11 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.6, 0.62, 0.38, 0, 0.72, 0, 0x8f7f63, 0, 0.1, 0).box(0.2, 0.5, 0.22, -0.14, 0.2, 0.04, 0x4a3a2c).box(0.2, 0.5, 0.22, 0.14, 0.2, 0.04, 0x4a3a2c, 0, 0, 0.2)
 			b.box(0.4, 0.38, 0.38, 0, 1.36, 0.06, 0xc9b79a, 0, 0.3, 0.2).cyl(0.36, 0.36, 0.07, 7, 0, 1.74, 0.02, P.straw, 0, 0.2, 0.2)
 			b.box(0.16, 0.5, 0.16, -0.52, 0.86, -0.1, 0x8f7f63, 0, 0, 0.5).box(0.16, 0.5, 0.16, 0.52, 0.86, -0.1, 0x8f7f63, 0, 0, -0.5)
+		"bailiff":                                           # Robert Bailiff, head and shoulders, in his nightcap
+			b.box(0.9, 0.5, 0.5, 0, 0, 0, 0x5a2a3a).box(0.3, 0.1, 0.52, 0, 0.42, 0, 0xd8b040)
+			b.box(0.46, 0.46, 0.44, 0, 0.5, 0.02, P.skin).box(0.12, 0.12, 0.08, 0, 0.62, 0.26, 0xd9a279)
+			b.box(0.5, 0.1, 0.46, 0, 0.5, 0.02, 0x8a6a4a)                                  # whiskers
+			b.cone(0.26, 0.6, 7, 0, 0.94, 0, 0xe8e0d0, 0, 0.5, 0).ico(0.08, 0.2, 1.3, -0.12, 0xe8e0d0)
 		# --- contraptions
 		"chicken":                                           # a chicken in a wicker cage on a post
 			b.box(0.12, 0.9, 0.12, 0, 0, 0, P.wood2)

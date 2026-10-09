@@ -668,6 +668,12 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1); Sound.play("swing", 0.5, Vector2(ev[1], ev[2]))
 		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3); Sound.play("raise", 0.7, Vector2(ev[1], ev[2]))
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
+		"bellring": world.ring_bell(); Sound.play("bell", 1.0)
+		"knock": Sound.play("knock", 1.0, Vector2(ev[1], ev[2]))
+		"jeer": Sound.play("jeer", 1.0, Vector2(ev[1], ev[2]))
+		"dummy":
+			world.hit_dummy(int(ev[1])); F.puff(ev[2], 1.0, ev[3], 6, F.C_FOOD, 2.5); Sound.play("thump", 0.6, Vector2(ev[2], ev[3]))
+		"bark": labels.bark(int(ev[1]), str(ev[2]))
 		"pit": F.puff(ev[1], 0.2, ev[2], 14, F.C_WOOD, 3); Sound.play("thump", 1.0, Vector2(ev[1], ev[2])); Sound.play("groan%d" % (randi() % 3), 0.7, Vector2(ev[1], ev[2]))
 		"logs":
 			for i in 8:
@@ -949,6 +955,8 @@ func _test_hook() -> void:
 	if shot == "":
 		return
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
+	if OS.get_environment("DTV_BAILIFF") != "" and _frame == at + 10:   # for pictures: Robert Bailiff, talking
+		R.bail_line = D.BAILIFF_TALK[0][1]; R.bail_t = 30.0
 	if OS.get_environment("DTV_MERCHANT") != "" and _frame == 2:   # for pictures: a merchant in
 		R.merchant = int(OS.get_environment("DTV_MERCHANT")); R.make_wares()
 	if OS.get_environment("DTV_PRIEST") != "" and me:     # for pictures: an apprentice priest, smiting and praying

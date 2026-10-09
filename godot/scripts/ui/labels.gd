@@ -8,7 +8,7 @@ const PLACES := [
 	["Farms: food", -58.0, 30.0, 1.5], ["The keep", 0.0, 0.0, 12.4], ["Chapel: the priest", 17.0, -14.0, 8.4],
 	["Old ruins: search", 10.8, -15.4, 3.4], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
-	["Merchant", "cart", 0.0, 3.2], ["Back door", -14.5, -16.4, 2.8],
+	["Merchant", "cart", 0.0, 3.2], ["Bailiff’s back door", -14.5, -16.4, 2.8],
 ]
 
 var R: Rules
@@ -19,6 +19,15 @@ var _zones: Array[Rect2] = []
 var focus := Vector3.ZERO
 var _signs: Array[Label] = []
 var _names: Array[Label] = []
+var _bubbles := {}                  # peasant id -> [label, seconds left]
+var _bailiff: Label
+
+
+## A peasant says something: a little speech bubble over their head for a few seconds.
+func bark(qid: int, text: String) -> void:
+	if _bubbles.has(qid): _bubbles[qid][0].queue_free()
+	var l := _label(text, 13, Color("2f2318"), Color("fffaf0"))
+	_bubbles[qid] = [l, 3.5]
 
 
 func _ready() -> void:
@@ -61,7 +70,7 @@ func _put(l: Label, at: Vector3) -> void:   # centred over the point, sitting on
 	l.visible = true
 
 
-func _process(_delta: float) -> void:
+func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 	if R == null or camera == null: return
 	_zones = hud.zones() if hud else []
 	for i in PLACES.size():
@@ -90,6 +99,25 @@ func _process(_delta: float) -> void:
 			_put(l, Vector3(x, p[3], z))
 		else:
 			l.visible = false
+	for qid in _bubbles.keys():                       # what peasants are saying
+		var b: Array = _bubbles[qid]
+		b[1] -= _delta
+		var q = null
+		for o in R.peasants:
+			if o.id == qid: q = o
+		if b[1] <= 0 or q == null or q.state == "gone" or q.state == "inn":
+			b[0].queue_free(); _bubbles.erase(qid)
+			continue
+		_put(b[0], Vector3(q.x, 2.6, q.z))
+	if _bailiff == null:
+		_bailiff = _label("", 13, Color("2f2318"), Color("fffaf0"))
+		_bailiff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_bailiff.custom_minimum_size.x = 260
+	_bailiff.text = R.bail_line
+	if R.bail_t > 0 and R.bail_line != "" and D.d2(focus.x, focus.z, -14.5, -9.3) < 30 * 30:   # Robert Bailiff, from his window
+		_put(_bailiff, Vector3(-14.5, 5.6, -9.3))
+	else:
+		_bailiff.visible = false
 	var shown := R.players.filter(func(p): return p != me and p.state != "hide" and p.state != "inn") if Settings.tags else []
 	while _names.size() < shown.size(): _names.append(_label("", 13, Color("2f2318"), Color("f6ebc9")))
 	for i in _names.size():

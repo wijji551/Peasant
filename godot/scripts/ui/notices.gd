@@ -152,8 +152,15 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			return {"title": M.name[0].to_upper() + M.name.substr(1), "intro": "Selling %s. You have %s. He leaves at dusk." % [M.sells, D.coins(p.coin)], "o": o}
 		"bailiff":
 			var left := D.GUARDS - R.guards
-			o.append({"label": "Hire a village guard for tonight", "sub": ("%s. He holds %s until dawn. %d of the %d guards are still free." % [D.coins(D.GUARD_FEE), D.POST_NAMES[R.guards % D.POSTS.size()], left, D.GUARDS]) if left > 0 else "Every guard is out tonight already.", "ok": left > 0 and p.coin >= D.GUARD_FEE, "a": "guard"})
-			return {"title": "Robert Bailiff’s back door", "intro": "You knock. After a while a voice says the Bailiff is not at home, and that his guards cost eight shillings a night, paid in advance, through the letterbox.", "o": o}
+			var fee := R.guard_fee()
+			o.append({"label": "Hire a village guard for tonight", "sub": ("%s%s. He holds %s until dawn. %d of the %d guards are still free." % [D.coins(fee), " (the Bailiff has been jeered at today)" if R.bail_mood > 0 else "", D.POST_NAMES[R.guards % D.POSTS.size()], left, D.GUARDS]) if left > 0 else "Every guard is out tonight already.", "ok": left > 0 and p.coin >= fee, "a": "guard"})
+			return {"title": "Robert Bailiff’s back door", "intro": "You knock. After a while a voice says the Bailiff is not at home, and that his guards cost %s a night, paid in advance, through the letterbox." % D.coins(fee), "o": o}
+		"window":
+			o.append({"label": "Talk to Robert Bailiff", "sub": "He has opinions. Mostly about you.", "ok": true, "a": "btalk"})
+			o.append({"label": "Knock on his door", "sub": "It will not open. It never opens.", "ok": true, "a": "bknock"})
+			o.append({"label": "Jeer at him", "sub": "Very satisfying. He remembers, though: each jeer makes his guards a shilling dearer today." + (" (Jeered at %d time%s today.)" % [R.bail_mood, "" if R.bail_mood == 1 else "s"] if R.bail_mood else ""), "ok": true, "a": "bjeer"})
+			var said := ("“%s”" % R.bail_line if not R.bail_line.begins_with("“") and not R.bail_line.begins_with("You") and not R.bail_line.begins_with("A ") and not R.bail_line.begins_with("He") else R.bail_line) if R.bail_t > 0 else "Robert Bailiff peers down from his upstairs window, ready to look busy."
+			return {"title": "Robert Bailiff, at his window", "intro": said, "o": o}
 		"priest", "pack":
 			var here := id == "priest"
 			var fee := func(f: bool) -> String: return "Free: you have the learning." if f else D.coins(D.BLESS_FEE) + "."

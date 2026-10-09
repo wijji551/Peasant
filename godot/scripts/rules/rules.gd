@@ -49,6 +49,10 @@ var wares: Array = []         # what is on the cart: [{n, price, left, give, ...
 var job := {"work": 0.0, "done": false}   # the merchant's job, today
 var reserve := false          # the brewer's reserve: tonight every tankard counts double
 var guards := 0               # village guards hired for tonight
+var bail_line := ""           # what Robert Bailiff last said from his window
+var bail_t := 0.0             # and how long he stays at it
+var bail_mood := 0            # how many times he has been jeered at today: each makes his guards a shilling dearer
+var bell_t := 0.0             # the village bell, swinging
 
 # --- the map as the rules see it
 var trees: Array = Map.trees()
@@ -141,6 +145,12 @@ static func merchant_on(game_seed: int, d: int, last: int) -> int:
 		var w: Array = windows[i]
 		if w[0] + rng.randi() % (w[1] - w[0] + 1) == d: return order[i]
 	return -1
+
+func guard_fee() -> int:
+	return D.GUARD_FEE + 12 * bail_mood
+
+func bark(q: E.Peasant, lines: Array) -> void:   # a peasant says something
+	if q: ev.append(["bark", q.id, pick(lines)])
 
 static func q_max(q: E.Peasant) -> float:   # a village guard and a mercenary are sturdier than a villager
 	return 200.0 if q.kind == 1 else 160.0 if q.kind == 2 else D.PEASANT_HP
@@ -438,7 +448,8 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	reserve = false
 	make_wares()
 	for p in players:
-		p.job = false; p.jobT = 0.0; p.merc = false
+		p.job = false; p.jobT = 0.0; p.merc = false; p.drill = 0.0
+	bail_mood = 0
 	ale = 0; innHp = D.INN_HP
 	for e in drops:
 		push_out(e, 0.7, QUARRY); push_out(e, 0.7, MINEC)
@@ -829,6 +840,8 @@ func find_interact(p: E.Player):
 				"label": ("Hold {interact} to search the rubble" + (". It is noisy work." if sp.ruin else "")) if n > 0 else "Nothing more under here until tomorrow"}
 	for st in D.STATIONS:
 		if st.id == "cart" and (merchant < 0 or phase != "day"): continue     # the cart is only there on a merchant's day
+		if st.id == "bell" and D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
+			return {"type": "bell", "key": "bell", "ok": bell_t <= 0, "dur": 0.4, "x": st.x, "z": st.z, "rad": 1.0, "label": "Hold {interact} to ring the village bell. It does nothing at all."}
 		if D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "station", "st": st, "key": "st" + st.id, "ok": true, "dur": 0.12, "x": st.x, "z": st.z, "rad": 1.3, "label": "Hold {interact} to " + st.verb}
 	if rk(p, 9) >= 1:
@@ -1057,7 +1070,7 @@ func nerve_hit(q: E.Peasant, n: float) -> void:   # a fright. At no nerve left, 
 		return
 	q.nv -= n * (1 - 0.1 * rk(own, 6))
 	if q.nv <= 0:
-		q.nv = 0; q.state = "hide"; q.tree = null; say("%s has lost their nerve and run for the keep." % D.PNAMES[q.ni])
+		q.nv = 0; q.state = "hide"; q.tree = null; say("%s has lost their nerve and run for the keep." % D.PNAMES[q.ni]); bark(q, D.BARK_RUN)
 
 func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> void:
 	if is_player:
@@ -1173,11 +1186,30 @@ func do_attack(p: E.Player) -> void:
 		p.combo += 1
 		if p.combo % 5 == 0: mul = 2.0
 	if I.rng:
-		shoot(p, I, mul)
+		if shoot(p, I, mul) == null: drill(p, I.rng, 0.3, 5)
 		return
 	var src := src_of(p, I)
+	var hit := false
 	for u in targets(p, I.reach, I.arc - 0.35 if rk(p, 4) >= 4 else I.arc):
-		hit_u(u, dmg_of(p, I, mul), src)
+		hit_u(u, dmg_of(p, I, mul), src); hit = true
+	if not hit: drill(p, I.reach + 0.5, I.arc, 4)
+
+## Practice on a training dummy: a little of the fighting book (or the ranged one), up to a limit a day.
+func drill(p: E.Player, reach: float, arc: float, b: int) -> void:
+	var fx := sin(p.r)
+	var fz := cos(p.r)
+	for i in D.DUMMIES.size():
+		var dmy: Array = D.DUMMIES[i]
+		var dx: float = dmy[0] - p.x
+		var dz: float = dmy[1] - p.z
+		var d := sqrt(dx * dx + dz * dz)
+		if d > reach + 0.4 or (d > 0.8 and (dx * fx + dz * fz) / d < arc): continue
+		ev.append(["dummy", i, r1(dmy[0]), r1(dmy[1]), b == 5])
+		if b == 5: ev.append(["shot", r1(p.x), r1(p.z), r1(dmy[0]), r1(dmy[1]), D.IT[p.wpn].shot])
+		if p.drill < D.DRILL_MAX and rk(p, b) > 0:
+			p.drill += 1; add_xp(p, b, 1)
+			if p.drill >= D.DRILL_MAX: say("%s has had enough practice for one day. The dummies look relieved." % p.dn)
+		return
 
 func stun_u(u: E.Undead, t: float) -> void:
 	u.stun = maxf(u.stun, t * 0.4 if big(u) else t)
@@ -1630,8 +1662,8 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				p.job = not p.job
 				if p.job: say("%s has agreed to %s." % [p.dn, D.MERCHANTS[merchant].job.to_lower()])
 		"guard":
-			if near_station(p, "bailiff") and guards < D.GUARDS and p.coin >= D.GUARD_FEE:
-				p.coin -= D.GUARD_FEE
+			if near_station(p, "bailiff") and guards < D.GUARDS and p.coin >= guard_fee():
+				p.coin -= guard_fee()
 				var post: Array = D.POSTS[guards % D.POSTS.size()]
 				var q := mk_peasant(guards, post[0], post[1], post[0], post[1], 0)
 				q.kind = 1; q.state = "post"; q.armed = 1; q.hp = q_max(q); q.px = post[0]; q.pz = post[1]
@@ -1647,6 +1679,17 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				peasants.append(q)
 				say("%s has hired %s at the Thorny Rose Inn. What could possibly go wrong?" % [p.dn, D.qname(q)])
 				spark.call("coin")
+		"btalk", "bknock", "bjeer":                # Robert Bailiff, at his upstairs window
+			if near_station(p, "window"):
+				var w := week_of(mday())
+				match a:
+					"btalk": bail_line = pick(D.BAILIFF_TALK[w - 1])
+					"bknock":
+						bail_line = pick(D.BAILIFF_KNOCK); ev.append(["knock", r1(p.x), r1(p.z)])
+					"bjeer":
+						bail_line = pick(D.BAILIFF_JEER); bail_mood += 1; ev.append(["jeer", r1(p.x), r1(p.z)])
+						say("%s has jeered at Robert Bailiff. His guards are a shilling dearer today." % p.dn)
+				bail_t = 6.0
 		"study":
 			if near_station(p, "priest") and p.holy < 2:
 				p.study = not p.study
@@ -1688,6 +1731,7 @@ func step(dt: float) -> void:
 	if not live():
 		return
 	innIn = 0
+	bell_t = maxf(0, bell_t - dt); bail_t = maxf(0, bail_t - dt)
 	for p in players:
 		if p.state == "inn": innIn += 1
 		player_step(p, dt)
@@ -1703,6 +1747,9 @@ func step(dt: float) -> void:
 
 func dusk_falls() -> void:
 	phase = "dusk"; timeLeft = D.DUSK_LEN
+	for p in players:                              # someone in every posse has something to say about it
+		var mine := peasants.filter(func(q): return q.owner == p.id and active(q))
+		if mine.size(): bark(mine[randi() % mine.size()], D.BARK_DUSK)
 	for q in peasants:
 		if q.state == "idle": q.state = "hide"
 	for p in players:
@@ -1978,6 +2025,8 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 				q.owner = 0; q.state = "idle"; q.x = q.hx; q.z = q.hz
 	for s in structs: s.age += 1
 	undead = []; boss = null
+	var up := peasants.filter(func(q): return q.state == "follow")
+	if up.size(): bark(up[randi() % up.size()], D.BARK_DAWN)
 	if day >= last_day:
 		phase = "won"; dawn = {"seq": dawn.seq + 1, "day": day, "lines": lines}
 		if save_hook.is_valid(): save_hook.call({})
@@ -2073,6 +2122,10 @@ func player_step(p: E.Player, dt: float) -> void:
 			match it.type:
 				"unhide":
 					p.state = "ok"; p.eLock = true
+				"bell":
+					if bell_t <= 0:
+						bell_t = 2.5; ev.append(["bellring", r1(it.x), r1(it.z)])
+						if randf() < 0.4: say(pick(D.BELL_LINE))
 				"hide":
 					p.state = "hide"; p.coward = true; p.gk = 0; p.eLock = true; say("%s has gone to hide under the bed." % p.dn)
 				"revive":
@@ -2088,6 +2141,7 @@ func player_step(p: E.Player, dt: float) -> void:
 						drops.erase(d); gain(p, d.it); ev.append(["coin", r1(p.x), r1(p.z)])
 				"rally":
 					it.target.owner = p.id; it.target.state = "follow"; add_xp(p, 6, 2)
+					if randf() < 0.6: bark(it.target, D.BARK_RALLY)
 				"body":
 					peasants.erase(it.target); p.bodies += 1
 				"found":

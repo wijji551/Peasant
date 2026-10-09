@@ -266,3 +266,12 @@ The web version is no longer updated; from here on, changes are made in Godot on
 - Contraptions were spread over Barricades for Beginners' ranks; the design only said they come from that book.
 - The bookseller's job pays An Index of Further Reading, or a rank of your least-read book; the brewer's pays the Brewer's Reserve. Not in the design.
 - Mercenaries take one of your posse places.
+
+## Build 5, stage 1: the village
+
+- **Robert Bailiff at his window** (`D.station("window")`, his front door): talk (`D.BAILIFF_TALK`, a set of lines for each week), knock (`D.BAILIFF_KNOCK`, with a knock), jeer (`D.BAILIFF_JEER`, with a jeer). What he says shows in a bubble over his window and in the notice (`R.bail_line`, `R.bail_t`). Each jeer that day makes his guards a shilling dearer (`R.bail_mood`, `Rules.guard_fee()`); he forgets by morning. He pops up at the window when someone stands at his door by day, or when he has something to say.
+- **The village bell** (in the square): hold E to ring it. It swings, rings for everyone, and sometimes the news has a line about it. Nothing else happens. 2.5 s between rings.
+- **Training dummies**: a melee swing that hits none of the dead but a dummy in reach, or a shot with nothing to shoot at but a dummy ahead, is practice: one step of The Art of Hitting Things (or the ranged book) per hit, up to `D.DRILL_MAX` (30) a day (`p.drill`). The dummies wobble.
+- **Peasants talk** (`D.BARK_*`, event `bark`, a bubble over their heads): when rallied, at dusk (one of each posse), when they lose their nerve, at dawn.
+- Clearer wording in many skill-tree ranks.
+- Tests: new `tests/village_test.gd` (11). All earlier tests pass.

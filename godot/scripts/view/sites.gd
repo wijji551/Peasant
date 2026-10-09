@@ -11,6 +11,8 @@ var _ruins: Node3D
 var _spots: Array = []          # one heap of rubble per search spot, paler while something is left in it
 var _spot_mats: Array = []
 var _cart: Node3D               # the merchant's cart, on a merchant's day
+var _bailiff: Node3D            # Robert Bailiff, popping up at his window
+var _bail_up := 0.0
 var _cart_mat: StandardMaterial3D
 const MERCHANT_COL := [Color(0.42, 0.55, 0.32), Color(0.45, 0.47, 0.55), Color(0.72, 0.52, 0.2), Color(0.5, 0.28, 0.5), Color(0.3, 0.38, 0.6)]
 
@@ -21,6 +23,9 @@ func _ready() -> void:
 	_jetty = _mi("jetty")
 	_ruins = Node3D.new()
 	add_child(_ruins)
+	_bailiff = _mi("bailiff")
+	_bailiff.position = Vector3(-14.5, 3.0, -9.05)
+	_bailiff.visible = false
 	_cart = Node3D.new()
 	add_child(_cart)
 	var st_c := D.station("cart")
@@ -103,6 +108,13 @@ func sync(R: Rules) -> void:
 			var mat := _tinted(Color(0.9, 0.86, 0.74))
 			m.material_override = mat
 			_spots.append(m); _spot_mats.append(mat)
+	var want := R.bail_t > 0.0                  # he shows himself when he has something to say, or when someone stands at his door by day
+	if not want and R.phase == "day":
+		for p in R.players:
+			if p.state == "ok" and D.d2(p.x, p.z, -14.5, -8.2) < 16: want = true
+	_bail_up = move_toward(_bail_up, 1.0 if want else 0.0, get_process_delta_time() * 3.0)
+	_bailiff.visible = _bail_up > 0.01
+	_bailiff.position.y = 2.4 + 0.6 * _bail_up
 	_cart.visible = R.merchant >= 0 and (R.phase == "day" or R.phase == "title")
 	if _cart.visible:
 		var c: Color = MERCHANT_COL[R.merchant % MERCHANT_COL.size()]
