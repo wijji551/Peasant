@@ -19,6 +19,9 @@ const MERCHANT_COL := [Color(0.42, 0.55, 0.32), Color(0.45, 0.47, 0.55), Color(0
 
 func _ready() -> void:
 	_quarry = _mi("outcrop")
+	var sm := _mi("mine")                            # the old steel mine, at the top of the forest: it does not move
+	sm.position = Vector3(D.STEEL_MINE.x, 0, D.STEEL_MINE.z)
+	sm.material_override = _tinted(Color(0.72, 0.78, 0.9))
 	_mine = _mi("mine")
 	_jetty = _mi("jetty")
 	_ruins = Node3D.new()

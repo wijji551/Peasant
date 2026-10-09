@@ -50,6 +50,7 @@ const ICON_COL := {
 	# a heap of grey stones
 	"stone": '<g stroke="#2e2a26" stroke-width="1.1" stroke-linejoin="round"><path d="M2 20l2-6l5-2l4 3l1 5z" fill="#8d877d"/><path d="M11 20l1-6l4-4l5 2l1 8z" fill="#a39d91"/><path d="M6 13l2-6l5-2l4 4l-3 4l-4 0z" fill="#bab4a7"/><path d="M8 8l4-2M13 15l3-3" stroke="#e2ddd2" fill="none"/></g>',
 	# an iron ingot
+	"steel": '<g stroke="#1d2228" stroke-width="1.1" stroke-linejoin="round"><path d="M3 16l4-6h12l-2 6z" fill="#c8d6e8"/><path d="M3 16h14v4H3z" fill="#8396b0"/><path d="M17 16l2-6v4l-2 6z" fill="#6a7c96"/><path d="M8 12h8M10 18h4" stroke="#f2f8ff" fill="none"/></g>',
 	"iron": '<g stroke="#1d2228" stroke-width="1.1" stroke-linejoin="round"><path d="M3 16l4-6h12l-2 6z" fill="#9aa6b2"/><path d="M3 16h14v4H3z" fill="#5d6874"/><path d="M17 16l2-6v4l-2 6z" fill="#47515c"/><path d="M8 12h8" stroke="#d3dde6" fill="none"/></g>',
 	# a loaf, and a fish in front of it
 	"food": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M3 12c0-4 4-6 9-6s9 2 9 6c0 2-1 3-3 3H6c-2 0-3-1-3-3z" fill="#c98a3d"/><path d="M8 8l-1 3M12 7.5v3.5M16 8l1 3" stroke="#f0c47e" fill="none"/><path d="M4 18c3-3 8-3 12 0c-4 3-9 3-12 0zM16 18l4-3v6z" fill="#7fa7b8"/><circle cx="7" cy="17.6" r="0.9" fill="#1d2228" stroke="none"/></g>',

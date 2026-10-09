@@ -275,3 +275,10 @@ The web version is no longer updated; from here on, changes are made in Godot on
 - **Peasants talk** (`D.BARK_*`, event `bark`, a bubble over their heads): when rallied, at dusk (one of each posse), when they lose their nerve, at dawn.
 - Clearer wording in many skill-tree ranks.
 - Tests: new `tests/village_test.gd` (11). All earlier tests pass.
+
+## Build 5, stage 2: the smithy
+
+- **Three grades** (`D._grades()`, ids from 29 so saves keep working): crude versions of the short sword, spear, mace, billhook and warhammer (`D.crude_of`): 80% damage, half the iron, anyone can forge them (heavy ones too). A crude weapon in hand on a night its owner fought (`p.fought`, set by any attack at night) becomes chipped at dawn (68% damage), and a chipped one falls apart at the next such dawn (back to the pitchfork). Refined (the old forged list) weapons now need rank 1 of Hammer and Tongs; armour can still be forged by anyone. Steel (`D.steel_of`) weapons (135% damage) and armour (cap, chain shirt and shield, a little more protection) need rank 4 and steel (three quarters of the iron as steel). `Rules.can_forge` and `forge_why` decide; heavy arms still need rank 2 unless crude. Hammer and Tongs ranks 1 and 4 say so.
+- **Steel**: a fifth material (`D.RES`), mined at the old steel mine (`D.STEEL_MINE`, -82, -44, at the top of the forest; it does not move; 3.2 s a piece; the gathering book). The market pays 3d a piece and sells none. Shown in what you carry when you have some; saved; in the storehouse.
+- The careful bot now reads Hammer and Tongs second (and Barricades for Beginners third) and holds the week, one peasant lost. Without it (crude spears only) it fell on night 5.
+- Tests: new `tests/smithy_test.gd` (18). Rules 117 (forging checks updated).

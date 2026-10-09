@@ -15,7 +15,7 @@ var peasants: Array = []      # E.Peasant
 var undead: Array = []        # E.Undead
 var structs: Array = []       # E.Struct
 var ev: Array = []            # things that happened this moment, for the view: [kind, ...]
-var store := {"wood": 0, "stone": 0, "iron": 0, "food": 0}
+var store := {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0}
 var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
 var spots: Array = [0, 0, 0, 0, 0, 0, 0, 0]   # searches left in each heap of rubble
@@ -60,6 +60,8 @@ var colliders: Array = Map.colliders()
 var QUARRY := E.Box.new(60, -8, 2.3, 1.9)
 var MINEC := E.Box.new(58, 24, 2.2, 2.2)
 var MINE := {"x": 55.0, "z": 24.0, "dir": 1}
+var STEELC := E.Box.new(D.STEEL_MINE.x, D.STEEL_MINE.z, 2.2, 2.2)
+var STEELM := {"x": D.STEEL_MINE.x + 3.0, "z": D.STEEL_MINE.z}   # its mouth faces the village
 var JETTY := {"x": 12.0, "z": 53.4}
 
 var save_hook: Callable       # called with the save data each morning, when set
@@ -68,6 +70,7 @@ var save_hook: Callable       # called with the save data each morning, when set
 func _init() -> void:
 	colliders.append(QUARRY)
 	colliders.append(MINEC)
+	colliders.append(STEELC)
 
 
 func say(t: String) -> void:
@@ -260,6 +263,25 @@ static func forge_cost(p: E.Player, c: Dictionary) -> Dictionary:
 	var r := rk(p, 3)
 	return c if r < 1 else scale(c, 0.67 - 0.04 * (r - 1), "iron")
 
+## What the smithy will let this player make: crude weapons, anyone; refined, Hammer and Tongs; steel, rank 4 of it.
+## Heavy arms (and the crossbow) need rank 2 whatever the grade.
+static func can_forge(p: E.Player, id: int) -> bool:
+	var I: Dictionary = D.IT[id]
+	if I.cost.is_empty() or I.wear == 2: return false
+	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return false
+	match I.tier:
+		"crude": return true
+		"steel": return rk(p, 3) >= 4
+		"forged": return I.s != "w" or rk(p, 3) >= 1           # anyone can make armour; refined weapons need the book
+	return false
+
+static func forge_why(p: E.Player, id: int) -> String:   # why not, for the smithy's notice
+	var I: Dictionary = D.IT[id]
+	if I.tier == "steel" and rk(p, 3) < 4: return "Steel needs rank 4 of Hammer and Tongs."
+	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return "Heavy arms need rank 2 of Hammer and Tongs."
+	if I.tier == "forged" and I.s == "w" and rk(p, 3) < 1: return "Refined weapons need Hammer and Tongs, from the library."
+	return ""
+
 static func reinf_cost(p: E.Player, k: String) -> Dictionary:
 	return scale(D.REINF[k].cost, 0.5) if rk(p, 3) >= 7 else D.REINF[k].cost
 
@@ -399,7 +421,7 @@ func add_villagers(slot: int, n: int) -> void:
 
 func clear_world() -> void:
 	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []
-	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
+	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
 	for t in trees:
 		t.wood = D.TREE_WOOD; t.gd = 0; t.set_state(0, 0)
@@ -559,7 +581,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs"]
+const P_SAVE := ["name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -879,6 +901,8 @@ func find_interact(p: E.Player):
 		gx = pt.x; gz = pt.y
 	elif D.d2(p.x, p.z, MINE.x, MINE.z) < 8:
 		kind = "iron"; gx = MINE.x + MINE.dir * 0.6; gz = MINE.z
+	elif D.d2(p.x, p.z, STEELM.x, STEELM.z) < 8:
+		kind = "steel"; gx = STEELM.x - 0.6; gz = STEELM.z
 	elif p.x > D.FARM.x0 and p.x < D.FARM.x1 and p.z > D.FARM.z0 and p.z < D.FARM.z1:
 		kind = "food"
 	elif D.d2(p.x, p.z, JETTY.x, JETTY.z) < 11:
@@ -1114,7 +1138,7 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 # --- fighting
 static func dmg_of(p: E.Player, I: Dictionary, mul: float = 1.0) -> float:
 	var d: float = I.dmg * mul * (1 + (0.08 * rk(p, 5) if I.rng else 0.06 * rk(p, 4)))
-	if I.tier == "forged" and rk(p, 3) >= 4: d *= 1.1
+	if (I.tier == "forged" or I.tier == "steel") and rk(p, 3) >= 4: d *= 1.1
 	if p.charge > 0: d *= 2.0 if rk(p, 7) >= 7 else 1.6
 	if p.wpn == 17 and I.n == D.IT[17].n and lore(p, 17): d *= 1.25
 	return d
@@ -1180,6 +1204,7 @@ func do_attack(p: E.Player) -> void:
 	if p.state != "ok" or p.atkCd > 0:
 		return
 	var I: Dictionary = D.IT[p.wpn]
+	if phase == "night": p.fought = true
 	p.atkCd = I.cd * (0.8 if I.rng and rk(p, 5) >= 4 else 1.0); p.ac += 1
 	var mul := 1.0
 	if rk(p, 4) >= 7:
@@ -1534,10 +1559,11 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 		"sell":
 			if near_station(p, "market") and D.RES.has(sa):
 				var n := mini(5, p.get(sa))
-				p.set(sa, p.get(sa) - n); p.coin += floori(n * 1.5) if p.gab else n
+				var each := D.STEEL_SELL if sa == "steel" else 1
+				p.set(sa, p.get(sa) - n); p.coin += floori(n * each * 1.5) if p.gab else n * each
 				if n: spark.call("coin")
 		"buy":
-			if near_station(p, "market") and D.RES.has(sa):
+			if near_station(p, "market") and D.RES.has(sa) and sa != "steel":     # nobody sells steel
 				var n := mini(mini(5, cap(p) - p.get(sa)), floori(p.coin / 2.0))
 				if n > 0:
 					p.set(sa, p.get(sa) + n); p.coin -= n * 2; spark.call("coin")
@@ -1571,7 +1597,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 			if near_station(p, "smithy") and ia >= 0 and ia < D.IT.size() and not D.IT[ia].cost.is_empty():
 				var I: Dictionary = D.IT[ia]
 				var c := forge_cost(p, I.cost)
-				if (not I.heavy or rk(p, 3) >= 2) and has(p, c):
+				if can_forge(p, ia) and has(p, c):
 					pay(p, c)
 					if can_use(p, ia): wear(p, ia)
 					else: stow(p, ia)
@@ -1969,6 +1995,14 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 				+ (" %s still %s where %s fell." % [" and ".join(kn), "lie" if kept.size() > 1 else "lies", was] if kept.size() else ""))
 		else:
 			if p.state == "down": p.hp = 30
+			if p.fought and D.IT[p.wpn].tier == "crude":    # a crude weapon wears: chipped after one night's fighting, gone after two
+				var I: Dictionary = D.IT[p.wpn]
+				if I.wear == 1:
+					p.wpn += 1; lines.append("%s’s %s is chipped after the night’s work." % [p.dn, I.n])
+				else:
+					lines.append("%s’s %s has fallen to bits. The smithy can make another, or Hammer and Tongs a better one." % [p.dn, I.n])
+					p.wpn = 0; p.bless &= ~1
+			p.fought = false
 			var hid: bool = p.coward
 			p.state = "ok"; p.hp = minf(max_hp(p), p.hp + 25)
 			if hid: lines.append("%s spent the night under the bed. The village has noticed, and will remember until dusk." % p.dn)

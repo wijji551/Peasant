@@ -29,6 +29,7 @@ var _boss_bar: ProgressBar
 var _boss_num: Label
 var _boss_name: Label
 var _title: Label
+var _steel_row: HBoxContainer
 var _powers: HBoxContainer
 var _res := {}                       # name -> Label
 var _carry: Label
@@ -116,8 +117,9 @@ func _ready() -> void:
 	rc.custom_minimum_size.x = 240
 	var rv := _vbox(rc, 2)
 	Look.label(rv, "What you carry", 20, Look.RUST, true)
-	for r in ["wood", "stone", "iron", "food", "coin"]:
+	for r in ["wood", "stone", "iron", "food", "steel", "coin"]:
 		var h := HBoxContainer.new()
+		if r == "steel": _steel_row = h
 		h.add_theme_constant_override("separation", 8)
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		rv.add_child(h)
@@ -421,7 +423,8 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		_boss_num.text = "%d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)]
 	# what you carry
 	var c := Rules.cap(p)
-	for r in ["wood", "stone", "iron", "food"]:
+	_steel_row.visible = p.steel > 0
+	for r in ["wood", "stone", "iron", "food", "steel"]:
 		var n: int = p.get(r)
 		_res[r].text = str(n)
 		_res[r].add_theme_color_override("font_color", Look.ROSE if n >= c else Look.INK)

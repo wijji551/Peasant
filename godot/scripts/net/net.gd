@@ -28,7 +28,7 @@ const PSTATE := ["ok", "down", "dead", "hide", "inn"]
 const QSTATE := ["idle", "follow", "chop", "fight", "hide", "body", "gone", "inn", "post"]
 const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
-const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
+const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
 	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT"]
 

@@ -73,6 +73,7 @@ func _draw() -> void:
 		draw_rect(Rect2(mx(x) - 2.5, mz(z) - 2.5, 5, 5), c)
 	mark.call(R.QUARRY.x, R.QUARRY.z, Color("d8d2c2"))
 	mark.call(R.MINEC.x, R.MINEC.z, Color("b5653a"))
+	mark.call(D.STEEL_MINE.x, D.STEEL_MINE.z, Color("7d93b5"))
 	mark.call(R.JETTY.x, R.JETTY.z + 2, Color("8fd0e0"))
 	var L := Map.ruin_layout(R.gseed, R.day)
 	var lore := me != null and Rules.rk(me, 8) >= 2

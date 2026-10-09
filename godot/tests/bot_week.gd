@@ -158,9 +158,9 @@ func run() -> Array:
 		var did := []
 		if n == 1: act("library", "book", 0)
 		var nb := me.books.filter(func(r): return r > 0).size()
-		if nb < 3 and me.books[0] >= 2 and not me.books[2]: act("library", "book", 2)
+		if nb < 3 and me.books[0] >= 2 and not me.books[3]: act("library", "book", 3)      # Hammer and Tongs: refined arms, not crude
 		nb = me.books.filter(func(r): return r > 0).size()
-		if nb < 3 and me.books[2] >= 2 and not me.books[3]: act("library", "book", 3)
+		if nb < 3 and Rules.book_slots(me) > 0 and not me.books[2]: act("library", "book", 2)
 		for i in 12:
 			if posse() >= R.pm or not day_ok(): break
 			var q = null
@@ -186,7 +186,10 @@ func run() -> Array:
 					act("slum", "recruit"); did.append("recruit")
 				if me.food < 6: get_res("food", 8)
 			# 3. iron for arms, one step a day
-			var wants := [null, null, ["forge", 2, {"iron": 4, "wood": 4}], ["forge", 19, {"iron": 5}], ["forge", 22, {"iron": 10}], ["forge", 25, {"iron": 4, "wood": 4}], ["armp", null, {"iron": 9, "wood": 6}], ["armp", null, {"iron": 9, "wood": 6}]]
+			if n >= 3 and me.wpn == 0 and day_ok():           # a crude spear wears out: knock out another
+				get_res("iron", 2); get_res("wood", 4)
+				if day_ok(): act("smithy", "forge", D.crude_of(2)); did.append("crude spear")
+			var wants := [null, null, ["forge", 2 if me.books[3] else D.crude_of(2), {"iron": 4, "wood": 4}], ["forge", 19, {"iron": 5}], ["forge", 22, {"iron": 10}], ["forge", 25, {"iron": 4, "wood": 4}], ["armp", null, {"iron": 9, "wood": 6}], ["armp", null, {"iron": 9, "wood": 6}]]
 			var want = wants[n]
 			if want and day_ok():
 				get_res("iron", want[2].iron)

@@ -58,6 +58,8 @@ class Player:
 	var stone := 0
 	var iron := 0
 	var food := 0
+	var steel := 0
+	var fought := false     # swung at the dead tonight: crude weapons wear
 	var coin := 0
 	var bodies := 0
 	var bbod := 0           # blessed bodies

@@ -52,6 +52,7 @@ static func tree_ok(x: float, z: float) -> bool:
 		if absf(x - c.x) < 10 and absf(z - c.z) < 6.5: return false                       # the clearings the outer ruins wander between
 	if absf(x) > 90.5 and absf(x) < 98: return false                                     # the thorn hedge
 	if absf(z + 62.8) < 1.6 and absf(x) < 93: return false                               # the line of stakes
+	if Vector2(x - D.STEEL_MINE.x, z - D.STEEL_MINE.z).length() < 9: return false   # the old steel mine and its yard
 	for k in 2:
 		for c in D.SITES[k]:
 			if Vector2(x - c.x, z - c.z).length() < 6.5: return false                     # every place the stone or the iron can turn up

@@ -39,9 +39,10 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var pr := func(n: int) -> int: return floori(n * 1.5) if p.gab else n
 			o.append({"head": "Sell"})
 			for r in D.RES:
-				o.append({"label": "Sell 5 " + r, "sub": "for %dd. You carry %d." % [pr.call(mini(5, p.get(r))), p.get(r)], "ok": p.get(r) > 0, "a": "sell", "arg": r})
+				o.append({"label": "Sell 5 " + r, "sub": "for %dd. You carry %d." % [pr.call(mini(5, p.get(r)) * (D.STEEL_SELL if r == "steel" else 1)), p.get(r)], "ok": p.get(r) > 0, "a": "sell", "arg": r})
 			o.append({"head": "Buy"})
 			for r in D.RES:
+				if r == "steel": continue                  # nobody sells steel
 				o.append({"label": "Buy 5 " + r, "sub": "for 10d", "ok": p.coin >= 2 and p.get(r) < Rules.cap(p), "a": "buy", "arg": r})
 			return {"title": "The market", "intro": "You have %s. " % D.coins(p.coin) + ("You have the Gift of the Gab: the stalls pay you three pence for every two pieces, and still charge two a piece." if p.gab else "The stalls pay a penny a piece and charge two."), "o": o}
 		"store":
@@ -71,24 +72,34 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var forge := func(i: int) -> void:
 				var I: Dictionary = D.IT[i]
 				var c := Rules.forge_cost(p, I.cost)
-				var locked: bool = I.heavy and Rules.rk(p, 3) < 2
-				var sub := "Heavy arms need rank 2 of Hammer and Tongs." if locked else D.cost_text(c) + ". " + \
+				var why := Rules.forge_why(p, i)
+				var locked := why != ""
+				var sub := why if locked else D.cost_text(c) + ". " + \
 					(("%s. %d damage. {trick}: %s." % [I.note, I.dmg, D.AB[I.ab].n]) + ("" if Rules.can_use(p, i) else " You cannot use it yet: it needs %s." % book_need(I.need)) if I.s == "w" else item_sub(p, i))
 				o.append({"label": "Forge " + D.it_a(i), "sub": sub, "ok": not locked and Rules.has(p, c), "a": "forge", "arg": i})
+			var h3 := Rules.rk(p, 3)
 			if page == "armour":
 				o.append({"head": "Armour"})
 				for i in D.FORGE_A: forge.call(i)
+				if h3 >= 4:
+					o.append({"head": "Steel armour"})
+					for b in D.STEEL_A: forge.call(D.steel_of(b))
 				var c := Rules.forge_cost(p, D.PEASANT_ARM)
 				var un := R.peasants.filter(func(q): return q.owner == p.id and not q.armed and q.state != "body").size()
 				o.append({"head": "Your posse"})
 				o.append({"label": "Arm your whole posse with spears" if Rules.rk(p, 3) >= 3 else "Arm one of your posse with a spear", "sub": "%s each. %d of yours still %s a pitchfork." % [D.cost_text(c), un, "carries" if un == 1 else "carry"], "ok": un > 0 and Rules.has(p, c), "a": "armp"})
 				o.append({"label": "Back to the weapons", "sub": "", "ok": true, "page": ""})
 			else:
-				o.append({"head": "Weapons"})
+				o.append({"head": "Crude weapons: anyone can make these. They wear out"})
+				for b in D.CRUDE_W: forge.call(D.crude_of(b))
+				o.append({"head": "Refined weapons: Hammer and Tongs" + ("" if h3 >= 1 else " (you have not read it)")})
 				for i in D.FORGE_W: forge.call(i)
+				if h3 >= 4:
+					o.append({"head": "Steel weapons: from the old steel mine. You carry %d steel" % p.steel})
+					for b in D.STEEL_W: forge.call(D.steel_of(b))
 				o.append({"head": "More"})
 				o.append({"label": "Armour, and spears for your posse", "sub": "Iron cap, chain shirt, shield.", "ok": true, "page": "armour"})
-			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Hammer and Tongs, in the library, makes all of this cheaper."), "o": o}
+			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Anyone can make crude weapons. Hammer and Tongs, in the library, makes refined ones, and later steel."), "o": o}
 		"library":
 			var slots := Rules.book_slots(p)
 			var owned: int = p.books.filter(func(r): return r > 0).size()

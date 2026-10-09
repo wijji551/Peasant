@@ -261,12 +261,12 @@ func _work_fx(kind: String) -> void:   # a blow landed on a tree, a rock, the or
 	if fx == null or kind == "fish": return
 	var x := _x + sin(_r) * 0.9
 	var z := _z + cos(_r) * 0.9
-	Sound.play({"tree": "chop", "search": "pick", "stone": "stone", "iron": "iron"}.get(kind, "pluck"), 0.7 if is_player else 0.4, Vector2(_x, _z))
+	Sound.play({"tree": "chop", "search": "pick", "stone": "stone", "iron": "iron", "steel": "iron"}.get(kind, "pluck"), 0.7 if is_player else 0.4, Vector2(_x, _z))
 	match kind:
 		"tree": fx.puff(_x + sin(_r) * 1.2, 1, _z + cos(_r) * 1.2, 4, fx.C_WOOD, 2.5); get_parent().shake_tree_near(_x, _z)
 		"search": fx.puff(x, 0.4, z, 4, fx.C_DUST, 2.2)
 		"stone": fx.puff(x, 0.6, z, 3, fx.C_STONE, 2)
-		"iron": fx.puff(x, 0.6, z, 3, fx.C_IRON, 2)
+		"iron", "steel": fx.puff(x, 0.6, z, 3, fx.C_IRON, 2)
 		_: fx.puff(x, 0.6, z, 3, fx.C_FOOD, 2)
 
 

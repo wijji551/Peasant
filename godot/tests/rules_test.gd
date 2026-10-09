@@ -139,10 +139,14 @@ func run() -> void:
 	at(12.9, 10.6); X.do_act(m, "puti", 0); ok("dagger put on the arms rack", R.items == [10] and m.inv.is_empty())
 	X.do_act(m, "pute", "wpn"); ok("club put on the rack from the hand", R.items == [10, 6] and m.wpn == 0)
 	X.do_act(m, "takei", 1); ok("club taken back, straight into the hand", m.wpn == 6 and R.items == [10])
-	m.iron = 20; m.wood = 20; at(12.4, -4.7); X.do_act(m, "forge", 1); ok("forged a short sword; the club went into the pack", m.wpn == 1 and m.inv == [6], m.inv)
+	m.iron = 20; m.wood = 20; at(12.4, -4.7); m.books[3] = 0
+	X.do_act(m, "forge", 1); ok("without Hammer and Tongs the smithy will not make a refined sword", m.wpn == 6)
+	X.do_act(m, "forge", D.crude_of(1)); ok("but anyone can knock out a crude one", m.wpn == D.crude_of(1) and m.inv == [6], m.inv)
+	m.inv = []; m.wpn = 6; m.books[3] = 1; m.iron = 20; m.wood = 20
+	X.do_act(m, "forge", 1); ok("forged a short sword; the club went into the pack", m.wpn == 1 and m.inv == [6], m.inv)
 	X.do_act(m, "forge", 13); ok("forged a bow but cannot use it yet", m.wpn == 1 and m.inv.has(13))
 	X.do_act(m, "forge", 19); ok("iron cap goes on", m.head == 19)
-	X.do_act(m, "forge", 4); ok("heavy arms still need Hammer and Tongs rank 2", m.wpn == 1)
+	m.books[3] = 1; m.xp[3] = 0.0; X.do_act(m, "forge", 4); ok("heavy arms still need Hammer and Tongs rank 2", m.wpn == 1, [m.wpn, m.inv, m.books[3]])
 
 	# ---------- every weapon's trick
 	at(40, 0); m.r = 0
