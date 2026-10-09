@@ -11,6 +11,7 @@ static var fx_vol := 80              # the effects
 static var amb_vol := 70             # the ambience: birds, crickets, rain, the castle
 static var music_vol := 50           # the tunes
 static var muted := false            # M
+static var relay := ""               # the village server's address, if not the usual one
 static var tags := true              # names over the other players
 static var see_keep := true          # see through the keep when something is behind it
 static var binds := {}               # action -> [physical keycodes]; empty means the usual keys
@@ -30,6 +31,7 @@ static func load_all() -> void:
 	amb_vol = clampi(int(d.get("amb_vol", 70)), 0, 100)
 	music_vol = clampi(int(d.get("music_vol", 50)), 0, 100)
 	muted = bool(d.get("muted", false))
+	relay = str(d.get("relay", ""))
 	tags = bool(d.get("tags", true))
 	see_keep = bool(d.get("see_keep", true))
 	var b = d.get("binds", {})
@@ -59,4 +61,4 @@ static func set_volume(k: String, v: int) -> void:
 
 static func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
-	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "tags": tags, "see_keep": see_keep, "binds": binds}))
+	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "relay": relay, "tags": tags, "see_keep": see_keep, "binds": binds}))

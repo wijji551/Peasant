@@ -1,0 +1,8 @@
+; The village server for Defend the Village!: a tiny Godot project with nothing in it but relay.gd.
+; Run:  godot --headless --path relay -s relay.gd
+
+config_version=5
+
+[application]
+
+config/name="Defend the Village relay"

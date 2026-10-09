@@ -19,6 +19,8 @@ It opens on a home screen: your name and colour, **Carry on** from the saved mor
 4. **Sound: done.** Every effect from the web version, made again, and new ones; ambience (birds and breeze, crickets and wind, rain, the castle's drone); a tune for the day and one for the night. Effects, ambience and music each have a volume in the options; M mutes. The sounds are files in `sounds/`, made by `tools/make_sounds.py` in the repository (`python3 tools/make_sounds.py` makes them again), so they can be tuned.
 5. **Co-op: done.** Up to eight players. One hosts from the home screen and reads out the village code; the others type it into Join. The host's game runs the rules for everyone and sends the result twelve times a second; each joined game sends what its player does, and walks its own player at once. Godot's own networking (ENet over UDP port 24565): the host's game asks the router to open the port by itself (UPnP), and the code is the host's address written as letters. If the router will not, the code for the same home network still works, or the host opens the port by hand.
 
+   Better: a **village server** (`relay/` in the repository, with a step-by-step guide for a free Oracle Cloud machine). Everyone connects out to it, so no router needs to let anyone in; villages on it have five-letter codes. Set its address in the game's Options (or as `Net.DEFAULT_RELAY`). If it does not answer, hosting falls back to direct.
+
 The move to Godot is finished. What comes next is in the design doc's build order: Build 4 (the month) and Build 5 (polish).
 
 ## Controls
@@ -46,6 +48,7 @@ Run from this folder, with Godot on the command line:
     godot --headless --path . -s res://tests/bot_week.gd
     godot --headless --path . -s res://tests/bot_week.gd -- walls
     tests/net_test.sh godot          # co-op: a host and a friend, two copies of the game, on one computer
+    tests/net_test.sh godot relay    # the same, through a village server run here too
 
 All 115 rule checks pass. The careful bot holds all seven nights; the bot that only builds walls falls on night 3, as it does in the web version (night 2 to 4).
 

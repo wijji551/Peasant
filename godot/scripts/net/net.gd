@@ -16,6 +16,10 @@ extends Node
 signal changed          # the lobby, or the connection, has changed: the window showing it should redraw
 
 const PORT := 24565
+const RELAY_PORT := 24566
+## The village server (relay) everyone uses unless the options say otherwise: "address" or "address:port".
+## Empty: no server, and hosting is direct (the host's router has to let friends in).
+const DEFAULT_RELAY := ""
 const MAX_PLAYERS := 8
 const SEND_RATE := 1.0 / 12.0
 const INPUT_RATE := 1.0 / 15.0
@@ -41,6 +45,7 @@ var status := ""               # joining: what is happening, or what went wrong
 var kicked := ""               # why the host sent us away, if it did
 var main: Node = null          # the game scene
 
+var via_relay := false         # connected through the village server rather than directly
 var _peer: ENetMultiplayerPeer
 var _conns := {}               # host: network peer id -> player id
 var _last_in := {}             # host: player id -> when we last heard from them
@@ -68,8 +73,8 @@ static func ensure(tree: SceneTree) -> Net:
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var mp := multiplayer as SceneMultiplayer
-	mp.peer_connected.connect(_on_peer_joined)
-	mp.peer_disconnected.connect(_on_peer_left)
+	mp.peer_connected.connect(func(pid): if not via_relay: _on_peer_joined(pid))
+	mp.peer_disconnected.connect(func(pid): if not via_relay: _on_peer_left(pid))
 	mp.peer_packet.connect(_on_packet)
 	mp.connected_to_server.connect(_on_connected)
 	mp.connection_failed.connect(_on_failed)
@@ -128,8 +133,85 @@ static func local_ip() -> String:
 	return "127.0.0.1"
 
 
+# ---------------------------------------------------------------- the village server
+static func relay_address() -> String:
+	var a: String = Settings.relay.strip_edges() if Settings.relay.strip_edges() != "" else DEFAULT_RELAY
+	return a
+
+
+func _relay_connect() -> String:
+	var a := relay_address()
+	var host_ := a
+	var port := RELAY_PORT
+	if a.count(":") == 1:
+		host_ = a.split(":")[0]; port = int(a.split(":")[1])
+	_peer = ENetMultiplayerPeer.new()
+	if _peer.create_client(host_, port, 3) != OK:
+		_peer = null
+		return "Could not reach the village server (%s)." % a
+	_peer.host.compress(ENetConnection.COMPRESS_RANGE_CODER)
+	multiplayer.multiplayer_peer = _peer
+	via_relay = true
+	return ""
+
+
+func _relay_timeout() -> void:   # no code from the village server within eight seconds: host from here instead
+	await get_tree().create_timer(8.0).timeout
+	if role == "host" and via_relay and code == "":
+		_on_failed()
+
+
+func _relay_msg(m: Dictionary) -> void:   # from the village server itself
+	match str(m.r):
+		"room":                                   # hosting: our village has a code
+			code = str(m.code)
+			port_open = "relay"
+			changed.emit()
+		"in":
+			status = "In. Waiting for the host to let us in..."
+			changed.emit()
+		"err":
+			var why := str(m.why)
+			leave()
+			status = why
+			changed.emit()
+		"joined":
+			_on_peer_joined(int(m.pid))
+		"left":
+			_on_peer_left(int(m.pid))
+		"closed":
+			kicked = str(m.get("why", "The host has closed the village."))
+			_on_server_gone()
+		"from":
+			var inner = bytes_to_var(m.d)
+			if inner is Dictionary and inner.has("t"):
+				if role == "host": _host_msg(int(m.from), inner)
+				elif role == "client":
+					if main == null or not is_instance_valid(main): _pending.append(inner)
+					else: _client_msg(inner)
+
+
 # ---------------------------------------------------------------- hosting
 func host(name_: String, col: int) -> String:
+	leave()
+	if relay_address() != "":                    # through the village server: nobody's router matters
+		var why := _relay_connect()
+		if why == "":
+			role = "host"
+			my_id = 1
+			_next_id = 2
+			_conns.clear()
+			lobby = [{"id": 1, "name": name_, "col": col}]
+			port_open = "trying"
+			status = ""
+			set_meta("fallback", [name_, col])
+			changed.emit()
+			_relay_timeout()
+			return ""
+	return _host_direct(name_, col)
+
+
+func _host_direct(name_: String, col: int) -> String:
 	leave()
 	_peer = ENetMultiplayerPeer.new()
 	var err := _peer.create_server(PORT, MAX_PLAYERS - 1)
@@ -192,7 +274,13 @@ func _on_peer_joined(pid: int) -> void:
 
 func _drop_later(pid: int) -> void:
 	await get_tree().create_timer(0.4).timeout
-	if _peer and role == "host": _peer.disconnect_peer(pid)
+	_drop(pid)
+
+
+func _drop(pid: int) -> void:
+	if _peer == null or role != "host": return
+	if via_relay: _raw({"r": "kick", "pid": pid})
+	else: _peer.disconnect_peer(pid)
 
 
 func _on_peer_left(pid: int) -> void:
@@ -242,6 +330,22 @@ func infos() -> Array:
 # ---------------------------------------------------------------- joining
 func join(text: String, name_: String, col: int) -> String:
 	leave()
+	var t := text.strip_edges().to_upper()
+	if t.length() == 5 and t.is_valid_identifier() and not t.contains("_"):   # five letters: a village on the village server
+		if relay_address() == "":
+			return "That is a village server code, but this game has no village server set (the handbook's options)."
+		var why := _relay_connect()
+		if why != "": return why
+		role = "client"
+		my_id = 0
+		kicked = ""
+		status = "Asking the village server for %s..." % t
+		lobby = []
+		set_meta("hello", [name_, col])
+		set_meta("room", t)
+		changed.emit()
+		_join_timeout()
+		return ""
 	var ip := decode(text)
 	if ip == "":
 		return "That is not a village code. It looks like ABCD-EFG (letters and numbers), or an address like 192.168.1.20."
@@ -272,18 +376,33 @@ func _join_timeout() -> void:
 
 
 func _on_connected() -> void:
+	if via_relay:                                 # connected to the village server: ask for a village, or to join one
+		if role == "host": _raw({"r": "host"})
+		else: _raw({"r": "join", "code": get_meta("room", "")})
+		return
 	status = "In. Waiting to be let in..."
 	changed.emit()
 
 
+func _raw(m: Dictionary) -> void:   # straight to the village server
+	if _peer: (multiplayer as SceneMultiplayer).send_bytes(var_to_bytes(m), 1, MultiplayerPeer.TRANSFER_MODE_RELIABLE, 0)
+
+
 func _on_failed() -> void:
+	if via_relay and role == "host":               # the village server is not answering: host directly instead
+		var h: Array = get_meta("fallback", ["Peasant", 0])
+		var why := _host_direct(h[0], h[1])
+		status = "The village server did not answer, so this village is hosted from this computer instead." if why == "" else why
+		changed.emit()
+		return
+	var was_relay := via_relay
 	leave()
-	status = "Could not reach that village."
+	status = "The village server did not answer. Try again in a minute." if was_relay else "Could not reach that village."
 	changed.emit()
 
 
 func _on_server_gone() -> void:
-	var why := kicked if kicked != "" else "The host has closed the village."
+	var why := kicked if kicked != "" else ("Lost the connection to the village server." if via_relay else "The host has closed the village.")
 	var in_game: bool = main != null and main.screen == "game"
 	leave()
 	status = why
@@ -304,6 +423,7 @@ func leave() -> void:
 	multiplayer.multiplayer_peer = null
 	_peer = null
 	role = "solo"
+	via_relay = false
 	my_id = 1
 	_conns.clear()
 	_last_in.clear()
@@ -324,6 +444,10 @@ func _exit_tree() -> void:
 func _send(m: Dictionary, to: int = 0, reliable: bool = true) -> void:
 	if _peer == null or _peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED: return
 	var mp := multiplayer as SceneMultiplayer
+	if via_relay:                                 # wrapped for the village server, which passes it on
+		var w := {"r": "to", "to": -1 if role == "client" else to, "u": not reliable, "d": var_to_bytes(m)}
+		mp.send_bytes(var_to_bytes(w), 1, MultiplayerPeer.TRANSFER_MODE_RELIABLE if reliable else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED, 0 if reliable else 1)
+		return
 	mp.send_bytes(var_to_bytes(m), to, MultiplayerPeer.TRANSFER_MODE_RELIABLE if reliable else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED, 0 if reliable else 1)
 
 
@@ -334,6 +458,9 @@ func send_host(m: Dictionary) -> void:
 
 func _on_packet(pid: int, bytes: PackedByteArray) -> void:
 	var m = bytes_to_var(bytes)
+	if via_relay:
+		if m is Dictionary and m.has("r"): _relay_msg(m)
+		return
 	if not m is Dictionary or not m.has("t"): return
 	if role == "host":
 		_host_msg(pid, m)
@@ -395,7 +522,7 @@ func _host_tick(delta: float) -> void:
 	for pid in _conns.keys():                     # gone quiet for twelve seconds: they have gone
 		var id: int = _conns[pid]
 		if now - int(_last_in.get(id, now)) > 12000:
-			_peer.disconnect_peer(pid)
+			_drop(pid)
 			_on_peer_left(pid)
 	_acc += delta
 	if _acc < SEND_RATE or _conns.is_empty(): return

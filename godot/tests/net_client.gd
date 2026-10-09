@@ -24,7 +24,15 @@ func wait_for(f: Callable, seconds: float) -> bool:
 func _init() -> void:
 	change_scene_to_file("res://main.tscn")
 	await frames(30)                                       # give the host a moment to open
-	var why: String = Net.me.join(Net.local_ip(), "Joiny", 3)
+	var relay := OS.get_environment("DTV_RELAY")
+	Settings.relay = relay
+	var where := Net.local_ip()
+	if relay != "":                                         # the host's code, as if read out
+		await wait_for(func(): return FileAccess.file_exists("user://test_code.txt"), 20.0)
+		await frames(5)
+		where = FileAccess.get_file_as_string("user://test_code.txt").strip_edges()
+		ok("we have the host's village code", where.length() == 5, where)
+	var why: String = Net.me.join(where, "Joiny", 3)
 	ok("joining starts", why == "", why)
 	var got_id := await wait_for(func(): return Net.me.my_id == 2, 20.0)
 	ok("the host lets us in", got_id, Net.me.my_id)

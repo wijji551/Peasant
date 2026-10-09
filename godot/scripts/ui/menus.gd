@@ -10,11 +10,16 @@ const GUIDE := [
 	["Fighting", ["{attack} or a click attacks. {trick} or a right-click is your weapon’s own trick: every weapon has a different one, with a short wait between uses. {eat} eats one food.", "Knocked down, you have 15 seconds for a team-mate to hold {interact} over you. After that a relative takes over your cottage at dawn, with your books but not your gear. Relics lie where you fell.", "From dusk you can hide in your own cottage. It is safe, and the village will call you a coward until the next dusk."]],
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
 	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: shared materials and a shared arms rack. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
-	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "The host's computer asks its router to let friends in. If the router says no, the code only works for people on the same home network: for friends further away, the host opens port 24565 (UDP) on the router. The game does not pause for the handbook when others are playing."]],
+	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "With a village server set (Options), villages go through it: a five-letter code that works from anywhere, and nobody's router matters. Without one, the host's computer asks its router to let friends in; if the router says no, that code only works on the same home network, unless the host opens port 24565 (UDP). The game does not pause for the handbook when others are playing."]],
 	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the Steward when he comes. Top right: the map. Left: what you carry. Bottom: your hand, bucket, posse, backpack, skills and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your backpack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
 ]
 
 const CHANGES := [
+	["Godot: the village server", [
+		"Playing together can now go through a village server: a small program on an always-on machine (a free Oracle Cloud one will do) that introduces players and passes their messages on. Nobody's router has to let anyone in, and your friends can host their own villages when you are not on.",
+		"A village on the server has a five-letter code. Older codes (with a dash) still work, straight to the host.",
+		"Put the server's address in the handbook's Options. If the server does not answer, hosting falls back to your own computer.",
+	]],
 	["Godot: playing together (stage 5 of the move: the move is done)", [
 		"Up to eight in one village. Host a village from the home screen and give your friends the code; they type it into Join.",
 		"Your computer asks your router to let them in by itself. If your router will not, the code still works for anyone on the same wifi.",
@@ -223,6 +228,13 @@ func menu(tab: String = "") -> void:
 				vs.value_changed.connect(func(v): Settings.set_volume(key, int(v)); vl.text = "%d%%" % int(v) if v else "off"; Settings.save(); Sound.apply_settings(); Sound.play("pop"))
 			Look.label(g, "Mute (%s)" % Keys.name("mute"), 15)
 			var mu := CheckBox.new(); mu.button_pressed = Settings.muted; mu.toggled.connect(func(on): Settings.muted = on; Settings.save(); Sound.apply_settings()); g.add_child(mu)
+			Look.label(g, "Village server, for playing together", 15)
+			var rv := LineEdit.new()
+			rv.text = Settings.relay
+			rv.placeholder_text = Net.DEFAULT_RELAY if Net.DEFAULT_RELAY != "" else "none: host from this computer"
+			rv.custom_minimum_size.x = 260
+			rv.text_changed.connect(func(t): Settings.relay = t.strip_edges(); Settings.save())
+			g.add_child(rv)
 			Look.label(g, "Names over the other players", 15)
 			var tg := CheckBox.new(); tg.button_pressed = Settings.tags; tg.toggled.connect(func(on): Settings.tags = on; Settings.save()); g.add_child(tg)
 			Look.label(g, "See through the keep when something is behind it", 15)
@@ -379,14 +391,15 @@ func lobby() -> void:
 		var cr := HBoxContainer.new()
 		cr.add_theme_constant_override("separation", 14)
 		b.add_child(cr)
-		var shown: String = N.code if N.code != "" else N.lan_code
+		var shown: String = N.code if N.code != "" else ("....." if N.via_relay else N.lan_code)
 		var cl := Look.label(cr, shown, 34, Look.INK, true)
 		cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var cp := Button.new(); cp.text = "Copy"; cp.focus_mode = Control.FOCUS_NONE
 		cp.pressed.connect(func(): DisplayServer.clipboard_set(shown); cp.text = "Copied")
 		cr.add_child(cp)
 		match N.port_open:
-			"trying": w.para("Asking your router to let friends in...", 14, Look.INK_SOFT)
+			"relay": w.para("Friends type this into Join on their home screen. It works from anywhere: everyone goes through the village server.", 14, Look.INK_SOFT)
+			"trying": w.para("Asking the village server for a code..." if N.via_relay else "Asking your router to let friends in...", 14, Look.INK_SOFT)
 			"open": w.para("Friends type this into Join on their home screen. On the same home network, %s works too." % N.lan_code, 14, Look.INK_SOFT)
 			_: w.para("Your router would not open the way in by itself, so this is the code for your home network only: it works for anyone on the same wifi. For friends elsewhere, open port %d (UDP) to this computer on your router, then give them your internet address instead." % N.PORT, 14, Look.ROSE)
 	elif N.my_id == 0:

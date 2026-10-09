@@ -26,12 +26,22 @@ func _init() -> void:
 	change_scene_to_file("res://main.tscn")
 	await frames(10)
 	var m = current_scene
+	var relay := OS.get_environment("DTV_RELAY")
+	Settings.relay = relay
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_code.txt"))
 	var why: String = Net.me.host("Hosty", 0)
 	ok("hosting starts", why == "" and Net.me.is_host(), why)
 	await frames(3)
 	ok("the lobby shows", m.win.is_open("lobby"))
-	ok("a code for the same network", Net.me.lan_code.length() == 8, Net.me.lan_code)
-	ok("the code reads back as this computer's address", Net.decode(Net.me.lan_code) == Net.local_ip(), [Net.decode(Net.me.lan_code), Net.local_ip()])
+	if relay != "":
+		var got := await wait_for(func(): return Net.me.code.length() == 5, 10.0)
+		ok("the village server gives the village a code", got and Net.me.via_relay, Net.me.code)
+		var f := FileAccess.open("user://test_code.txt", FileAccess.WRITE)
+		f.store_string(Net.me.code)
+		f.close()
+	else:
+		ok("a code for the same network", Net.me.lan_code.length() == 8, Net.me.lan_code)
+		ok("the code reads back as this computer's address", Net.decode(Net.me.lan_code) == Net.local_ip(), [Net.decode(Net.me.lan_code), Net.local_ip()])
 	var joined := await wait_for(func(): return Net.me.lobby.size() == 2 and Net.me.lobby[1].name == "Joiny", 25.0)
 	ok("a friend joins, with their name and colour", joined and Net.me.lobby[1].col == 3, Net.me.lobby)
 	m.begin(null)
