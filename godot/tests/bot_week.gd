@@ -138,7 +138,7 @@ func fight() -> Dictionary:
 				bd = dd; bu = u
 		var tx := bu.x if bu else 0.0
 		var tz := bu.z if bu else -19.0
-		if bu and R.wall_between(m.x, m.z, bu.x, bu.z):   # go round by the gate
+		if bu and absf(bu.z - D.VN) > 0.8 and R.wall_between(m.x, m.z, bu.x, bu.z):   # go round by the gate (one standing in a gap in the wall can be walked up to)
 			var out := m.z > -22
 			if absf(m.x) > 1.6:
 				tx = 0; tz = -20.4 if out else -24.0
@@ -148,6 +148,14 @@ func fight() -> Dictionary:
 		var dz := tz - m.z
 		var far := Vector2(dx, dz).length() > (1.7 if bu and tx == bu.x else 0.5)
 		keys.right = far and dx > 0.3; keys.left = far and dx < -0.3; keys.down = far and dz > 0.3; keys.up = far and dz < -0.3
+		# walking into the end of a wall and getting nowhere: step back into the village and come at it again
+		if far and Vector2(m.x - st.get("px", 0.0), m.z - st.get("pz", 0.0)).length() < 0.02: st.still = st.get("still", 0.0) + STEP
+		else: st.still = 0.0
+		st.px = m.x; st.pz = m.z
+		if st.still > 0.8: st.dodge = 0.7
+		if st.get("dodge", 0.0) > 0:
+			st.dodge -= STEP
+			keys.down = m.z < 0; keys.up = m.z >= 0
 		return null)
 	keys.clear()
 	return st

@@ -2449,8 +2449,9 @@ func undead_goal(u: E.Undead) -> Vector2:
 		return Vector2(clampf(u.lane * 0.3, -D.KEEP_H + 0.6, D.KEEP_H - 0.6), -D.KEEP_H - 0.2)
 	if u.side != 0 and not D.inside_village(u.x, u.z):   # the Captain's guard: round to a side gateway
 		var sx := float(u.side)
+		if absf(u.z - D.GATE_Z) <= 1.4 and signf(u.x) == sx and absf(u.x) > D.VW - 1: return Vector2(sx * (D.VW - 3), D.GATE_Z)   # level with the gateway: in
 		if absf(u.x) < D.VW + 3.5 or signf(u.x) != sx: return Vector2(sx * (D.VW + 5.5), minf(u.z + 4, D.GATE_Z))
-		return Vector2(sx * (D.VW + 4.5), D.GATE_Z) if absf(u.z - D.GATE_Z) > 1.4 else Vector2(sx * (D.VW - 3), D.GATE_Z)
+		return Vector2(sx * (D.VW + 4.5), D.GATE_Z)
 	if u.z < D.VN - 0.3:                          # outside, to the north: look for a way through the wall
 		if U.ram or U.hearse: return Vector2(u.lane, D.VN + 2.5)   # straight down the road at the gate
 		u.gt -= 1
@@ -2717,7 +2718,8 @@ func undead_step(dt: float) -> void:
 		if u.lt >= 3.0:                               # walking for three seconds and nowhere to show for it: wedged in a corner. Shuffle sideways.
 			if D.d2(u.x, u.z, u.lx, u.lz) < 0.3:
 				var a := randf() * TAU
-				nx = u.x + cos(a) * 1.4; nz = u.z + sin(a) * 1.4
+				if blocking_struct(u.x + cos(a) * 1.4, u.z + sin(a) * 1.4, U.r) == null:
+					nx = u.x + cos(a) * 1.4; nz = u.z + sin(a) * 1.4
 			u.lt = 0.0; u.lx = u.x; u.lz = u.z
 		u.x = nx
 		var nc := near_colliders(nx, nz)

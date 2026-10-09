@@ -305,6 +305,16 @@ The web version is no longer updated; from here on, changes are made in Godot on
   - Shared defences are stouter with company (`Rules.stout()`, the square root of the number of players): a blow from the dead does that much less to a wall, gate, barricade or the keep. Seven foundations and one keep were taking eight hordes' worth of blows.
   - The Steward has 800 health (was 520): a lone player's posse was putting him down in about five seconds.
   - Gravediggers come up on the green (they could surface wedged between Robert Bailiff's and the inn, and the night never ended), and any of the dead that walks for three seconds without getting anywhere shuffles sideways.
-- Not changed: each extra player still adds a whole solo horde, and three or more players still start with three followers each. The test players hold nights 4 and 7 as one or two, and lose them as four or eight; but test players do not repair, build or work together, and four real players found the first week too gentle at the old growth. To make big games gentler, lower `D.NIGHT_PER_PLAYER` (0.8 would be the next thing to try) or raise `D.POSSE_MAX`.
-- The bot can play the month (`bot_week.gd -- month`): after the first week it also mends the keep, bands the gate, sits holy studies and forges steel.
-- Tests: new `tests/letters_test.gd` (22). Month 48 (seven new, for the cap, the pair's posse, stout walls and the Steward). Rules 117, Holy Book 32, merchants 38, contraptions 21, village 11, smithy 18, UI 31, clicks 14, co-op 23.
+- Not changed: each extra player still adds a whole solo horde, and three or more players still start with three followers each. The test players hold night 7 as one or two and lose it as four or eight; but test players do not repair, build or work together, and four real players found the first week too gentle at the old growth. To make big games gentler, lower `D.NIGHT_PER_PLAYER` (0.8 would be the next thing to try) or raise `D.POSSE_MAX`.
+- **The Captain of the Guard was not getting in.** Two nights in three he picks a side gateway, and his party then dithered outside it for ever (the rule that sends them round the corner kept pulling them back from the gateway itself). Fixed in `Rules.undead_goal`; `month_test` now marches him in by both gateways.
+- The bot can play the month (`bot_week.gd -- month`): after the first week it also mends the keep, bands the gate, sits holy studies and forges steel. Three runs alone: it holds the first week with nobody lost, loses followers and walls through the second (ghouls, gravediggers, bats), and falls on night 13 or 14, twice to the Coachman. It uses no contraptions, guards, mercenaries or barricades, so a person should do better; but weeks 3 and 4 have still not been played by anything.
+- The measuring tool's last run (held or lost; nobody repairs, so later nights are harsh on everyone):
+
+  | Night | 1 player | 2 | 4 | 8 |
+  |---|---|---|---|---|
+  | 1 | held | held | held | held |
+  | 4 | held | held | held | held |
+  | 7 (the Steward) | held | held | lost | lost |
+  | 14 (the Coachman) | held | lost | lost | lost |
+  | 21 (the Captain; steel and blessed weapons) | held | held | held | held |
+- Tests: new `tests/letters_test.gd` (22). Month 50 (nine new, for the cap, the pair's posse, stout walls, the Steward and the Captain's march). Rules 117, Holy Book 32, merchants 38, contraptions 21, village 11, smithy 18, UI 31, clicks 14, co-op 23.

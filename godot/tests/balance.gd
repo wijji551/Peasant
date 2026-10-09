@@ -84,7 +84,7 @@ func run(d: int, n: int) -> String:
 					bd = dd; bu = u
 			var tx := bu.x if bu else (i - (n - 1) / 2.0) * 3.0
 			var tz := bu.z if bu else -19.0
-			if bu and R.wall_between(m.x, m.z, bu.x, bu.z):   # go round by the gate
+			if bu and absf(bu.z - D.VN) > 0.8 and R.wall_between(m.x, m.z, bu.x, bu.z):   # go round by the gate (one standing in a gap in the wall can be walked up to)
 				var out := m.z > -22
 				if absf(m.x) > 1.6:
 					tx = 0; tz = -20.4 if out else -24.0

@@ -261,6 +261,26 @@ func _init() -> void:
 	var sv := R.save_data()
 	ok("the length of the game is saved", sv.last == 7)
 
+	# ---------- the Captain's party gets in by a side gateway (it used to dither outside it)
+	for side in [-1, 1]:
+		var C := Rules.new()
+		C.new_game([{"id": 1, "name": "Matt", "col": 0}])
+		for s in C.structs:
+			if s.slot >= 0:
+				s.built = true; s.hp = s.mhp
+		C.day = 21; C.weather = "clear"; C.dusk_falls(); C.timeLeft = 0.01; C.step(STEP)
+		C.night.q = []; C.night.boss = -1; C.undead.clear()
+		C.players[0].state = "hide"
+		for q in C.peasants: q.state = "gone"
+		C.spawn_boss(D.U_CAPTAIN)
+		for u in C.undead:
+			u.side = side; u.state = "walk"; u.t = 0
+		var cap: E.Undead = C.boss
+		var tt := 0.0
+		while tt < 100 and not D.inside_village(cap.x, cap.z):
+			C.step(STEP); C.ev.clear(); tt += STEP
+		ok("the Captain marches in by the %s gateway" % ("west" if side < 0 else "east"), D.inside_village(cap.x, cap.z) and absf(cap.z - D.GATE_Z) < 6, [cap.x, cap.z, tt])
+
 	# ---------- one to eight players
 	var heads := func(d: int, n: int) -> int:
 		var t := 0
