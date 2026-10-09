@@ -1,6 +1,6 @@
 extends RefCounted
 ## What goes in the window: the home screen, the handbook (guide, controls, options), a place's notice,
-## your pack, the dawn notice, and the end of the week. main.gd says which; this fills it in.
+## your backpack, the dawn notice, and the end of the week. main.gd says which; this fills it in.
 
 const GUIDE := [
 	["The short version", ["By day, gather and build. At dusk the bell rings. At night the dead rise along the graveyard to the north, one after another without a pause and faster as the night goes on, and make for the keep, where the families are hiding. If the keep falls, Thornhallow is lost. Hold for seven nights.", "Nearly everything is done by walking up to it and holding {interact}."]],
@@ -8,12 +8,26 @@ const GUIDE := [
 	["Defences", ["The north wall has seven foundations: six walls and a gate. Stand on one and hold {interact}. Barricades and spike rows go anywhere: press {build} or 1 to 4 (or click one, bottom right), then {interact} or click.", "Hold {interact} at a damaged defence to repair it with wood. Carrying stone or iron, hold {interact} again to face a wall with stone, band the gate or brace a barricade. An unbraced barricade rots by half every evening after its first night.", "Nobody can be hit through a standing wall or gate, in either direction. Go out through the gate, or shoot over."]],
 	["Your posse", ["Hold {interact} beside a neighbour to rally them. They gather when you gather and fight when you fight. The slum has more, for food. The smithy gives them spears.", "They can die, and they have nerve: when friends fall they may run for the keep until dawn. {toilet} is the emergency toilet break, which sends the dead nearby running. With rank 3 of the leadership book, {orders} tells them to follow, hold or charge."]],
 	["Fighting", ["{attack} or a click attacks. {trick} or a right-click is your weapon’s own trick: every weapon has a different one, with a short wait between uses. {eat} eats one food.", "Knocked down, you have 15 seconds for a team-mate to hold {interact} over you. After that a relative takes over your cottage at dawn, with your books but not your gear. Relics lie where you fell.", "From dusk you can hide in your own cottage. It is safe, and the village will call you a coward until the next dusk."]],
-	["Things you carry", ["{pack} opens your pack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the pack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
-	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. The smithy: weapons, armour, spears for the posse. The storehouse: shared materials and a shared arms rack. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
-	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the Steward when he comes. Top right: the map. Left: what you carry, and your books. Bottom: your hand, bucket, posse, pack and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your pack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
+	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
+	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: shared materials and a shared arms rack. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
+	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the Steward when he comes. Top right: the map. Left: what you carry. Bottom: your hand, bucket, posse, backpack, skills and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your backpack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
 ]
 
 const CHANGES := [
+	["Godot: the look of the place", [
+		"Proper medieval lettering, and every card and button is now torn parchment, like the scroll.",
+		"What you carry says what it is, with pictures that look like wood, stone, iron, food and coin.",
+		"Your pack is now your Backpack. It was always a backpack. It feels better for the name.",
+		"The books have moved to a Skills window (K): each book is a ladder of seven ranks showing what every rank does and how near the next one is. Past rank VII, extra learning becomes spare points you can sell for coin.",
+		"The game opens in a bigger window, and the home screen is smaller.",
+		"Fixed: a notice after the home screen sat off to the right and down. Fixed: trees outside the hedge showed on the map.",
+		"Bailiff’s House and the Thorny Rose Inn, by their proper names. The chapel looks like a chapel: a bell tower, a spire, coloured windows. The priest wears white and gold and is, frankly, glowing.",
+		"The haybales are haybales, not tents.",
+		"The two outer ruins wander off to a new clearing every night, and nobody is told where. Find one and it goes on the map for everyone.",
+		"Mist creeps over the ground at night and never quite leaves the castle. Some days it rains, some are grey, some misty. Chimneys smoke.",
+		"Ashhollow is haunted now: dead trees, a gibbet, green fires at the gate, purple windows, will-o’-wisps, crows, and lightning at night.",
+		"Smoother edges (anti-aliasing).",
+	]],
 	["Godot: stage 3, patched", [
 		"Clicking the mouse no longer crashes the game. It asked the old readouts whether a notice was open, and they had been thrown out. They did not answer, and the game took it badly.",
 	]],
@@ -45,7 +59,7 @@ func _init(main_, window_) -> void:
 
 # ---------------------------------------------------------------- home
 func home() -> void:
-	var b: VBoxContainer = w.open("home", "Defend the Village!", "", 1000, 660, false, false)
+	var b: VBoxContainer = w.open("home", "Defend the Village!", "", 800, 510, false, false)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 26)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -89,12 +103,12 @@ func home() -> void:
 	var co := Look.para(left, "Playing together comes back in the last stage of the move to Godot. Until then, co-op is in the web version.", 13, Look.INK_SOFT)
 	co.custom_minimum_size.x = 300
 	w.foot_button("Handbook: guide, controls, options", func(): menu("guide"))
-	w.hint("%s move · %s or click attacks · %s or right-click: your weapon’s trick · hold %s to do things · Esc: the handbook" % [
-		" ".join(["up", "left", "down", "right"].map(func(a): return Keys.name(a))), Keys.name("attack"), Keys.name("trick"), Keys.name("interact")])
+	w.hint("%s move · %s attacks · hold %s to do things · Esc: the handbook" % [
+		" ".join(["up", "left", "down", "right"].map(func(a): return Keys.name(a))), Keys.name("attack"), Keys.name("interact")])
 	# the change log
 	var right := PanelContainer.new()
 	right.add_theme_stylebox_override("panel", Look.card(Color("f3e2b0"), Color(Look.OUTLINE, 0.5), 12))
-	right.custom_minimum_size.x = 380
+	right.custom_minimum_size.x = 300
 	cols.add_child(right)
 	var rs := ScrollContainer.new()
 	rs.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -119,7 +133,8 @@ func _big(parent: Control, text: String, cb: Callable, primary: bool) -> Button:
 	b.add_theme_font_size_override("font_size", 19)
 	if primary:
 		b.add_theme_stylebox_override("normal", w._primary())
-		b.add_theme_stylebox_override("hover", w._primary())
+		b.add_theme_stylebox_override("hover", Look.primary_hover())
+		b.add_theme_stylebox_override("pressed", Look.primary_hover())
 		b.add_theme_color_override("font_color", Color("fbeec2"))
 		b.add_theme_color_override("font_hover_color", Color.WHITE)
 	b.pressed.connect(cb)
@@ -155,7 +170,7 @@ func menu(tab: String = "") -> void:
 				c.pressed.connect(func(): rebinding = "" if rebinding == act else act; bind_msg = ""; menu())
 				grid.add_child(c)
 			w.para(bind_msg if bind_msg != "" else "Choose Change, then press the key you want. A key does one thing: whatever had it before is left without.", 14, Look.INK_SOFT)
-			w.para("Fixed: a click attacks and a right-click is your weapon’s trick. The numbers pick from a notice, your pack, or the things to place. Esc closes whatever is open, and otherwise opens this handbook.", 14, Look.INK_SOFT)
+			w.para("Fixed: a click attacks and a right-click is your weapon’s trick. The numbers pick from a notice, your backpack, or the things to place. Esc closes whatever is open, and otherwise opens this handbook.", 14, Look.INK_SOFT)
 			var r := Button.new(); r.text = "Back to the usual keys"; r.focus_mode = Control.FOCUS_NONE
 			r.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			r.pressed.connect(func(): Keys.reset(); rebinding = ""; bind_msg = "The usual keys are back."; menu())
@@ -204,7 +219,7 @@ func take_key(k: int) -> void:
 	if k == KEY_ESCAPE:
 		bind_msg = "Left as it was."
 	elif k >= KEY_0 and k <= KEY_9:
-		bind_msg = "The numbers are kept for notices, the pack and the things to place."
+		bind_msg = "The numbers are kept for notices, the backpack and the things to place."
 	else:
 		var had := Keys.action_of(k)
 		Keys.set_bind(a, k)
@@ -239,7 +254,7 @@ func notice(id: String, page: String, force: bool = false) -> void:
 	w.hint("Press the number, or click." + ("" if m.me.state == "inn" else " Walk away or press Esc to close."))
 
 
-# ---------------------------------------------------------------- your pack, as slots
+# ---------------------------------------------------------------- your backpack, as slots
 var _pack_sig := ""
 var _info: Label
 
@@ -250,7 +265,7 @@ func pack(force: bool = false) -> void:
 		return
 	_pack_sig = sig
 	var W: Dictionary = D.IT[p.wpn]
-	w.open("pack", "Your pack", "In your hand: %s. {trick}: %s, %s." % [W.n, D.AB[W.ab].n, D.AB[W.ab].d], 640, 560, true, false)
+	w.open("pack", "Your backpack", "In your hand: %s. {trick}: %s, %s." % [W.n, D.AB[W.ab].n, D.AB[W.ab].d], 640, 560, true, false)
 	w.head("On you")
 	var on := HBoxContainer.new()
 	on.add_theme_constant_override("separation", 8)
@@ -262,7 +277,7 @@ func pack(force: bool = false) -> void:
 		var blessed: bool = (k == "wpn" and p.bless & 1) or (k == "trk" and p.bless & 2)
 		var slot: String = k
 		_slot(on, id if has_it else -1, Notices.SLOTN[k], "", tip, blessed, func(): m.inv_do("uneq", slot), Callable())
-	w.head("In your pack (%d of %d)" % [p.inv.size(), D.PACK_MAX])
+	w.head("In your backpack (%d of %d)" % [p.inv.size(), D.PACK_MAX])
 	var inv := HBoxContainer.new()
 	inv.add_theme_constant_override("separation", 8)
 	w.body.add_child(inv)
@@ -293,6 +308,127 @@ func pack(force: bool = false) -> void:
 	w.hint("1 to 6: use it. {swap}: next weapon, without opening this. {pack} or Esc: close. Spare arms can go on the rack in the storehouse.")
 
 
+# ---------------------------------------------------------------- skills: each book as a ladder of seven ranks
+var skill_book := -1
+var _skills_sig := ""
+const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII"]
+
+func skills(force: bool = false) -> void:
+	var p: E.Player = m.me
+	var owned: Array = []
+	for i in 10:
+		if p.books[i] > 0: owned.append(i)
+	if skill_book < 0 or not owned.has(skill_book):
+		skill_book = owned[0] if owned.size() else -1
+	var sig := str(p.books) + str(p.xp.map(func(x): return floori(x))) + str(floori(p.spare)) + str(skill_book) + str(p.coward)
+	if not force and w.is_open("skills") and sig == _skills_sig:
+		return
+	_skills_sig = sig
+	var slots := Rules.book_slots(p)
+	w.open("skills", "Your skills", "Every book is learned by doing what it teaches, and each rank takes more practice than the last." + (" You can take %s more from the library." % ("one" if slots == 1 else str(slots)) if slots > 0 else ""), 940, 640, true, true)
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 18)
+	w.body.add_child(cols)
+	# left: the ten books
+	var left := VBoxContainer.new()
+	left.custom_minimum_size.x = 270
+	left.add_theme_constant_override("separation", 4)
+	cols.add_child(left)
+	for i in 10:
+		var bk: Dictionary = D.BOOKS[i]
+		var bt := Button.new()
+		bt.focus_mode = Control.FOCUS_NONE
+		bt.toggle_mode = true
+		bt.button_pressed = i == skill_book
+		bt.disabled = p.books[i] == 0
+		bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		bt.text = ("%s   %s" % [ROMAN[p.books[i]], bk.what]) if p.books[i] else "—   " + bk.what
+		bt.tooltip_text = bk.name if p.books[i] else bk.name + ". In the library."
+		bt.add_theme_font_size_override("font_size", 16)
+		var bi := i
+		bt.pressed.connect(func(): skill_book = bi; skills.call_deferred(true))
+		left.add_child(bt)
+	# right: the chosen book's ranks
+	var right := VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.add_theme_constant_override("separation", 0)
+	cols.add_child(right)
+	if skill_book < 0:
+		Look.para(right, "No book yet. The library has one waiting for you: walk in and hold {interact}.".replace("{interact}", Keys.name("interact")), 18, Look.INK_SOFT)
+	else:
+		var b := skill_book
+		var bk: Dictionary = D.BOOKS[b]
+		var rank: int = p.books[b]
+		Look.label(right, bk.name, 26, Look.INK, true)
+		Look.para(right, "%s. You learn it by %s.%s" % [bk.what, bk.by, " Halved while you are a coward." if p.coward else ""], 15, Look.INK_SOFT)
+		var gap := Control.new(); gap.custom_minimum_size.y = 8; right.add_child(gap)
+		for r in range(1, 8):
+			var got := rank >= r
+			var next := rank + 1 == r
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 12)
+			right.add_child(row)
+			var med := PanelContainer.new()
+			var ms := StyleBoxFlat.new()
+			ms.bg_color = Look.GOLD if got else Color("efe0b6") if next else Color("e2d3aa")
+			ms.border_color = Look.OUTLINE if got or next else Color(Look.OUTLINE, 0.35)
+			ms.set_border_width_all(2)
+			ms.set_corner_radius_all(20)
+			med.add_theme_stylebox_override("panel", ms)
+			med.custom_minimum_size = Vector2(40, 40)
+			med.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			row.add_child(med)
+			var num := Look.label(med, ROMAN[r], 17, Look.INK if got or next else Color(Look.INK, 0.4))
+			num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			var tv := VBoxContainer.new()
+			tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			tv.add_theme_constant_override("separation", 1)
+			row.add_child(tv)
+			var t := Look.para(tv, Keys.fill(bk.ranks[r - 1]), 16, Look.INK if got else Look.INK_SOFT if next else Color(Look.INK_SOFT, 0.6))
+			if next:
+				var lo := Rules.need_xp(b, rank - 1) if rank > 1 else 0
+				var hi := Rules.need_xp(b, rank)
+				var f := clampf((p.xp[b] - lo) / float(hi - lo), 0, 1)
+				var bar := ProgressBar.new()
+				bar.custom_minimum_size = Vector2(0, 8)
+				bar.show_percentage = false
+				bar.max_value = 1.0
+				bar.value = f
+				var bg := StyleBoxFlat.new(); bg.bg_color = Color("3a2d22"); bg.set_corner_radius_all(3)
+				var fg := StyleBoxFlat.new(); fg.bg_color = Look.GOLD; fg.set_corner_radius_all(3)
+				bar.add_theme_stylebox_override("background", bg)
+				bar.add_theme_stylebox_override("fill", fg)
+				tv.add_child(bar)
+				Look.label(tv, "Next rank: %d%% of the way" % roundi(f * 100), 13, Look.RUST)
+			if r < 7:                                              # the line joining one rank to the next
+				var link := HBoxContainer.new()
+				right.add_child(link)
+				var stem := ColorRect.new()
+				stem.color = Look.GOLD if rank > r else Color(Look.OUTLINE, 0.3)
+				stem.custom_minimum_size = Vector2(4, 10)
+				var pad := Control.new(); pad.custom_minimum_size.x = 18
+				link.add_child(pad); link.add_child(stem)
+		if rank >= 7:
+			var done := Look.para(right, "Mastered. What you learn from this book now is spare.", 15, Look.RUST)
+			done.custom_minimum_size.y = 26
+	# spare learning, sold for coin
+	w.head("Spare learning")
+	var sp := floori(p.spare)
+	var srow := HBoxContainer.new()
+	srow.add_theme_constant_override("separation", 14)
+	w.body.add_child(srow)
+	var st := Look.para(srow, ("%d spare point%s, worth %s." % [sp, "" if sp == 1 else "s", D.coins(sp * D.SPARE_PAY)]) if sp > 0 else "When a book reaches rank VII, whatever more you learn from it is kept here as spare points, and sold for %s each." % D.coins(D.SPARE_PAY), 15, Look.INK_SOFT)
+	st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sell := Button.new()
+	sell.text = "Sell for coin"
+	sell.disabled = sp <= 0
+	sell.focus_mode = Control.FOCUS_NONE
+	sell.pressed.connect(func(): m.sell_spare())
+	srow.add_child(sell)
+	w.hint("{skills} or Esc: close.")
+
+
 func _slot(parent: Control, id: int, label: String, num: String, tip: String, blessed: bool, cb: Callable, drop: Callable, locked: bool = false) -> void:
 	var box := Control.new()
 	box.custom_minimum_size = Vector2(88, 96)
@@ -301,11 +437,11 @@ func _slot(parent: Control, id: int, label: String, num: String, tip: String, bl
 	b.set_anchors_preset(Control.PRESET_FULL_RECT)
 	b.focus_mode = Control.FOCUS_NONE
 	b.disabled = id < 0
-	var st := Look.card(Color("fff6dc") if id >= 0 else Color(Look.PAPER, 0.4), Look.OUTLINE if id >= 0 else Color(Look.OUTLINE, 0.3), 4)
-	st.shadow_size = 0
+	var st := Look.card(Color("fff6dc") if id >= 0 else Color("e2cf9c"), Look.OUTLINE if id >= 0 else Color("8a7556"), 4)
+	if id < 0: b.self_modulate = Color(1, 1, 1, 0.6)
 	b.add_theme_stylebox_override("normal", st)
 	b.add_theme_stylebox_override("disabled", st)
-	var hv := Look.card(Color("fffbe9"), Look.ROSE, 4); hv.shadow_size = 0
+	var hv := Look.card(Color("fffbe9"), Look.ROSE, 4)
 	b.add_theme_stylebox_override("hover", hv)
 	b.add_theme_stylebox_override("pressed", hv)
 	box.add_child(b)

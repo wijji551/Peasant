@@ -19,6 +19,7 @@ var store := {"wood": 0, "stone": 0, "iron": 0, "food": 0}
 var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
 var spots: Array = [0, 0, 0, 0, 0, 0, 0, 0]   # searches left in each heap of rubble
+var ruins_seen: Array = [true, false, false]   # has anyone found the outer ruins today? Until then the map and the signs keep quiet
 var sites: Array = [0, 0, 0]
 var gseed := 1
 var ale := 0
@@ -202,12 +203,29 @@ static func repair_cost(p: E.Player, s: E.Struct) -> Dictionary:
 	return {"wood": ceili(n / 2.0) if rk(p, 2) >= 2 else n}
 
 func add_xp(p: E.Player, b: int, n: float) -> void:
-	if not p.books[b] or p.books[b] >= 7:
+	if not p.books[b]:
 		return
-	p.xp[b] += n * 0.5 if p.coward else n
+	n = n * 0.5 if p.coward else n
+	if p.books[b] >= 7:                           # the book is mastered: what is learned now is spare, to be sold
+		var before := floori(p.spare)
+		p.spare += n / float(D.BOOKS[b].base)
+		if floori(p.spare) > before and before == 0:
+			say("%s has learned more than %s can teach. Spare learning can be sold for coin in the skills window." % [p.dn, D.BOOKS[b].name])
+		return
+	p.xp[b] += n
 	while p.books[b] < 7 and p.xp[b] >= need_xp(b, p.books[b]):
 		p.books[b] += 1
 		say("%s has reached rank %d of %s." % [p.dn, p.books[b], D.BOOKS[b].name])
+
+
+## Sell whole spare points of learning for coin. Returns the pence paid.
+func sell_spare(p: E.Player) -> int:
+	var n := floori(p.spare)
+	if n <= 0:
+		return 0
+	p.spare -= n
+	p.coin += n * D.SPARE_PAY
+	return n * D.SPARE_PAY
 
 
 func mk_player(id: int, name: String, col: int, slot: int) -> E.Player:
@@ -280,6 +298,7 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	set_sites(sites)
 	for i in spots.size():
 		spots[i] = D.SEARCHES
+	ruins_seen = [true, false, false]
 	ale = 0; innHp = D.INN_HP
 	for e in drops:
 		push_out(e, 0.7, QUARRY); push_out(e, 0.7, MINEC)
@@ -292,7 +311,7 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 
 func site_line() -> String:
 	return "Today the stone is %s, the iron %s, and the fish are biting %s." % [D.SITES[0][sites[0]].n, D.SITES[1][sites[1]].n, D.SITES[2][sites[2]].n] \
-		+ (" The outer ruins have fallen down differently." if day > 1 else "")
+		+ (" The outer ruins have wandered off again in the night, as ruins do. Nobody knows where." if day > 1 else " Somewhere out there are two older ruins. Nobody remembers where.")
 
 func start_day(lines: Array) -> void:
 	phase = "day"; timeLeft = D.DAY_LEN; undead = []; boss = null; night = null; left = 0; wave = 0; rage = 1.0
@@ -304,7 +323,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths"]
+const P_SAVE := ["name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -507,7 +526,7 @@ func find_interact(p: E.Player):
 	if best:
 		var full: bool = p.inv.size() >= D.PACK_MAX and not wears_now(p, best.it)
 		return {"type": "pick", "target": best, "key": "d%d" % best.id, "ok": not full, "dur": 0.4, "x": best.x, "z": best.z, "rad": 0.7,
-			"label": "Your pack is full ({pack} opens it)" if full else "Hold {interact} to pick up " + D.it_a(best.it)}
+			"label": "Your backpack is full ({pack} opens it)" if full else "Hold {interact} to pick up " + D.it_a(best.it)}
 	best = null; bd = 8.0
 	for q in peasants:
 		if q.state == "idle":
@@ -679,7 +698,7 @@ func wear(p: E.Player, id: int) -> void:
 	if old > 0:
 		stow(p, old)
 
-static func wears_now(p: E.Player, id: int) -> bool:   # would go straight on, not into the pack
+static func wears_now(p: E.Player, id: int) -> bool:   # would go straight on, not into the backpack
 	var k: String = D.SLOTK[D.IT[id].s]
 	return can_use(p, id) and (p.wpn == 0 if k == "wpn" else p.get(k) < 0)
 
@@ -1125,7 +1144,7 @@ func leave_inn(p: E.Player, charging: bool) -> void:
 			q.state = "follow"; q.x = p.x + rnd2(0.4, 2); q.z = p.z + rnd2(-2, 2)
 			if charging: q.nv = 100
 	if charging:
-		p.cg = 0; p.charge = charge_len(p); ev.append(["burst", r1(p.x), r1(p.z)]); say("%s bursts out of the Thorny Rose, full of Dutch courage." % p.dn)
+		p.cg = 0; p.charge = charge_len(p); ev.append(["burst", r1(p.x), r1(p.z)]); say("%s bursts out of the Thorny Rose Inn, full of Dutch courage." % p.dn)
 
 func near_station(p: E.Player, id: String) -> bool:
 	var st := D.station(id)
@@ -1232,7 +1251,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				for q in peasants:
 					if q.owner == p.id and (q.state == "follow" or q.state == "fight" or q.state == "chop"):
 						q.state = "inn"; q.tree = null
-				say("%s has gone into the Thorny Rose and barred the door." % p.dn)
+				say("%s has gone into the Thorny Rose Inn and barred the door." % p.dn)
 		"study":
 			if near_station(p, "priest") and p.holy < 2:
 				p.study = not p.study
@@ -1251,6 +1270,15 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 
 # --- one step of the world
 func step(dt: float) -> void:
+	if not (ruins_seen[1] and ruins_seen[2]):             # anyone who comes near an outer ruin finds it, for everyone
+		var cs: Array = Map.ruin_layout(gseed, day).centres
+		for p in players:
+			if p.state != "ok": continue
+			for k in [1, 2]:
+				if not ruins_seen[k] and D.d2(p.x, p.z, cs[k].x, cs[k].z) < 18 * 18:
+					ruins_seen[k] = true
+					ev.append(["ruin", k])
+					say("%s has found one of the outer ruins." % p.dn)
 	if phase == "day":
 		nf = maxf(0, nf - dt / 6); timeLeft -= dt
 		if timeLeft <= 0 or (players.size() and players.all(func(p): return p.ready)):
@@ -1807,7 +1835,7 @@ func undead_step(dt: float) -> void:
 			if u.cd <= 0:
 				u.cd = U.cd; u.ac += 1; innHp -= U.sdmg; ev.append(["build", r1(D.INN.dx - 0.8), r1(D.INN.dz)])
 				if innHp <= 0:
-					innHp = 0; say("The dead have broken into the Thorny Rose. Drinking-up time.")
+					innHp = 0; say("The dead have broken into the Thorny Rose Inn. Drinking-up time.")
 					for p in players: leave_inn(p, p.cg >= 100)
 			continue
 		if tgt == null and not door and (u.k != 3 or u.march) and in_box(u.x, u.z, U.r + 0.45, keep_box):

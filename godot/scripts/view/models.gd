@@ -205,12 +205,21 @@ static func _build(name: String, b: Mesher) -> void:
 			b.cyl(0.22, 0.3, 1.5, 5, 0, 0, 0, P.trunk).ico(1.35, 0, 2.4, 0, P.leaf2, 0.85).ico(0.85, 0.7, 3.2, 0.25, P.leaf2, 0.9)
 		"stump":
 			b.cyl(0.24, 0.32, 0.34, 6, 0, 0, 0, P.trunk).cyl(0.2, 0.2, 0.03, 6, 0, 0.34, 0, 0xcaa972)
-		"priest":                                            # the priest, in black, outside his chapel
-			b.box(0.2, 0.46, 0.22, -0.14, 0, 0, 0x1d1a20).box(0.2, 0.46, 0.22, 0.14, 0, 0, 0x1d1a20)
-			b.box(0.7, 0.9, 0.46, 0, 0.3, 0, 0x2a2630).box(0.17, 0.5, 0.2, -0.42, 0.62, 0, 0x2a2630).box(0.17, 0.5, 0.2, 0.42, 0.62, 0, 0x2a2630)
-			b.box(0.2, 0.08, 0.05, 0, 1.12, 0.23, 0xf0ece0)
-			b.box(0.42, 0.4, 0.4, 0, 1.2, 0.02, P.skin).box(0.44, 0.12, 0.44, 0, 1.6, 0, 0x2a2630)
-			b.box(0.05, 0.3, 0.04, 0, 0.75, 0.25, 0xd8b040).box(0.18, 0.05, 0.04, 0, 0.85, 0.25, 0xd8b040)
+		"priest":                                            # the priest: white robes, a gold-edged vestment, a cross, a book
+			b.cyl(0.34, 0.48, 1.0, 8, 0, 0, 0, 0xf4f0e4)                                   # the long white alb, to the ground
+			b.box(0.74, 0.7, 0.46, 0, 0.5, 0, 0xfbf6e8)                                     # the vestment over it
+			b.box(0.76, 0.06, 0.48, 0, 0.5, 0, 0xd8b040).box(0.76, 0.06, 0.48, 0, 1.14, 0, 0xd8b040)   # gold hems
+			b.box(0.1, 0.62, 0.04, 0, 0.52, 0.245, 0xd8b040).box(0.36, 0.1, 0.04, 0, 0.86, 0.245, 0xd8b040)  # the cross on his front
+			b.box(0.07, 0.95, 0.03, -0.24, 0.2, 0.235, 0x7a2a8c).box(0.07, 0.95, 0.03, 0.24, 0.2, 0.235, 0x7a2a8c)  # the purple stole
+			b.box(0.17, 0.52, 0.2, -0.43, 0.66, 0, 0xfbf6e8).box(0.17, 0.52, 0.2, 0.43, 0.66, 0, 0xfbf6e8)  # sleeves
+			b.box(0.16, 0.12, 0.18, -0.43, 0.6, 0.04, P.skin).box(0.16, 0.12, 0.18, 0.43, 0.6, 0.04, P.skin)  # hands
+			b.box(0.3, 0.1, 0.46, 0, 1.18, 0, 0x7a2a8c)                                       # the collar
+			b.box(0.42, 0.42, 0.4, 0, 1.22, 0.02, P.skin).box(0.1, 0.1, 0.06, 0, 1.34, 0.24, 0xd9a279)
+			b.box(0.46, 0.14, 0.44, 0, 1.46, 0.0, 0xc9c4ba)                                   # a grey fringe round a bald crown
+			b.box(0.3, 0.05, 0.24, 0, 1.6, 0.0, P.skin)
+			b.box(0.06, 2.3, 0.06, 0.5, 0, 0.16, 0x6b4a2f)                                     # the processional cross
+			b.box(0.08, 0.5, 0.08, 0.5, 2.2, 0.16, 0xe2b54a).box(0.34, 0.08, 0.08, 0.5, 2.48, 0.16, 0xe2b54a)
+			b.box(0.34, 0.06, 0.26, -0.45, 0.7, 0.22, 0x7a1e18).box(0.3, 0.04, 0.22, -0.45, 0.76, 0.22, 0xf3e8c8)  # his book
 
 
 ## Where an item hangs on a peasant: the slot it is worn in decides.

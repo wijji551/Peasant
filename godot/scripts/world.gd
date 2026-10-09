@@ -40,6 +40,12 @@ var keep_window_mat: StandardMaterial3D
 var _keep_mats: Array[StandardMaterial3D] = []
 var _keep_alpha := 1.0
 
+## The haunted ground round the castle: green fires and windows that glow at night (atmos.gd turns them up).
+var haunt_lights: Array[OmniLight3D] = []
+var haunt_mat: StandardMaterial3D
+## The tops of the chimneys, for atmos.gd's smoke.
+var chimneys: Array[Vector3] = []
+
 var _log_xf: Array[Transform3D] = []
 var _log_col: Array[Color] = []
 
@@ -53,6 +59,7 @@ func _ready() -> void:
 	window_mat.emission_energy_multiplier = 0.0
 	_ground()
 	_castle()
+	_haunted()
 	_graveyard_and_edges()
 	_walls()
 	_keep()
@@ -134,6 +141,91 @@ func _castle() -> void:
 	lit.emission = Color("ffd070")
 	lit.emission_energy_multiplier = 3.0
 	Build.glow_box(n, Vector3(1.2, 1.9, 0.2), Vector3(0, 18.4, 2.56), lit)
+
+
+## Between the stakes and the castle: dead trees, a gibbet by the road, broken railings, toppled stones, and at
+## the castle gate two braziers of green fire. The castle's narrow windows glow a sickly purple after dark.
+func _haunted() -> void:
+	var bark := Color("2e2620")
+	var bark2 := Color("3b3029")
+	var rng2 := RandomNumberGenerator.new()
+	rng2.seed = 666
+	var placed := 0
+	var tries := 0
+	while placed < 34 and tries < 400:
+		tries += 1
+		var x := rng2.randf_range(-78, 78)
+		var z := rng2.randf_range(-108, -76)
+		if absf(x) < 7: continue                                                  # keep the road clear
+		if Vector2(x, z).distance_to(Vector2(HILL.x, HILL.z)) < 31: continue      # not on the castle's own hilltop
+		var h := rng2.randf_range(2.6, 4.8)
+		var lean := rng2.randf_range(-0.18, 0.18)
+		var t := Node3D.new()
+		t.position = Vector3(x, 0, z)
+		t.rotation = Vector3(0, rng2.randf_range(0, TAU), lean)
+		add_child(t)
+		Build.cyl(t, 0.14, 0.34, h, Vector3.ZERO, bark, 5)
+		for b in rng2.randi_range(2, 4):                                          # crooked bare branches
+			var by := h * rng2.randf_range(0.45, 0.95)
+			var ang := rng2.randf_range(0, TAU)
+			var br := Node3D.new()
+			br.position = Vector3(0, by, 0)
+			br.rotation = Vector3(0, ang, rng2.randf_range(0.6, 1.1))
+			t.add_child(br)
+			var bl := rng2.randf_range(0.9, 1.9)
+			Build.cyl(br, 0.04, 0.1, bl, Vector3.ZERO, bark2, 4)
+			var tw := Node3D.new(); tw.position = Vector3(0, bl, 0); tw.rotation.z = rng2.randf_range(-0.9, 0.9); br.add_child(tw)
+			Build.cyl(tw, 0.02, 0.05, bl * 0.6, Vector3.ZERO, bark2, 4)
+		placed += 1
+	# a gibbet by the road, with an empty cage that turns in the wind (it is empty. Probably.)
+	Build.box(self, Vector3(0.3, 5.2, 0.3), Vector3(-6.2, 0, -84), bark)
+	Build.box(self, Vector3(2.4, 0.26, 0.26), Vector3(-5.1, 5.0, -84), bark)
+	Build.box(self, Vector3(0.18, 1.2, 0.18), Vector3(-5.9, 4.0, -84), bark, 0.0, 0.0, -0.8)
+	var cage := Node3D.new(); cage.position = Vector3(-4.2, 2.6, -84); add_child(cage)
+	for a in 6:
+		var v := Vector3(cos(a * TAU / 6) * 0.42, 0, sin(a * TAU / 6) * 0.42)
+		Build.box(cage, Vector3(0.05, 1.5, 0.05), v, Color("3a3a40"))
+	Build.cyl(cage, 0.5, 0.5, 0.06, Vector3(0, 0, 0), Color("3a3a40"), 6)
+	Build.cone(cage, 0.5, 0.5, Vector3(0, 1.5, 0), Color("3a3a40"), 6)
+	Build.box(self, Vector3(0.04, 1.0, 0.04), Vector3(-4.2, 4.0, -84), Color("3a3a40"))
+	# broken iron railings along the foot of the hill
+	for i in 26:
+		if i % 5 == 3: continue                                                   # gaps where it has fallen
+		var a := PI * (0.12 + i * 0.03)
+		var x := HILL.x + cos(a + PI) * 44.5
+		var z := HILL.z - sin(a + PI) * 44.5
+		if absf(x) < 5: continue
+		Build.box(self, Vector3(0.08, rr(1.0, 1.8), 0.08), Vector3(x, 0, z), Color("2c2c33"), 0.0, rr(-0.25, 0.25), rr(-0.25, 0.25))
+		Build.cone(self, 0.1, 0.25, Vector3(x, 1.8, z), Color("2c2c33"), 4)
+	# braziers of green fire either side of the castle gate
+	for sx in [-1.0, 1.0]:
+		var bp := HILL + Vector3(sx * 4.2, 7.0, 9.6)
+		Build.cyl(self, 0.6, 0.35, 1.1, bp, Color("2c2c33"), 6)
+		var fire := StandardMaterial3D.new()
+		fire.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		fire.albedo_color = Color(0.45, 1.0, 0.55)
+		Build.cone(self, 0.45, 1.0, bp + Vector3(0, 1.1, 0), Color.WHITE, 5).material_override = fire
+		var l := OmniLight3D.new()
+		l.position = bp + Vector3(0, 2.0, 0)
+		l.light_color = Color(0.4, 1.0, 0.5)
+		l.omni_range = 16.0
+		l.light_energy = 0.5
+		add_child(l)
+		haunt_lights.append(l)
+	# the castle's windows: dark by day, a sickly purple by night
+	haunt_mat = StandardMaterial3D.new()
+	haunt_mat.albedo_color = Color("2a1f38")
+	haunt_mat.emission_enabled = true
+	haunt_mat.emission = Color("b45cff")
+	haunt_mat.emission_energy_multiplier = 0.2
+	var hn := Node3D.new(); hn.position = HILL; add_child(hn)
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			for wy in [10.5, 14.5]:
+				var wn := Node3D.new(); wn.position = Vector3(sx * 10.5, 0, sz * 6.5); wn.rotation.y = atan2(sx, sz); hn.add_child(wn)
+				Build.glow_box(wn, Vector3(0.45, 1.3, 0.2), Vector3(0, wy, 3.05), haunt_mat)
+	for wx in [-6.0, -3.0, 3.0, 6.0]:
+		Build.glow_box(hn, Vector3(0.6, 1.4, 0.2), Vector3(wx, 10.5, 6.55), haunt_mat)
 
 
 func _graveyard_and_edges() -> void:
@@ -335,6 +427,7 @@ func house(x: float, z: float, rot_y: float, w: float, d: float, h: float, wall_
 		Build.glow_box(n, Vector3(0.1, 0.6, 0.6), Vector3(sx * (w / 2 + 0.04), wy + 0.01, 0), window_mat)
 	if chimney:
 		Build.box(n, Vector3(0.7, rh + 1, 0.7), Vector3(w * 0.28, f + h, -d * 0.12), C.stone2)
+		chimneys.append(n.transform * Vector3(w * 0.28, f + h + rh + 1.1, -d * 0.12))
 	return n
 
 
@@ -354,16 +447,12 @@ func _buildings() -> void:
 	Build.box(self, Vector3(1.5, 0.18, 0.1), Vector3(-14.5, 1.05, -9.28), C.wood3, 0.0, 0.0, 0.5)
 	Build.box(self, Vector3(1.5, 0.18, 0.1), Vector3(-14.5, 1.05, -9.28), C.wood3, 0.0, 0.0, -0.5)
 	# the old ruins and the priest's chapel
-	house(17, -14, 0, 4.4, 6.2, 3.4, C.stone, C.slate, true, false, 2.8)
-	Build.box(self, Vector3(1, 1.5, 1), Vector3(17, 6.2, -12), C.stone2)
-	Build.cone(self, 0.9, 1.2, Vector3(17, 7.7, -12), C.slate, 4, PI / 4)
-	Build.box(self, Vector3(0.14, 1, 0.14), Vector3(17, 8.8, -12), C.stone3)
-	Build.box(self, Vector3(0.6, 0.14, 0.14), Vector3(17, 9.3, -12), C.stone3)
+	_chapel()
 	for i in 9:
 		Build.box(self, Vector3(rr(1, 2.6), rr(0.5, 2.3), 0.5), Vector3(rr(8.3, 13.2), 0, rr(-18.2, -12.4)), C.stone2 if i % 2 else C.stone3, rr(0, 3))
 	for p in [Vector2(9.2, -16), Vector2(8.4, -11.6)]:
 		Build.cyl(self, 0.36, 0.42, rr(1.4, 2.6), Vector3(p.x, 0, p.y), C.stone2, 6)
-	# the Thorny Rose
+	# the Thorny Rose Inn
 	house(-17.5, -4.7, PI / 2, 8, 6, 4.2, C.cream, C.roof, false, true, 3.0)
 	Build.box(self, Vector3(0.18, 3, 0.18), Vector3(-13.4, 0, -1.4), C.timber)
 	Build.box(self, Vector3(1.5, 0.14, 0.14), Vector3(-12.8, 2.86, -1.4), C.timber)
@@ -431,6 +520,73 @@ func _buildings() -> void:
 		house(c.x, c.z, 0.0 if c.dir > 0 else PI, 3.7, 3.3, 2.0, C.cream if i % 2 else C.cream2, roofs[i % 4], false, i % 3 == 0, 1.9)
 
 
+## The chapel: a stone nave with buttresses and tall pointed windows of coloured glass, a round window over
+## the door, a rounded end to the north, and a bell tower with a spire and a gilded cross over the door.
+func _chapel() -> void:
+	var n := Node3D.new()
+	n.position = Vector3(17, 0, -14)
+	add_child(n)
+	var w := 4.2
+	var d := 5.6
+	var h := 3.8
+	var stone := Color("cfc8b6")
+	var trim := Color("a39c8b")
+	Build.box(n, Vector3(w + 0.5, 0.35, d + 0.5), Vector3(0, 0, 0.2), trim)                  # plinth
+	Build.box(n, Vector3(w, h, d), Vector3(0, 0.35, 0), stone)                              # the nave
+	Build.roof(n, w + 0.7, 3.0, d + 0.6, Vector3(0, 0.35 + h, 0), C.slate, 0.0)              # steep slate roof
+	Build.box(n, Vector3(0.25, 0.2, d + 0.7), Vector3(0, 0.35 + h + 2.95, 0), Color("4f5b6c"))  # ridge
+	Build.cyl(n, 1.9, 1.9, h - 0.4, Vector3(0, 0.35, -d / 2), stone, 10)                     # the rounded north end
+	Build.cone(n, 2.1, 2.2, Vector3(0, 0.35 + h - 0.4, -d / 2), C.slate, 10)
+	# buttresses along both sides, stepping in as they rise
+	for sx in [-1.0, 1.0]:
+		for zz in [-1.9, 0.0, 1.9]:
+			Build.box(n, Vector3(0.45, 2.6, 0.45), Vector3(sx * (w / 2 + 0.2), 0.35, zz), trim)
+			Build.box(n, Vector3(0.32, 1.0, 0.32), Vector3(sx * (w / 2 + 0.14), 2.95, zz), trim, 0.0, 0.0, sx * 0.25)
+	# tall pointed windows of coloured glass between the buttresses
+	var glass := [Build.mat(Color("c23b3b"), 0.9), Build.mat(Color("3b6fc2"), 0.9), Build.mat(Color("e0b13a"), 0.9)]
+	for sx in [-1.0, 1.0]:
+		for i in 2:
+			var zz := -0.95 + i * 1.9
+			var g: Material = glass[(i + (1 if sx > 0 else 0)) % 3]
+			Build.box(n, Vector3(0.12, 1.9, 0.62), Vector3(sx * (w / 2 + 0.02), 1.15, zz), Color("4a4438"))
+			Build.glow_box(n, Vector3(0.12, 1.6, 0.44), Vector3(sx * (w / 2 + 0.05), 1.25, zz), g)
+			var tip := Build.glow_box(n, Vector3(0.12, 0.32, 0.32), Vector3(sx * (w / 2 + 0.05), 2.82, zz), g)
+			tip.rotation.x = PI / 4                                                            # the pointed top
+	# the front: a pointed doorway, a round window above it, and the bell tower over all
+	Build.box(n, Vector3(1.5, 2.3, 0.2), Vector3(0, 0.35, d / 2 + 0.02), trim)
+	Build.box(n, Vector3(1.1, 2.0, 0.22), Vector3(0, 0.35, d / 2 + 0.04), Color("4b2f1e"))
+	var arch := Build.box(n, Vector3(0.8, 0.8, 0.22), Vector3(0, 1.95, d / 2 + 0.04), Color("4b2f1e"))
+	arch.rotation.z = PI / 4
+	Build.box(n, Vector3(0.08, 1.9, 0.24), Vector3(0, 0.35, d / 2 + 0.06), Color("8a6a3c"))
+	var rose := Build.cyl(n, 0.62, 0.62, 0.12, Vector3(0, 3.0, d / 2 + 0.02), trim, 12, 0.0, PI / 2)
+	rose.position = Vector3(0, 3.0, d / 2 + 0.06)
+	var rg := Build.cyl(n, 0.5, 0.5, 0.12, Vector3(0, 3.0, d / 2 + 0.1), Color.WHITE, 12, 0.0, PI / 2)
+	rg.material_override = Build.mat(Color("8f5bc2"), 1.0)
+	rg.position = Vector3(0, 3.0, d / 2 + 0.1)
+	# the bell tower, at the south end
+	var tz := d / 2 - 0.6
+	Build.box(n, Vector3(1.7, 7.2, 1.7), Vector3(0, 0.35, tz), stone)
+	Build.box(n, Vector3(1.9, 0.22, 1.9), Vector3(0, 7.55, tz), trim)
+	for a in 4:                                                                                  # the belfry's openings
+		var b := Node3D.new(); b.position = Vector3(0, 0, tz); b.rotation.y = a * PI / 2; n.add_child(b)
+		Build.box(b, Vector3(0.55, 1.0, 0.1), Vector3(0, 6.1, 0.82), Color("231d18"))
+		var ba := Build.box(b, Vector3(0.39, 0.39, 0.1), Vector3(0, 6.9, 0.82), Color("231d18"))
+		ba.rotation.z = PI / 4
+	Build.cyl(n, 0.3, 0.42, 0.55, Vector3(0, 6.15, tz), Color("c9962f"), 8)                    # the bell
+	Build.cone(n, 1.3, 3.4, Vector3(0, 7.77, tz), C.slate, 4, PI / 4)                           # the spire
+	var gold := Build.mat(Color("e2b54a"), 0.35)
+	var c1 := Build.glow_box(n, Vector3(0.12, 1.1, 0.12), Vector3(0, 11.1, tz), gold)          # the gilded cross
+	var c2 := Build.glow_box(n, Vector3(0.62, 0.12, 0.12), Vector3(0, 11.75, tz), gold)
+	# a little churchyard: a few old headstones and a yew
+	for i in 4:
+		Build.box(self, Vector3(0.6, 0.85, 0.16), Vector3(20.6 + (i % 2) * 1.1, 0, -16.4 + i * 1.3), C.grave, rr(-0.2, 0.2), 0.0, rr(-0.12, 0.12))
+	Build.cyl(self, 0.25, 0.3, 1.0, Vector3(21.8, 0, -11.2), C.trunk, 6)
+	Build.cone(self, 1.1, 2.6, Vector3(21.8, 0.8, -11.2), Color("2f5a33"), 7)
+	Build.box(self, Vector3(0.14, 2.3, 0.14), Vector3(15.3, 0, -10.6), C.timber)          # a lantern on a post by the door
+	Build.box(self, Vector3(0.5, 0.1, 0.1), Vector3(15.5, 2.25, -10.6), C.timber)
+	lantern(Vector3(15.7, 1.85, -10.6), 8.0)
+
+
 func _farms() -> void:
 	for i in 6:
 		Build.box(self, Vector3(24, 0.05, 3), Vector3(-58, 0, 22 + i * 3.6), [C.field1, C.field2, C.field3][i % 3])
@@ -438,8 +594,26 @@ func _farms() -> void:
 		Build.box(self, Vector3(0.2, 0.9, 0.2), Vector3(-70.5 + i * 2, 0, 19.6), C.wood2)
 		Build.box(self, Vector3(0.2, 0.9, 0.2), Vector3(-70.5 + i * 2, 0, 42.8), C.wood2)
 	house(-47, 24, PI / 2, 5, 7, 3.6, Color("a9493b"), C.roof2, true, false, 2.6)
-	for p in [Vector2(-48, 33), Vector2(-46.5, 36), Vector2(-49, 38.5)]:
-		Build.cyl(self, 1.1, 1.3, 1.3, Vector3(p.x, 0, p.y), C.straw, 7)
-		Build.cone(self, 1.3, 1.1, Vector3(p.x, 1.3, p.y), C.straw, 7)
+	# round bales lying on their sides, their rolled ends showing, and a stack of square ones
+	var hay := Color("d9b65a")
+	var hay_end := Color("e8cc78")
+	for p in [Vector3(-48, 33, 0.3), Vector3(-46.2, 35.6, 1.4), Vector3(-49.2, 38.4, 2.2), Vector3(-63, 27.5, 0.9), Vector3(-56, 39.5, 2.6)]:
+		var bale := Node3D.new()
+		bale.position = Vector3(p.x, 0, p.y)
+		bale.rotation.y = p.z
+		add_child(bale)
+		Build.cyl(bale, 0.85, 0.85, 1.25, Vector3(-0.625, 0.85, 0), hay, 12, 0.0, 0.0, -PI / 2)
+		for sx in [-1.0, 1.0]:                                                 # each end: the face, then the rolled middle
+			for e in [[0.78, 0.04, hay_end, 12], [0.42, 0.05, Color("c9a24a"), 10], [0.12, 0.06, Color("b8913e"), 8]]:
+				var x0: float = 0.625 if sx > 0 else -0.625 - e[1]
+				Build.cyl(bale, e[0], e[0], e[1], Vector3(x0, 0.85, 0), e[2], e[3], 0.0, 0.0, -PI / 2)
+		for bx in [-0.3, 0.3]:                                                 # the twine
+			Build.cyl(bale, 0.865, 0.865, 0.05, Vector3(bx - 0.025, 0.85, 0), Color("8a6a3c"), 12, 0.0, 0.0, -PI / 2)
+	for i in 5:                                                                # square bales, stacked by the farmhouse
+		var row := 0 if i < 3 else 1
+		var bx: float = -44.6 + (i if row == 0 else i - 3 + 0.5) * 1.15
+		Build.box(self, Vector3(1.1, 0.55, 0.62), Vector3(bx, row * 0.55, 29.4), hay if i % 2 else Color("cfac52"))
+		Build.box(self, Vector3(0.04, 0.56, 0.64), Vector3(bx - 0.2, row * 0.55, 29.4), Color("8a6a3c"))
+		Build.box(self, Vector3(0.04, 0.56, 0.64), Vector3(bx + 0.2, row * 0.55, 29.4), Color("8a6a3c"))
 	# (the rocky outcrop and the mine move every morning: sites.gd draws them)
 

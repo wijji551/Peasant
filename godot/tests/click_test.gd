@@ -78,6 +78,9 @@ func _init() -> void:
 	await frames(20)
 	m = current_scene
 	ok("game started", m != null and m.screen == "game", m.screen if m else "no scene")
+	var fr: Rect2 = m.win._frame.get_global_rect()
+	var vc: Vector2 = m.win.get_viewport_rect().size / 2
+	ok("the dawn window after the home screen is in the middle", fr.get_center().distance_to(vc) < 30 and fr.size.x < 900, [fr, vc])
 	Input.action_release("dtv_attack_mouse")
 	m.win.close()
 	await frames(5)

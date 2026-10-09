@@ -385,3 +385,29 @@ func run() -> void:
 	clear_u()
 	m.inv = [14]; X.do_act(m, "eq", 0); ok("a crossbow needs rank 3", m.wpn == 13)
 	m.books[5] = 3; X.do_act(m, "eq", 0); ok("and works at rank 3", m.wpn == 14)
+	# ---------- spare learning: past rank VII, learning is kept and sold for coin
+	m.books[4] = 7; m.spare = 0.0; m.coward = false
+	X.add_xp(m, 4, D.BOOKS[4].base * 2.5)
+	ok("learning past rank VII is kept as spare points", absf(m.spare - 2.5) < 0.01 and m.books[4] == 7, m.spare)
+	var c0 := m.coin
+	var paid := X.sell_spare(m)
+	ok("whole spare points sell for coin, the rest is kept", paid == 2 * D.SPARE_PAY and m.coin == c0 + paid and absf(m.spare - 0.5) < 0.01, [paid, m.spare])
+	ok("and spare learning is saved", X.save_data().players[0].has("spare"))
+	# ---------- the outer ruins wander between clearings, and are found by going near them
+	var moved := 0
+	var in_clearing := true
+	var c1: Array = Map.ruin_layout(R.gseed, 1).centres
+	for dd in range(2, 8):
+		var cd: Array = Map.ruin_layout(R.gseed, dd).centres
+		if cd[1] != c1[1] or cd[2] != c1[2]: moved += 1
+		for k in [1, 2]: if not D.RUIN_SITES.has(cd[k]): in_clearing = false
+		ok("two different clearings on day %d" % dd, cd[1] != cd[2]) if dd == 2 else null
+	ok("the outer ruins move to other clearings on other nights", moved >= 4 and in_clearing, moved)
+	ok("no tree grows in a clearing", R.trees.all(func(t): return D.RUIN_SITES.all(func(c): return absf(t.x - c.x) >= 10 or absf(t.z - c.z) >= 6.5)))
+	Map.ruin_layout(R.gseed, R.day)
+	R.ruins_seen = [true, false, false]
+	var cn: Dictionary = Map.ruin_layout(R.gseed, R.day).centres[1]
+	m.state = "ok"; at(cn.x + 30, cn.z); X.step(STEP)
+	ok("an outer ruin is not found from far away", not R.ruins_seen[1])
+	at(cn.x + 10, cn.z); X.step(STEP)
+	ok("walking near it finds it, for everyone", R.ruins_seen[1])

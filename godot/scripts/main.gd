@@ -17,6 +17,7 @@ const DefencesView := preload("res://scripts/view/defences.gd")
 const Hud := preload("res://scripts/hud.gd")
 const Menus := preload("res://scripts/ui/menus.gd")
 const Build := preload("res://scripts/build.gd")
+const Atmos := preload("res://scripts/view/atmos.gd")
 
 const STEP := 1.0 / 30.0         # the rules run thirty times a second, as in the web version
 const SAVE_PATH := "user://dtv-save.json"
@@ -26,10 +27,10 @@ const SUN_DAY := Color(1.0, 0.94, 0.8)
 const SUN_NIGHT := Color(0.5, 0.6, 1.0)
 const SUN_DUSK := Color(1.0, 0.6, 0.35)
 const AMB_DAY := Color(0.62, 0.66, 0.62)
-const AMB_NIGHT := Color(0.2, 0.25, 0.48)
+const AMB_NIGHT := Color(0.17, 0.22, 0.4)
 const AMB_DUSK := Color(0.6, 0.42, 0.4)
 const FOG_DAY := Color(0.8, 0.86, 0.68)
-const FOG_NIGHT := Color(0.07, 0.09, 0.2)
+const FOG_NIGHT := Color(0.05, 0.07, 0.13)
 const FOG_DUSK := Color(0.9, 0.6, 0.4)
 const SUN_FROM_DAY := Vector3(-26, 44, 20)
 const SUN_FROM_NIGHT := Vector3(22, 46, -16)
@@ -52,6 +53,7 @@ var defences_view: Node3D
 var dead_view: Node3D
 var minimap: Control
 var labels: Control
+var atmos: Node3D                # mist, rain, wisps, crows and lightning (only for looking at)
 
 var screen := "home"             # "home" or "game"
 var _acc := 0.0
@@ -95,6 +97,7 @@ func _ready() -> void:
 	R = Rules.new()
 	R.save_hook = _save
 	_fx = Fx.new(); add_child(_fx)
+	atmos = Atmos.new(); add_child(atmos); atmos.setup(world)
 	trees_view = TreesView.new(); trees_view.fx = _fx; add_child(trees_view)
 	sites_view = SitesView.new(); add_child(sites_view)
 	defences_view = DefencesView.new(); defences_view.fx = _fx; add_child(defences_view)
@@ -117,6 +120,7 @@ func _ready() -> void:
 	hud.build_pressed.connect(func(k): if screen == "game" and me.state == "ok": _build_sel = "" if _build_sel == k else k)
 	hud.pack_pressed.connect(func(): if screen == "game" and me.state == "ok": _open_pack())
 	hud.menu_pressed.connect(func(): menus.menu())
+	hud.skills_pressed.connect(func(): if screen == "game": _open_skills())
 	menus = Menus.new(self, win)
 	labels = Labels.new()
 	labels.camera = camera
@@ -128,7 +132,7 @@ func _ready() -> void:
 	minimap.R = R
 	labels.R = R
 	_bot = OS.get_environment("DTV_BOT") != ""
-	var test := OS.get_environment("DTV_NEW") != "" or OS.get_environment("DTV_DEMO") != "" or OS.get_environment("DTV_BOT") != "" or OS.get_environment("DTV_PHASE") != ""
+	var test := OS.get_environment("DTV_LOAD") != "" or OS.get_environment("DTV_NEW") != "" or OS.get_environment("DTV_DEMO") != "" or OS.get_environment("DTV_BOT") != "" or OS.get_environment("DTV_PHASE") != ""
 	if OS.get_environment("DTV_HOME") == "" and (test or _go_straight):
 		_go_straight = false
 		begin(null if OS.get_environment("DTV_NEW") != "" or OS.get_environment("DTV_DEMO") != "" else (_go_save if _go_save else read_save()))
@@ -196,6 +200,7 @@ func begin(save) -> void:
 	win.close()
 	_dawn_seen = -1
 	_prev_phase = ""
+	atmos.pick(R.gseed, R.day)
 	if OS.get_environment("DTV_PHASE") == "night":       # for testing: go straight to night
 		R.dusk_falls(); R.timeLeft = 0.5
 	if OS.get_environment("DTV_DEMO") != "":            # for testing: a village with a bit of everything in it, for pictures
@@ -212,7 +217,7 @@ func _demo() -> void:
 	R.try_place(me, "spikes", me.x + 3, me.z - 8, 0)
 	me.bodies = 2
 	me.wpn = 4; me.head = 19; me.body = 22; me.off = 25; me.trk = 28; me.inv = [6, 13, 15]
-	me.books[0] = 3; me.books[4] = 2; me.books[6] = 3; me.xp[0] = 300.0
+	me.books[0] = 3; me.books[4] = 7; me.books[6] = 3; me.xp[0] = 300.0; me.spare = 4.6
 	for i in 4:
 		var q: E.Peasant = R.peasants[i]
 		q.owner = me.id; q.state = "follow"; q.armed = i % 2
@@ -285,6 +290,10 @@ func _unhandled_input(e: InputEvent) -> void:
 		elif Keys.is_act(e, "pack"): win.close()
 		else: _game_key(e, -1)
 		return
+	if win.is_open("skills"):
+		if Keys.is_act(e, "skills"): win.close()
+		else: _game_key(e, -1)
+		return
 	if win.is_open("dawn") and (Keys.is_act(e, "interact") or Keys.is_act(e, "ready")):
 		win.close()
 	if win.visible and win.kind != "dawn":
@@ -297,6 +306,9 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 	if Keys.is_act(e, "ready") and R.phase == "day":
 		p.ready = not p.ready
 		hud.banner("Ready for the night" if p.ready else "Not ready after all", "", 1.2)
+	if Keys.is_act(e, "skills"):
+		_open_skills()
+		return
 	if p.state != "ok":
 		return
 	if Keys.is_act(e, "pack"):
@@ -310,7 +322,7 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 			if D.IT[p.inv[j]].s == "w" and Rules.can_use(p, p.inv[j]):
 				i = j; break
 		if i < 0:
-			hud.banner("No other weapon", "There is no weapon in your pack that you can use.", 1.5)
+			hud.banner("No other weapon", "There is no weapon in your backpack that you can use.", 1.5)
 		else:
 			hud.banner(D.it_cap(p.inv[i]), "", 0.8); R.do_act(p, "eq", i)
 	elif Keys.is_act(e, "carry"):
@@ -375,6 +387,22 @@ func _open_pack() -> void:
 	menus.pack(true)
 
 
+func _open_skills() -> void:
+	if win.is_open("skills"):
+		win.close()
+		return
+	_panel = ""
+	_build_sel = ""
+	menus.skills(true)
+
+
+func sell_spare() -> void:
+	var paid := R.sell_spare(me)
+	if paid > 0:
+		hud.feed("Your spare learning fetched %s." % D.coins(paid))
+	menus.skills(true)
+
+
 func _window_closed(what: String) -> void:
 	if screen == "home":                                  # the handbook, opened from the home screen: back to it
 		menus.home.call_deferred()
@@ -404,7 +432,7 @@ func option(i: int) -> void:
 		R.do_act(me, o.a, o.get("arg"))
 
 
-## Something done in the pack: put on, put away, drop, bless.
+## Something done in the backpack: put on, put away, drop, bless.
 func inv_do(a: String, arg) -> void:
 	var p := me
 	if a == "eq" and (arg >= p.inv.size()):
@@ -416,7 +444,7 @@ func inv_do(a: String, arg) -> void:
 		hud.banner("The pitchfork stays", "It is what you hold when you hold nothing else.", 1.8)
 		return
 	if a == "uneq" and p.inv.size() >= D.PACK_MAX:
-		hud.banner("Your pack is full", "Drop something, or leave it on the arms rack in the storehouse.", 2.2)
+		hud.banner("Your backpack is full", "Drop something, or leave it on the arms rack in the storehouse.", 2.2)
 		return
 	R.do_act(p, a, arg)
 
@@ -433,6 +461,7 @@ func _process(delta: float) -> void:
 		trees_view.sync(R, delta)
 		sites_view.sync(R)
 		_apply_light(0.0)
+		atmos.update(delta, 0.0, _focus)
 		_test_hook()
 		return
 	var paused: bool = win.is_open("menu") and R.players.size() == 1   # alone, the game waits while you read the handbook
@@ -498,6 +527,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 	var F = _fx
 	match ev[0]:
 		"msg": hud.feed(ev[1])
+		"ruin": hud.banner("A ruin!", "One of the outer ruins, found. It is on the map now, for everyone.", 2.4)
 		"arrow": F.fly(ev[1], ev[2], ev[3], ev[4], 0)
 		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1)
 		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3)
@@ -534,7 +564,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"found":
 			F.puff(ev[3], 0.5, ev[4], 20 if ev[5] else 6, F.C_HOLY if ev[5] else F.C_DUST, 3)
 			if ev[1] == me.id:
-				hud.banner("A find!" if ev[5] else "You found", str(ev[2]) + (". It is in your pack: %s opens it." % Keys.name("pack") if ev[6] else ""), 3.8 if ev[5] else 2.8)
+				hud.banner("A find!" if ev[5] else "You found", str(ev[2]) + (". It is in your backpack: %s opens it." % Keys.name("pack") if ev[6] else ""), 3.8 if ev[5] else 2.8)
 		"gone":
 			dead_view.gone(ev[2], ev[3], ev[4], ev[5])
 
@@ -629,20 +659,26 @@ func _draw(delta: float) -> void:
 		_ghost.rotation.y = g.rot
 		var ok := Rules.has(me, Rules.cost_of(me, _build_sel)) and R.valid_place(_build_sel, g.x, g.z, g.rot)
 		(_ghost.material_override as StandardMaterial3D).albedo_color = Color(0.6, 0.95, 0.5, 0.45) if ok else Color(0.95, 0.4, 0.35, 0.45)
-	_apply_light(R.nf)
 	_camera(delta)
+	_apply_light(R.nf)
+	atmos.update(delta, R.nf, _focus)
 	labels.focus = _focus
 
 
 func _apply_light(nf: float) -> void:
 	var k := 4.0 * nf * (1.0 - nf)                       # peaks at the moment of dusk
-	sun.light_color = SUN_DAY.lerp(SUN_NIGHT, nf).lerp(SUN_DUSK, k * 0.7)
-	sun.light_energy = lerpf(0.8, 0.42, nf)
+	var gl: float = atmos.gloom() if atmos else 0.0      # the weather: overcast, rain or mist take the shine off the day
+	var fl: float = atmos.flash if atmos else 0.0        # lightning over the castle
+	sun.light_color = SUN_DAY.lerp(SUN_NIGHT, nf).lerp(SUN_DUSK, k * 0.7).lerp(Color(0.78, 0.8, 0.84), gl * (1 - nf)).lerp(Color(0.85, 0.9, 1.0), fl)
+	sun.light_energy = lerpf(0.8 - gl * 0.45, 0.34, nf) + fl * 1.6
 	sun.position = SUN_FROM_DAY.lerp(SUN_FROM_NIGHT, nf)
 	sun.look_at(Vector3.ZERO)
 	env.ambient_light_color = AMB_DAY.lerp(AMB_NIGHT, nf).lerp(AMB_DUSK, k * 0.7)
-	env.ambient_light_energy = lerpf(0.32, 0.6, nf)
-	var fog := FOG_DAY.lerp(FOG_NIGHT, nf).lerp(FOG_DUSK, k * 0.7)
+	env.ambient_light_energy = lerpf(0.32 - gl * 0.06, 0.5, nf) + fl * 0.5
+	var fog := FOG_DAY.lerp(Color(0.48, 0.52, 0.54), gl).lerp(FOG_NIGHT, nf).lerp(FOG_DUSK, k * 0.7).lerp(Color(0.6, 0.65, 0.8), fl * 0.6)
+	env.fog_depth_begin = lerpf(95.0 - gl * 15.0, 70.0, nf)
+	env.fog_depth_end = lerpf(250.0 - gl * 40.0, 190.0, nf)
+	env.adjustment_saturation = lerpf(1.1 - gl * 0.25, 0.8, nf)
 	env.background_color = fog
 	env.fog_light_color = fog
 	var lit := smoothstep(0.3, 0.8, nf)                  # windows and lanterns come on as it gets dark
@@ -691,7 +727,8 @@ func _hud_update(delta: float) -> void:
 		hud.banner("Day %d" % R.dawn.day, "", 2.6)
 		if R.dawn.lines.size() and not win.is_open("menu"):
 			_panel = ""
-			menus.dawn(R.dawn.day, R.dawn.lines)
+			atmos.pick(R.gseed, R.dawn.day)
+			menus.dawn(R.dawn.day, R.dawn.lines + ([atmos.weather_line()] if atmos.weather_line() != "" else []))
 			_dawn_t = 15.0
 	if win.is_open("dawn"):
 		_dawn_t -= delta
@@ -712,6 +749,7 @@ func _hud_update(delta: float) -> void:
 	if _panel == "pack":
 		if p.state != "ok" or not R.live(): win.close()
 		elif win.is_open("pack"): menus.pack()
+	if win.is_open("skills"): menus.skills()
 	# the prompt: what holding E would do
 	var it = R.find_interact(p) if _build_sel == "" and R.live() else null
 	var ptxt := ""
@@ -734,6 +772,11 @@ func _hud_update(delta: float) -> void:
 ## DTV_AT=x,z puts the player there first. DTV_LOG=1 prints how the night is going every ten seconds.
 func _test_hook() -> void:
 	_frame += 1
+	if OS.get_environment("DTV_CAM") != "":         # for pictures: DTV_CAM=x,y,z,lookx,looky,lookz puts the camera there
+		var c := OS.get_environment("DTV_CAM").split(",")
+		camera.fov = 40.0
+		camera.position = Vector3(float(c[0]), float(c[1]), float(c[2]))
+		camera.look_at(Vector3(float(c[3]), float(c[4]), float(c[5])))
 	if OS.get_environment("DTV_LOG") != "" and _frame % 600 == 0 and me:
 		print("t=", floori(_frame / 60.0), "s ", R.phase, " day ", R.day, " undead ", R.undead.size(), " to rise ", R.wave, " kills ", R.stats.kills, " keep ", roundi(R.keepHp), " player ", me.state, " hp ", roundi(me.hp), " posse ", me.posse)
 	var shot := OS.get_environment("DTV_SHOT")
@@ -746,6 +789,9 @@ func _test_hook() -> void:
 	if _frame == at and OS.get_environment("DTV_OPEN") != "":   # open a window for the picture
 		var o := OS.get_environment("DTV_OPEN")
 		if o == "pack": _open_pack()
+		elif o == "skills": _open_skills()
+		elif o == "none": win.close()
+		elif o.begins_with("weather:"): atmos.weather = o.substr(8); win.close()
 		elif o == "menu": menus.menu()
 		elif o == "keys": menus.menu("keys")
 		elif o == "dawn": menus.dawn(R.day, R.dawn.lines); _dawn_t = 99.0

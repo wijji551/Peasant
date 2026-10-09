@@ -31,6 +31,7 @@ func _ready() -> void:
 	_frame = PanelContainer.new()
 	_frame.add_theme_stylebox_override("panel", Look.scroll())
 	add_child(_frame)
+	_frame.resized.connect(_place)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	_frame.add_child(v)
@@ -104,9 +105,18 @@ func _fit() -> void:   # centred, and never bigger than the screen; a notice kee
 	var bottom := 40.0 if _dim.visible else 78.0
 	var w := minf(_want.x, vs.x - 40)
 	var h := minf(_want.y, vs.y - top - bottom)
-	_frame.position = Vector2(round((vs.x - w) / 2), round(top + (vs.y - top - bottom - h) / 2))
-	_frame.size = Vector2(w, h)
+	# the smallest size first, or the frame keeps the last window's size and sits off to the right and down
 	_frame.custom_minimum_size = Vector2(w, h)
+	_frame.size = Vector2(w, h)
+	_place()
+
+
+func _place() -> void:   # centre what the frame actually came to (its contents can make it bigger than asked)
+	var vs := get_viewport_rect().size
+	var top := 40.0 if _dim.visible else 62.0
+	var bottom := 40.0 if _dim.visible else 78.0
+	var fs := _frame.size
+	_frame.position = Vector2(round((vs.x - fs.x) / 2), round(maxf(top, top + (vs.y - top - bottom - fs.y) / 2)))
 
 
 func close() -> void:
@@ -144,6 +154,8 @@ func foot_button(text: String, cb: Callable, primary: bool = false) -> Button:
 	b.focus_mode = Control.FOCUS_NONE
 	if primary:
 		b.add_theme_stylebox_override("normal", _primary())
+		b.add_theme_stylebox_override("hover", Look.primary_hover())
+		b.add_theme_stylebox_override("pressed", Look.primary_hover())
 		b.add_theme_color_override("font_color", Color("fbeec2"))
 		b.add_theme_color_override("font_hover_color", Color.WHITE)
 	b.pressed.connect(cb)
@@ -151,14 +163,8 @@ func foot_button(text: String, cb: Callable, primary: bool = false) -> Button:
 	return b
 
 
-static func _primary() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Look.ROSE
-	sb.border_color = Look.OUTLINE
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(5)
-	sb.content_margin_left = 14; sb.content_margin_right = 14; sb.content_margin_top = 7; sb.content_margin_bottom = 7
-	return sb
+static func _primary() -> StyleBox:
+	return Look.primary()
 
 
 # --- things to put in the body

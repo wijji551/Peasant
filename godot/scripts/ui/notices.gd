@@ -1,7 +1,7 @@
 class_name Notices
 extends RefCounted
 ## What each place offers: the notice that opens when you hold E at the market, the smithy, the storehouse,
-## the library, the slum, the Thorny Rose or the priest, and your own pack.
+## the library, the slum, the Thorny Rose Inn or the priest, and your own pack.
 ## Each option is {label, sub, ok, a (the action), arg} or {head} for a heading, or {page} to turn to another page.
 
 const WEARV := {"w": "Take in hand", "h": "Put on", "b": "Put on", "o": "Take up", "t": "Carry"}
@@ -45,7 +45,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			if page == "arms":
 				o.append({"head": "Put on the rack"})
 				for i in p.inv.size():
-					o.append({"label": "Put in: " + D.IT[p.inv[i]].n, "sub": "From your pack.", "ok": true, "a": "puti", "arg": i})
+					o.append({"label": "Put in: " + D.IT[p.inv[i]].n, "sub": "From your backpack.", "ok": true, "a": "puti", "arg": i})
 				for k in D.SLOTS:
 					if p.get(k) > 0:
 						o.append({"label": "Put in: " + D.IT[p.get(k)].n, "sub": "It is in your hand. You go back to the pitchfork." if k == "wpn" else "You are wearing it.", "ok": true, "a": "pute", "arg": k})
@@ -54,7 +54,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 					var it: int = R.items[i]
 					o.append({"label": "Take: " + D.IT[it].n, "sub": item_sub(p, it), "ok": p.inv.size() < D.PACK_MAX or Rules.wears_now(p, it), "a": "takei", "arg": i})
 				o.append({"label": "Back to the materials", "sub": "", "ok": true, "page": ""})
-				return {"title": "The arms rack", "intro": "Spare arms, shared by the whole village: %d on the rack. Your pack holds %d of %d." % [R.items.size(), p.inv.size(), D.PACK_MAX], "o": o}
+				return {"title": "The arms rack", "intro": "Spare arms, shared by the whole village: %d on the rack. Your backpack holds %d of %d." % [R.items.size(), p.inv.size(), D.PACK_MAX], "o": o}
 			o.append({"head": "Put in"})
 			for r in D.RES:
 				o.append({"label": "Put in your " + r, "sub": "You carry %d." % p.get(r), "ok": p.get(r) > 0, "a": "put", "arg": r})
@@ -85,7 +85,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				for i in D.FORGE_W: forge.call(i)
 				o.append({"head": "More"})
 				o.append({"label": "Armour, and spears for your posse", "sub": "Iron cap, chain shirt, shield.", "ok": true, "page": "armour"})
-			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your pack." % [p.iron, p.wood] + ("" if p.books[3] else " Hammer and Tongs, in the library, makes all of this cheaper."), "o": o}
+			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Hammer and Tongs, in the library, makes all of this cheaper."), "o": o}
 		"library":
 			var slots := Rules.book_slots(p)
 			var owned: int = p.books.filter(func(r): return r > 0).size()
@@ -108,11 +108,11 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			if p.state == "inn":
 				o.append({"label": "Drink a tankard", "sub": "Drinking…" if p.drinkT > 0 else ("%d left in the barrel." % R.ale) if R.ale > 0 else "The barrel is empty. Somebody should have brought the innkeeper food.", "ok": R.ale > 0 and p.drinkT <= 0 and p.cg < 100, "a": "drink"})
 				o.append({"label": "Unbar the door and go out", "sub": "Sober, more or less.", "ok": true, "a": "innout"})
-				return {"title": "Inside the Thorny Rose", "intro": "Dutch courage: %d%%. At 100 you burst out and charge for %d seconds: faster, stronger and tougher. Nothing can reach you in here until the door gives way (%d%% left)." % [p.cg, Rules.charge_len(p), roundi(R.innHp / D.INN_HP * 100)], "o": o}
+				return {"title": "Inside the Thorny Rose Inn", "intro": "Dutch courage: %d%%. At 100 you burst out and charge for %d seconds: faster, stronger and tougher. Nothing can reach you in here until the door gives way (%d%% left)." % [p.cg, Rules.charge_len(p), roundi(R.innHp / D.INN_HP * 100)], "o": o}
 			var is_day := R.phase == "day"
 			o.append({"label": "Give the innkeeper 5 food", "sub": "He turns each piece into a tankard for tonight. %d in the barrel. You carry %d." % [R.ale, p.food], "ok": p.food > 0, "a": "ale"})
 			o.append({"label": "Go in and bar the door", "sub": "The Rose opens at dusk." if is_day else "The door is in pieces until morning." if R.innHp <= 0 else "Your posse comes in with you. The dead will try the door.", "ok": not is_day and R.innHp > 0, "a": "innin"})
-			return {"title": "The Thorny Rose", "intro": "Dutch courage: %d%%. Drink inside at night until you are brave enough to charge. The innkeeper only has as much ale as the village brings him food that day." % p.cg, "o": o}
+			return {"title": "The Thorny Rose Inn", "intro": "Dutch courage: %d%%. Drink inside at night until you are brave enough to charge. The innkeeper only has as much ale as the village brings him food that day." % p.cg, "o": o}
 		"priest", "pack":
 			var here := id == "priest"
 			var fee := func(f: bool) -> String: return "Free: you have the learning." if f else D.coins(D.BLESS_FEE) + "."
@@ -129,7 +129,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				bless.call()
 				o.append({"head": "Holy studies"})
 				var lab := "Holy studies: finished" if p.holy >= 2 else ("In class: %d of %d seconds" % [floori(p.holyT), D.HOLY_TIME]) if p.study else "Sit a class in holy studies (%d of 2 done)" % p.holy
-				var sub := "You can bless anything yourself, anywhere, from your pack ({pack})." if p.holy >= 2 else "Stay beside the priest. Press again to walk out; he will remember where you got to." if p.study else "About %d seconds beside the priest. After one class you can bless your own weapon and bucket for nothing; after two, the departed as well. It does not count as one of your three books." % D.HOLY_TIME
+				var sub := "You can bless anything yourself, anywhere, from your backpack ({pack})." if p.holy >= 2 else "Stay beside the priest. Press again to walk out; he will remember where you got to." if p.study else "About %d seconds beside the priest. After one class you can bless your own weapon and bucket for nothing; after two, the departed as well. It does not count as one of your three books." % D.HOLY_TIME
 				o.append({"label": lab, "sub": sub, "ok": p.holy < 2, "a": "study"})
 				return {"title": "The priest", "intro": "A blessing lasts until dawn. You have %s." % D.coins(p.coin), "o": o}
 			if page == "drop":
@@ -137,8 +137,8 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				for i in p.inv.size():
 					o.append({"label": "Drop: " + D.IT[p.inv[i]].n, "sub": "It stays on the ground where you stand.", "ok": true, "a": "dropi", "arg": i})
 				o.append({"label": "Back", "sub": "", "ok": true, "page": ""})
-				return {"title": "Your pack", "intro": "Anything dropped can be picked up again, by anyone.", "o": o}
-			o.append({"head": "In your pack (%d of %d)" % [p.inv.size(), D.PACK_MAX]})
+				return {"title": "Your backpack", "intro": "Anything dropped can be picked up again, by anyone.", "o": o}
+			o.append({"head": "In your backpack (%d of %d)" % [p.inv.size(), D.PACK_MAX]})
 			for i in p.inv.size():
 				var it: int = p.inv[i]
 				o.append({"label": "%s: %s" % [WEARV[D.IT[it].s], D.IT[it].n], "sub": item_sub(p, it), "ok": Rules.can_use(p, it), "a": "eq", "arg": i})
@@ -146,11 +146,11 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			if on.size():
 				o.append({"head": "On you"})
 				for k in on:
-					o.append({"label": "Put away: " + D.IT[p.get(k)].n, "sub": "Your pack is full." if p.inv.size() >= D.PACK_MAX else "Back to the pitchfork." if k == "wpn" else "", "ok": p.inv.size() < D.PACK_MAX, "a": "uneq", "arg": k})
+					o.append({"label": "Put away: " + D.IT[p.get(k)].n, "sub": "Your backpack is full." if p.inv.size() >= D.PACK_MAX else "Back to the pitchfork." if k == "wpn" else "", "ok": p.inv.size() < D.PACK_MAX, "a": "uneq", "arg": k})
 			if p.holy >= 1:
 				o.append({"head": "Blessings"})
 				bless.call()
 			if p.inv.size():
 				o.append({"label": "Throw something away", "sub": "", "ok": true, "page": "drop"})
-			return {"title": "Your pack", "intro": "In your hand: %s. {trick}: %s, %s. Spare arms can go on the rack in the storehouse for the others." % [W.n, D.AB[W.ab].n, D.AB[W.ab].d], "o": o}
+			return {"title": "Your backpack", "intro": "In your hand: %s. {trick}: %s, %s. Spare arms can go on the rack in the storehouse for the others." % [W.n, D.AB[W.ab].n, D.AB[W.ab].d], "o": o}
 	return {}

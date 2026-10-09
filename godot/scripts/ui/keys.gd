@@ -7,14 +7,14 @@ extends RefCounted
 const ACTIONS := [
 	["up", "Move north"], ["left", "Move west"], ["down", "Move south"], ["right", "Move east"],
 	["attack", "Attack, and land a fish"], ["trick", "Your weapon’s trick"],
-	["interact", "Gather, build, search, rally, use a place (hold)"], ["eat", "Eat"], ["pack", "Open your pack"],
-	["carry", "Use what you carry: bucket or handbell"], ["swap", "Swap to the next weapon in your pack"],
+	["interact", "Gather, build, search, rally, use a place (hold)"], ["eat", "Eat"], ["pack", "Open your backpack"], ["skills", "Your skills: books and ranks"],
+	["carry", "Use what you carry: bucket or handbell"], ["swap", "Swap to the next weapon in your backpack"],
 	["orders", "Posse orders: follow, hold, charge"], ["toilet", "Emergency toilet break"],
 	["build", "Next thing to place"], ["ready", "Ready for the night"], ["mute", "Sound on or off"],
 ]
 const DEF := {
 	"up": [KEY_W, KEY_UP], "left": [KEY_A, KEY_LEFT], "down": [KEY_S, KEY_DOWN], "right": [KEY_D, KEY_RIGHT],
-	"attack": [KEY_SPACE], "trick": [KEY_SHIFT], "interact": [KEY_E], "eat": [KEY_F], "pack": [KEY_I],
+	"attack": [KEY_SPACE], "trick": [KEY_SHIFT], "interact": [KEY_E], "eat": [KEY_F], "pack": [KEY_I], "skills": [KEY_K],
 	"carry": [KEY_G], "swap": [KEY_X], "orders": [KEY_Q], "toilet": [KEY_T], "build": [KEY_TAB],
 	"ready": [KEY_R], "mute": [KEY_M],
 }

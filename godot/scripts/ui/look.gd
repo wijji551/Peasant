@@ -41,6 +41,26 @@ const ICON := {
 	"decoy": "M12 3v18M7 8h10M12 6a2 2 0 1 0 0.01 0zM9 12h6v5H9z",
 }
 
+# the readouts' pictures in colour, so each looks like what it is (24 by 24)
+const ICON_COL := {
+	# two logs, cut ends showing their rings
+	"wood": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><rect x="2.5" y="12.5" width="15" height="7" rx="3.5" fill="#8a5a2b"/><path d="M5 14.5h8M6 17.5h9" stroke="#5e3b1a" fill="none"/><ellipse cx="17.5" cy="16" rx="3.4" ry="3.5" fill="#e6be82"/><ellipse cx="17.5" cy="16" rx="1.6" ry="1.7" fill="none" stroke="#a8743a"/><rect x="5.5" y="5" width="14" height="7" rx="3.5" fill="#9a6532"/><path d="M8 7h7M8.5 10h8" stroke="#5e3b1a" fill="none"/><ellipse cx="19.5" cy="8.5" rx="3.2" ry="3.5" fill="#efc98d"/><ellipse cx="19.5" cy="8.5" rx="1.5" ry="1.7" fill="none" stroke="#a8743a"/></g>',
+	# a heap of grey stones
+	"stone": '<g stroke="#2e2a26" stroke-width="1.1" stroke-linejoin="round"><path d="M2 20l2-6l5-2l4 3l1 5z" fill="#8d877d"/><path d="M11 20l1-6l4-4l5 2l1 8z" fill="#a39d91"/><path d="M6 13l2-6l5-2l4 4l-3 4l-4 0z" fill="#bab4a7"/><path d="M8 8l4-2M13 15l3-3" stroke="#e2ddd2" fill="none"/></g>',
+	# an iron ingot
+	"iron": '<g stroke="#1d2228" stroke-width="1.1" stroke-linejoin="round"><path d="M3 16l4-6h12l-2 6z" fill="#9aa6b2"/><path d="M3 16h14v4H3z" fill="#5d6874"/><path d="M17 16l2-6v4l-2 6z" fill="#47515c"/><path d="M8 12h8" stroke="#d3dde6" fill="none"/></g>',
+	# a loaf, and a fish in front of it
+	"food": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M3 12c0-4 4-6 9-6s9 2 9 6c0 2-1 3-3 3H6c-2 0-3-1-3-3z" fill="#c98a3d"/><path d="M8 8l-1 3M12 7.5v3.5M16 8l1 3" stroke="#f0c47e" fill="none"/><path d="M4 18c3-3 8-3 12 0c-4 3-9 3-12 0zM16 18l4-3v6z" fill="#7fa7b8"/><circle cx="7" cy="17.6" r="0.9" fill="#1d2228" stroke="none"/></g>',
+	# a coin
+	"coin": '<g stroke="#5a3d08" stroke-width="1.1"><circle cx="12" cy="12" r="9" fill="#d9a62e"/><circle cx="12" cy="12" r="6.6" fill="#ecc458" stroke="#a87a18"/><path d="M12 8v8M10 10h4" stroke="#8a6110" stroke-width="1.6" fill="none"/></g>',
+	# a backpack
+	"pack": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M9 6V5a3 3 0 0 1 6 0v1" fill="none"/><path d="M5 9a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v12H5z" fill="#8a5a2b"/><path d="M7 12h10v5H7z" fill="#a8743a"/><path d="M5 10h14" stroke="#5e3b1a" fill="none"/><rect x="11" y="13" width="2" height="2" fill="#d9a62e"/></g>',
+	# an open book, for the skills
+	"book": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M2 6c3-1 7-1 10 1v14c-3-2-7-2-10-1z" fill="#f3e2b0"/><path d="M22 6c-3-1-7-1-10 1v14c3-2 7-2 10-1z" fill="#ead39a"/><path d="M4 9c2-.5 4-.4 6 .4M4 12c2-.5 4-.4 6 .4M14 9.4c2-.8 4-.9 6-.4M14 12.4c2-.8 4-.9 6-.4" stroke="#8a6a45" fill="none"/><path d="M12 7v14" stroke="#7a1e18"/></g>',
+	# a tankard
+	"ale": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><path d="M16 10h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-3" fill="none"/><path d="M5 8h11v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z" fill="#9a6532"/><path d="M5 8c0-3 3-4 5-3c1-2 5-2 6 1c1 0 1 2 0 2z" fill="#fbf3dc"/><path d="M8 11v7M11 11v7M14 11v7" stroke="#5e3b1a" fill="none"/></g>',
+}
+
 static var _theme: Theme
 static var _icons := {}
 static var _scroll: StyleBoxTexture
@@ -48,23 +68,24 @@ static var _display: Font
 static var _body: Font
 
 
-## The display face (for titles) and the body face. The web version's Pirata One and Alegreya are not
-## bundled; these ask Windows for the nearest it has (Palatino, Book Antiqua, Georgia), which read well.
+## The display face (Pirata One, a blackletter, for titles and numbers) and the body face (IM Fell English, cut
+## from the type of a 17th-century press). Both are in fonts/, under the SIL Open Font License.
 static func display_font() -> Font:
 	if _display == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Old English Text MT", "Blackadder ITC", "Palatino Linotype", "Book Antiqua", "Georgia", "serif"])
-		f.font_weight = 600
-		_display = f
+		_display = _font("res://fonts/PirataOne-Regular.ttf")
 	return _display
 
 
 static func body_font() -> Font:
 	if _body == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Palatino Linotype", "Book Antiqua", "Georgia", "Cambria", "serif"])
-		_body = f
+		_body = _font("res://fonts/IMFellEnglish.ttf")
 	return _body
+
+
+static func _font(path: String) -> Font:   # through Godot's importer, so the fonts go with an exported game
+	var f: FontFile = load(path)
+	f.hinting = TextServer.HINTING_LIGHT
+	return f
 
 
 ## The scroll frame: rolled ends top and bottom, wax seals, knots in the corners, a torn edge.
@@ -92,27 +113,78 @@ static func scroll() -> StyleBoxTexture:
 	return _scroll
 
 
-## A small parchment card, for the readouts round the edge of the screen.
-static func card(bg: Color = PAPER_LIGHT, border: Color = OUTLINE, pad: float = 8) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(bg, 0.94)
-	sb.border_color = border
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(6)
-	sb.set_content_margin_all(pad)
-	sb.shadow_color = Color(0, 0, 0, 0.3)
-	sb.shadow_size = 4
-	sb.shadow_offset = Vector2(0, 2)
+## A parchment card, for the readouts and anything else that is not the big scroll: torn, slightly burnt edges,
+## the paper a little blotchy. Made once per tone, when the game starts.
+static var _parch := {}
+
+static func card(bg: Color = PAPER_LIGHT, border: Color = OUTLINE, pad: float = 10) -> StyleBoxTexture:
+	var k := "%s|%s|%s" % [bg.to_html(), border.to_html(), pad]
+	if _parch.has(k):
+		return _parch[k]
+	var sb := StyleBoxTexture.new()
+	sb.texture = ImageTexture.create_from_image(parchment(128, 128, bg, border, 11))
+	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		sb.set_texture_margin(side, 26)
+		sb.set_content_margin(side, pad + 4)
+	_parch[k] = sb
 	return sb
 
 
-static func _button(bg: Color, border: Color) -> StyleBoxFlat:
+## The picture behind a card or button: paper with a torn, darkened edge and a thin ink line just inside it.
+static func parchment(w: int, h: int, base: Color, edge: Color, seed_: int, rim := 0.0) -> Image:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var n := FastNoiseLite.new(); n.seed = seed_; n.frequency = 0.045; n.fractal_octaves = 3
+	var g := FastNoiseLite.new(); g.seed = seed_ + 9; g.frequency = 0.5
+	var half := Vector2(w, h) / 2.0
+	var r := 9.0
+	for y in h:
+		for x in w:
+			var q := (Vector2(x + 0.5, y + 0.5) - half).abs() - (half - Vector2(r, r))
+			var d := -(Vector2(maxf(q.x, 0), maxf(q.y, 0)).length() + minf(maxf(q.x, q.y), 0.0) - r)   # inside distance to the edge
+			var torn := 2.2 + n.get_noise_2d(x * 3.1, y * 3.1) * 2.4 + g.get_noise_2d(x, y) * 0.8
+			var a := clampf(d - torn, 0.0, 1.0)
+			if a <= 0.0:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			var c := base.darkened(n.get_noise_2d(x, y) * 0.07 + 0.02).lightened(maxf(0.0, g.get_noise_2d(x * 0.7, y * 0.7)) * 0.04)
+			var burn := clampf(1.0 - (d - torn) / 11.0, 0.0, 1.0)
+			c = c.lerp(edge, burn * burn * 0.7)
+			if d - torn < 1.4: c = edge.darkened(0.35)
+			if rim > 0.0 and absf(d - torn - 6.0) < 0.7: c = c.lerp(edge, rim)          # an inked border, for buttons
+			c.a = a
+			img.set_pixel(x, y, c)
+	return img
+
+
+static func _plaque(base: Color, edge: Color, seed_: int, rim: float) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = ImageTexture.create_from_image(parchment(96, 64, base, edge, seed_, rim))
+	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		sb.set_texture_margin(side, 20)
+	sb.content_margin_left = 14; sb.content_margin_right = 14; sb.content_margin_top = 8; sb.content_margin_bottom = 8
+	return sb
+
+
+## The red wax button, for the thing you most likely want.
+static func primary() -> StyleBoxTexture:
+	if not _parch.has("primary"):
+		_parch.primary = _plaque(ROSE, Color("4a120c"), 5, 0.0)
+		_parch.primary_hover = _plaque(ROSE.lightened(0.12), Color("4a120c"), 5, 0.0)
+	return _parch.primary
+
+
+static func primary_hover() -> StyleBoxTexture:
+	primary()
+	return _parch.primary_hover
+
+
+static func _button(bg: Color, border: Color) -> StyleBoxFlat:   # a plain box, for typing in
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = border
 	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(5)
-	sb.content_margin_left = 12; sb.content_margin_right = 12; sb.content_margin_top = 6; sb.content_margin_bottom = 6
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 10; sb.content_margin_right = 10; sb.content_margin_top = 6; sb.content_margin_bottom = 6
 	return sb
 
 
@@ -121,18 +193,18 @@ static func theme() -> Theme:
 		return _theme
 	var t := Theme.new()
 	t.default_font = body_font()
-	t.default_font_size = 17
+	t.default_font_size = 18
 	t.set_color("font_color", "Label", INK)
 	t.set_color("font_color", "Button", INK)
 	t.set_color("font_hover_color", "Button", INK)
 	t.set_color("font_pressed_color", "Button", INK)
 	t.set_color("font_focus_color", "Button", INK)
 	t.set_color("font_disabled_color", "Button", Color(INK, 0.4))
-	t.set_stylebox("normal", "Button", _button(PAPER_LIGHT, Color(OUTLINE, 0.7)))
-	t.set_stylebox("hover", "Button", _button(Color("fff3cf"), OUTLINE))
-	t.set_stylebox("pressed", "Button", _button(PAPER_DARK, OUTLINE))
-	t.set_stylebox("focus", "Button", _button(Color("fff3cf"), ROSE))
-	t.set_stylebox("disabled", "Button", _button(Color(PAPER, 0.5), Color(OUTLINE, 0.25)))
+	t.set_stylebox("normal", "Button", _plaque(PAPER_LIGHT, Color("6b4423"), 3, 0.35))
+	t.set_stylebox("hover", "Button", _plaque(Color("fff6d8"), Color("6b4423"), 3, 0.55))
+	t.set_stylebox("pressed", "Button", _plaque(PAPER_DARK, Color("4a2a12"), 3, 0.6))
+	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
+	t.set_stylebox("disabled", "Button", _plaque(Color("e3d3a8"), Color("9c8a6a"), 3, 0.2))
 	t.set_stylebox("normal", "LineEdit", _button(Color("fffaf0"), Color(OUTLINE, 0.7)))
 	t.set_stylebox("focus", "LineEdit", _button(Color("fffaf0"), ROSE))
 	t.set_color("font_color", "LineEdit", INK)
@@ -145,7 +217,8 @@ static func theme() -> Theme:
 	t.set_stylebox("pressed", "CheckBox", StyleBoxEmpty.new())
 	t.set_stylebox("focus", "CheckBox", StyleBoxEmpty.new())
 	t.set_stylebox("panel", "PanelContainer", card())
-	t.set_stylebox("panel", "TooltipPanel", card(PAPER_LIGHT, OUTLINE, 8))
+	t.set_stylebox("panel", "TooltipPanel", card(PAPER_LIGHT, OUTLINE, 6))
+	t.set_font_size("font_size", "TooltipLabel", 16)
 	t.set_color("font_color", "TooltipLabel", INK)
 	var grab := StyleBoxFlat.new(); grab.bg_color = Color(OUTLINE, 0.5); grab.set_corner_radius_all(4)
 	t.set_stylebox("grabber", "VScrollBar", grab)
@@ -170,7 +243,8 @@ static func icon(key, px: int = 40) -> Texture2D:
 	if _icons.has(k):
 		return _icons[k]
 	var col := "#a8761c" if gold else "#3a2614"
-	var svg := '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="%s" fill="none" stroke="%s" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' % [ICON.get(name, ""), col]
+	var inner: String = ICON_COL[name] if ICON_COL.has(name) and not gold and not (key is int) else '<path d="%s" fill="none" stroke="%s" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' % [ICON.get(name, ""), col]
+	var svg := '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">%s</svg>' % inner
 	var img := Image.new()
 	img.load_svg_from_string(svg, px / 24.0)
 	var tex := ImageTexture.create_from_image(img)

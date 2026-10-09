@@ -4,9 +4,9 @@ extends Control
 
 const PLACES := [
 	["Market", 0.0, 21.6, 3.2], ["Smithy", 16.5, -4.7, 6.0], ["Storehouse", 17.0, 10.6, 6.5], ["Library", 17.0, 20.4, 8.0],
-	["Slum", -17.6, 20.5, 3.4], ["The Thorny Rose", -17.5, -4.7, 7.5], ["Robert Bailiff", -14.5, -12.6, 8.6],
+	["Slum", -17.6, 20.5, 3.4], ["The Thorny Rose Inn", -17.5, -4.7, 7.5], ["Bailiff’s House", -14.5, -12.6, 8.6],
 	["Farms: food", -58.0, 30.0, 1.5], ["The keep", 0.0, 0.0, 12.4], ["Chapel: the priest", 17.0, -14.0, 8.4],
-	["Old ruins: search", 10.8, -15.4, 3.4], ["West ruins: search", -58.0, 46.0, 5.0], ["East ruins: search", 58.0, 46.0, 5.0],
+	["Old ruins: search", 10.8, -15.4, 3.4], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
 ]
 
@@ -71,6 +71,13 @@ func _process(_delta: float) -> void:
 			"quarry": x = R.QUARRY.x; z = R.QUARRY.z
 			"mine": x = R.MINEC.x; z = R.MINEC.z
 			"jetty": x = R.JETTY.x; z = R.JETTY.z + 2.6
+			"ruin1", "ruin2":                          # the outer ruins: only once someone has found them today
+				var k := 1 if p[1] == "ruin1" else 2
+				var c: Dictionary = Map.ruin_layout(R.gseed, R.day).centres[k]
+				x = c.x; z = c.z - 1.6
+				if not R.ruins_seen[k]:
+					_signs[i].visible = false
+					continue
 		var l := _signs[i]
 		if D.d2(focus.x, focus.z, x, z) < 30 * 30 and R.live():
 			_put(l, Vector3(x, p[3], z))

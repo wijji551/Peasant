@@ -23,6 +23,22 @@ func _ready() -> void:
 	pr.position = Vector3(st.x + 0.9, 0, st.z - 0.5)
 	pr.rotation.y = -2.2
 	pr.scale = Vector3.ONE * 1.08
+	var halo := MeshInstance3D.new()                  # and, faintly, a halo. He has been very good this year
+	var tm := TorusMesh.new(); tm.inner_radius = 0.2; tm.outer_radius = 0.26; tm.rings = 20; tm.ring_segments = 6
+	halo.mesh = tm
+	var hm := StandardMaterial3D.new()
+	hm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	hm.albedo_color = Color(1.0, 0.86, 0.45, 0.85)
+	hm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	halo.material_override = hm
+	halo.position = Vector3(0, 1.88, 0)
+	pr.add_child(halo)
+	var gl := OmniLight3D.new()
+	gl.light_color = Color(1.0, 0.88, 0.6)
+	gl.light_energy = 0.6
+	gl.omni_range = 3.2
+	gl.position = Vector3(0, 1.6, 0.3)
+	pr.add_child(gl)
 
 
 func _mi(mesh: String, parent: Node3D = null) -> MeshInstance3D:

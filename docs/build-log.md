@@ -178,3 +178,21 @@ A test bot gathering flat out collected 120 to 140 wood in a day, which is in li
 
 - Clicking in the game crashed it: `main.gd` still asked the HUD `notice_open()`, which went when the menus were rewritten. It now asks whether the window is open. Found from the log Godot keeps in `%APPDATA%\Godot\app_userdata\Peasant Defence\logs`.
 - New `godot/tests/click_test.gd` clicks the home screen and the game with real mouse presses (holding the button down as the game starts), which is how this got past `ui_test.gd`.
+
+## Godot: the look of the place
+
+The web version is no longer updated; from here on, changes are made in Godot only.
+
+- Fonts: Pirata One (titles, numbers) and IM Fell English (text), from Google's open-licence font collection, in `godot/fonts/` with their licences. Loaded through Godot's importer so they go with an exported game.
+- Look: `Look.card()` and buttons are now drawn parchment (torn, burnt edges, made with noise when the game starts) instead of flat boxes; the wax-red button for the main choice. Resource pictures are full colour (logs, stones, an ingot, a loaf and a fish, a coin, a backpack, a book).
+- Readouts: "What you carry" lists Wood, Stone, Iron, Food and Coin by name with the carry limit. The books card is gone; a Skills chip (K) opens a covering Skills window: the ten books on the left, the chosen one as a ladder of seven ranks with what each does and the progress to the next.
+- Rules: past rank VII, learning becomes `spare` points (one per first step's worth of the book), saved, and sold for `D.SPARE_PAY` = 12d each from the Skills window. Starting value to tune.
+- "Pack" is "Backpack" in everything the player reads (the key action is still called `pack` inside).
+- Window: 1600 by 900 to start (the UI is laid out at 1280 by 720 and scaled). Home screen 800 by 510.
+- Fixed: a window opened after a bigger one kept the bigger one's size and sat off to the right and down (the frame's smallest size has to be set before its size); the frame now recentres whenever its size changes. Fixed: scenery trees beyond the hedge and the stakes were drawn on the map.
+- Names: Bailiff's House; the Thorny Rose Inn.
+- Models: a new chapel (nave, buttresses, coloured lancet windows, round window, rounded north end, bell tower with spire and gilded cross, churchyard, lantern); a new priest (white alb, gold-trimmed vestment with a cross, purple stole, processional cross, book, faint halo and glow); round haybales lying on their sides and a stack of square ones.
+- Ruins: `D.RUIN_SITES` has eight clearings (no trees grow in them); each night the two outer ruins move to two of them, chosen from the game's seed and the day. `R.ruins_seen` hides them from the map and signs until a player comes within 18 of one, which tells everyone.
+- Atmosphere (`scripts/view/atmos.gd`, only for looking at): two sheets of drifting mist (a shader on large planes), light by day, thicker at night, always lingering at the castle; weather per day from the seed (clear, overcast, rain, mist) with a line in the dawn notice; rain; chimney smoke; will-o'-wisps over the graveyard and the castle at night; crows round the towers; lightning at night. Night is darker and colder. Around the castle: dead trees, a gibbet, broken railings, green braziers at the gate, purple-glowing windows.
+- Anti-aliasing: MSAA 4x, with debanding.
+- Tests: rules 115 (spare learning, wandering ruins), UI 26, clicks 14 (new: the dawn after the home screen is centred). The careful bot still holds all seven nights.

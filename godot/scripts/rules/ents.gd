@@ -74,6 +74,7 @@ class Player:
 	var gab := false
 	var books: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	var xp: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+	var spare := 0.0        # learning past rank VII, in points; sold for coin in the skills window
 	var coward := false
 	var deaths := 0
 	var cg := 0.0           # courage, from the inn

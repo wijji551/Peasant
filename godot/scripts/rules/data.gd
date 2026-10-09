@@ -140,6 +140,7 @@ const TOILET_CD := 60.0
 
 # --- the ten books. Seven ranks each; a rank is earned by doing what the book teaches.
 const XPM := [1, 3, 7, 13, 21, 32]   # how much doing each further rank takes, as a multiple of the book's first step
+const SPARE_PAY := 12                # past rank VII, each further first step's worth of learning is a spare point, sold for this many pence
 const BOOKS := [
 	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material"]},
 	{"name": "Field, Hook and Pot", "what": "Food", "base": 40, "by": "fishing and foraging", "ranks": ["Fish and forage faster (and faster again with every rank)", "Meals heal 35", "A catch is 4 fish", "One meal feeds your whole posse", "Meals heal 50", "Slum recruits cost 3 food", "Meals heal 65 and steady your posse’s nerve"]},
@@ -148,7 +149,7 @@ const BOOKS := [
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["Hit harder up close (and harder again with every rank)", "One blow in eight misses you", "Your weapon’s trick is ready a fifth sooner", "Your swings reach wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow lands twice as hard"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "You never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also strikes a second enemy", "Aimed stones, volleys and piercing bolts are ready in half the time"]},
 	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 50, "by": "recruiting, and your posse’s blows", "ranks": ["Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "Orders: {orders} tells your posse to follow, hold or charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away"]},
-	{"name": "The Landlord’s Ledger", "what": "Dutch courage", "base": 4, "by": "drinking at the Thorny Rose", "ranks": ["Every tankard goes further (and further again with every rank)", "A longer charge: 26 seconds", "Half the hangover", "No hangover", "When you drink, everyone in the inn gets a mouthful", "A longer charge: 32 seconds", "The charge hits twice as hard"]},
+	{"name": "The Landlord’s Ledger", "what": "Dutch courage", "base": 4, "by": "drinking at the Thorny Rose Inn", "ranks": ["Every tankard goes further (and further again with every rank)", "A longer charge: 26 seconds", "Half the hangover", "No hangover", "When you drink, everyone in the inn gets a mouthful", "A longer charge: 32 seconds", "The charge hits twice as hard"]},
 	{"name": "Relics and Where They Were Left", "what": "Relic lore", "base": 4, "by": "searching the ruins", "ranks": ["Search faster (and faster again with every rank)", "Your map marks the rubble that still hides something", "Relics turn up half as often again", "You find twice the materials and coins", "Holy things hit harder in your hands", "Relics turn up far more often", "Nothing lurking in the ruins notices you"]},
 	{"name": "Granny’s Remedies", "what": "Healing", "base": 4, "by": "bandaging and reviving", "ranks": ["Bandage a hurt ally: hold {interact} beside them (it heals more with every rank)", "Revive twice as fast, and to better health", "Each of your posse survives one fatal blow a night", "You mend slowly all the time, even in a fight", "You last twice as long when down", "A bandage heals completely", "Once a night you get back up by yourself"]},
 ]
@@ -168,7 +169,7 @@ const STATIONS := [
 	{"id": "store", "x": 12.9, "z": 10.6, "r": 3.0, "name": "the storehouse", "verb": "open the storehouse"},
 	{"id": "library", "x": 13.4, "z": 20.4, "r": 3.0, "name": "the library", "verb": "read in the library"},
 	{"id": "slum", "x": -17.6, "z": 17.4, "r": 3.4, "name": "the slum", "verb": "recruit in the slum"},
-	{"id": "inn", "x": -13.1, "z": -4.7, "r": 2.5, "name": "the Thorny Rose", "verb": "call at the Thorny Rose"},
+	{"id": "inn", "x": -13.1, "z": -4.7, "r": 2.5, "name": "the Thorny Rose Inn", "verb": "call at the Thorny Rose Inn"},
 	{"id": "priest", "x": 13.6, "z": -10.6, "r": 2.3, "name": "the priest", "verb": "speak to the priest"},
 ]
 const INN := {"x": -17.5, "z": -4.7, "dx": -13.6, "dz": -4.7}   # inside, and the door
@@ -180,7 +181,12 @@ const SITES := [
 	[{"x": 12.0, "z": 53.4, "n": "south of the village"}, {"x": -28.0, "z": 53.4, "n": "on the west reach"}, {"x": 34.0, "z": 53.4, "n": "on the east reach"}, {"x": -80.0, "z": 53.4, "n": "far downstream, to the west"}, {"x": 76.0, "z": 53.4, "n": "far upstream, to the east"}],
 ]
 # --- the ruins. The old ruins by the chapel never change; the two outer ruins fall down differently every night.
-const RUINS := [{"x": 11.0, "z": -13.4, "name": "the old ruins"}, {"x": -58.0, "z": 47.6, "name": "the west ruins"}, {"x": 58.0, "z": 47.6, "name": "the east ruins"}]
+const RUINS := [{"x": 11.0, "z": -13.4, "name": "the old ruins"}, {"x": -58.0, "z": 47.6, "name": "the outer ruins"}, {"x": 58.0, "z": 47.6, "name": "the outer ruins"}]
+# the clearings where the two outer ruins can be. Every night they wander off to two of them; nobody is told which.
+const RUIN_SITES := [
+	{"x": -58.0, "z": 47.6}, {"x": 58.0, "z": 47.6}, {"x": -62.0, "z": -22.0}, {"x": -81.0, "z": -4.0},
+	{"x": 70.0, "z": -47.0}, {"x": 46.0, "z": 13.0}, {"x": -18.0, "z": 40.0}, {"x": 21.0, "z": 40.0},
+]
 
 const PCOL := ["#c8443a", "#3f77c4", "#e0a526", "#4f9d57", "#8e55b5", "#e07a2f", "#3aa6a0", "#d46a9a"]
 const PCOLN := ["Red", "Blue", "Gold", "Green", "Purple", "Orange", "Teal", "Rose"]

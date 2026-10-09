@@ -25,8 +25,8 @@ static func colliders() -> Array:
 	wall.call(-VW, VS, VW, VS)
 	out.append(E.Box.new(0, 0, D.KEEP_H, D.KEEP_H))
 	out.append(house_box(-14.5, -12.6, 0, 9, 6.4))           # Robert Bailiff's
-	out.append(house_box(17, -14, 0, 4.4, 6.2))              # the chapel
-	out.append(house_box(-17.5, -4.7, PI / 2, 8, 6))         # the Thorny Rose
+	out.append(house_box(17, -14.8, 0, 4.6, 7.8))            # the chapel, with its rounded north end
+	out.append(house_box(-17.5, -4.7, PI / 2, 8, 6))         # the Thorny Rose Inn
 	out.append(house_box(17.5, -4.7, -PI / 2, 6.5, 5.6))     # the smithy
 	out.append(house_box(17.5, 10.6, -PI / 2, 7, 5.6))       # the storehouse
 	out.append(house_box(-21.5, 19.2, 0.12, 3, 2.8))         # the slum
@@ -48,7 +48,8 @@ static func tree_ok(x: float, z: float) -> bool:
 	if absf(z - D.GATE_Z) < 4.5 and absf(x) < 50: return false                           # the gate paths
 	if Vector2(x, z).distance_to(D.HILL) < 47: return false                              # castle hill
 	if x > -74 and x < -42 and z > 17 and z < 44: return false                           # farms
-	if absf(absf(x) - 58) < 10 and z > 37 and z < 54: return false                       # outer ruins
+	for c in D.RUIN_SITES:
+		if absf(x - c.x) < 10 and absf(z - c.z) < 6.5: return false                       # the clearings the outer ruins wander between
 	if absf(x) > 90.5 and absf(x) < 98: return false                                     # the thorn hedge
 	if absf(z + 62.8) < 1.6 and absf(x) < 93: return false                               # the line of stakes
 	for k in 2:
@@ -96,7 +97,8 @@ static func trees() -> Array:
 	return out
 
 
-# --- the ruins. The old ruins by the chapel never change; the two outer ruins fall down differently every night.
+# --- the ruins. The old ruins by the chapel never change; the two outer ruins move to new clearings every night,
+# and fall down differently when they get there.
 static var _ruin_key := ""
 static var _ruin_now := {}
 
@@ -107,8 +109,13 @@ static func ruin_layout(game_seed: int, day: int) -> Dictionary:   # the same on
 	var rub := []
 	var pil := []
 	var spots := [{"x": 9.8, "z": -14.3, "ruin": 0}, {"x": 12.3, "z": -16.6, "ruin": 0}]
+	var pick := RandomNumberGenerator.new()
+	pick.seed = game_seed * 17 + day * 733 + 5
+	var a := pick.randi_range(0, D.RUIN_SITES.size() - 1)
+	var b := (a + 1 + pick.randi_range(0, D.RUIN_SITES.size() - 2)) % D.RUIN_SITES.size()
+	var centres := [{"x": D.RUINS[0].x, "z": D.RUINS[0].z}, D.RUIN_SITES[a], D.RUIN_SITES[b]]
 	for side in [1, 2]:
-		var R: Dictionary = D.RUINS[side]
+		var R: Dictionary = centres[side]
 		var rng := RandomNumberGenerator.new()
 		rng.seed = game_seed * 31 + day * 977 + side * 131
 		var n := 8 + rng.randi_range(0, 4)
@@ -133,5 +140,5 @@ static func ruin_layout(game_seed: int, day: int) -> Dictionary:   # the same on
 					break
 			spots.append({"x": x, "z": z, "ruin": side})
 	_ruin_key = key
-	_ruin_now = {"rub": rub, "pil": pil, "spots": spots}
+	_ruin_now = {"rub": rub, "pil": pil, "spots": spots, "centres": centres}
 	return _ruin_now

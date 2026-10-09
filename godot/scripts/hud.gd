@@ -2,17 +2,18 @@ extends CanvasLayer
 ## The readouts round the edge of the screen. Each has its own place, so nothing sits on anything else:
 ##
 ##   top left      the day, the time, and whether you are ready         top middle   the keep (and the Steward)
-##   left          what you carry, and your books                       top right    the map, and the handbook button
+##   left          what you carry                                      top right    the map, and the handbook button
 ##   bottom left   your health, and the news                            bottom right the four things you can place
 ##   bottom middle what holding E would do, and your hand, bucket, posse, pack and courage
 ##
-## Notices, the pack, the dawn and the handbook open in the one window in the middle (window.gd); while it is
+## Notices, the backpack, the dawn and the handbook open in the one window in the middle (window.gd); while it is
 ## open the big announcements wait.
 
 const ScrollWindow := preload("res://scripts/ui/window.gd")
 
 signal build_pressed(k: String)
 signal pack_pressed
+signal skills_pressed
 signal menu_pressed
 
 var window: Control
@@ -28,8 +29,6 @@ var _boss_bar: ProgressBar
 var _boss_num: Label
 var _res := {}                       # name -> Label
 var _carry: Label
-var _books: VBoxContainer
-var _books_sig := ""
 var _hp_bar: ProgressBar
 var _hp_lab: Label
 var _feed: VBoxContainer
@@ -101,33 +100,33 @@ func _ready() -> void:
 	top_right.add_child(mb)
 	_zones.append(top_right)
 
-	# --- left: what you carry, and your books
+	# --- left: what you carry
 	var lc := VBoxContainer.new()
 	root.add_child(lc)
-	_pin(lc, Control.PRESET_TOP_LEFT, 14, 132, 254, 132)
+	_pin(lc, Control.PRESET_TOP_LEFT, 14, 142, 254, 142)
 	lc.add_theme_constant_override("separation", 8)
 	lc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var rc := _card(lc)
-	var rv := _vbox(rc, 4)
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 14)
-	grid.add_theme_constant_override("v_separation", 3)
-	rv.add_child(grid)
-	for r in ["wood", "stone", "iron", "food"]:
+	rc.custom_minimum_size.x = 240
+	var rv := _vbox(rc, 2)
+	Look.label(rv, "What you carry", 20, Look.RUST, true)
+	for r in ["wood", "stone", "iron", "food", "coin"]:
 		var h := HBoxContainer.new()
-		grid.add_child(h)
-		var ic := TextureRect.new(); ic.texture = Look.icon(r, 20); h.add_child(ic)
-		_res[r] = Look.label(h, "0", 16, Look.INK)
-		_res[r].custom_minimum_size.x = 64
-	var cr := HBoxContainer.new()
-	rv.add_child(cr)
-	var ci := TextureRect.new(); ci.texture = Look.icon("coin", 20); cr.add_child(ci)
-	_res.coin = Look.label(cr, "", 16, Look.INK)
-	_carry = Look.para(rv, "", 12, Look.INK_SOFT)
-	var bc := _card(lc)
-	_books = _vbox(bc, 3)
-	for card in [rc, bc]: card.custom_minimum_size.x = 240
+		h.add_theme_constant_override("separation", 8)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rv.add_child(h)
+		var ic := TextureRect.new(); ic.texture = Look.icon(r, 30); ic.custom_minimum_size = Vector2(30, 30)
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED; h.add_child(ic)
+		var nm := Look.label(h, r.capitalize(), 18, Look.INK)
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_res[r] = Look.label(h, "0", 22, Look.INK, true)
+		_res[r].vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		if r != "coin":
+			_res[r + "_cap"] = Look.label(h, "/30", 14, Look.INK_SOFT)
+			_res[r + "_cap"].custom_minimum_size.x = 28
+			_res[r + "_cap"].vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_carry = Look.para(rv, "", 14, Look.INK_SOFT)
 	_zones.append(lc)
 
 	# --- bottom left: health, and above it the news
@@ -184,8 +183,8 @@ func _ready() -> void:
 	_pin(_hotbar, Control.PRESET_CENTER_BOTTOM, 0, -14, 0, -14)
 	_hotbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_hotbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_hotbar.add_theme_constant_override("separation", 6)
-	for c in ["hand", "carry", "posse", "pack", "toilet", "courage"]:
+	_hotbar.add_theme_constant_override("separation", 3)
+	for c in ["hand", "carry", "posse", "pack", "skills", "toilet", "courage"]:
 		_chip(c)
 	_zones.append(_hotbar)
 	_prompt_box = VBoxContainer.new()
@@ -240,7 +239,7 @@ func _shout(parent: Control, size: int, display: bool = false) -> Label:
 	if display: l.add_theme_font_override("font", Look.display_font())
 	l.add_theme_color_override("font_color", Color("f8eed3"))
 	l.add_theme_color_override("font_outline_color", Color(0.08, 0.05, 0.02, 0.9))
-	l.add_theme_constant_override("outline_size", 9 if size > 30 else 6)
+	l.add_theme_constant_override("outline_size", 9 if size > 30 else 4)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
 	return l
@@ -264,17 +263,18 @@ func _bar(parent: Control, fill: Color, h: float) -> ProgressBar:
 func _chip(name_: String) -> void:   # one slot in the bar at the bottom: a picture, a word or two, and its key
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(96, 54)
-	b.mouse_filter = Control.MOUSE_FILTER_STOP if name_ == "pack" else Control.MOUSE_FILTER_IGNORE
+	b.custom_minimum_size = Vector2(96, 58)
+	b.mouse_filter = Control.MOUSE_FILTER_STOP if name_ in ["pack", "skills"] else Control.MOUSE_FILTER_IGNORE
 	if name_ == "pack": b.pressed.connect(func(): pack_pressed.emit())
+	if name_ == "skills": b.pressed.connect(func(): skills_pressed.emit())
 	var h := HBoxContainer.new()
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
-	h.offset_left = 8; h.offset_right = -6
+	h.offset_left = 9; h.offset_right = -5
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_theme_constant_override("separation", 6)
 	b.add_child(h)
 	var ic := TextureRect.new()
-	ic.custom_minimum_size = Vector2(28, 28)
+	ic.custom_minimum_size = Vector2(30, 30)
 	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -285,8 +285,8 @@ func _chip(name_: String) -> void:   # one slot in the bar at the bottom: a pict
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(v)
-	var key := Look.label(v, "", 11, Look.ROSE)
-	var text := Look.label(v, "", 13, Look.INK)
+	var key := Look.label(v, "", 12, Look.ROSE)
+	var text := Look.label(v, "", 15, Look.INK)
 	_hotbar.add_child(b)
 	_chips[name_] = {"box": b, "icon": ic, "text": text, "key": key}
 
@@ -297,11 +297,11 @@ func _set_chip(name_: String, shown: bool, icon_key, key: String, text: String, 
 	if not shown: return
 	if c.get("ik") != icon_key:                    # a number is an item; a word is one of the readout pictures
 		c.ik = icon_key
-		c.icon.texture = Look.icon(int(icon_key) if str(icon_key).is_valid_int() else icon_key, 28)
+		c.icon.texture = Look.icon(int(icon_key) if str(icon_key).is_valid_int() else icon_key, 30)
 	c.key.text = key
 	c.text.text = text
-	var need: float = maxf(c.key.get_minimum_size().x, c.text.get_minimum_size().x) + 28 + 6 + 18
-	c.box.custom_minimum_size.x = maxf(92, need)
+	var need: float = maxf(c.key.get_minimum_size().x, c.text.get_minimum_size().x) + 30 + 6 + 20
+	c.box.custom_minimum_size.x = maxf(80, need)
 	c.box.tooltip_text = Keys.fill(tip)
 	c.box.modulate = Color(1, 1, 1, 0.55) if dim else Color.WHITE
 
@@ -406,32 +406,10 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		var n: int = p.get(r)
 		_res[r].text = str(n)
 		_res[r].add_theme_color_override("font_color", Look.ROSE if n >= c else Look.INK)
+		_res[r + "_cap"].text = "/%d" % c
 	_res.coin.text = D.coins(p.coin)
-	_carry.text = "You can carry %d of each." % c + ("  Bodies %d / %d%s" % [p.bodies, D.MAX_BODIES, " (%d blessed)" % p.bbod if p.bbod else ""] if p.bodies else "")
-	# books: the ones you have, the rank, and how far to the next
-	var bsig := str(p.books) + str(p.xp.map(func(x): return floori(x))) + str(p.coward)
-	if bsig != _books_sig:
-		_books_sig = bsig
-		for ch in _books.get_children(): ch.queue_free()
-		var any := false
-		for b in 10:
-			var rnk: int = p.books[b]
-			if not rnk: continue
-			any = true
-			var h := HBoxContainer.new(); _books.add_child(h)
-			var t := Look.label(h, D.BOOKS[b].name, 12, Look.INK)
-			t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			t.custom_minimum_size.x = 10
-			t.clip_text = true
-			t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			Look.label(h, ["", "I", "II", "III", "IV", "V", "VI", "VII"][rnk], 13, Look.ROSE, true)
-			var lo := Rules.need_xp(b, rnk - 1) if rnk > 1 else 0
-			var f := 1.0 if rnk >= 7 else clampf((p.xp[b] - lo) / float(Rules.need_xp(b, rnk) - lo), 0, 1)
-			var pb := _bar(_books, Color("b8862b"), 4)
-			pb.value = f
-		if not any:
-			var t := Look.para(_books, "No book yet. The library has one for you.", 12, Look.INK_SOFT)
-			t.custom_minimum_size.x = 200
+	_carry.text = "Bodies: %d of %d%s" % [p.bodies, D.MAX_BODIES, " (%d blessed)" % p.bbod if p.bbod else ""] if p.bodies else ""
+	_carry.visible = p.bodies > 0
 	# health
 	_hp_bar.value = p.hp / Rules.max_hp(p)
 	_hp_lab.text = "Your health. %s eats." % Keys.name("eat") if p.food > 0 and p.hp < Rules.max_hp(p) and p.state == "ok" else "Your health"
@@ -448,10 +426,13 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 	var orders := Rules.rk(p, 6) >= 3
 	_set_chip("posse", true, "posse", (Keys.name("orders") + " " + ["follow", "hold", "charge"][p.order]) if orders else "", "Posse %d/%d" % [p.posse, R.posse_max(p)],
 		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + (" {orders}: follow, hold, charge." if orders else ""), p.posse == 0)
-	_set_chip("pack", true, "pack", Keys.name("pack"), "Pack %d/%d" % [p.inv.size(), D.PACK_MAX], "Your pack: what is on you, and six places for spares. Click or press {pack}.")
+	_set_chip("pack", true, "pack", Keys.name("pack"), "Backpack %d/%d" % [p.inv.size(), D.PACK_MAX], "Your backpack: what is on you, and six places for spares. Click or press {pack}.")
+	var owned := p.books.filter(func(r): return r > 0).size()
+	_set_chip("skills", true, "book", Keys.name("skills"), ("Skills +" if p.spare >= 1 else "Skills") if owned else "No book",
+		"Your skills: each book you have read, what every rank does, and how close the next is. Click or press {skills}." if owned else "The library has a book for you.", owned == 0)
 	_set_chip("toilet", p.posse > 0, "toilet", Keys.name("toilet"), "Toilet" if p.tbCd <= 0 else "Toilet %ds" % ceili(p.tbCd), "Emergency toilet break: the dead nearby run from your posse.", p.tbCd > 0)
 	var cg := p.state == "inn" or p.cg > 0 or p.charge > 0 or p.hang > 0
-	_set_chip("courage", cg, "ale", "", "Charging %ds" % ceili(p.charge) if p.charge > 0 else "Hangover %ds" % ceili(p.hang) if p.hang > 0 else "Courage %d%%" % p.cg, "Dutch courage, from the Thorny Rose.")
+	_set_chip("courage", cg, "ale", "", "Charging %ds" % ceili(p.charge) if p.charge > 0 else "Hangover %ds" % ceili(p.hang) if p.hang > 0 else "Courage %d%%" % p.cg, "Dutch courage, from the Thorny Rose Inn.")
 	# what you can place
 	for k in _build_cards:
 		var e: Dictionary = _build_cards[k]

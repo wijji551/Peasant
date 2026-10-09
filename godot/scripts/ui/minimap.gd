@@ -21,6 +21,7 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(W, H) * SC
 	size = custom_minimum_size
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip_contents = true                          # nothing is drawn past the edge of the map
 
 
 func mx(x: float) -> float: return (x - X0) / (X1 - X0) * W * SC
@@ -64,7 +65,7 @@ func _draw() -> void:
 	draw_line(Vector2(mx(D.X1 + 1.5), mz(D.Z0 - 1)), Vector2(mx(D.X1 + 1.5), mz(58)), hedge, 2)
 	draw_dashed_line(Vector2(mx(D.X0 - 1.5), mz(D.Z0 - 1)), Vector2(mx(D.X1 + 1.5), mz(D.Z0 - 1)), Color("5a4a3c"), 1, 3)
 	for t: E.Trunk in R.trees:
-		if t.st == 1: continue
+		if t.st == 1 or t.x < D.X0 or t.x > D.X1 or t.z < D.Z0 or t.z > D.Z1: continue   # scenery past the hedge and the stakes is not on the map
 		var s := 1.0 if t.st else 2.0
 		draw_rect(Rect2(mx(t.x) - s / 2, mz(t.z) - s / 2, s, s), Color("a9bf78") if t.st else Color("7f9f58"))
 	var mark := func(x: float, z: float, c: Color) -> void:
@@ -75,8 +76,13 @@ func _draw() -> void:
 	mark.call(R.JETTY.x, R.JETTY.z + 2, Color("8fd0e0"))
 	var L := Map.ruin_layout(R.gseed, R.day)
 	var lore := me != null and Rules.rk(me, 8) >= 2
+	for k in [1, 2]:
+		if R.ruins_seen[k]:
+			var cc: Dictionary = L.centres[k]
+			draw_rect(Rect2(mx(cc.x - 7), mz(cc.z - 4.4), mx(cc.x + 7) - mx(cc.x - 7), mz(cc.z + 4.4) - mz(cc.z - 4.4)), Color(0.45, 0.42, 0.38, 0.45))
 	for i in L.spots.size():
 		var sp: Dictionary = L.spots[i]
+		if not R.ruins_seen[sp.ruin]: continue                 # the outer ruins are not on the map until someone finds them
 		if lore and R.spots[i] > 0: draw_rect(Rect2(mx(sp.x) - 1.5, mz(sp.z) - 1.5, 3, 3), Color("f3d36a"))
 		else: draw_rect(Rect2(mx(sp.x) - 1, mz(sp.z) - 1, 2, 2), Color("8a8478"))
 	for d: E.Drop in R.drops:
