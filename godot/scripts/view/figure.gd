@@ -115,7 +115,7 @@ func _place(x: float, z: float, r: float, snap: bool) -> void:
 
 ## Show a player, as the rules have them now.
 func player(p: E.Player, is_me: bool) -> void:
-	visible = p.state != "inn" and p.state != "hide"
+	visible = p.state != "hide"                                                # (drinking at the bar of the Rose, you can be seen: it is a room now)
 	_place(p.x, p.z, p.r, false)
 	var kind: String = D.GK[p.gk] if p.gk < D.GK.size() else ""
 	var c := _counts(p.ac, p.hc, p.cc)

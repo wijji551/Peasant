@@ -84,6 +84,10 @@ class Player:
 	var spare := 0.0        # learning past rank VII, in points; sold for coin in the skills window
 	var cogs := 0           # boxes of cogs, from the tinker: for contraptions
 	var room := ""          # inside somewhere (D.ROOMS), or "" out of doors
+	var game := {}          # a game with the gambler, in progress or just finished: {g, bet, ...}
+	var gwon := 0           # what the gambler has lost to this player today
+	var gstreak := 0        # how many times running this player has found the pea: the cups get quicker
+	var treated := 0        # which locals have been stood a drink today (bits)
 	var rune := 0           # runes carried, from the old workings
 	var etch := -1          # the weapon that has had runes etched into it
 	var card_rank := 0      # a library card has been handed in: the next book taken up starts at this rank

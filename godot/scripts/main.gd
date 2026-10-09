@@ -718,6 +718,11 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
 		"bellring": world.ring_bell(); Sound.play("bell", 1.0)
 		"hop": F.puff(ev[1], 0.6, ev[2], 8, F.C_WOOD, 2.5)
+		"tip":
+			if ev[1] == me.id:
+				Sound.play("find"); hud.banner(str(ev[2])[0].to_upper() + str(ev[2]).substr(1), str(ev[3]), 8.0)
+		"gamble":
+			if ev[1] == me.id: Sound.play("coin" if ev[2] else "no", 0.9)
 		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
 		"door": Sound.play("door", 0.8, Vector2(ev[1], ev[2]))
 		"tenant":
@@ -937,6 +942,15 @@ func _apply_light(nf: float) -> void:
 		env.fog_depth_begin = 400.0
 		env.fog_depth_end = 500.0
 		env.adjustment_saturation = 1.0
+	elif screen == "game" and me and me.room == "inn":  # in the Rose: lamplight and firelight, whatever the hour
+		sun.light_energy = 0.0
+		env.ambient_light_color = Color(1.0, 0.82, 0.62)
+		env.ambient_light_energy = 0.42
+		env.background_color = Color(0.07, 0.05, 0.04)
+		env.fog_light_color = env.background_color
+		env.fog_depth_begin = 400.0
+		env.fog_depth_end = 500.0
+		env.adjustment_saturation = 1.05
 
 
 ## The view: looking down on the player, from the south to begin with (as in the web version). It can be turned
@@ -1080,11 +1094,15 @@ func _test_hook() -> void:
 		return
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
 	if OS.get_environment("DTV_TORCH") != "" and me: me.wpn = D.I_TORCH     # for pictures: a torch in hand
-	if OS.get_environment("DTV_ROOM") != "" and _frame == at + 2 and me:      # for pictures: indoors, at DTV_ROOM=name[,x,z]
+	if OS.get_environment("DTV_ROOM") != "" and _frame == at - 5 and me:      # for pictures: indoors, at DTV_ROOM=name[,x,z]
 		var rm := OS.get_environment("DTV_ROOM").split(",")
 		R.enter_room(me, rm[0])
 		if rm.size() >= 3:
 			me.x = float(rm[1]); me.z = float(rm[2])
+	if OS.get_environment("DTV_GAME") != "" and _frame == at + 6 and me:      # for pictures: a game with the gambler (use with DTV_ROOM=inn and DTV_OPEN=notice:gambler)
+		me.coin = 200
+		R.do_act(me, "gstart", OS.get_environment("DTV_GAME") + ":12")
+		if OS.get_environment("DTV_GAME") == "21": R.do_act(me, "ghit")
 	if OS.get_environment("DTV_BURN") != "" and _frame == at + 2 and me:      # for pictures: a few of the dead, alight
 		for i in 5:
 			var bu := R.spawn_undead(i % 2, me.x - 4.0 + i * 2.0, me.z - 3.0 - (i % 2))

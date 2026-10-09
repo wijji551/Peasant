@@ -52,6 +52,7 @@ var maypole: Node3D                       # the maypole's ribbons and crown, whi
 var letter_paper: Node3D                  # the Lord's letter, nailed to the gatepost
 var rider: Node3D                         # the headless rider who brings it
 var _rider_t := -1.0
+var _inn_fire: OmniLight3D                # the fire in the Thorny Rose
 var _veins: Array = []                    # the rune veins in the old workings: [node, material, light]
 var _evil: Array[Node3D] = []             # the castle's worse and worse looks, one set a week
 var _evil_now := -1
@@ -83,6 +84,7 @@ func _ready() -> void:
 	_green()
 	_gatepost()
 	_mine_room()
+	_inn_room()
 	_farms()
 	_downs()
 
@@ -1025,6 +1027,128 @@ func _mine_room() -> void:
 		Build.box(self, Vector3(0.6, 0.07, 0.1), dp + Vector3(0, 0.35 + i * 0.45, 0.5 - i * 0.09), C.wood3)
 
 
+## Somebody to talk to, made of boxes: coat, head, and something on the head. Seated ones have no legs to speak of.
+func _npc(parent: Node3D, pos: Vector3, rot_y: float, coat: Color, hat: String, seated: bool = true, skin: Color = Color("e0b48c")) -> Node3D:
+	var g := Node3D.new()
+	g.position = pos
+	g.rotation.y = rot_y
+	parent.add_child(g)
+	var y0 := 0.42 if seated else 0.5
+	if not seated:
+		for sx in [-0.14, 0.14]: Build.box(g, Vector3(0.2, 0.5, 0.22), Vector3(sx, 0, 0), Color("3a2f28"))
+	else:
+		Build.box(g, Vector3(0.5, 0.2, 0.5), Vector3(0, 0.4, 0.2), coat.darkened(0.2))                # a lap
+	Build.box(g, Vector3(0.64, 0.78, 0.42), Vector3(0, y0, 0), coat)
+	for sx in [-0.4, 0.4]: Build.box(g, Vector3(0.16, 0.5, 0.18), Vector3(sx, y0 + 0.22, 0.08), coat, 0, -0.5)
+	Build.box(g, Vector3(0.4, 0.4, 0.38), Vector3(0, y0 + 0.8, 0.02), skin)
+	match hat:
+		"hood":
+			Build.box(g, Vector3(0.5, 0.5, 0.5), Vector3(0, y0 + 0.78, -0.04), coat.darkened(0.25))
+			Build.box(g, Vector3(0.34, 0.3, 0.1), Vector3(0, y0 + 0.82, 0.2), Color("15121a"))        # nothing to see in there
+		"bonnet":
+			Build.box(g, Vector3(0.46, 0.2, 0.44), Vector3(0, y0 + 1.14, -0.02), Color("efe6cf"))
+			Build.box(g, Vector3(0.5, 0.3, 0.12), Vector3(0, y0 + 0.86, -0.2), Color("efe6cf"))
+		"cap":
+			Build.box(g, Vector3(0.44, 0.14, 0.44), Vector3(0, y0 + 1.18, 0), Color("5b4130"))
+			Build.box(g, Vector3(0.3, 0.05, 0.2), Vector3(0, y0 + 1.18, 0.28), Color("5b4130"))
+		"bald":
+			Build.box(g, Vector3(0.42, 0.1, 0.3), Vector3(0, y0 + 0.86, -0.14), Color("8a8478"))
+			Build.box(g, Vector3(0.3, 0.16, 0.06), Vector3(0, y0 + 0.86, 0.2), Color("8a8478"))       # and a moustache to make up for it
+	return g
+
+
+## Inside the Thorny Rose: a room to walk into (it is really far off to the south, like the old workings). The bar and the
+## innkeeper, a fire, Old Marge and Tam the Carter at their tables, a stranger in the corner, the gambler, and a bookshelf.
+func _inn_room() -> void:
+	var M: Dictionary = D.ROOMS.inn
+	var n := Node3D.new()
+	n.position = Vector3(M.x, 0, M.z)
+	add_child(n)
+	var plaster := Color("d9c9a3")
+	var board := Color("8a6a45")
+	Build.box(n, Vector3(120, 0.1, 120), Vector3(0, 0.02, 0), Color("120d0a"))
+	Build.box(n, Vector3(M.hw * 2, 0.1, M.hd * 2), Vector3(0, 0.08, 0), board)
+	for i in 8:                                                                                 # floorboards
+		Build.box(n, Vector3(0.06, 0.02, M.hd * 2), Vector3(-7.0 + i * 2.0, 0.18, 0), Color("6f5335"))
+	Build.box(n, Vector3(4.4, 0.03, 3.0), Vector3(0, 0.19, 2.4), Color("7d2f2a"))                # a rug that has seen things
+	Build.box(n, Vector3(3.8, 0.035, 2.4), Vector3(0, 0.19, 2.4), Color("9b4a35"))
+	# walls: the back one full height, the sides lower, the front only a sill so you can see in
+	Build.box(n, Vector3(M.hw * 2 + 0.6, 3.4, 0.3), Vector3(0, 0, -M.hd - 0.15), plaster)
+	for i in 6:
+		Build.box(n, Vector3(0.22, 3.4, 0.36), Vector3(-8.0 + i * 3.2, 0, -M.hd - 0.12), C.timber)
+	Build.box(n, Vector3(M.hw * 2 + 0.6, 0.24, 0.36), Vector3(0, 3.3, -M.hd - 0.12), C.timber)
+	for sx in [-1.0, 1.0]:
+		Build.box(n, Vector3(0.3, 2.5, M.hd * 2), Vector3(sx * (M.hw + 0.15), 0, 0), plaster)
+		for i in 4:
+			Build.box(n, Vector3(0.36, 2.5, 0.22), Vector3(sx * (M.hw + 0.12), 0, -5.6 + i * 3.7), C.timber)
+	for sx in [-1.0, 1.0]:
+		Build.box(n, Vector3(M.hw - 1.0, 0.5, 0.3), Vector3(sx * (M.hw + 1.0) / 2.0, 0, M.hd + 0.15), plaster)
+		Build.box(n, Vector3(0.24, 2.3, 0.3), Vector3(sx * 0.95, 0, M.hd + 0.15), C.timber)          # the door posts
+	Build.box(n, Vector3(2.2, 0.22, 0.3), Vector3(0, 2.3, M.hd + 0.15), C.timber)
+	Build.box(n, Vector3(1.5, 0.04, 0.5), Vector3(0, 0.14, M.hd - 0.1), C.path2)                    # the worn step
+	# the bar, the barrels behind it, and the innkeeper
+	Build.box(n, Vector3(9.2, 1.05, 1.1), Vector3(0, 0, -4.7), C.wood2)
+	Build.box(n, Vector3(9.5, 0.12, 1.3), Vector3(0, 1.05, -4.7), C.wood3)
+	for i in 4:
+		Build.cyl(n, 0.5, 0.5, 1.0, Vector3(-6.4 + i * 1.15, 1.2, -5.5), C.wood, 9, 0, 0, PI / 2)
+	for i in 5:
+		Build.cyl(n, 0.1, 0.09, 0.2, Vector3(-3.0 + i * 1.4, 1.17, -4.5 + (i % 2) * 0.2), Color("b9bcc4"), 7)     # tankards
+	Build.box(n, Vector3(5.0, 0.1, 0.4), Vector3(2.4, 2.1, -5.7), C.wood)                             # a shelf of bottles
+	for i in 7:
+		Build.cyl(n, 0.07, 0.1, 0.34, Vector3(0.4 + i * 0.66, 2.2, -5.7), [Color("3f6b3a"), Color("7a4a22"), Color("4f6480")][i % 3], 6)
+	_npc(n, Vector3(0, 0, -5.5), 0.0, Color("7a5a3a"), "bald", false)
+	Build.box(n, Vector3(0.7, 0.5, 0.06), Vector3(0, 0.6, -5.27), Color("efe6cf"))                    # his apron
+	# the fire, on the west wall, and Old Marge beside it with her knitting
+	Build.box(n, Vector3(0.7, 2.0, 2.4), Vector3(-M.hw + 0.35, 0, 3.3), C.stone2)
+	Build.box(n, Vector3(0.5, 1.0, 1.5), Vector3(-M.hw + 0.5, 0, 3.3), Color("1b1612"))
+	Build.box(n, Vector3(0.9, 0.16, 2.7), Vector3(-M.hw + 0.4, 2.0, 3.3), C.stone3)
+	var flame := StandardMaterial3D.new()
+	flame.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	flame.albedo_color = Color(1.0, 0.62, 0.18)
+	for i in 3:
+		Build.cone(n, 0.22 - i * 0.04, 0.6 + i * 0.12, Vector3(-M.hw + 0.62, 0.1, 2.9 + i * 0.4), Color.WHITE, 5).material_override = flame
+	_inn_fire = OmniLight3D.new()
+	_inn_fire.light_color = Color(1.0, 0.6, 0.28)
+	_inn_fire.omni_range = 11.0
+	_inn_fire.position = Vector3(-M.hw + 1.4, 1.2, 3.3)
+	n.add_child(_inn_fire)
+	for at in [Vector3(-4.6, 0, 0.9), Vector3(4.4, 0, 1.2)]:                                          # two round tables, with stools
+		Build.cyl(n, 0.85, 0.85, 0.1, at + Vector3(0, 0.78, 0), C.wood3, 10)
+		Build.cyl(n, 0.14, 0.2, 0.78, at, C.wood2, 6)
+		for a in [0.9, 2.6, 4.4]:
+			Build.cyl(n, 0.26, 0.26, 0.42, at + Vector3(cos(a) * 1.35, 0, sin(a) * 1.35), C.wood, 7)
+		Build.cyl(n, 0.1, 0.09, 0.2, at + Vector3(0.3, 0.88, -0.1), Color("b9bcc4"), 7)
+	_npc(n, Vector3(-4.6, 0, -0.35), 0.0, Color("8a6f8f"), "bonnet")
+	Build.box(n, Vector3(0.5, 0.06, 1.5), Vector3(-4.6, 0.72, 0.2), Color("9a9a9a"), 0.2)             # the knitting, which is long, and grey
+	_npc(n, Vector3(4.4, 0, -0.1), 0.0, Color("5d6b3f"), "cap")
+	# the stranger's corner, a long way from the fire
+	Build.box(n, Vector3(1.8, 0.8, 1.0), Vector3(-7.5, 0, -5.0), C.wood2)
+	Build.cyl(n, 0.1, 0.09, 0.2, Vector3(-7.2, 0.8, -4.8), Color("b9bcc4"), 7)
+	_npc(n, Vector3(-7.45, 0, -5.55), 0.5, Color("3b3340"), "hood")
+	# the gambler's table: a pack of cards and three cups
+	Build.box(n, Vector3(1.8, 0.8, 1.4), Vector3(6.6, 0, -3.4), C.wood2)
+	Build.box(n, Vector3(1.9, 0.05, 1.5), Vector3(6.6, 0.8, -3.4), Color("3f6b3a"))
+	for i in 3:
+		Build.cyl(n, 0.1, 0.14, 0.2, Vector3(6.2 + i * 0.36, 0.85, -3.2), Color("8a5a34"), 7)
+	Build.box(n, Vector3(0.22, 0.08, 0.3), Vector3(7.1, 0.85, -3.6), Color("efe6cf"), 0.3)
+	_npc(n, Vector3(7.3, 0, -4.3), -0.6, Color("4a2f52"), "hood")
+	# the bookshelf, with its one book
+	Build.box(n, Vector3(0.6, 2.6, 2.4), Vector3(-M.hw + 0.35, 0, -0.7), C.wood2)
+	for sy in [0.7, 1.4, 2.1]:
+		Build.box(n, Vector3(0.66, 0.08, 2.3), Vector3(-M.hw + 0.37, sy, -0.7), C.wood3)
+	Build.box(n, Vector3(0.5, 0.56, 0.9), Vector3(-M.hw + 0.42, 0.78, -0.7), Color("8e1f25"), 0, 0, 0.06)
+	Build.box(n, Vector3(0.52, 0.5, 0.08), Vector3(-M.hw + 0.42, 0.81, -0.7), Color("c9a13a"))
+	# light: lanterns over the bar and the room, warm
+	for at in [Vector3(-3.2, 2.9, -3.2), Vector3(3.6, 2.9, -2.6), Vector3(1.0, 2.9, 2.6)]:
+		Build.box(n, Vector3(0.3, 0.36, 0.3), at, Color("ffd98a")).material_override = Build.mat(Color("ffd98a"), 2.2)
+		var l := OmniLight3D.new()
+		l.light_color = Color(1.0, 0.82, 0.55)
+		l.omni_range = 10.0
+		l.light_energy = 1.5
+		l.position = at
+		n.add_child(l)
+
+
 ## How much is left in each rune vein today: a worked-out vein goes dull.
 func set_veins(left: Array) -> void:
 	for i in mini(left.size(), _veins.size()):
@@ -1105,5 +1229,6 @@ func _process(delta: float) -> void:
 	if storm and _evil_now >= 3:
 		storm.rotation.y += delta * 0.35
 		_storm_light.light_energy = (1.2 + night * 4.0) * (0.8 + 0.2 * sin(Time.get_ticks_msec() / 130.0))
+	if _inn_fire: _inn_fire.light_energy = 2.0 + 0.5 * sin(Time.get_ticks_msec() / 90.0) + 0.3 * sin(Time.get_ticks_msec() / 37.0)
 	if mill_sails: mill_sails.rotation.x += delta * 0.55
 	if maypole: maypole.rotation.y += delta * 0.12

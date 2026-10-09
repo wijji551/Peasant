@@ -14,6 +14,7 @@ const GUIDE := [
 	["The lie of the land", ["Thornhallow sits in the middle, with the castle up the road to the north and the river to the south. The thorn hedges, far to the west and east, are the edge of the world. West is Hallowshire Forest, with the old steel mine at its top end; east are the downs and the old mill. The stone, the iron and the fish move every morning (the dawn notice says where), and the far places are a long walk, so go early."]],
 	["The smithy", ["Anyone can knock out a crude weapon at the smithy. It wears out: chipped after a night's fighting, in bits after a second. Hammer and Tongs makes refined weapons, which last; from rank 4, steel ones, which hit harder still. Steel comes from the old steel mine, at the top of the forest to the north-west, and the market pays well for it but sells none. Anyone can forge armour; steel armour needs rank 4."]],
 	["The village", ["Robert Bailiff will talk to you from his upstairs window: stand at his front door. You can knock (it will not open) or jeer at him, which is satisfying, but he remembers, and his guards cost a shilling more for every jeer that day.", "Anyone can ring the village bell in the square. It does nothing at all.", "The training yard's straw dummies: practise on them by day for a little of The Art of Hitting Things (or, with a sling or a bow, Slings, Bows and Thrown Turnips). There is only so much a dummy can teach you in a day."]],
+	["The Thorny Rose", ["Hold {interact} at the inn’s door on the square to go in. It is open day and night, until the dead break the door down; your posse waits outside (and comes in with you if you sit down to drink). The door back out is at the bottom of the room.", "The bar: give the innkeeper food and he turns it into ale for the night; hire a mercenary; and after dark, sit down to drink. Each tankard is Dutch courage, and at 100 you burst out and charge.", "Old Marge, Tam the Carter and the stranger in the corner will each talk about three things, and each does one good turn a day for the price of a drink (6d).", "The gambler plays twenty-one, higher or lower, and the pea and the cups, for stakes of sixpence to four shillings. Twenty-one and higher or lower are luck, with the odds a little his way. The cups are not luck: watch the pea go under, follow that cup, and click it when he stops. Walking away from the table loses the stake."]],
 	["The torch, the old workings and runes", ["Anyone can make a burning torch at the smithy (three wood). What it hits burns for four seconds after, and Flare ({trick}) sets fire to everything round you and drives it back a step. Bones burn badly, wraiths not at all, and rain halves it. It also lights your way.", "Beside the old steel mine, far to the north-west, a timber frame stands over a hole: hold {interact} to climb down into the old workings. Down there it is dark, the dead cannot reach you, and your posse waits at the top. Three veins of runes glow in the walls. With a burning torch in your hand, hold {interact} at a vein to prise one out: two to a vein each day. The ladder takes you back up, and dawn fetches you out whatever you are doing.", "At the smithy, three runes cut into the weapon in your hand make it a fifth stronger for good, and able to hurt wraiths."]],
 	["Ruins, chests and cards", ["The outer ruins are not empty. Rummaging is noisy, and brings shamblers; from the second day it can also wake the Previous Tenant, who is several times the size and has a great deal of health. By day he will not follow you far from his ruin. After dark he goes down to the village with the rest. Whoever puts him down gets his back rent.", "Once a week a chest sent to help the village goes astray. The dawn notice says who sent it and which way the messenger set off. It lies outside the wall, off the map until somebody walks near it. The finder gets the coin; anything else inside can be dropped for a friend.", "A library card (from a chest) is handed in at the library to swap one of your books for another. The new one starts a rank behind the old."]],
 	["Letters and notices", ["The Lord of Ashhollow writes. From the second morning, and every other morning after, a headless rider gallops down the castle road at first light and nails a letter to the gatepost just inside the north gate. They are complaints: about the noise, the breakages, and whatever the village has most lately done to his household. Read them at the gatepost.", "The notice board in the square, opposite the bell, has the day's news (the weather, what is expected tonight, when the next boss is due), three notices from the village, and a copy of every letter so far.", "With eight players, more of the dead would rise than the night can hold. Past about 420 in a night there are fewer of them instead, and each is harder to put down and hits harder: the same horde, in fewer pieces."]],
@@ -26,6 +27,12 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Inside the Thorny Rose", [
+		"The inn is a room now. Hold E at its door on the square, day or night, and walk in. The innkeeper is behind the bar with his old business: food for ale, a mercenary for hire, and after dark a seat to drink yourself brave.",
+		"Three locals will talk: Old Marge by the fire, Tam the Carter, and a stranger in the corner. Ask each about three things. Stand one a drink (6d, once a day each) and you get a good turn: a pie, word of where the lost chest or the outer ruins are, or how to deal with the next boss.",
+		"In the other corner sits a gambler, with three games for coin. Twenty-one, with very old cards. Higher or lower, which pays more the bolder the guess. And the pea under the cups, which is no luck at all: he shows you the pea and you follow it. He gets quicker each time you win, and packs up when he has lost ten shillings to you in a day.",
+		"The bookshelf has one book on it, the size of a paving stone. It is for the next update.",
+	]],
 	["Fire, and what is under the mine", [
 		"The burning torch: anyone can make one at the smithy for three wood. It does not hit hard, but whatever it hits catches fire and goes on burning for a few seconds, and its trick, Flare, sets light to everything round you. It lights your way at night. Rain halves the burning; wraiths do not burn at all.",
 		"By the mouth of the old steel mine there is now a way down into the old workings: a room you walk into. It is dark. Three veins of runes glow in the walls, two runes to a vein each day, and you can only work them with a burning torch in your hand. Your posse waits at the top.",
@@ -382,6 +389,9 @@ static func _act_label(a: String) -> String:
 
 # ---------------------------------------------------------------- a place's notice
 func notice(id: String, page: String, force: bool = false) -> void:
+	if id == "gambler":                                 # the gambler has a table of his own
+		gamble(force)
+		return
 	var d := Notices.data(m.R, id, m.me, page)
 	if d.is_empty():
 		return
@@ -402,6 +412,142 @@ func notice(id: String, page: String, force: bool = false) -> void:
 		var i := n - 1
 		w.option(n, o.label, o.get("sub", ""), o.ok, func(): m.option(i))
 	w.hint("Press the number, or click." + ("" if m.me.state == "inn" else " Walk away or press Esc to close."))
+
+
+# ---------------------------------------------------------------- the gambler's table
+const Cups := preload("res://scripts/ui/cups.gd")
+var _gamble_sig := ""
+const SUIT_COL := [Color("a8362c"), Color("b8862b"), Color("4f6480"), Color("4f7a3a")]
+
+func _playing_card(parent: Control, c: int) -> void:   # a card face up (c 0 to 51), or face down (c < 0)
+	var pc := PanelContainer.new()
+	pc.add_theme_stylebox_override("panel", Look.card(Color("fff6dc") if c >= 0 else Color("7a4a22"), Look.OUTLINE, 6))
+	pc.custom_minimum_size = Vector2(64, 86)
+	parent.add_child(pc)
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	pc.add_child(v)
+	if c < 0:
+		var q := Look.label(v, "?", 30, Color("e8d5a8"), true)
+		q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		return
+	var r := c % 13
+	var nm: String = D.CARD_N[r]
+	var top := Look.label(v, {"Knave": "Kn", "Queen": "Q", "King": "K", "Ace": "A"}.get(nm, nm), 28, SUIT_COL[c / 13], true)
+	top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var st := Look.label(v, D.CARD_SUIT[c / 13], 11, SUIT_COL[c / 13])
+	st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+func _card_row(title: String, cards: Array, hidden: int = 0) -> void:
+	Look.label(w.body, title, 13, Look.RUST)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	w.body.add_child(row)
+	for c in cards: _playing_card(row, int(c))
+	for i in hidden: _playing_card(row, -1)
+
+
+func gamble(force: bool = false) -> void:
+	var p: E.Player = m.me
+	var G: Dictionary = p.game
+	var over: bool = not G.is_empty() and G.get("done", false)
+	var gs := G.duplicate()
+	if gs.has("t"): gs.t = float(gs.t) <= 0.0           # the countdown itself must not redraw the table (it would restart the cups)
+	var sig := str(gs) + str(p.coin) + str(p.gwon)
+	if sig == _gamble_sig and w.is_open("notice") and not force:
+		return
+	_gamble_sig = sig
+	var act := func(a: String, arg = null) -> void: m.cmd({"t": "act", "a": a, "arg": arg})
+	var packed: bool = p.gwon >= D.GAMBLE_DAY
+	var says: String = D.GAMBLER_SAYS[(m.R.day + p.slot) % D.GAMBLER_SAYS.size()]
+	w.open("notice", "The gambler", "", 620, 580, true, false)
+	w.para("You have %s.%s" % [D.coins(p.coin), (" You are %s up on him today." % D.coins(p.gwon)) if p.gwon > 0 else (" He is %s up on you today." % D.coins(-p.gwon)) if p.gwon < 0 else ""], 15, Look.INK_SOFT)
+	if G.is_empty():
+		w.para("A man in a deep hood, a pack of very old cards, and three wooden cups. %s" % says if not packed else "The gambler has swept his cups into his coat. “Enough for one day, friend. You have had %s of mine. Come back tomorrow, and bring it with you.”" % D.coins(p.gwon), 16)
+		if not packed:
+			for g in [["21", "Twenty-one", "Cards: nearer twenty-one than him, without going over. Pays your stake again."],
+					["hl", "Higher or lower", "Will the next card be higher or lower? The safer the guess, the less it pays."],
+					["cups", "The pea and the cups", "Watch the pea, follow the cup. No luck in it: only your eyes, and his hands."]]:
+				w.head(g[1])
+				w.para(g[2], 14, Look.INK_SOFT)
+				var row := HBoxContainer.new()
+				row.add_theme_constant_override("separation", 8)
+				w.body.add_child(row)
+				for bet in D.BETS:
+					var b := Button.new()
+					b.text = "Stake " + D.coins(bet)
+					b.focus_mode = Control.FOCUS_NONE
+					b.disabled = p.coin < bet
+					var gk: String = g[0]
+					var bb: int = bet
+					b.pressed.connect(func(): act.call("gstart", "%s:%d" % [gk, bb]))
+					row.add_child(b)
+		w.hint("Walk away or press Esc to leave the table.")
+		return
+	var again := func() -> void:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		w.body.add_child(row)
+		var gk: String = G.g
+		var bb: int = int(G.bet)
+		var b1 := Button.new(); b1.text = "Again, for " + D.coins(bb); b1.focus_mode = Control.FOCUS_NONE
+		b1.disabled = p.coin < bb or packed
+		b1.pressed.connect(func(): act.call("gend"); act.call("gstart", "%s:%d" % [gk, bb]))
+		row.add_child(b1)
+		var b2 := Button.new(); b2.text = "Something else"; b2.focus_mode = Control.FOCUS_NONE
+		b2.pressed.connect(func(): act.call("gend"))
+		row.add_child(b2)
+	var verdict := func() -> void:
+		var won: bool = int(G.win) > int(G.bet)
+		w.para(str(G.msg), 16, Look.INK)
+		w.para(("You get %s back: %s up." % [D.coins(int(G.win)), D.coins(int(G.win) - int(G.bet))]) if won else "Your stake comes back." if int(G.win) == int(G.bet) else "Your %s is his." % D.coins(int(G.bet)), 15, Color("3f6b2a") if won else Look.ROSE if int(G.win) == 0 else Look.INK_SOFT)
+	match str(G.g):
+		"21":
+			w.head("Twenty-one, for " + D.coins(int(G.bet)))
+			_card_row("His cards" + (": %d" % Rules.total21(G.him) if over and G.him.size() > 1 else ""), G.him, 0 if over and G.him.size() > 1 else 1)
+			_card_row("Yours: %d" % Rules.total21(G.me), G.me)
+			if over:
+				verdict.call(); again.call()
+			else:
+				var row := HBoxContainer.new()
+				row.add_theme_constant_override("separation", 8)
+				w.body.add_child(row)
+				var b1 := Button.new(); b1.text = "Another card"; b1.focus_mode = Control.FOCUS_NONE; b1.pressed.connect(func(): act.call("ghit")); row.add_child(b1)
+				var b2 := Button.new(); b2.text = "Stand on %d" % Rules.total21(G.me); b2.focus_mode = Control.FOCUS_NONE; b2.pressed.connect(func(): act.call("gstand")); row.add_child(b2)
+		"hl":
+			w.head("Higher or lower, for " + D.coins(int(G.bet)))
+			_card_row("He turns up", [G.card] + ([G.next] if int(G.next) >= 0 else []), 0 if int(G.next) >= 0 else 1)
+			if over:
+				verdict.call(); again.call()
+			else:
+				var pays := Rules.hl_pays(int(G.card), int(G.bet))
+				var row := HBoxContainer.new()
+				row.add_theme_constant_override("separation", 8)
+				w.body.add_child(row)
+				for k in 2:
+					var b := Button.new()
+					b.text = ("Higher" if k == 0 else "Lower") + (": pays %s" % D.coins(pays[k]) if pays[k] > 0 else ": cannot be")
+					b.focus_mode = Control.FOCUS_NONE
+					b.disabled = pays[k] <= 0
+					var a: String = "ghi" if k == 0 else "glo"
+					b.pressed.connect(func(): act.call(a))
+					row.add_child(b)
+				w.para("An ace is the lowest card and a king the highest.", 13, Look.INK_SOFT)
+		"cups":
+			w.head("The pea and the cups, for " + D.coins(int(G.bet)))
+			var cv := Cups.new()
+			cv.ball = int(G.ball); cv.swaps = G.swaps; cv.sp = float(G.sp)
+			cv.can_pick = float(G.t) <= 0.0
+			if over:
+				cv.shown = int(G.at); cv.chosen = int(G.pick)
+			cv.picked.connect(func(i): act.call("gcup", i))
+			w.body.add_child(cv)
+			if over:
+				verdict.call(); again.call()
+			else:
+				w.para("Watch the pea go under, then follow its cup. When he stops, click the cup." if float(G.t) > 0.0 else "“Well?” Click a cup.", 15, Look.INK_SOFT)
+	w.hint("Walking away from the table forfeits a game in progress.")
 
 
 # ---------------------------------------------------------------- your backpack, as slots

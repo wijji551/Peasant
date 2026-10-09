@@ -171,12 +171,47 @@ const ETCH_RUNES := 3                # runes to etch a weapon: a fifth more dama
 const RUNE_PER_VEIN := 2             # runes in each vein of the old workings, each morning
 const RUNE_TIME := 4.0
 const RUNE_VEINS := [[-6.0, 233.0], [6.0, 238.0], [-2.0, 229.9]]
+## --- Inside the Thorny Rose: three locals, and what each will say. Each has three things to be asked about, and a set of
+## answers for each week; and each will do you one small good turn a day for the price of a drink.
+const LOCALS := [
+	{"name": "Old Marge", "what": "knitting something long and grey by the fire", "ask": ["the castle", "Robert Bailiff", "the village"], "treat": "a pie from her basket: 3 food",
+		"say": [
+			["Foreign gentleman took it, from Transylvania they say. Paid Lord Aldred in gold, and nobody thought to ask whose.", "Nobody has seen him by day. Not once. I have seen his washing, mind. All black, and a great deal of it.", "They say he is a guest of Lord Aldred. I say a guest goes home."],
+			["Robert? Bolted his door the first night and has been governing us through the letterbox ever since.", "He was a brave little boy. It did not last. His mother blamed the schooling.", "He keeps six guards in there with him. For the look of the thing, he says. They cost the earth, and he remembers a jeer."],
+			["Four hundred years this village has stood, and the worst we ever had before was the sheep going wrong.", "Mind the maypole. It was put up for a wedding, and nobody will say whose.", "If you want anything known in Thornhallow, tell the priest in confidence."],
+		]},
+	{"name": "Tam the Carter", "what": "a big man with a tankard, and mud to the knee", "ask": ["the roads", "the smithy", "the dead"], "treat": "he tells you what he saw on the road today",
+		"say": [
+			["West road is all forest, right out to the thorn hedge. The old steel mine is at the top of it, and there is a hole beside it I would not go down without a light.", "East is the downs, and the old mill. Count the sheep if you like. I have stopped.", "Messengers come by the roads and the river. When one goes missing, look outside the wall. Look early, before the foxes."],
+			["Anybody can knock out a crude blade, and it will see you through a night or two. For one that lasts you want Hammer and Tongs.", "Steel is the thing. Top of the forest. The smith wants rank four of his book before he will touch it.", "There are stones down the old workings with marks on. Three of them cut into a blade, and it will bite things a blade should not."],
+			["Shamblers are slow. It is the standing still that kills you. Keep moving, and hit the one at the edge.", "Bones get up again unless you break them properly. A mace, or anything blessed.", "Something big sleeps under the outer ruins. Rummage if you must, but have your running legs on."],
+		]},
+	{"name": "the stranger in the corner", "what": "hooded, a long way from the fire, with a drink that has not gone down", "ask": ["what is coming", "the Lord", "himself"], "treat": "he tells you what the next of the Lord’s household cannot abide",
+		"say": [
+			["Every week he sends worse, and at the end of every week one of his own household comes down to see why you are not dead.", "The seventh night, the fourteenth, the twenty-first. And on the thirtieth, himself.", "Watch the castle as night falls. It will tell you how his temper is."],
+			["He does not hate you. You are in the way, like a hedge.", "He writes letters. Read them. A man who complains can be annoyed, and a man who is annoyed makes mistakes.", "He has relatives. They all have relatives. Remember that, when you think you have won."],
+			["I am waiting for someone. No, not you.", "I knew this inn when it had a different sign. A long time ago. Do not do the sums.", "Ask the gambler who I am. Then ask me who he is. We will both lie."],
+		]},
+]
+const TREAT := 6                     # the price of a drink for a local: one good turn each, a day
+const BOSS_HINT := {3: "The Steward keeps back and raises the fallen. He is no fighter: get to him early, and he stops.", 10: "The Coachman’s hearse goes through wood like paper. Stone on the walls and iron on the gate, and keep out of the road.",
+	11: "The Captain does not come by the north gate unless he must. Watch which way his banner turns, and be at that gateway first.", 12: "Himself. Blessed things and rune-cut things hurt him properly. Nothing else does, much."}
+## --- The gambler. Stakes, and his patience: when you have won this much in a day he packs up.
+const BETS := [6, 12, 24, 48]
+const GAMBLE_DAY := 120
+const CARD_N := ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Knave", "Queen", "King"]
+const CARD_SUIT := ["Cups", "Coins", "Swords", "Batons"]
+const GAMBLER_SAYS := ["“Sit, friend. Three games, all honest. I have never been caught.”", "“The cards are old. They have opinions. Do not take it personally.”", "“Watch the cups, not my hands. Everybody watches my hands.”",
+	"“I take coin from the living. The dead never have any change.”", "“I was here before the inn. They built it round me.”"]
 ## Rooms: places you walk into. They are built far off beyond the river, out of sight; going in or out moves you there and back.
 ## at: where you arrive inside (and leave from). door: the way in, outside. box: solid things inside, as [x, z, half width, half depth].
 const ROOMS := {
 	"mine": {"name": "the old workings", "x": 0.0, "z": 240.0, "hw": 7.0, "hd": 11.0, "at": [0.0, 249.4], "door": [-104.0, -40.2],
 		"in": "climb down into the old workings", "out": "climb back up into the daylight",
 		"box": [[-3.4, 243.0, 0.5, 0.5], [3.4, 243.0, 0.5, 0.5], [-3.4, 236.0, 0.5, 0.5], [3.4, 236.0, 0.5, 0.5], [1.6, 232.4, 1.0, 0.7]]},
+	"inn": {"name": "the Thorny Rose Inn", "x": 60.0, "z": 240.0, "hw": 8.0, "hd": 6.0, "at": [60.0, 245.3], "door": [-13.2, -4.7],
+		"in": "go into the Thorny Rose", "out": "go back out into the square",
+		"box": [[60.0, 235.3, 4.6, 0.55], [55.4, 240.9, 0.85, 0.85], [64.4, 241.2, 0.85, 0.85], [66.6, 236.6, 0.9, 0.7], [52.35, 239.3, 0.35, 1.2], [52.5, 235.0, 0.9, 0.5]]},
 }
 ## The chest that never arrived: who sent it, and the note inside.
 const CHEST_FROM := [
@@ -336,7 +371,7 @@ const STATIONS := [
 	{"id": "store", "x": 12.9, "z": 10.6, "r": 3.0, "name": "the storehouse", "verb": "open the storehouse"},
 	{"id": "library", "x": 13.4, "z": 20.4, "r": 3.0, "name": "the library", "verb": "read in the library"},
 	{"id": "slum", "x": -17.6, "z": 17.4, "r": 3.4, "name": "the slum", "verb": "recruit in the slum"},
-	{"id": "inn", "x": -13.1, "z": -4.7, "r": 2.5, "name": "the Thorny Rose Inn", "verb": "call at the Thorny Rose Inn"},
+	{"id": "inn", "x": 60.0, "z": 236.9, "r": 1.9, "room": "inn", "name": "the bar of the Thorny Rose", "verb": "have a word with the innkeeper"},
 	{"id": "priest", "x": 13.6, "z": -10.6, "r": 2.3, "name": "the priest", "verb": "speak to the priest"},
 	{"id": "cart", "x": 10.4, "z": 22.6, "r": 3.0, "name": "the merchant’s cart", "verb": "see what the merchant has"},
 	{"id": "bailiff", "x": -14.5, "z": -16.6, "r": 2.4, "name": "Robert Bailiff’s back door", "verb": "knock at Robert Bailiff’s back door"},
@@ -344,6 +379,11 @@ const STATIONS := [
 	{"id": "bell", "x": 5.5, "z": -8.6, "r": 1.8, "name": "the village bell", "verb": "ring the village bell"},
 	{"id": "board", "x": -5.5, "z": -8.5, "r": 1.8, "name": "the notice board", "verb": "read the notice board"},
 	{"id": "letter", "x": -4.2, "z": -18.4, "r": 1.6, "name": "the gatepost", "verb": "read the letter nailed to the gatepost"},
+	{"id": "local0", "x": 55.4, "z": 242.3, "r": 1.7, "room": "inn", "name": "Old Marge", "verb": "talk to Old Marge"},
+	{"id": "local1", "x": 64.4, "z": 242.6, "r": 1.7, "room": "inn", "name": "Tam the Carter", "verb": "talk to Tam the Carter"},
+	{"id": "local2", "x": 53.6, "z": 235.9, "r": 1.6, "room": "inn", "name": "the stranger in the corner", "verb": "talk to the stranger in the corner"},
+	{"id": "gambler", "x": 65.6, "z": 237.9, "r": 1.7, "room": "inn", "name": "the gambler", "verb": "sit down with the gambler"},
+	{"id": "shelf", "x": 53.1, "z": 239.3, "r": 1.4, "room": "inn", "name": "the inn’s bookshelf", "verb": "look at the inn’s bookshelf"},
 ]
 # --- The Lord of Ashhollow's letters of complaint. A headless rider nails one to the gatepost at first light.
 # why: what must have happened first (a count in Rules.seen, or "kills"); the rest are sent when there is nothing new to complain of.
@@ -460,7 +500,7 @@ const POSTS := [[0.0, -19.4], [-25.4, 2.0], [25.4, 2.0]]   # the north gate, the
 const POST_NAMES := ["the north gate", "the west gateway", "the east gateway"]
 const GUARD_NAMES := ["Sergeant Pike", "Corporal Dunn", "Old Gerald", "Watchman Hobb", "Halbert", "Young Gerald"]
 const MERC_NAMES := ["Gunter the Unreliable", "Big Margery", "Swiss Hans", "Ulf (no surname)", "Sir Reginald (allegedly)", "Mad Agnes", "Two-Swords Tom", "the Bastard of Bruges"]
-const INN := {"x": -17.5, "z": -4.7, "dx": -13.6, "dz": -4.7}   # inside, and the door
+const INN := {"x": 60.0, "z": 237.6, "dx": -13.6, "dz": -4.7}   # at the bar (inside, which is a room far off), and the door on the square
 const FARM := {"x0": -70.0, "x1": -46.5, "z0": 20.4, "z1": 41.6}
 # --- the stone, the iron and the fish are somewhere new every morning
 const SITES := [

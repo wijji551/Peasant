@@ -261,13 +261,13 @@ func run() -> void:
 	X.hurt_friend(q2, 999, false, null, false); ok("but not two", q2.state == "body")
 	m.books[9] = 1
 
-	# ---------- the Thorny Rose
-	R.phase = "day"; R.timeLeft = 300; clear_u(); at(-13.1, -4.7); m.food = 12
+	# ---------- the Thorny Rose (the bar is inside now: a room, reached by the door on the square)
+	R.phase = "day"; R.timeLeft = 300; clear_u(); X.enter_room(m, "inn"); at(60.0, 237.4); m.food = 12
 	X.do_act(m, "ale"); X.do_act(m, "ale"); ok("food becomes ale", R.ale == 10 and m.food == 2)
 	X.do_act(m, "innin"); ok("the Rose is shut by day", m.state == "ok")
 	X.dusk_falls(); fast(21); ok("night has fallen", R.phase == "night")
 	R.night.q = [{"k": 0, "t": 1e9}]; clear_u()
-	R.peasants[4].owner = m.id; R.peasants[4].state = "follow"; at(-13.1, -4.7)
+	R.peasants[4].owner = m.id; R.peasants[4].state = "follow"; X.enter_room(m, "inn"); at(60.0, 237.4)
 	X.do_act(m, "innin"); ok("inside, door barred, posse with you", m.state == "inn" and R.peasants.any(func(q): return q.state == "inn"))
 	var du0: E.Undead = mob(1, 0, 1)[0]
 	var h0 := m.hp
@@ -281,7 +281,7 @@ func run() -> void:
 	clear_u()
 	fast(21); ok("then the hangover", m.charge == 0 and m.hang > 5, m.hang)
 	fast(11); ok("which passes", m.hang == 0)
-	at(-13.1, -4.7); X.do_act(m, "innin"); ok("back inside", m.state == "inn")
+	X.enter_room(m, "inn"); at(60.0, 237.4); X.do_act(m, "innin"); ok("back inside", m.state == "inn")
 	var du := X.spawn_undead(0, -8.0, -4.7)
 	du.state = "walk"; fast(40, func(): return not (R.innHp <= 0))
 	ok("the dead break the door down and everyone is thrown out", R.innHp == 0 and m.state == "ok", "%d %s" % [R.innHp, m.state])
@@ -292,6 +292,7 @@ func run() -> void:
 	var tr0: E.Trunk = R.trees.filter(func(t): return t.alive and t.x < -34)[0]
 	at(tr0.x + 1.4, tr0.z); m.wood = 0; R.phase = "night"
 	var felled: E.Trunk = X.find_interact(m).target
+	fast(0.1)                              # let go of E after the inn: a fresh press is needed
 	hold(30, func(): return not felled.alive); ok("a felled tree leaves a stump", felled.st == 1 and not felled.alive)
 	var tx0 := felled.x
 	var tz0 := felled.z

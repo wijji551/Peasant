@@ -611,7 +611,7 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	reserve = false
 	make_wares()
 	for p in players:
-		p.job = false; p.jobT = 0.0; p.merc = false; p.drill = 0.0
+		p.job = false; p.jobT = 0.0; p.merc = false; p.drill = 0.0; p.game = {}; p.gwon = 0; p.treated = 0
 	bail_mood = 0
 	ale = 0; innHp = D.INN_HP
 	for e in drops:
@@ -954,7 +954,9 @@ func find_interact(p: E.Player):
 		for k in D.ROOMS:
 			var M: Dictionary = D.ROOMS[k]
 			if D.d2(p.x, p.z, M.door[0], M.door[1]) < 4.0:
-				return {"type": "enter", "room": k, "key": "enter" + k, "ok": true, "dur": 0.6, "x": M.door[0], "z": M.door[1], "rad": 1.1, "label": "Hold {interact} to " + M["in"]}
+				var shut: bool = k == "inn" and innHp <= 0
+				return {"type": "enter", "room": k, "key": "enter" + k, "ok": not shut, "dur": 0.6, "x": M.door[0], "z": M.door[1], "rad": 1.1,
+					"label": "The door of the Rose is in pieces. It is shut until morning" if shut else "Hold {interact} to " + M["in"]}
 	if p.state == "ok" and not chest.is_empty() and not chest.open and D.d2(p.x, p.z, chest.x, chest.z) < 7.0:
 		return {"type": "chest", "key": "chest", "ok": true, "dur": 1.5, "x": chest.x, "z": chest.z, "rad": 1.1, "label": "Hold {interact} to open the chest"}
 	if p.state != "ok":
@@ -1763,10 +1765,109 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 			u.taunt = p.id; u.tauntT = 30
 		say("Something in %s heard %s rummaging." % [D.RUINS[sp.ruin].name, p.dn])
 
+# --- the gambler in the Rose: twenty-one, higher or lower, and the pea under the cups. A card is 0 to 51: its rank is
+# card % 13 (0 the ace, 12 the king), its suit card / 13.
+static func pip(c: int) -> int:   # what a card counts at twenty-one (an ace as one)
+	return mini(10, c % 13 + 1)
+
+static func total21(cards: Array) -> int:
+	var t := 0
+	var ace := false
+	for c in cards:
+		t += pip(int(c))
+		if int(c) % 13 == 0: ace = true
+	return t + 10 if ace and t + 10 <= 21 else t
+
+## What higher or lower pays on a card: [what a right "higher" returns, what a right "lower" returns] for this stake (0: cannot be).
+static func hl_pays(c: int, bet: int) -> Array:
+	var r := c % 13
+	var hi := 12 - r
+	var lo := r
+	return [roundi(bet * 0.92 * 13.0 / hi) if hi > 0 else 0, roundi(bet * 0.92 * 13.0 / lo) if lo > 0 else 0]
+
+## Where the pea ends up: the cups are swapped in pairs, and it goes with its cup.
+static func cups_end(ball: int, swaps: Array) -> int:
+	for s in swaps:
+		if ball == int(s[0]): ball = int(s[1])
+		elif ball == int(s[1]): ball = int(s[0])
+	return ball
+
+func settle(p: E.Player, back: int, msg: String) -> void:   # the game is over: what comes back (0 if lost), and what he says
+	var G: Dictionary = p.game
+	G.done = true; G.win = back; G.msg = msg
+	p.coin += back; p.gwon += back - int(G.bet)
+	ev.append(["gamble", p.id, 1 if back > int(G.bet) else 0, r1(p.x), r1(p.z)])
+	if back > int(G.bet) * 3: say("%s has taken %s off the gambler in one go. He has stopped smiling." % [p.dn, D.coins(back)])
+
+func gamble(p: E.Player, a: String, arg) -> void:
+	if p.room != "inn" or p.state != "ok" or not near_station(p, "gambler"): return
+	var G: Dictionary = p.game
+	var live_game: bool = not G.is_empty() and not G.get("done", false)
+	match a:
+		"gend":
+			if not live_game: p.game = {}
+		"gstart":                                   # arg: "game:stake"
+			var bits: PackedStringArray = str(arg).split(":")
+			var bet := int(bits[1]) if bits.size() > 1 else 0
+			if live_game or not D.BETS.has(bet) or p.coin < bet or p.gwon >= D.GAMBLE_DAY or not ["21", "hl", "cups"].has(bits[0]): return
+			p.coin -= bet; note("gamble")
+			match bits[0]:
+				"21":
+					p.game = {"g": "21", "bet": bet, "me": [randi() % 52, randi() % 52], "him": [randi() % 52], "done": false, "msg": "", "win": 0}
+					if total21(p.game.me) == 21: settle(p, bet + roundi(bet * 1.5), "Twenty-one in two cards. He pays you half as much again, and looks at the cards as if they had let him down.")
+				"hl":
+					p.game = {"g": "hl", "bet": bet, "card": randi() % 52, "next": -1, "done": false, "msg": "", "win": 0}
+				"cups":
+					var n := 5 + mini(8, 2 * p.gstreak)
+					var swaps := []
+					for i in n:
+						var x := randi() % 3
+						swaps.append([x, (x + 1 + randi() % 2) % 3])
+					var sp := maxf(0.26, 0.5 - 0.035 * p.gstreak)
+					p.game = {"g": "cups", "bet": bet, "ball": randi() % 3, "swaps": swaps, "sp": sp, "t": 1.7 + n * sp, "pick": -1, "at": -1, "done": false, "msg": "", "win": 0}
+		"ghit":
+			if live_game and G.g == "21":
+				G.me.append(randi() % 52)
+				if total21(G.me) > 21: settle(p, 0, "%d. Too many. He sweeps the cards up without a word." % total21(G.me))
+				elif total21(G.me) == 21: gamble(p, "gstand", null)
+		"gstand":
+			if live_game and G.g == "21":
+				while total21(G.him) < 17: G.him.append(randi() % 52)
+				var mine := total21(G.me)
+				var his := total21(G.him)
+				if his > 21: settle(p, int(G.bet) * 2, "He turns up %d and goes over. He pays, slowly." % his)
+				elif mine > his: settle(p, int(G.bet) * 2, "Your %d beats his %d. He pays." % [mine, his])
+				elif mine == his: settle(p, int(G.bet), "%d each. “Nobody’s money,” he says, and pushes yours back." % mine)
+				else: settle(p, 0, "His %d beats your %d. He does not gloat. It is worse." % [his, mine])
+		"ghi", "glo":
+			if live_game and G.g == "hl":
+				var pays := hl_pays(int(G.card), int(G.bet))
+				var back: int = pays[0] if a == "ghi" else pays[1]
+				if back <= 0: return
+				G.next = randi() % 52
+				var r0 := int(G.card) % 13
+				var r1_ := int(G.next) % 13
+				var right: bool = r1_ > r0 if a == "ghi" else r1_ < r0
+				var nm := "the %s of %s" % [D.CARD_N[r1_], D.CARD_SUIT[int(G.next) / 13]]
+				if right: settle(p, back, "He turns up %s. %s it is. He pays you %s." % [nm, "Higher" if a == "ghi" else "Lower", D.coins(back)])
+				elif r1_ == r0: settle(p, 0, "He turns up %s. The same. “The house takes a pair,” he says. It would." % nm)
+				else: settle(p, 0, "He turns up %s. Wrong way." % nm)
+		"gcup":
+			var i := int(arg) if arg != null else -1
+			if live_game and G.g == "cups" and float(G.t) <= 0.0 and i >= 0 and i < 3:
+				var at := cups_end(int(G.ball), G.swaps)
+				G.pick = i; G.at = at
+				if i == at:
+					p.gstreak += 1
+					settle(p, int(G.bet) * 2, "The pea is there. He pays, and moves the cups a little faster next time.")
+				else:
+					p.gstreak = 0
+					settle(p, 0, "Nothing under it. He lifts the %s cup, and there it is." % ["left", "middle", "right"][at])
+
 func leave_inn(p: E.Player, charging: bool) -> void:
 	if p.state != "inn":
 		return
-	p.state = "ok"; p.x = D.INN.dx; p.tx = p.x; p.z = D.INN.dz + rnd2(-0.8, 0.8); p.tz = p.z; p.r = PI / 2; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.drinkT = 0
+	p.state = "ok"; p.room = ""; p.x = D.INN.dx; p.tx = p.x; p.z = D.INN.dz + rnd2(-0.8, 0.8); p.tz = p.z; p.r = PI / 2; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.drinkT = 0
 	for q in peasants:
 		if q.owner == p.id and q.state == "inn":
 			q.state = "follow"; q.x = p.x + rnd2(0.4, 2); q.z = p.z + rnd2(-2, 2)
@@ -1786,6 +1887,9 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 			ale -= 1; p.drinkT = D.DRINK_TIME
 		elif a == "innout":
 			leave_inn(p, false)
+		return
+	if a.begins_with("g") and ["gstart", "ghit", "gstand", "ghi", "glo", "gcup", "gend"].has(a):
+		gamble(p, a, arg)
 		return
 	if p.state != "ok":
 		return
@@ -1888,7 +1992,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					p.food -= n; ale += n; spark.call("eat")
 		"innin":
 			if near_station(p, "inn") and phase != "day" and innHp > 0:
-				p.state = "inn"; p.x = D.INN.x; p.tx = p.x; p.z = D.INN.z; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.study = false
+				p.state = "inn"; p.room = "inn"; p.x = D.INN.x - 3.2 + p.slot * 0.9; p.tx = p.x; p.z = D.INN.z; p.tz = p.z; p.r = PI; p.goal_r = PI; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.study = false; p.game = {}
 				for q in peasants:
 					if q.owner == p.id and (q.state == "follow" or q.state == "fight" or q.state == "chop"):
 						q.state = "inn"; q.tree = null
@@ -1970,6 +2074,27 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				say("%s has handed in a library card and given up %s (rank %d). The librarian has stamped something." % [p.dn, D.BOOKS[ia].name, p.books[ia]])
 				p.books[ia] = 0; p.xp[ia] = 0.0
 				retitle(p, t0); spark.call("page")
+		"treat":                                    # a drink for one of the locals in the Rose: one good turn each, a day
+			if ia >= 0 and ia < D.LOCALS.size() and p.room == "inn" and near_station(p, "local%d" % ia) and p.coin >= D.TREAT and not (p.treated & (1 << ia)):
+				p.coin -= D.TREAT; p.treated |= 1 << ia; spark.call("coin")
+				var tip := ""
+				match ia:
+					0:
+						p.food = mini(cap(p), p.food + 3); tip = "Old Marge gives %s a pie out of her basket. It is still warm, which is a worry." % p.dn
+					1:
+						if not chest.is_empty() and not chest.open:
+							chest.seen = true
+							tip = "Tam the Carter tells %s: “I saw a man down, %s, and a box by him with a seal on. I did not stop. It is marked on your map now.”" % [p.dn, D.CHEST_ROADS[chest.road]]
+						else:
+							ruins_seen = [true, true, true]
+							tip = "Tam the Carter tells %s where the outer ruins have got to today. They are on the map." % p.dn
+					2:
+						var nb := 0
+						for d in D.BOSS_NIGHTS:
+							if last_day >= D.MONTH and int(d) >= day and (nb == 0 or int(d) < nb): nb = int(d)
+						var k: int = D.BOSS_NIGHTS[nb] if nb else D.U_LORD
+						tip = "The stranger tells %s: “%s”" % [p.dn, D.BOSS_HINT[k]]
+				say(tip); ev.append(["tip", p.id, D.LOCALS[ia].name, tip])
 		"etch":                                     # three runes, cut into the weapon in your hand
 			if near_station(p, "smithy") and p.rune >= D.ETCH_RUNES and p.etch != p.wpn:
 				p.rune -= D.ETCH_RUNES; p.etch = p.wpn; spark.call("forge")
@@ -2386,6 +2511,9 @@ func player_step(p: E.Player, dt: float) -> void:
 	for q in peasants:
 		if q.owner == p.id and q.state != "body": n += 1
 	p.posse = n
+	if not p.game.is_empty():                      # a game with the gambler: the cups take their time, and walking off forfeits the stake
+		if p.room != "inn" or p.state != "ok" or not near_station(p, "gambler"): p.game = {}
+		elif p.game.g == "cups" and float(p.game.t) > 0: p.game.t = maxf(0.0, float(p.game.t) - dt)
 	if p.state == "inn":                           # drinking: each tankard takes a few seconds and fills the courage meter
 		p.gk = 0; p.prog = 0
 		if phase == "day":
@@ -2607,7 +2735,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		if u.state == "pile" or u.state == "rise": continue
 		var d := D.d2(q.x, q.z, u.x, u.z)
 		if d < 144: near = true
-		if d < bd and (order == 2 or (D.d2(q.px, q.pz, u.x, u.z) < 36 if order == 1 else D.d2(Ld.x, Ld.z, u.x, u.z) < 64)) and not wall_between(q.x, q.z, u.x, u.z):
+		if d < bd and (order == 2 or (D.d2(q.px, q.pz, u.x, u.z) < 36 if order == 1 else D.d2(q.x if Ld.room != "" else Ld.x, q.z if Ld.room != "" else Ld.z, u.x, u.z) < 64)) and not wall_between(q.x, q.z, u.x, u.z):
 			bd = d; tgt = u
 	if not near and q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
 	if tgt:
@@ -2977,7 +3105,9 @@ func undead_step(dt: float) -> void:
 				u.cd = U.cd; u.ac += 1; innHp -= maxf(U.sdmg, 3.0) * dmul; ev.append(["build", r1(D.INN.dx - 0.8), r1(D.INN.dz)])
 				if innHp <= 0:
 					innHp = 0; say("The dead have broken into the Thorny Rose Inn. Drinking-up time.")
-					for p in players: leave_inn(p, p.cg >= 100)
+					for p in players:
+						leave_inn(p, p.cg >= 100)
+						if p.room == "inn": leave_room(p)     # and anyone else who was in there, talking
 			continue
 		if tgt == null and not door and (not raiser or u.march) and in_box(u.x, u.z, U.r + 0.45, keep_box):
 			u.state = "atk"; u.r = D.ang_lerp(u.r, atan2(D.KEEP_X - u.x, D.KEEP_Z - u.z), 0.3)

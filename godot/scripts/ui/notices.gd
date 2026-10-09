@@ -161,10 +161,34 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				o.append({"label": "Unbar the door and go out", "sub": "Sober, more or less.", "ok": true, "a": "innout"})
 				return {"title": "Inside the Thorny Rose Inn", "intro": "Dutch courage: %d%%. At 100 you burst out and charge for %d seconds: faster, stronger and tougher. Nothing can reach you in here until the door gives way (%d%% left)." % [p.cg, Rules.charge_len(p), roundi(R.innHp / D.INN_HP * 100)], "o": o}
 			var is_day := R.phase == "day"
+			o.append({"head": "The innkeeper"})
 			o.append({"label": "Hire a mercenary until dawn", "sub": "You have one already. One is plenty." if p.merc else "%s. A hired fighter for your posse: stronger than a guard, and not to be trusted. About one in seven turns on his employer at dawn for two shillings more." % D.coins(D.MERC_FEE), "ok": not p.merc and p.coin >= D.MERC_FEE, "a": "merc"})
 			o.append({"label": "Give the innkeeper 5 food", "sub": "He turns each piece into a tankard for tonight. %d in the barrel. You carry %d." % [R.ale, p.food], "ok": p.food > 0, "a": "ale"})
-			o.append({"label": "Go in and bar the door", "sub": "The Rose opens at dusk." if is_day else "The door is in pieces until morning." if R.innHp <= 0 else "Your posse comes in with you. The dead will try the door.", "ok": not is_day and R.innHp > 0, "a": "innin"})
-			return {"title": "The Thorny Rose Inn", "intro": "Dutch courage: %d%%. Drink inside at night until you are brave enough to charge. The innkeeper only has as much ale as the village brings him food that day." % p.cg, "o": o}
+			o.append({"label": "Sit down to drink, and have the door barred", "sub": "He only pours for Dutch courage after dark." if is_day else "The door is in pieces until morning." if R.innHp <= 0 else "Your posse comes in with you. The dead will try the door.", "ok": not is_day and R.innHp > 0, "a": "innin"})
+			return {"title": "The bar of the Thorny Rose", "intro": "Dutch courage: %d%%. Drink here at night until you are brave enough to charge. The innkeeper only has as much ale as the village brings him food that day. There are people to talk to, a gambler in the corner, and a bookshelf with one book on it." % p.cg, "o": o}
+		"local0", "local1", "local2":
+			var li := int(id.substr(5))
+			var Lc: Dictionary = D.LOCALS[li]
+			var topic := int(page.substr(1)) if page.begins_with("t") else -1
+			var nm: String = Lc.name[0].to_upper() + Lc.name.substr(1)
+			var intro: String = "%s: %s." % [nm, Lc.what]
+			if topic >= 0 and topic < 3:
+				var ls: Array = Lc.say[topic]
+				intro = "“%s”" % ls[(R.day + li * 2 + topic) % ls.size()]
+			o.append({"head": "Ask about"})
+			for t in 3:
+				o.append({"label": Lc.ask[t][0].to_upper() + Lc.ask[t].substr(1), "sub": "", "ok": true, "page": "t%d" % t})
+			o.append({"head": "Or"})
+			var done := (p.treated & (1 << li)) != 0
+			o.append({"label": "Stand %s a drink" % ("her" if li == 0 else "him"), "sub": "You have stood one already today." if done else "%s. In return: %s." % [D.coins(D.TREAT), Lc.treat],
+				"ok": not done and p.coin >= D.TREAT, "a": "treat", "arg": li})
+			return {"title": nm, "intro": intro, "o": o}
+		"shelf":
+			o.append({"text": "It has one book on it, and the shelf has bent."})
+			o.append({"text": "JESTER: The Faux Magician. His Art, his Mystery, and his Excuses. Being a Complete Course in the Appearance of Magic, with Some Remarks on What to Do when it Works."})
+			o.append({"text": "It is the size of a paving stone. You open it at random and understand one word in five. The innkeeper says nobody has ever finished it, and that it would take a peasant three days at the least to get through, several times over."})
+			o.append({"text": "Not today. (The Jester’s calling comes with the next big update.)"})
+			return {"title": "The inn’s bookshelf", "intro": "", "o": o}
 		"cart":
 			if R.merchant < 0:
 				return {"title": "An empty spot", "intro": "No merchant today.", "o": o}

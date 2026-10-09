@@ -9,7 +9,8 @@ const PLACES := [
 	["Old ruins: search", 10.8, -15.4, 3.4], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
 	["Old mine: steel", -108.0, -44.0, 4.0], ["The old mill", 104.0, 30.0, 9.0], ["Merchant", "cart", 0.0, 3.2], ["Bailiff’s back door", -14.5, -16.4, 2.8],
-	["A chest", "chest", 0.0, 1.9], ["The old workings: runes", -104.0, -40.2, 3.2], ["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
+	["A chest", "chest", 0.0, 1.9], ["The bar", 60.0, 235.3, 2.6], ["Old Marge", 55.4, 240.9, 2.3], ["Tam the Carter", 64.4, 241.2, 2.4], ["A stranger", 52.6, 235.0, 2.3],
+	["The gambler", 66.8, 236.6, 2.4], ["A bookshelf", 52.4, 239.3, 2.9], ["Out", 60.0, 245.6, 1.4], ["The ladder up", 0.0, 250.0, 2.0], ["The old workings: runes", -104.0, -40.2, 3.2], ["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
 ]
 
 var R: Rules
@@ -117,7 +118,8 @@ func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 		if D.d2(focus.x, focus.z, x, z) < 30 * 30 and R.live():
 			_put(l, Vector3(x, p[3], z), true)
 			# near a place you know where you are: its sign fades to half, so you can see what is under it
-			var near := 1.0 - smoothstep(9.0, 15.0, sqrt(D.d2(me.x if me else focus.x, me.z if me else focus.z, x, z)))
+			var indoors: bool = me != null and me.room != ""                  # in a room everything is near: fade only what you are standing at
+			var near := 1.0 - smoothstep(1.5 if indoors else 9.0, 3.5 if indoors else 15.0, sqrt(D.d2(me.x if me else focus.x, me.z if me else focus.z, x, z)))
 			l.modulate.a = lerpf(l.modulate.a, lerpf(1.0, 0.45, near), minf(1.0, _delta * 6.0))
 		else:
 			l.visible = false
