@@ -27,6 +27,8 @@ const CHANGES := [
 		"The Lord of Ashhollow has started writing to the village. A headless rider brings each letter down at first light and nails it to the gatepost inside the north gate. He is very polite, and he is complaining: about what you built, whom you hit, and the bell.",
 		"The notice board in the square now has something on it: today's weather, what is coming tonight, the next boss, the village's own notices (three new ones a day), and all the Lord's letters so far.",
 		"Big games: when more than about 420 of the dead would rise in one night (five players or more, later on), fewer rise, and each is tougher and hits harder. Eight players still face eight hordes' worth, without the night taking an hour.",
+		"Two players now start with four followers each, not three. The more players there are, the less each blow from the dead does to walls, gates, barricades and the keep. The Steward is a good deal harder to put down.",
+		"Fixed: the Captain of the Guard's party used to hang about outside the side gateways and never come in. Gravediggers could surface wedged between two houses, so the night never ended. And the game runs much faster with a big posse or a lot of the dead.",
 	]],
 	["Build 5, stage 3: a bigger map", [
 		"The land between the thorn hedges is a third wider. Out west, past the forest, and east, on the downs, there are new places for the stone, the iron, the fish and the outer ruins.",
