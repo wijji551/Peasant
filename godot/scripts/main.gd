@@ -705,6 +705,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3); Sound.play("raise", 0.7, Vector2(ev[1], ev[2]))
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
 		"bellring": world.ring_bell(); Sound.play("bell", 1.0)
+		"hop": F.puff(ev[1], 0.6, ev[2], 8, F.C_WOOD, 2.5)
 		"rider":
 			world.rider_come(); Sound.play("hooves", 0.9)
 			get_tree().create_timer(3.5).timeout.connect(func(): Sound.play("nail", 0.8))

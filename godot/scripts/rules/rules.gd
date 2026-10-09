@@ -683,7 +683,7 @@ func save_data() -> Dictionary:
 		qs.append({"ni": q.ni, "x": q.x, "z": q.z, "hx": q.hx, "hz": q.hz, "hp": q.hp, "armed": q.armed, "body": q.state == "body", "os": own.slot if own else -1, "kind": q.kind})
 	var ds := []
 	for d in drops:
-		ds.append({"it": d.it, "x": d.x, "z": d.z})
+		ds.append({"it": d.it, "x": d.x, "z": d.z, "day": d.day})
 	return {"v": 3, "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
 		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "peasants": qs}
 
@@ -704,7 +704,7 @@ func load_game(d: Dictionary, infos: Array) -> void:
 	for v in d.get("relics", []): relics.append(int(v))
 	drops = []
 	for e in d.get("drops", []):
-		var dr := E.Drop.new(); dr.id = nid; nid += 1; dr.it = int(e.it); dr.x = e.x; dr.z = e.z
+		var dr := E.Drop.new(); dr.id = nid; nid += 1; dr.it = int(e.it); dr.x = e.x; dr.z = e.z; dr.day = int(e.get("day", day))
 		drops.append(dr)
 	for a in d.get("trees", []):
 		if a[0] < trees.size():
@@ -1030,7 +1030,7 @@ func aim_assist(p: E.Player) -> void:   # turn to the nearest undead in reach
 # --- things held and worn
 func drop_item(id: int, x: float, z: float) -> void:
 	var d := E.Drop.new()
-	d.id = nid; nid += 1; d.it = id
+	d.id = nid; nid += 1; d.it = id; d.day = day
 	d.x = clampf(x + rnd2(-0.9, 0.9), D.X0, D.X1); d.z = clampf(z + rnd2(-0.9, 0.9), D.Z0, D.Z1)
 	drops.append(d)
 
@@ -1679,6 +1679,11 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 		"dropi":
 			if ia >= 0 and ia < p.inv.size():
 				drop_item(p.inv.pop_at(ia), p.x, p.z)
+		"destroy":                                  # broken up, burnt or thrown in the river: gone for good
+			if ia >= 0 and ia < p.inv.size():
+				var gone: int = p.inv.pop_at(ia)
+				if D.IT[gone].tier == "relic": relics.erase(gone)   # (a relic finds its way back into the rubble, in time)
+				ev.append(["smash", r1(p.x), r1(p.z)])
 		"forge":
 			if near_station(p, "smithy") and ia >= 0 and ia < D.IT.size() and not D.IT[ia].cost.is_empty():
 				var I: Dictionary = D.IT[ia]
@@ -2164,6 +2169,12 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 		if save_hook.is_valid(): save_hook.call({})
 		return
 	day += 1; grow_trees(); roll_day(false); lines.append(site_line())
+	var stale := drops.filter(func(d): return day - d.day >= D.DROP_DAYS)       # things left lying about: after two days nobody cares
+	if stale.size():
+		for d in stale:
+			drops.erase(d)
+			if D.IT[d.it].tier == "relic": relics.erase(d.it)
+		lines.append("%s left lying on the ground for two days %s gone. Nobody knows where, and nobody is asking." % [D.it_a(stale[0].it).capitalize().substr(0, 1) + D.it_a(stale[0].it).substr(1) if stale.size() == 1 else "%d things" % stale.size(), "has" if stale.size() == 1 else "have"])
 	lines.append_array(tonight_lines())
 	var li := next_letter()
 	if li >= 0:
@@ -2318,6 +2329,67 @@ func step_to(e, x: float, z: float, spd: float, dt: float, stop: float = 0.0) ->
 	e.z += dz / d * s; collide_friend(e, 0.35, 1)     # one axis at a time, so corners do not snag
 	return d
 
+## Does the straight line from a to b pass through this box (x0..x1, z0..z1)?
+static func seg_hits(ax: float, az: float, bx: float, bz: float, x0: float, z0: float, x1: float, z1: float) -> bool:
+	var t0 := 0.0
+	var t1 := 1.0
+	var dx := bx - ax
+	var dz := bz - az
+	for e in [[-dx, ax - x0], [dx, x1 - ax], [-dz, az - z0], [dz, z1 - az]]:
+		var p: float = e[0]
+		var q: float = e[1]
+		if absf(p) < 1e-9:
+			if q < 0: return false
+			continue
+		var r := q / p
+		if p < 0: t0 = maxf(t0, r)
+		else: t1 = minf(t1, r)
+		if t0 > t1: return false
+	return true
+
+## Where a villager should walk next to reach (tx, tz). Straight there, unless the village wall is in the way: then to the
+## gateway that makes the shortest way through it (the north gate opens for friends), or round the corner of it.
+func way_to(x: float, z: float, tx: float, tz: float) -> Vector2:
+	var a := D.inside_village(x, z)
+	var b := D.inside_village(tx, tz)
+	var goal := Vector2(tx, tz)
+	var here := Vector2(x, z)
+	if a != b:
+		# [where the gateway is, the way out through it]
+		var gates := [[Vector2(0, D.VN), Vector2(0, -1)], [Vector2(-D.VW, D.GATE_Z), Vector2(-1, 0)], [Vector2(D.VW, D.GATE_Z), Vector2(1, 0)]]
+		var best: Array = gates[0]
+		var bd := 1e9
+		for g in gates:
+			var d: float = here.distance_to(g[0]) + goal.distance_to(g[0])
+			if d < bd:
+				bd = d; best = g
+		var out: Vector2 = best[1] * (-1.0 if a else 1.0)      # from the gateway towards the side this villager is on
+		var gate: Vector2 = best[0]
+		var off: Vector2 = here - gate
+		var side := absf(off.x * out.y - off.y * out.x)        # how far off the line through the gateway
+		if side > 0.9 and off.dot(out) > -0.5: return gate + out * 2.2     # line up in front of it first
+		return gate - out * 2.4                                             # then through, and out the other side
+	if not a:                                                  # both outside: is the village itself in the way?
+		var m := 1.2
+		var x0 := -D.VW - m; var x1 := D.VW + m; var z0 := D.VN - m; var z1 := D.VS + m
+		if seg_hits(x, z, tx, tz, x0, z0, x1, z1):
+			var cs := [Vector2(x0 - 1.5, z0 - 1.5), Vector2(x1 + 1.5, z0 - 1.5), Vector2(x1 + 1.5, z1 + 1.5), Vector2(x0 - 1.5, z1 + 1.5)]   # going round, clockwise
+			var best := goal
+			var bd := 1e9
+			for i in 4:
+				var c: Vector2 = cs[i]
+				if here.distance_to(c) < 1.2 or seg_hits(x, z, c.x, c.y, x0, z0, x1, z1): continue
+				var rest := 1e9
+				if not seg_hits(c.x, c.y, tx, tz, x0, z0, x1, z1): rest = c.distance_to(goal)
+				else:
+					for j in [(i + 1) % 4, (i + 3) % 4]:
+						var c2: Vector2 = cs[j]
+						if not seg_hits(c2.x, c2.y, tx, tz, x0, z0, x1, z1): rest = minf(rest, c.distance_to(c2) + c2.distance_to(goal))
+				if here.distance_to(c) + rest < bd:
+					bd = here.distance_to(c) + rest; best = c
+			return best
+	return goal
+
 func peasant_step(q: E.Peasant, dt: float) -> void:
 	q.cd = maxf(0, q.cd - dt); q.hurtT += dt; q.prot = maxf(0, q.prot - dt)
 	if q.state == "body" or q.state == "idle" or q.state == "gone" or q.state == "inn":
@@ -2368,12 +2440,19 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 			if q.tree == null or not q.tree.alive or D.d2(q.tree.x, q.tree.z, Ld.x, Ld.z) > 196:
 				q.tree = null
 				var b := 100.0
+				var spare: E.Trunk = null                 # a tree somebody else is on already: better to share it than to wander off
+				var sb := 1e9
 				for t in trees:
-					if not t.alive or D.d2(t.x, t.z, Ld.x, Ld.z) > 100: continue
-					if peasants.any(func(o): return o != q and o.tree == t): continue
+					if not t.alive or D.d2(t.x, t.z, Ld.x, Ld.z) > 49: continue     # close by the leader: within seven paces
 					var d := D.d2(t.x, t.z, q.x, q.z)
+					if peasants.any(func(o): return o != q and o.tree == t):
+						var dl := D.d2(t.x, t.z, Ld.x, Ld.z)
+						if dl < sb:
+							sb = dl; spare = t
+						continue
 					if d < b:
 						b = d; q.tree = t
+				if q.tree == null: q.tree = spare
 			if q.tree:
 				var d := step_to(q, q.tree.x, q.tree.z, 5, dt, 1.25 * q.tree.s + 0.3)
 				if d < 1.25 * q.tree.s + 0.7:
@@ -2405,7 +2484,15 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		if d > 40:
 			q.x = tx; q.z = tz
 		elif d > 0.45:
-			step_to(q, tx, tz, (10.5 if Ld.charge > 0 else 8.2) if d > 4 else 5.4, dt, 0.3)
+			var wp := way_to(q.x, q.z, tx, tz)
+			step_to(q, wp.x, wp.y, (10.5 if Ld.charge > 0 else 8.2) if d > 4 else 5.4, dt, 0.3 if wp.x == tx and wp.y == tz else 0.0)
+			q.st += dt
+			if q.st >= 2.5:                              # wedged behind something for a while, and the leader well away: catch up at a run
+				if d > 6 and D.d2(q.x, q.z, q.sx, q.sz) < 1.0:
+					ev.append(["hop", r1(q.x), r1(q.z)])
+					q.x = tx; q.z = tz; collide_friend(q, 0.35)
+					ev.append(["hop", r1(q.x), r1(q.z)])
+				q.st = 0.0; q.sx = q.x; q.sz = q.z
 	collide_friend(q, 0.35)
 	for o in peasants:
 		if o != q and o.state != "body" and o.state != "gone" and o.state != "inn":

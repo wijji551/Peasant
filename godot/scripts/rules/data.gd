@@ -38,6 +38,7 @@ const POSSE_PAIR := 4                # two players start with four followers eac
 const POP_PER_PLAYER := 6
 const MAX_BODIES := 3
 const PACK_MAX := 6
+const DROP_DAYS := 2                 # a thing left on the ground is gone on the second morning after
 const PLAYER_HP := 100.0
 const PEASANT_HP := 75.0
 const KEEP_HP := 1000.0

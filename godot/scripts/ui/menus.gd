@@ -24,6 +24,11 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Tidying up", [
+		"Steel is always shown under iron in what you carry. Anyone can mine it, at the old steel mine at the top of the forest, far to the north-west (the grey-blue square on the map).",
+		"A thing in your backpack can be destroyed for good: the little flame on it, pressed twice. Things left on the ground are gone on the second morning.",
+		"Your posse finds its own way round the village wall now, by the gates, and a follower who gets properly wedged runs to catch up. When you chop wood they chop beside you, sharing a tree if they must, not off across the forest.",
+	]],
 	["A new name: Thornhallow, Thirty Nights", [
 		"The game has its proper name and a title screen to match. The Lord of Ashhollow now looks as he does in his portrait: beak, tall hat, goblet and all.",
 		"The names over places fade to about half when you stand near them, so you can see what is underneath.",
@@ -383,11 +388,15 @@ func notice(id: String, page: String, force: bool = false) -> void:
 
 # ---------------------------------------------------------------- your backpack, as slots
 var _pack_sig := ""
+var _arm_inv := ""
+var _destroy_arm := -1              # which backpack place has had its flame pressed once
 var _info: Label
 
 func pack(force: bool = false) -> void:
 	var p: E.Player = m.me
-	var sig := str([p.inv, p.wpn, p.head, p.body, p.off, p.trk, p.bless, p.holy, p.books, p.bodies, p.bbod, p.coin >= D.BLESS_FEE, Settings.binds])
+	if str(p.inv) != _arm_inv:                          # the backpack has changed: nothing is half-destroyed any more
+		_arm_inv = str(p.inv); _destroy_arm = -1
+	var sig := str([p.inv, p.wpn, p.head, p.body, p.off, p.trk, p.bless, p.holy, p.books, p.bodies, p.bbod, p.coin >= D.BLESS_FEE, Settings.binds, _destroy_arm])
 	if sig == _pack_sig and w.is_open("pack") and not force:
 		return
 	_pack_sig = sig
@@ -415,9 +424,14 @@ func pack(force: bool = false) -> void:
 		var id: int = p.inv[i]
 		var can := Rules.can_use(p, id)
 		var j := i
+		var burn := func() -> void:
+			if _destroy_arm == j:
+				_destroy_arm = -1; m.inv_do("destroy", j)
+			else:
+				_destroy_arm = j; pack(true)
 		_slot(inv, id, "", str(i + 1), "%s. %s Click to %s." % [D.it_cap(id), Notices.item_sub(p, id), Notices.lower(Notices.WEARV[D.IT[id].s])], false,
-			func(): m.inv_do("eq", j), func(): m.inv_do("dropi", j), not can)
-	_info = w.para("Point at a thing to read about it. Click it to use it or put it away; the little cross drops it on the ground.", 14, Look.INK_SOFT)
+			func(): m.inv_do("eq", j), func(): m.inv_do("dropi", j), not can, burn, _destroy_arm == j)
+	_info = w.para("Point at a thing to read about it. Click it to use it or put it away. The little cross drops it on the ground (it lies there two days); the little flame, pressed twice, destroys it for good.", 14, Look.INK_SOFT)
 	_info.custom_minimum_size.y = 58
 	var bl: Array = Notices.data(m.R, "pack", p, "").o.filter(func(o): return o.get("a") == "bless")
 	if bl.size():
@@ -630,7 +644,7 @@ func skills(force: bool = false) -> void:
 	w.hint("{skills} or Esc: close.")
 
 
-func _slot(parent: Control, id: int, label: String, num: String, tip: String, blessed: bool, cb: Callable, drop: Callable, locked: bool = false) -> void:
+func _slot(parent: Control, id: int, label: String, num: String, tip: String, blessed: bool, cb: Callable, drop: Callable, locked: bool = false, destroy: Callable = Callable(), armed: bool = false) -> void:
 	var box := Control.new()
 	box.custom_minimum_size = Vector2(88, 96)
 	parent.add_child(box)
@@ -681,10 +695,20 @@ func _slot(parent: Control, id: int, label: String, num: String, tip: String, bl
 		x.tooltip_text = "Drop it on the ground"
 		x.focus_mode = Control.FOCUS_NONE
 		x.add_theme_font_size_override("font_size", 11)
-		x.position = Vector2(64, -6)
+		x.position = Vector2(50, -6)
 		x.size = Vector2(26, 24)
 		x.pressed.connect(drop)
 		box.add_child(x)
+	if destroy.is_valid():                              # the little flame: break it up for good. Press twice.
+		var k := Button.new()
+		k.icon = Look.icon("burn", 16)
+		k.tooltip_text = "Press again to destroy it for good" if armed else "Destroy it for good (press twice)"
+		k.focus_mode = Control.FOCUS_NONE
+		k.position = Vector2(-6, -6)
+		k.size = Vector2(26, 24)
+		if armed: k.modulate = Color(1.0, 0.45, 0.35)
+		k.pressed.connect(destroy)
+		box.add_child(k)
 
 
 # ---------------------------------------------------------------- dawn, and the end

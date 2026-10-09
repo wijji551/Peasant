@@ -148,6 +148,9 @@ class Peasant:
 	var tx := 0.0           # in a joined game: where the host last said they were (the view eases towards it)
 	var tz := 0.0
 	var tr := 0.0
+	var sx := 0.0           # where they were a moment ago, and how long since: a follower getting nowhere hops to their leader
+	var sz := 0.0
+	var st := 0.0
 	var px := 0.0           # where they were told to hold (a guard: his post)
 	var pz := 0.0
 	var prot := 0.0         # prayed over: a third less harm
@@ -221,5 +224,6 @@ class Struct:
 class Drop:
 	var id := 0
 	var it := 0
+	var day := 0            # the day it was dropped: nobody wants it after two
 	var x := 0.0
 	var z := 0.0

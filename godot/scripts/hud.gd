@@ -117,7 +117,7 @@ func _ready() -> void:
 	rc.custom_minimum_size.x = 240
 	var rv := _vbox(rc, 2)
 	Look.label(rv, "What you carry", 20, Look.RUST, true)
-	for r in ["wood", "stone", "iron", "food", "steel", "coin"]:
+	for r in ["wood", "stone", "iron", "steel", "food", "coin"]:
 		var h := HBoxContainer.new()
 		if r == "steel": _steel_row = h
 		h.add_theme_constant_override("separation", 8)
@@ -423,7 +423,6 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		_boss_num.text = "%d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)]
 	# what you carry
 	var c := Rules.cap(p)
-	_steel_row.visible = p.steel > 0
 	for r in ["wood", "stone", "iron", "food", "steel"]:
 		var n: int = p.get(r)
 		_res[r].text = str(n)

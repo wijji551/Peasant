@@ -18,6 +18,7 @@ const ScrollSvg := preload("res://scripts/ui/scroll_svg.gd")
 
 # small pictures of things, the same as the web version's (24 by 24, drawn as ink lines)
 const ICON := {
+	"burn": "M12 3c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4c0 2 1 3 2 3c0-3-1-5 0-8zM6 20h12",
 	"fork": "M12 22V8M7 3v5h10V3M12 3v5", "sword": "M12 2l2 3v10h-4V5zM8 15h8M12 15v6", "spear": "M12 22V7M12 1l3 6H9z",
 	"mace": "M12 22V11M8 7a4 4 0 1 0 8 0a4 4 0 1 0-8 0M12 1v2M5 7h2M17 7h2", "bill": "M10 22V3M10 3c5 0 7 3 7 7c-2-2-4-3-7-3",
 	"hammer": "M12 22V9M6 3h12v6H6z", "club": "M10 22l1-9c-2-4-1-10 2-10s4 6 2 10l-1 9z", "spade": "M12 2v12M9 2h6M7 14h10v3c0 3-3 5-5 5s-5-2-5-5z",
