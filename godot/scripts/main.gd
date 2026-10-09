@@ -18,6 +18,7 @@ const Hud := preload("res://scripts/hud.gd")
 const Menus := preload("res://scripts/ui/menus.gd")
 const Build := preload("res://scripts/build.gd")
 const Atmos := preload("res://scripts/view/atmos.gd")
+const SoundNode := preload("res://scripts/audio/sound.gd")
 
 const STEP := 1.0 / 30.0         # the rules run thirty times a second, as in the web version
 const SAVE_PATH := "user://dtv-save.json"
@@ -80,6 +81,7 @@ var _end_shown := false
 var _frame := 0
 var _bot := false
 var _home_t := 0.0
+var _keep_hc_seen := 0
 
 
 func _ready() -> void:
@@ -98,6 +100,7 @@ func _ready() -> void:
 	R.save_hook = _save
 	_fx = Fx.new(); add_child(_fx)
 	atmos = Atmos.new(); add_child(atmos); atmos.setup(world)
+	add_child(SoundNode.new())
 	trees_view = TreesView.new(); trees_view.fx = _fx; add_child(trees_view)
 	sites_view = SitesView.new(); add_child(sites_view)
 	defences_view = DefencesView.new(); defences_view.fx = _fx; add_child(defences_view)
@@ -270,6 +273,12 @@ func _input(e: InputEvent) -> void:
 func _unhandled_input(e: InputEvent) -> void:
 	if not (e is InputEventKey or e is InputEventMouseButton) or not e.is_pressed() or e.is_echo():
 		return
+	if Keys.is_act(e, "mute"):
+		Settings.muted = not Settings.muted
+		Settings.save()
+		Sound.apply_settings()
+		hud.banner("Sound off" if Settings.muted else "Sound on", "%s turns it back on." % Keys.name("mute") if Settings.muted else "", 1.2)
+		return
 	if e is InputEventKey and e.physical_keycode == KEY_ESCAPE:   # closes whatever is open; with nothing open, the handbook
 		if win.visible:
 			if win.closable: win.close()
@@ -322,20 +331,20 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 			if D.IT[p.inv[j]].s == "w" and Rules.can_use(p, p.inv[j]):
 				i = j; break
 		if i < 0:
-			hud.banner("No other weapon", "There is no weapon in your backpack that you can use.", 1.5)
+			Sound.play("no"); hud.banner("No other weapon", "There is no weapon in your backpack that you can use.", 1.5)
 		else:
 			hud.banner(D.it_cap(p.inv[i]), "", 0.8); R.do_act(p, "eq", i)
 	elif Keys.is_act(e, "carry"):
 		if p.trk != 28 and p.trk != 26:
-			hud.banner("Nothing to use", "A slop bucket or a handbell goes here. The ruins have them.", 1.5)
+			Sound.play("no"); hud.banner("Nothing to use", "A slop bucket or a handbell goes here. The ruins have them.", 1.5)
 		elif not (p.trk == 26 and p.useCd > 0):
 			R.aim_assist(p); R.do_use(p)
 	elif Keys.is_act(e, "toilet"):
-		if p.tbCd > 0: hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
-		elif not p.posse: hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
+		if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
+		elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
 		else: R.do_toilet(p)
 	elif Keys.is_act(e, "orders"):
-		if Rules.rk(p, 6) < 3: hud.banner("No orders yet", "Orders need rank 3 of How to Win Peasants and Lead Them.", 1.7)
+		if Rules.rk(p, 6) < 3: Sound.play("no"); hud.banner("No orders yet", "Orders need rank 3 of How to Win Peasants and Lead Them.", 1.7)
 		else:
 			R.do_order(p); hud.banner(["Follow me", "Hold here", "Charge!"][p.order], "", 0.9)
 	elif Keys.is_act(e, "build"):
@@ -348,7 +357,7 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 	elif (Keys.is_act(e, "interact") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT)) and _build_sel != "":
 		_place_ghost()
 	elif Keys.is_act(e, "eat"):
-		if p.food < 1: hud.banner("You have no food", "The farms and the river have some.", 1.3)
+		if p.food < 1: Sound.play("no"); hud.banner("You have no food", "The farms and the river have some.", 1.3)
 		else: R.do_eat(p)
 	elif Keys.is_act(e, "attack") and p.gk == 5:
 		R.do_fish(p)
@@ -368,11 +377,11 @@ func _place_ghost() -> void:
 	var g := _ghost_pos()
 	var c := Rules.cost_of(me, k)
 	if not Rules.has(me, c):
-		hud.banner("A %s needs %s" % [D.SNAME[k], D.cost_text(c)], "", 1.1)
+		Sound.play("no"); hud.banner("A %s needs %s" % [D.SNAME[k], D.cost_text(c)], "", 1.1)
 		return
 	if not R.valid_place(k, g.x, g.z, g.rot):
 		if D.COST[k].has("bodies") and D.inside_village(g.x, g.z):
-			hud.banner("Not inside the village", "The fallen go outside the wall.", 1.5)
+			Sound.play("no"); hud.banner("Not inside the village", "The fallen go outside the wall.", 1.5)
 		return
 	R.try_place(me, k, g.x, g.z, g.rot)
 
@@ -438,13 +447,13 @@ func inv_do(a: String, arg) -> void:
 	if a == "eq" and (arg >= p.inv.size()):
 		return
 	if a == "eq" and not Rules.can_use(p, p.inv[arg]):
-		hud.banner("Not yet", "%s needs %s. The book is in the library." % [D.it_cap(p.inv[arg]), Notices.book_need(D.IT[p.inv[arg]].need)], 3.0)
+		Sound.play("no"); hud.banner("Not yet", "%s needs %s. The book is in the library." % [D.it_cap(p.inv[arg]), Notices.book_need(D.IT[p.inv[arg]].need)], 3.0)
 		return
 	if a == "uneq" and p.get(arg) == 0:
 		hud.banner("The pitchfork stays", "It is what you hold when you hold nothing else.", 1.8)
 		return
 	if a == "uneq" and p.inv.size() >= D.PACK_MAX:
-		hud.banner("Your backpack is full", "Drop something, or leave it on the arms rack in the storehouse.", 2.2)
+		Sound.play("no"); hud.banner("Your backpack is full", "Drop something, or leave it on the arms rack in the storehouse.", 2.2)
 		return
 	R.do_act(p, a, arg)
 
@@ -462,6 +471,7 @@ func _process(delta: float) -> void:
 		sites_view.sync(R)
 		_apply_light(0.0)
 		atmos.update(delta, 0.0, _focus)
+		Sound.me.update(delta, 0.0, _focus, "clear", 0, 0.0, false)
 		_test_hook()
 		return
 	var paused: bool = win.is_open("menu") and R.players.size() == 1   # alone, the game waits while you read the handbook
@@ -527,18 +537,18 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 	var F = _fx
 	match ev[0]:
 		"msg": hud.feed(ev[1])
-		"ruin": hud.banner("A ruin!", "One of the outer ruins, found. It is on the map now, for everyone.", 2.4)
-		"arrow": F.fly(ev[1], ev[2], ev[3], ev[4], 0)
-		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1)
-		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3)
-		"coin": F.puff(ev[1], 1.4, ev[2], 6, F.C_COIN, 2)
-		"forge": F.puff(ev[1], 1.2, ev[2], 10, F.C_SPARK, 3.5)
-		"build": F.puff(ev[1], 0.8, ev[2], 8, F.C_WOOD, 3)
-		"eat": F.puff(ev[1], 1.7, ev[2], 4, F.C_FOOD, 1.5)
-		"fish": F.puff(ev[1], 0.3, ev[2], 10, F.C_SPLASH, 3)
+		"ruin": hud.banner("A ruin!", "One of the outer ruins, found. It is on the map now, for everyone.", 2.4); Sound.play("find")
+		"arrow": F.fly(ev[1], ev[2], ev[3], ev[4], 0); Sound.play("swing", 0.5, Vector2(ev[1], ev[2]))
+		"shot": F.fly(ev[1], ev[2], ev[3], ev[4], ev[5] + 1); Sound.play("swing", 0.5, Vector2(ev[1], ev[2]))
+		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3); Sound.play("raise", 0.7, Vector2(ev[1], ev[2]))
+		"coin": F.puff(ev[1], 1.4, ev[2], 6, F.C_COIN, 2); Sound.play("coin", 1.0, Vector2(ev[1], ev[2]))
+		"forge": F.puff(ev[1], 1.2, ev[2], 10, F.C_SPARK, 3.5); Sound.play("forge", 1.0, Vector2(ev[1], ev[2]))
+		"build": F.puff(ev[1], 0.8, ev[2], 8, F.C_WOOD, 3); Sound.play("build", 1.0, Vector2(ev[1], ev[2]))
+		"eat": F.puff(ev[1], 1.7, ev[2], 4, F.C_FOOD, 1.5); Sound.play("eat", 0.7, Vector2(ev[1], ev[2]))
+		"fish": F.puff(ev[1], 0.3, ev[2], 10, F.C_SPLASH, 3); Sound.play("splash", 1.0, Vector2(ev[1], ev[2]))
 		"bite":
 			F.puff(R.JETTY.x, 0.2, R.JETTY.z + 2.6, 4, F.C_SPLASH, 1.5)
-			if ev[1] == me.id: hud.banner("A bite!", "Press %s" % Keys.name("attack"), 1.0)
+			if ev[1] == me.id: hud.banner("A bite!", "Press %s" % Keys.name("attack"), 1.0); Sound.play("pop")
 		"abl":                                           # a weapon's trick: show where it landed
 			var k: String = ev[1]
 			var x: float = ev[2]
@@ -546,27 +556,32 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			var fx_ := sin(ev[4])
 			var fz := cos(ev[4])
 			match k:
-				"smash": F.ring(x + fx_ * 1.6, z + fz * 1.6, 3.2, 22, F.C_DUST)
-				"clang": F.ring(x, z, 4, 18, F.C_SPARK)
-				"reap", "trip": F.ring(x, z, 2.6, 16, F.C_DUST if k == "trip" else F.C_WOOD)
-				"parry": F.puff(x + fx_ * 0.6, 1.3, z + fz * 0.6, 5, F.C_SPARK, 1.5)
-				_: F.puff(x + fx_ * 1.8, 1, z + fz * 1.8, 8, F.C_DUST if k == "bury" else F.C_SPARK, 3)
-		"parry": F.puff(ev[1], 1.3, ev[2], 10, F.C_SPARK, 4)
+				"smash": F.ring(x + fx_ * 1.6, z + fz * 1.6, 3.2, 22, F.C_DUST); Sound.play("thump", 1.0, Vector2(x, z))
+				"clang": F.ring(x, z, 4, 18, F.C_SPARK); Sound.play("clang", 1.0, Vector2(x, z))
+				"reap", "trip": F.ring(x, z, 2.6, 16, F.C_DUST if k == "trip" else F.C_WOOD); Sound.play("swing", 1.0, Vector2(x, z))
+				"parry": F.puff(x + fx_ * 0.6, 1.3, z + fz * 0.6, 5, F.C_SPARK, 1.5); Sound.play("pop", 0.5, Vector2(x, z))
+				_: F.puff(x + fx_ * 1.8, 1, z + fz * 1.8, 8, F.C_DUST if k == "bury" else F.C_SPARK, 3); Sound.play("swing", 0.8, Vector2(x, z))
+		"parry": F.puff(ev[1], 1.3, ev[2], 10, F.C_SPARK, 4); Sound.play("clang", 0.7, Vector2(ev[1], ev[2]))
 		"miss": F.puff(ev[1], 1.6, ev[2], 3, F.C_DUST, 2)
 		"splat":
 			F.ring(ev[1], ev[2], 4, 24, F.C_HOLY if ev[3] else F.C_POO)
 			F.puff(ev[1], 0.4, ev[2], 14, F.C_POO, 4)
-		"ring": F.ring(ev[1], ev[2], 8, 30, F.C_HOLY)
-		"holy": F.puff(ev[1], 1.4, ev[2], 12, F.C_HOLY, 2.5)
+			Sound.play("splat", 1.0, Vector2(ev[1], ev[2]))
+			if ev[3]: Sound.play("holy", 0.7, Vector2(ev[1], ev[2]))
+		"ring": F.ring(ev[1], ev[2], 8, 30, F.C_HOLY); Sound.play("ring", 1.0, Vector2(ev[1], ev[2]))
+		"holy": F.puff(ev[1], 1.4, ev[2], 12, F.C_HOLY, 2.5); Sound.play("holy", 1.0, Vector2(ev[1], ev[2]))
 		"burst":
 			F.ring(ev[1], ev[2], 3, 20, F.C_ALE)
 			F.puff(ev[1], 1, ev[2], 14, F.C_WOOD, 5)
+			Sound.play("cheer", 1.0, Vector2(ev[1], ev[2]))
 		"found":
 			F.puff(ev[3], 0.5, ev[4], 20 if ev[5] else 6, F.C_HOLY if ev[5] else F.C_DUST, 3)
 			if ev[1] == me.id:
+				Sound.play("relic" if ev[5] else "find")
 				hud.banner("A find!" if ev[5] else "You found", str(ev[2]) + (". It is in your backpack: %s opens it." % Keys.name("pack") if ev[6] else ""), 3.8 if ev[5] else 2.8)
 		"gone":
 			dead_view.gone(ev[2], ev[3], ev[4], ev[5])
+			Sound.play("steward" if ev[5] == 3 else "bone" if ev[5] else "hit", 0.8, Vector2(ev[3], ev[4]))
 
 
 # ---------------------------------------------------------------- drawing
@@ -662,6 +677,13 @@ func _draw(delta: float) -> void:
 	_camera(delta)
 	_apply_light(R.nf)
 	atmos.update(delta, R.nf, _focus)
+	var near := 0
+	for u: E.Undead in R.undead:
+		if D.d2(u.x, u.z, _focus.x, _focus.z) < 22 * 22: near += 1
+	Sound.me.update(delta, R.nf, _focus, atmos.weather, near, atmos.flash, R.live())
+	if R.keepHc != _keep_hc_seen:
+		_keep_hc_seen = R.keepHc
+		if R.phase == "night": Sound.play("keep", 0.5)
 	labels.focus = _focus
 
 
@@ -710,12 +732,14 @@ func _hud_update(delta: float) -> void:
 			"day":
 				_end_shown = false
 			"dusk":
+				Sound.play("bell")
 				hud.banner("Dusk", "The bell rings. Somebody at the castle is polishing the silver." if R.day == D.LAST_DAY else "The bell rings. Something is stirring at Ashhollow Castle.", 5.0)
 				if win.is_open("dawn"): win.close()
 			"night":
 				hud.banner("Night %d" % R.day, "The dead are rising all along the graveyard, and some have brought bows." if R.day >= 4 else "The dead are rising all along the graveyard.", 4.5)
 			"won", "lost":
 				_end_t = 2.2
+				Sound.play("won" if ph == "won" else "lost")
 	if (ph == "won" or ph == "lost") and not _end_shown:
 		_end_t -= delta
 		if _end_t <= 0:
@@ -728,6 +752,7 @@ func _hud_update(delta: float) -> void:
 		if R.dawn.lines.size() and not win.is_open("menu"):
 			_panel = ""
 			atmos.pick(R.gseed, R.dawn.day)
+			if R.dawn.day > 1: Sound.play("dawn")
 			menus.dawn(R.dawn.day, R.dawn.lines + ([atmos.weather_line()] if atmos.weather_line() != "" else []))
 			_dawn_t = 15.0
 	if win.is_open("dawn"):

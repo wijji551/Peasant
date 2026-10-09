@@ -90,10 +90,13 @@ func sync(R: Rules, delta: float) -> void:
 			if s.built and (not was_built or (fresh and s.slot < 0 and now - _started > 1.5)) or (s.re and not was_re):
 				e.pop = 1.0                              # just built, or just reinforced
 				if fx: fx.puff(s.x, 0.4, s.z, 8, fx.C_WOOD, 3)
+				Sound.play("build", 1.0, Vector2(s.x, s.z))
 			if was_built and not s.built and fx:         # knocked down
 				fx.puff(s.x, 0.6, s.z, 16, fx.C_WOOD, 4)
+				Sound.play("thump", 0.9, Vector2(s.x, s.z))
 		if s.hc != e.hc:
 			e.hc = s.hc; e.shake = 0.18
+			Sound.play("chop", 0.45, Vector2(s.x, s.z))
 		e.pop = maxf(0, e.pop - delta * 3.5)
 		e.shake = maxf(0, e.shake - delta)
 		var pp: float = 1 + sin(e.pop * PI) * 0.22 - ((e.pop - 0.7) * 1.5 if e.pop > 0.7 else 0.0)

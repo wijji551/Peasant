@@ -88,7 +88,9 @@ func open(k: String, title: String, intro: String = "", w: float = 640, h: float
 	_want = Vector2(w, h)
 	visible = true
 	_fit()
-	if not same: _scroll.scroll_vertical = 0
+	if not same:
+		_scroll.scroll_vertical = 0
+		Sound.play("page", 0.8)
 	return body
 
 

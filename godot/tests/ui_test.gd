@@ -105,6 +105,19 @@ func _init() -> void:
 	await create_timer(3.0).timeout
 	await frames(3)
 	ok("the end of the week shows", m.win.is_open("end"), m.win.kind)
+	# sound: three channels, M mutes, the sliders reach them
+	ok("effects, ambience and music each have a channel", ["Effects", "Ambience", "Music"].all(func(b): return AudioServer.get_bus_index(b) > 0))
+	var was_muted := Settings.muted
+	key(KEY_M)
+	await frames(2)
+	ok("M mutes the sound", Settings.muted != was_muted and AudioServer.is_bus_mute(0) == Settings.muted)
+	key(KEY_M)
+	await frames(2)
+	ok("and M again turns it back on", Settings.muted == was_muted and not AudioServer.is_bus_mute(0))
+	Settings.set_volume("music_vol", 0); Sound.apply_settings()
+	ok("music at nothing silences the music", AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))
+	Settings.set_volume("music_vol", 50); Sound.apply_settings()
+	ok("the tunes and the ambience loop", Sound.me._loops.values().all(func(e): return (e[0].stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD and e[0].playing))
 	m.free()
 	for l in lines: print(l)
 	var fails := lines.filter(func(l): return not l.begins_with("PASS")).size()

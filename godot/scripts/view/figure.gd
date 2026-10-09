@@ -96,6 +96,9 @@ func _mi(parent: Node3D, mesh: String, m: Material) -> MeshInstance3D:
 	return mi
 
 
+var _owner_seen := -1
+
+
 func _counts(ac: int, hc: int, cc: int) -> Array:   # [swung, was hit, worked] since last time
 	var out := [ac != _seen[0] and _seen[0] >= 0, hc != _seen[1] and _seen[1] >= 0, cc != _seen[2] and _seen[2] >= 0]
 	_seen = [ac, hc, cc]
@@ -115,9 +118,13 @@ func player(p: E.Player, is_me: bool) -> void:
 	var kind: String = D.GK[p.gk] if p.gk < D.GK.size() else ""
 	var c := _counts(p.ac, p.hc, p.cc)
 	if c[2] and p.state != "inn": _work_fx(kind if kind != "" else "tree")
-	if c[0]: _atk = 1.0
+	if c[2] and p.state == "inn" and is_me: Sound.play("gulp")
+	if c[0]:
+		_atk = 1.0
+		Sound.play("swing", 0.7, Vector2(p.x, p.z))
 	if c[2]: _atk = 1.0
 	if c[1] and p.state != "dead":
+		Sound.play("hurt" if is_me else "hit", 0.8, Vector2(p.x, p.z))
 		_flash = 1.0
 		if fx: fx.puff(p.x, 1, p.z, 3, fx.C_BLOOD, 2)
 	var tint := Color(D.PCOL[p.col % 8])
@@ -157,7 +164,13 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 	if c[0]:
 		_atk = 1.0
 		if q.state == "chop": _work_fx(kind if kind != "" else "tree")
+		else: Sound.play("swing", 0.35, Vector2(q.x, q.z))
+	var oid: int = q.owner
+	if oid != _owner_seen:
+		if _owner_seen == 0 and oid != 0 and own: Sound.play("rally", 0.8, Vector2(q.x, q.z))   # rallied to a posse
+		_owner_seen = oid
 	if c[1]:
+		Sound.play("hit", 0.5, Vector2(q.x, q.z))
 		_flash = 1.0
 		if fx and q.state != "body": fx.puff(q.x, 1, q.z, 3, fx.C_BLOOD, 2)
 	_down = q.state == "body"
@@ -245,6 +258,7 @@ func _work_fx(kind: String) -> void:   # a blow landed on a tree, a rock, the or
 	if fx == null or kind == "fish": return
 	var x := _x + sin(_r) * 0.9
 	var z := _z + cos(_r) * 0.9
+	Sound.play({"tree": "chop", "search": "pick", "stone": "stone", "iron": "iron"}.get(kind, "pluck"), 0.7 if is_player else 0.4, Vector2(_x, _z))
 	match kind:
 		"tree": fx.puff(_x + sin(_r) * 1.2, 1, _z + cos(_r) * 1.2, 4, fx.C_WOOD, 2.5); get_parent().shake_tree_near(_x, _z)
 		"search": fx.puff(x, 0.4, z, 4, fx.C_DUST, 2.2)

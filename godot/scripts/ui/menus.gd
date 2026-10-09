@@ -14,6 +14,12 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Godot: sound (stage 4 of the move)", [
+		"Every sound from the web version, made again, and new ones: the dead groaning and rattling as they come near, crows, an owl, thunder after the lightning, a knock, a creaking door, a page turning when a window opens.",
+		"Birds and a breeze by day, crickets and wind at night, rain when it rains, and a low moaning drone the closer you get to the castle.",
+		"Two tunes: a lute in the village by day, and something slower and less friendly at night.",
+		"The handbook's options have a volume for everything, the effects, the ambience and the music. M mutes it all.",
+	]],
 	["Godot: the look of the place", [
 		"Proper medieval lettering, and every card and button is now torn parchment, like the scroll.",
 		"What you carry says what it is, with pictures that look like wood, stone, iron, food and coin.",
@@ -181,13 +187,17 @@ func menu(tab: String = "") -> void:
 			g.add_theme_constant_override("h_separation", 16)
 			g.add_theme_constant_override("v_separation", 10)
 			b.add_child(g)
-			Look.label(g, "Sound (it arrives in the next stage)", 15)
-			var vh := HBoxContainer.new(); g.add_child(vh)
-			var vs := HSlider.new(); vs.min_value = 0; vs.max_value = 100; vs.step = 5; vs.value = Settings.vol; vs.custom_minimum_size.x = 180
-			var vl := Look.label(vh, "", 15)
-			vh.add_child(vs); vh.move_child(vs, 0)
-			vl.text = "%d%%" % Settings.vol if Settings.vol else "off"
-			vs.value_changed.connect(func(v): Settings.vol = int(v); vl.text = "%d%%" % Settings.vol if Settings.vol else "off"; Settings.save())
+			for row in [["All sound", "vol"], ["Effects", "fx_vol"], ["Birds, wind and rain", "amb_vol"], ["Music", "music_vol"]]:
+				Look.label(g, row[0], 15)
+				var vh := HBoxContainer.new(); g.add_child(vh)
+				var vs := HSlider.new(); vs.min_value = 0; vs.max_value = 100; vs.step = 5; vs.value = Settings.volume(row[1]); vs.custom_minimum_size.x = 180
+				var vl := Look.label(vh, "", 15)
+				vh.add_child(vs); vh.move_child(vs, 0)
+				var key: String = row[1]
+				vl.text = "%d%%" % Settings.volume(key) if Settings.volume(key) else "off"
+				vs.value_changed.connect(func(v): Settings.set_volume(key, int(v)); vl.text = "%d%%" % int(v) if v else "off"; Settings.save(); Sound.apply_settings(); Sound.play("pop"))
+			Look.label(g, "Mute (%s)" % Keys.name("mute"), 15)
+			var mu := CheckBox.new(); mu.button_pressed = Settings.muted; mu.toggled.connect(func(on): Settings.muted = on; Settings.save(); Sound.apply_settings()); g.add_child(mu)
 			Look.label(g, "Names over the other players", 15)
 			var tg := CheckBox.new(); tg.button_pressed = Settings.tags; tg.toggled.connect(func(on): Settings.tags = on; Settings.save()); g.add_child(tg)
 			Look.label(g, "See through the keep when something is behind it", 15)
