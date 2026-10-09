@@ -9,7 +9,7 @@ const PLACES := [
 	["Old ruins: search", 10.8, -15.4, 3.4], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
 	["Old mine: steel", -108.0, -44.0, 4.0], ["The old mill", 104.0, 30.0, 9.0], ["Merchant", "cart", 0.0, 3.2], ["Bailiff’s back door", -14.5, -16.4, 2.8],
-	["A chest", "chest", 0.0, 1.9], ["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
+	["A chest", "chest", 0.0, 1.9], ["The old workings: runes", -104.0, -40.2, 3.2], ["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
 ]
 
 var R: Rules

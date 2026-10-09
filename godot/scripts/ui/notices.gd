@@ -96,7 +96,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				var locked := why != ""
 				var sub := why if locked else D.cost_text(c) + ". " + \
 					(("%s. %d damage. {trick}: %s." % [I.note, I.dmg, D.AB[I.ab].n]) + ("" if Rules.can_use(p, i) else " You cannot use it yet: it needs %s." % book_need(I.need)) if I.s == "w" else item_sub(p, i))
-				o.append({"label": "Forge " + D.it_a(i), "sub": sub, "ok": not locked and Rules.has(p, c), "a": "forge", "arg": i})
+				o.append({"label": ("Make " if I.tier == "made" else "Forge ") + D.it_a(i), "sub": sub, "ok": not locked and Rules.has(p, c), "a": "forge", "arg": i})
 			var h3 := Rules.rk(p, 3)
 			if page == "armour":
 				o.append({"head": "Armour"})
@@ -117,6 +117,11 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				if h3 >= 4:
 					o.append({"head": "Steel weapons: from the old steel mine. You carry %d steel" % p.steel})
 					for b in D.STEEL_W: forge.call(D.steel_of(b))
+				o.append({"head": "Fire, and runes"})
+				forge.call(D.I_TORCH)
+				var W0: Dictionary = D.IT[p.wpn]
+				o.append({"label": "Cut runes into your " + W0.n, "sub": "It has them already." if p.etch == p.wpn else "%d runes (you carry %d): a fifth more damage, for good, and it bites wraiths as a blessed weapon does. Runes come from the old workings, under the steel mine: take a torch." % [D.ETCH_RUNES, p.rune],
+					"ok": p.etch != p.wpn and p.rune >= D.ETCH_RUNES, "a": "etch"})
 				o.append({"head": "More"})
 				o.append({"label": "Armour, and spears for your posse", "sub": "Iron cap, chain shirt, shield.", "ok": true, "page": "armour"})
 			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Anyone can make crude weapons. Hammer and Tongs, in the library, makes refined ones, and later steel."), "o": o}

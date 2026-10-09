@@ -117,7 +117,7 @@ func _ready() -> void:
 	rc.custom_minimum_size.x = 240
 	var rv := _vbox(rc, 2)
 	Look.label(rv, "What you carry", 20, Look.RUST, true)
-	for r in ["wood", "stone", "iron", "steel", "food", "coin"]:
+	for r in ["wood", "stone", "iron", "steel", "rune", "food", "coin"]:
 		var h := HBoxContainer.new()
 		if r == "steel": _steel_row = h
 		h.add_theme_constant_override("separation", 8)
@@ -125,7 +125,7 @@ func _ready() -> void:
 		rv.add_child(h)
 		var ic := TextureRect.new(); ic.texture = Look.icon(r, 30); ic.custom_minimum_size = Vector2(30, 30)
 		ic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED; h.add_child(ic)
-		var nm := Look.label(h, r.capitalize(), 18, Look.INK)
+		var nm := Look.label(h, "Runes" if r == "rune" else r.capitalize(), 18, Look.INK)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_res[r] = Look.label(h, "0", 22, Look.INK, true)
@@ -423,7 +423,7 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		_boss_num.text = "%d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)]
 	# what you carry
 	var c := Rules.cap(p)
-	for r in ["wood", "stone", "iron", "food", "steel"]:
+	for r in ["wood", "stone", "iron", "food", "steel", "rune"]:
 		var n: int = p.get(r)
 		_res[r].text = str(n)
 		_res[r].add_theme_color_override("font_color", Look.ROSE if n >= c else Look.INK)

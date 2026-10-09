@@ -718,6 +718,8 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
 		"bellring": world.ring_bell(); Sound.play("bell", 1.0)
 		"hop": F.puff(ev[1], 0.6, ev[2], 8, F.C_WOOD, 2.5)
+		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
+		"door": Sound.play("door", 0.8, Vector2(ev[1], ev[2]))
 		"tenant":
 			Sound.play("steward", 1.0, Vector2(ev[1], ev[2])); F.ring(ev[1], ev[2], 3.0, 20, F.C_DUST)
 			hud.banner("The Previous Tenant", "Something big is getting up out of the rubble, in its nightshirt. Fight it, or run: it will not follow far.", 4.5)
@@ -758,6 +760,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			var fz := cos(ev[4])
 			match k:
 				"smash": F.ring(x + fx_ * 1.6, z + fz * 1.6, 3.2, 22, F.C_DUST); Sound.play("thump", 1.0, Vector2(x, z))
+				"flare": F.ring(x, z, 3.4, 30, F.C_FIRE); F.puff(x, 1.4, z, 16, F.C_FIRE, 4.5); Sound.play("swing", 1.0, Vector2(x, z))
 				"clang": F.ring(x, z, 4, 18, F.C_SPARK); Sound.play("clang", 1.0, Vector2(x, z))
 				"reap", "trip": F.ring(x, z, 2.6, 16, F.C_DUST if k == "trip" else F.C_WOOD); Sound.play("swing", 1.0, Vector2(x, z))
 				"parry": F.puff(x + fx_ * 0.6, 1.3, z + fz * 0.6, 5, F.C_SPARK, 1.5); Sound.play("pop", 0.5, Vector2(x, z))
@@ -806,7 +809,9 @@ func _draw(delta: float) -> void:
 	for p: E.Player in R.players:
 		var key := "p%d" % p.id
 		live[key] = true
-		_fig(key, true).player(p, p == me)
+		var pf = _fig(key, true)
+		pf.dark = 1.0 if p.room == "mine" else R.nf
+		pf.player(p, p == me)
 	for q: E.Peasant in R.peasants:
 		var key := "q%d" % q.id
 		live[key] = true
@@ -923,13 +928,28 @@ func _apply_light(nf: float) -> void:
 	world.keep_window_mat.albedo_color = kw
 	for l in world.lanterns:
 		l.light_energy = 2.4 * lit
+	if screen == "game" and me and me.room == "mine":   # underground: no sun, no sky, no haze. What light there is, you brought
+		sun.light_energy = 0.0
+		env.ambient_light_color = Color(0.3, 0.27, 0.42)
+		env.ambient_light_energy = 0.09
+		env.background_color = Color(0.02, 0.02, 0.03)
+		env.fog_light_color = env.background_color
+		env.fog_depth_begin = 400.0
+		env.fog_depth_end = 500.0
+		env.adjustment_saturation = 1.0
 
 
 ## The view: looking down on the player, from the south to begin with (as in the web version). It can be turned
 ## round the player (the turn keys, or the mouse with the wheel pressed or the look key held), tilted, and zoomed.
 func _camera(delta: float) -> void:
+	var indoors: bool = me.room != ""
+	if Vector2(me.x - _focus.x, me.z - _focus.z).length() > 60.0:      # through a door: the view goes with you at once
+		_focus = Vector3(me.x, 0, me.z); _zoom = 0.38 if indoors else 1.0 + 0.12 * R.nf
 	_focus = _focus.lerp(Vector3(me.x, 0, me.z), minf(1.0, delta * 6.0))
-	_zoom = lerpf(_zoom, 1.0 + 0.12 * R.nf, minf(1.0, delta * 3.0))
+	_zoom = lerpf(_zoom, 0.38 if indoors else 1.0 + 0.12 * R.nf, minf(1.0, delta * 3.0))
+	if indoors: _pan_t = -1.0
+	world.set_veins(R.rune_left)
+	atmos.indoors = indoors
 	if not win.is_open("menu"):
 		_yaw_goal += ((1.0 if Keys.held("cam_right") else 0.0) - (1.0 if Keys.held("cam_left") else 0.0)) * delta * 2.2
 	var k := minf(1.0, delta * 14.0)
@@ -976,7 +996,7 @@ func _hud_update(delta: float) -> void:
 			"dusk":
 				Sound.play("bell")
 				hud.banner("Dusk", _dusk_line(), 6.5 if Settings.castle_pan else 5.0)
-				if Settings.castle_pan and not _bot and OS.get_environment("DTV_SHOT") == "": _pan_t = 0.0
+				if Settings.castle_pan and not _bot and OS.get_environment("DTV_SHOT") == "" and me.room == "": _pan_t = 0.0
 				if win.is_open("dawn"): win.close()
 			"night":
 				hud.banner("Night %d" % R.day, "The dead are rising all along the graveyard, and some have brought bows." if R.day >= 4 else "The dead are rising all along the graveyard.", 4.5)
@@ -1059,6 +1079,16 @@ func _test_hook() -> void:
 	if shot == "":
 		return
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
+	if OS.get_environment("DTV_TORCH") != "" and me: me.wpn = D.I_TORCH     # for pictures: a torch in hand
+	if OS.get_environment("DTV_ROOM") != "" and _frame == at + 2 and me:      # for pictures: indoors, at DTV_ROOM=name[,x,z]
+		var rm := OS.get_environment("DTV_ROOM").split(",")
+		R.enter_room(me, rm[0])
+		if rm.size() >= 3:
+			me.x = float(rm[1]); me.z = float(rm[2])
+	if OS.get_environment("DTV_BURN") != "" and _frame == at + 2 and me:      # for pictures: a few of the dead, alight
+		for i in 5:
+			var bu := R.spawn_undead(i % 2, me.x - 4.0 + i * 2.0, me.z - 3.0 - (i % 2))
+			bu.state = "walk"; bu.stun = 999; bu.burn = 99.0; bu.bt = 99.0
 	if OS.get_environment("DTV_FINDS") != "" and _frame == at + 2 and me:   # for pictures: the Previous Tenant and the lost chest, beside the player
 		R.chest = {"x": me.x + 3.0, "z": me.z - 2.0, "from": 0, "road": 0, "seen": true, "open": false, "rot": 0.4}
 		var tn := R.spawn_undead(D.U_TENANT, me.x - 3.5, me.z - 2.5)

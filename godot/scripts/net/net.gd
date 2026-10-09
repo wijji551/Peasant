@@ -29,7 +29,7 @@ const QSTATE := ["idle", "follow", "chop", "fight", "hide", "body", "gone", "inn
 const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
 const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
-	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
+	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "room", "rune", "etch", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT"]
 
 static var me: Net
@@ -564,12 +564,12 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind])
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
-		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]),
+		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]),
 		"pl": pl, "pe": pe, "ev": ev_out}
 	if with_undead:
 		var un := PackedFloat32Array()
 		for u in R.undead:
-			var fl: int = (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0) | (16 * u.stage) | (64 if u.march else 0)
+			var fl: int = (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0) | (16 * u.stage) | (64 if u.march else 0) | (128 if u.burn > 0 else 0)
 			un.append_array([u.id, u.k, u.x, u.z, u.r, u.hp, u.mhp, USTATE.find(u.state), u.ac, u.hc, fl])
 		o.un = un
 	return o
@@ -664,6 +664,7 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 	var lt: Array = m.get("lt", [[], false])
 	R.letters = lt[0]; R.letter_new = bool(lt[1])
 	R.chest = m.get("ch", {})
+	R.rune_left = m.get("rn", R.rune_left)
 	if str(m.si) != str(R.sites):
 		R.sites = m.si
 		R.set_sites(R.sites)
@@ -720,7 +721,7 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 			u.state = USTATE[int(un[i + 7])]; u.ac = int(un[i + 8]); u.hc = int(un[i + 9])
 			var fl := int(un[i + 10])
 			u.stun = 1.0 if fl & 1 else 0.0; u.pin = 1.0 if fl & 2 else 0.0; u.fear = 1.0 if fl & 4 else 0.0; u.vuln = 1.0 if fl & 8 else 0.0
-			u.stage = (fl >> 4) & 3; u.march = (fl & 64) != 0
+			u.stage = (fl >> 4) & 3; u.march = (fl & 64) != 0; u.burn = 1.0 if fl & 128 else 0.0
 			uo.append(u)
 		R.undead = uo
 		R.boss = null

@@ -83,6 +83,9 @@ class Player:
 	var hb := 0.0           # prayed over at rank 3: the weapon is holy
 	var spare := 0.0        # learning past rank VII, in points; sold for coin in the skills window
 	var cogs := 0           # boxes of cogs, from the tinker: for contraptions
+	var room := ""          # inside somewhere (D.ROOMS), or "" out of doors
+	var rune := 0           # runes carried, from the old workings
+	var etch := -1          # the weapon that has had runes etched into it
 	var card_rank := 0      # a library card has been handed in: the next book taken up starts at this rank
 	var job := false        # working on today's merchant's job
 	var jobT := 0.0         # how much of it they have done
@@ -199,6 +202,8 @@ class Undead:
 	var hx := 0.0           # the Previous Tenant: the ruin he came out of, and goes back to
 	var hz := 0.0
 	var last := 0           # whose blow (or whose posse's) landed last
+	var burn := 0.0         # alight: seconds left, and until the next scorch
+	var bt := 0.0
 	var dd := 0.0           # scratch: distance when sorting
 	var tx := 0.0           # in a joined game: where the host last said it was
 	var tz := 0.0

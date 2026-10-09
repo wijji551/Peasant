@@ -18,6 +18,7 @@ const ScrollSvg := preload("res://scripts/ui/scroll_svg.gd")
 
 # small pictures of things, the same as the web version's (24 by 24, drawn as ink lines)
 const ICON := {
+	"torch": "M12 22V11M9 11h6l-1-3h-4zM12 8c-2-2 0-3 0-6c2 2 3 4 0 6",
 	"card": "M4 6h16v12H4zM7 10h10M7 13h7M16 15l1.5 1.5L20 13",
 	"burn": "M12 3c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4c0 2 1 3 2 3c0-3-1-5 0-8zM6 20h12",
 	"fork": "M12 22V8M7 3v5h10V3M12 3v5", "sword": "M12 2l2 3v10h-4V5zM8 15h8M12 15v6", "spear": "M12 22V7M12 1l3 6H9z",
@@ -47,6 +48,7 @@ const ICON := {
 
 # the readouts' pictures in colour, so each looks like what it is (24 by 24)
 const ICON_COL := {
+	"rune": '<g stroke="#1d1a2a" stroke-width="1.1" stroke-linejoin="round"><path d="M12 3l7 5v8l-7 5l-7-5V8z" fill="#7d6bd0"/><path d="M12 3l7 5l-7 4l-7-4z" fill="#a99af0"/><path d="M10 10v7M10 10l4 3l-4 3" stroke="#f3efff" fill="none" stroke-width="1.3"/></g>',
 	# two logs, cut ends showing their rings
 	"wood": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><rect x="2.5" y="12.5" width="15" height="7" rx="3.5" fill="#8a5a2b"/><path d="M5 14.5h8M6 17.5h9" stroke="#5e3b1a" fill="none"/><ellipse cx="17.5" cy="16" rx="3.4" ry="3.5" fill="#e6be82"/><ellipse cx="17.5" cy="16" rx="1.6" ry="1.7" fill="none" stroke="#a8743a"/><rect x="5.5" y="5" width="14" height="7" rx="3.5" fill="#9a6532"/><path d="M8 7h7M8.5 10h8" stroke="#5e3b1a" fill="none"/><ellipse cx="19.5" cy="8.5" rx="3.2" ry="3.5" fill="#efc98d"/><ellipse cx="19.5" cy="8.5" rx="1.5" ry="1.7" fill="none" stroke="#a8743a"/></g>',
 	# a heap of grey stones

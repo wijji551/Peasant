@@ -52,6 +52,7 @@ var maypole: Node3D                       # the maypole's ribbons and crown, whi
 var letter_paper: Node3D                  # the Lord's letter, nailed to the gatepost
 var rider: Node3D                         # the headless rider who brings it
 var _rider_t := -1.0
+var _veins: Array = []                    # the rune veins in the old workings: [node, material, light]
 var _evil: Array[Node3D] = []             # the castle's worse and worse looks, one set a week
 var _evil_now := -1
 var _castle_lit: StandardMaterial3D       # the one window that is always lit
@@ -81,6 +82,7 @@ func _ready() -> void:
 	_buildings()
 	_green()
 	_gatepost()
+	_mine_room()
 	_farms()
 	_downs()
 
@@ -923,6 +925,113 @@ func _farms() -> void:
 		Build.box(self, Vector3(0.04, 0.56, 0.64), Vector3(bx + 0.2, row * 0.55, 29.4), Color("8a6a3c"))
 	# (the rocky outcrop and the mine move every morning: sites.gd draws them)
 
+
+
+## The old workings under the steel mine: a room built far off to the south, where nobody can see it from the village.
+## It is dark: only the rune veins glow, and the daylight down the ladder. A torch shows the rest.
+func _mine_room() -> void:
+	var M: Dictionary = D.ROOMS.mine
+	var n := Node3D.new()
+	n.position = Vector3(M.x, 0, M.z)
+	add_child(n)
+	var rock := Color("4a4652")
+	var rock2 := Color("3c3945")
+	var rock3 := Color("57525f")
+	Build.box(n, Vector3(120, 0.1, 120), Vector3(0, 0.02, 0), Color("09080b"))                 # nothing beyond the walls
+	Build.box(n, Vector3(M.hw * 2, 0.1, M.hd * 2), Vector3(0, 0.08, 0), Color("38343d"))
+	var rg := RandomNumberGenerator.new()
+	rg.seed = 4242
+	for i in 26:                                                                              # loose stone on the floor
+		Build.box(n, Vector3(rg.randf_range(0.3, 0.9), 0.12, rg.randf_range(0.3, 0.8)), Vector3(rg.randf_range(-6.2, 6.2), 0.12, rg.randf_range(-10, 10)), rock2 if i % 2 else rock3, rg.randf() * 3)
+	for i in 9:                                                                               # the back wall, in lumps
+		var x := -7.0 + i * 1.75
+		Build.box(n, Vector3(2.0, rg.randf_range(3.4, 4.6), rg.randf_range(1.0, 1.7)), Vector3(x, 0, -M.hd - 0.5), rock if i % 2 else rock2, rg.randf_range(-0.15, 0.15))
+	for sx in [-1.0, 1.0]:                                                                    # the sides
+		for i in 12:
+			var z := -10.4 + i * 1.9
+			Build.box(n, Vector3(rg.randf_range(1.0, 1.6), rg.randf_range(2.0, 3.0), 2.1), Vector3(sx * (M.hw + 0.55), 0, z), rock2 if i % 2 else rock, rg.randf_range(-0.12, 0.12))
+	for i in 9:                                                                               # a low lip at the front, so you can see in
+		Build.box(n, Vector3(1.9, rg.randf_range(0.5, 0.9), 0.9), Vector3(-7.0 + i * 1.75, 0, M.hd + 0.4), rock)
+	for b in M.box.slice(0, 4):                                                               # pit props
+		var px: float = b[0] - M.x
+		var pz: float = b[1] - M.z
+		Build.box(n, Vector3(0.5, 3.3, 0.5), Vector3(px, 0, pz), C.timber)
+	for pz in [3.0, -4.0]:
+		Build.box(n, Vector3(7.6, 0.4, 0.5), Vector3(0, 3.3, pz), C.wood2)
+	for sx in [-0.55, 0.55]:                                                                  # the rails, and the cart at the end of them
+		Build.box(n, Vector3(0.1, 0.1, 17.0), Vector3(1.6 + sx, 0.14, -0.4), C.iron)
+	for i in 12:
+		Build.box(n, Vector3(1.6, 0.08, 0.26), Vector3(1.6, 0.1, -8.0 + i * 1.45), C.timber)
+	var cart := Node3D.new(); cart.position = Vector3(1.6, 0, -7.6); n.add_child(cart)
+	Build.box(cart, Vector3(1.5, 0.8, 1.2), Vector3(0, 0.35, 0), C.wood2)
+	Build.box(cart, Vector3(1.3, 0.22, 1.0), Vector3(0, 1.1, 0), rock3)
+	for sx in [-0.7, 0.7]:
+		for sz in [-0.4, 0.4]:
+			Build.cyl(cart, 0.26, 0.26, 0.1, Vector3(sx, 0.0, sz), C.iron, 8, 0, 0, PI / 2)
+	# the ladder up, and the daylight coming down it
+	var lx: float = M.at[0] - M.x
+	var lz: float = M.at[1] - M.z
+	for sx in [-0.3, 0.3]:
+		Build.box(n, Vector3(0.1, 4.6, 0.1), Vector3(lx + sx, 0, lz + 0.9), C.wood, 0, -0.18)
+	for i in 8:
+		Build.box(n, Vector3(0.6, 0.07, 0.1), Vector3(lx, 0.4 + i * 0.52, lz + 0.9 + 0.09 * i * 0.9), C.wood3)
+	var shaft := StandardMaterial3D.new()
+	shaft.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	shaft.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shaft.albedo_color = Color(0.85, 0.9, 1.0, 0.1)
+	shaft.cull_mode = BaseMaterial3D.CULL_DISABLED
+	Build.glow_box(n, Vector3(1.6, 6.0, 1.6), Vector3(lx, 0, lz + 0.3), shaft)
+	var day := OmniLight3D.new()
+	day.light_color = Color(0.8, 0.88, 1.0)
+	day.omni_range = 6.5
+	day.light_energy = 1.3
+	day.position = Vector3(lx, 2.6, lz)
+	n.add_child(day)
+	# the veins: cold stones with marks on them, glowing a little
+	for i in D.RUNE_VEINS.size():
+		var v: Array = D.RUNE_VEINS[i]
+		var g := Node3D.new()
+		g.position = Vector3(v[0] - M.x, 0, v[1] - M.z)
+		n.add_child(g)
+		var gm := StandardMaterial3D.new()
+		gm.albedo_color = Color("6f5fd6")
+		gm.emission_enabled = true
+		gm.emission = Color("8f7dff")
+		gm.emission_energy_multiplier = 1.8
+		for j in 6:
+			var a := rg.randf() * TAU
+			var c := Build.cone(g, rg.randf_range(0.14, 0.3), rg.randf_range(0.5, 1.3), Vector3(cos(a) * rg.randf_range(0.1, 0.8), rg.randf_range(0.0, 1.2), sin(a) * rg.randf_range(0.1, 0.5)), Color.WHITE, 4, rg.randf() * TAU)
+			c.material_override = gm
+			c.rotation.x = rg.randf_range(-0.5, 0.5); c.rotation.z = rg.randf_range(-0.5, 0.5)
+		var l := OmniLight3D.new()
+		l.light_color = Color(0.6, 0.5, 1.0)
+		l.omni_range = 4.5
+		l.light_energy = 0.9
+		l.position = Vector3(0, 1.2, 0)
+		g.add_child(l)
+		_veins.append([g, gm, l])
+	# and, up top, the way down: a timber frame over a hole, by the mouth of the steel mine
+	var dp := Vector3(M.door[0], 0, M.door[1])
+	Build.box(self, Vector3(1.9, 0.06, 1.9), dp + Vector3(0, 0.03, 0), Color("15120f"))
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			Build.box(self, Vector3(0.22, 2.3, 0.22), dp + Vector3(sx * 1.0, 0, sz * 1.0), C.timber)
+	for sz in [-1.0, 1.0]:
+		Build.box(self, Vector3(2.4, 0.2, 0.24), dp + Vector3(0, 2.3, sz * 1.0), C.wood2)
+	Build.box(self, Vector3(2.2, 0.12, 2.2), dp + Vector3(0, 2.5, 0), C.wood3)
+	for sx in [-0.3, 0.3]:
+		Build.box(self, Vector3(0.1, 1.6, 0.1), dp + Vector3(sx, 0, 0.5), C.wood, 0, 0.2)
+	for i in 3:
+		Build.box(self, Vector3(0.6, 0.07, 0.1), dp + Vector3(0, 0.35 + i * 0.45, 0.5 - i * 0.09), C.wood3)
+
+
+## How much is left in each rune vein today: a worked-out vein goes dull.
+func set_veins(left: Array) -> void:
+	for i in mini(left.size(), _veins.size()):
+		var full: bool = left[i] > 0
+		_veins[i][0].scale = Vector3.ONE * (1.0 if full else 0.6)
+		_veins[i][1].emission_energy_multiplier = (1.5 + 0.5 * sin(Time.get_ticks_msec() / 400.0 + i * 2.0)) if full else 0.15
+		_veins[i][2].light_energy = 0.9 if full else 0.1
 
 
 ## The gatepost inside the north gate, where the Lord of Ashhollow's letters are nailed up, and the rider who brings them.

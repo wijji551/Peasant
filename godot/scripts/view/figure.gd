@@ -6,6 +6,8 @@ const HOLYT := Color(1.3, 1.2, 0.75)
 const CORPSE := Color(0.6, 0.56, 0.5)
 
 var is_player := false
+var dark := 0.0                     # how dark it is where this figure stands (0 day, 1 night): a torch shows more in the dark
+var _torch: OmniLight3D
 var fx: Node3D
 
 var _x := 0.0
@@ -135,6 +137,17 @@ func player(p: E.Player, is_me: bool) -> void:
 	_wobble = p.hang > 0
 	_set_work(kind)
 	_set_held(p.wpn, (p.bless & 1) != 0 or p.hb > 0)
+	var lit: bool = p.wpn == D.I_TORCH and visible and p.state != "dead"       # a burning torch lights the way
+	if lit and _torch == null:
+		_torch = OmniLight3D.new()
+		_torch.light_color = Color(1.0, 0.72, 0.36)
+		_torch.omni_range = 13.0
+		_torch.position = Vector3(0.3, 1.9, 0.3)
+		add_child(_torch)
+	if _torch:
+		_torch.visible = lit
+		_torch.light_energy = (4.2 if p.room == "mine" else 0.5 + 2.1 * dark) * (0.9 + 0.1 * sin(Time.get_ticks_msec() / 70.0 + p.id))
+		if lit and fx and randf() < get_process_delta_time() * 9: fx.puff(p.x + sin(p.r) * 0.5, 2.3, p.z + cos(p.r) * 0.5, 1, fx.C_FIRE, 0.8)
 	_set_gear([p.head, p.body, p.off, p.trk])
 	_set_carry(p.bodies, p.bbod)
 	if fx:

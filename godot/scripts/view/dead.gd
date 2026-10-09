@@ -88,6 +88,9 @@ func sync(R: Rules, delta: float) -> void:
 		var dz := -0.45 if u.stun > 0 or u.pin > 0 else 0.0           # dazed ones lean back
 		var col := Color(f * (1.5 if u.vuln > 0 else 1.0), f * (1.25 if u.fear > 0 else 0.75 if u.vuln > 0 else 1.0), f * (0.7 if u.fear > 0 or u.vuln > 0 else 1.0))
 		if u.stun > 0 and fx and randf() < delta * 5: fx.puff(u.x, 2, u.z, 1, fx.C_SPARK, 0.7)
+		if u.burn > 0:                                              # alight: glowing, with flames coming off
+			col = Color(col.r * 1.6, col.g * 0.95, col.b * 0.5)
+			if fx and randf() < delta * 14: fx.puff(u.x + randf_range(-0.3, 0.3), randf_range(0.8, 1.8), u.z + randf_range(-0.3, 0.3), 1, fx.C_FIRE, 1.4)
 		var y: float = -1.6 * (1 - v[8])
 		var walk: float = v[3]
 		var atk: float = v[4]

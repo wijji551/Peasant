@@ -74,6 +74,9 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.71, 0.46, 0.47, 0, 0.52, 0, 0xffffff).box(0.19, 0.2, 0.22, -0.42, 0.82, 0, 0xffffff).box(0.19, 0.2, 0.22, 0.42, 0.82, 0, 0xffffff)
 		"shield":
 			b.box(0.09, 0.66, 0.54, -0.56, 0.36, 0.12, P.wood3).box(0.11, 0.7, 0.07, -0.56, 0.34, 0.12, P.iron).box(0.14, 0.16, 0.16, -0.58, 0.61, 0.12, P.iron)
+		"torch":                                             # a burning torch: a stick, a head of pitch-soaked rag, and the flame
+			b.box(0.08, 0.78, 0.08, 0, -0.14, 0, P.wood).cyl(0.13, 0.1, 0.22, 6, 0, 0.6, 0, 0x2a211b)
+			b.cone(0.16, 0.42, 5, 0, 0.8, 0, 0xffa62b).cone(0.09, 0.3, 4, 0.02, 0.84, 0.03, 0xffe27a)
 		"club":
 			b.box(0.09, 0.5, 0.09, 0, -0.1, 0, P.wood).cyl(0.17, 0.11, 0.72, 6, 0, 0.35, 0, P.wood2)
 		"spade":

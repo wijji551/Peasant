@@ -56,6 +56,7 @@ var bail_t := 0.0             # and how long he stays at it
 var letters: Array = []        # the Lord's letters so far: [which of D.LETTERS, the day it came]
 var letter_new := false        # one is nailed to the gatepost, and nobody has read it yet
 var seen := {}                 # things the Lord might write about, and how often each has happened
+var rune_left: Array = [D.RUNE_PER_VEIN, D.RUNE_PER_VEIN, D.RUNE_PER_VEIN]   # what is left in each vein today
 var tenant_day := 0           # the last day the Previous Tenant was woken: once a day is plenty
 var chest := {}               # the chest that never arrived: {x, z, from, road, seen, open}, or empty when there is none
 var bail_mood := 0            # how many times he has been jeered at today: each makes his guards a shilling dearer
@@ -351,7 +352,7 @@ static func can_forge(p: E.Player, id: int) -> bool:
 	if I.cost.is_empty() or I.wear == 2: return false
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return false
 	match I.tier:
-		"crude": return true
+		"crude", "made": return true
 		"steel": return rk(p, 3) >= 4
 		"forged": return I.s != "w" or rk(p, 3) >= 1           # anyone can make armour; refined weapons need the book
 	return false
@@ -602,6 +603,7 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	set_sites(sites)
 	for i in spots.size():
 		spots[i] = D.SEARCHES
+	rune_left = [D.RUNE_PER_VEIN, D.RUNE_PER_VEIN, D.RUNE_PER_VEIN]
 	ruins_seen = [true, false, false]
 	weather = weather_of(gseed, day, last_day)
 	merchant = merchant_on(gseed, day, last_day)
@@ -720,7 +722,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
+const P_SAVE := ["card_rank", "rune", "etch", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -869,7 +871,44 @@ static func in_box(x: float, z: float, r: float, c) -> bool:
 static func box_point(x: float, z: float, c) -> Vector2:   # nearest point of an unrotated box
 	return Vector2(clampf(x, c.x - c.hw, c.x + c.hw), clampf(z, c.z - c.hd, c.z + c.hd))
 
+## Going in: to where the room really is, far off to the south.
+func enter_room(p: E.Player, k: String) -> void:
+	var M: Dictionary = D.ROOMS[k]
+	p.room = k; p.x = M.at[0]; p.z = M.at[1] - 1.2; p.tx = p.x; p.tz = p.z; p.r = PI; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
+	ev.append(["door", r1(M.door[0]), r1(M.door[1])])
+
+func leave_room(p: E.Player) -> void:
+	if p.room == "": return
+	var M: Dictionary = D.ROOMS[p.room]
+	p.room = ""; p.x = M.door[0] + rnd2(-0.4, 0.4); p.z = M.door[1] + 1.2; p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
+	ev.append(["door", r1(p.x), r1(p.z)])
+
+## What holding E would do, indoors.
+func room_interact(p: E.Player):
+	var M: Dictionary = D.ROOMS[p.room]
+	if p.room == "mine":
+		for i in D.RUNE_VEINS.size():
+			var v: Array = D.RUNE_VEINS[i]
+			if D.d2(p.x, p.z, v[0], v[1]) < 5.3:
+				var lit := p.wpn == D.I_TORCH
+				var left: int = rune_left[i]
+				var full := p.rune >= cap(p)
+				return {"type": "rune", "i": i, "key": "rune%d" % i, "ok": lit and left > 0 and not full, "dur": D.RUNE_TIME * (0.8 if rk(p, 0) >= 3 else 1.0), "x": v[0], "z": v[1], "rad": 1.0,
+					"label": "It is too dark to work. You need a burning torch in your hand" if not lit else "This vein is worked out until tomorrow" if left <= 0 else "You can carry no more runes" if full else "Hold {interact} to prise out a rune"}
+	for st in D.STATIONS:
+		if st.get("room", "") == p.room and D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
+			return {"type": "station", "st": st, "key": "st" + st.id, "ok": true, "dur": 0.12, "x": st.x, "z": st.z, "rad": 1.1, "label": "Hold {interact} to " + st.verb}
+	if D.d2(p.x, p.z, M.at[0], M.at[1]) < 4.0:
+		return {"type": "leave", "key": "leave", "ok": true, "dur": 0.6, "x": M.at[0], "z": M.at[1], "rad": 1.1, "label": "Hold {interact} to " + M.out}
+	return null
+
 func collide_friend(e, r: float, axis: int = -1) -> void:   # villagers: buildings, built walls, trees, the edge of the map
+	if e is E.Player and e.room != "":                 # indoors: the room's own walls and furniture
+		var M: Dictionary = D.ROOMS[e.room]
+		for b in M.box:
+			push_out(e, r, E.Box.new(b[0], b[1], b[2], b[3]), axis)
+		e.x = clampf(e.x, M.x - M.hw + r, M.x + M.hw - r); e.z = clampf(e.z, M.z - M.hd + r, M.z + M.hd - r)
+		return
 	for c in near_colliders(e.x, e.z):
 		push_out(e, r, c, axis)
 	for s in structs:
@@ -910,6 +949,12 @@ func find_interact(p: E.Player):
 		return null
 	if p.state == "hide":
 		return {"type": "unhide", "key": "unhide", "ok": true, "dur": 0.6, "x": p.x, "z": p.z, "rad": 1.0, "label": "Hold {interact} to come out of your cottage"}
+	if p.room != "": return room_interact(p) if p.state == "ok" else null
+	if p.state == "ok":
+		for k in D.ROOMS:
+			var M: Dictionary = D.ROOMS[k]
+			if D.d2(p.x, p.z, M.door[0], M.door[1]) < 4.0:
+				return {"type": "enter", "room": k, "key": "enter" + k, "ok": true, "dur": 0.6, "x": M.door[0], "z": M.door[1], "rad": 1.1, "label": "Hold {interact} to " + M["in"]}
 	if p.state == "ok" and not chest.is_empty() and not chest.open and D.d2(p.x, p.z, chest.x, chest.z) < 7.0:
 		return {"type": "chest", "key": "chest", "ok": true, "dur": 1.5, "x": chest.x, "z": chest.z, "rad": 1.1, "label": "Hold {interact} to open the chest"}
 	if p.state != "ok":
@@ -1012,6 +1057,7 @@ func find_interact(p: E.Player):
 		if st.id == "letter" and letters.is_empty(): continue                 # and the gatepost is bare until the Lord writes
 		if st.id == "bell" and D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "bell", "key": "bell", "ok": bell_t <= 0, "dur": 0.4, "x": st.x, "z": st.z, "rad": 1.0, "label": "Hold {interact} to ring the village bell. It does nothing at all."}
+		if st.has("room"): continue                                           # indoors: room_interact sees to those
 		if D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "station", "st": st, "key": "st" + st.id, "ok": true, "dur": 0.12, "x": st.x, "z": st.z, "rad": 1.3, "label": "Hold {interact} to " + st.verb}
 	if rk(p, 9) >= 1:
@@ -1222,7 +1268,7 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	var holy: float = s.get("holy", 0)
 	if s.get("p"): u.last = s.p.id
 	elif s.get("q"): u.last = s.q.owner
-	if U.ghost and not holy:                         # ordinary weapons pass straight through a wraith
+	if U.ghost and not holy and not s.get("rune", false):   # ordinary weapons pass straight through a wraith (rune-cut ones do not)
 		ev.append(["miss", r1(u.x), r1(u.z)])
 		return
 	if holy: d *= holy
@@ -1233,7 +1279,8 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if U.fly and not s.get("ranged", false) and not s.get("ring", false): d *= 0.35   # bats are hard to hit with anything you swing
 	if U.ram and s.get("heavy", false): d *= 2
 	if U.lord and not holy: d *= 0.6
-	u.hp -= d; u.cd = minf(U.cd, u.cd + 0.25)          # a hit delays its next swing a little; it does not stop it
+	u.hp -= d
+	if not s.get("dot", false): u.cd = minf(U.cd, u.cd + 0.25)   # a hit delays its next swing a little; it does not stop it
 	if U.lord: lord_stage(u)
 	if s.has("x") and not big(u):
 		var dx: float = u.x - s.x
@@ -1242,7 +1289,7 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 		if l == 0: l = 1
 		var k: float = (0.25 if u.k == 0 else 0.7) * (1.6 if s.get("blunt", false) else 1.0) + s.get("kb", 0.0)
 		u.x += dx / l * k; u.z += dz / l * k
-	if s.get("p") and not s.get("smite", false):
+	if s.get("p") and not s.get("smite", false) and not s.get("dot", false):
 		add_xp(s.p, 5 if s.get("ranged", false) else 4, 1)
 	elif s.get("q"):
 		var own := player_by_id(s.q.owner)
@@ -1308,11 +1355,12 @@ static func dmg_of(p: E.Player, I: Dictionary, mul: float = 1.0) -> float:
 	if (I.tier == "forged" or I.tier == "steel") and rk(p, 3) >= 4: d *= 1.1
 	if p.charge > 0: d *= 2.0 if rk(p, 7) >= 7 else 1.6
 	if p.wpn == 17 and I.n == D.IT[17].n and lore(p, 17): d *= 1.25
+	if p.etch == p.wpn and I.n == D.IT[p.wpn].n: d *= 1.2      # runes cut into it
 	return d
 
 static func src_of(p: E.Player, I: Dictionary, kb: float = 0.0) -> Dictionary:
 	return {"x": p.x, "z": p.z, "p": p, "blunt": I.blunt, "holy": ((1.9 if rk(p, 8) >= 5 else 1.5) if I.holy or (p.bless & 1) or p.hb > 0 else 0.0),
-		"kb": I.kb + kb, "ranged": I.rng > 0, "farm": I.tier == "found", "heavy": I.heavy}
+		"kb": I.kb + kb, "ranged": I.rng > 0, "farm": I.tier == "found", "heavy": I.heavy, "rune": p.etch == p.wpn and I.n == D.IT[p.wpn].n}
 
 ## The Lord fights in three stages: he watches from the road and sends his bats, then he comes down himself, then
 ## he goes for the keep door.
@@ -1384,6 +1432,7 @@ func do_attack(p: E.Player) -> void:
 	var hit := false
 	for u in targets(p, I.reach, I.arc - 0.35 if rk(p, 4) >= 4 else I.arc):
 		hit_u(u, dmg_of(p, I, mul), src); hit = true
+		if I.fire: ignite(u, p, D.BURN_TIME)
 	if not hit: drill(p, I.reach + 0.5, I.arc, 4)
 
 ## Practice on a training dummy: a little of the fighting book (or the ranged one), up to a limit a day.
@@ -1402,6 +1451,12 @@ func drill(p: E.Player, reach: float, arc: float, b: int) -> void:
 			p.drill += 1; add_xp(p, b, 1)
 			if p.drill >= D.DRILL_MAX: say("%s has had enough practice for one day. The dummies look relieved." % p.dn)
 		return
+
+## Set one of the dead alight. Wraiths have nothing to burn; rain puts it out in half the time.
+func ignite(u: E.Undead, p: E.Player, t: float) -> void:
+	if u.dead or D.UN[u.k].ghost or u.state == "pile": return
+	if u.burn <= 0: u.bt = 0.5
+	u.burn = maxf(u.burn, t * (0.5 if weather == "rain" else 1.0)); u.last = p.id
 
 func stun_u(u: E.Undead, t: float) -> void:
 	u.stun = maxf(u.stun, t * 0.4 if big(u) else t)
@@ -1439,6 +1494,10 @@ func do_ability(p: E.Player) -> void:   # the weapon's own trick
 					u.x = p.x + fx * 1.4; u.z = p.z + fz * 1.4
 				var s2 := src.duplicate(); s2.erase("x")
 				hit_u(u, D_.call(1.0), s2); stun_u(u, 1.6)
+		"flare":                                    # the torch, swept all round: everything near catches, and backs off
+			for u in targets(p, 3.4, -1.0):
+				if not wall_between(p.x, p.z, u.x, u.z):
+					hit_u(u, D_.call(1.0), src); ignite(u, p, D.BURN_TIME * 1.5); scare(u, p.x, p.z, 1.6)
 		"smash":
 			var c := {"x": p.x + fx * 1.6, "z": p.z + fz * 1.6, "r": 0.0}
 			var s2 := src.duplicate(); s2.x = c.x; s2.z = c.z; s2.kb = 1.4
@@ -1911,6 +1970,10 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				say("%s has handed in a library card and given up %s (rank %d). The librarian has stamped something." % [p.dn, D.BOOKS[ia].name, p.books[ia]])
 				p.books[ia] = 0; p.xp[ia] = 0.0
 				retitle(p, t0); spark.call("page")
+		"etch":                                     # three runes, cut into the weapon in your hand
+			if near_station(p, "smithy") and p.rune >= D.ETCH_RUNES and p.etch != p.wpn:
+				p.rune -= D.ETCH_RUNES; p.etch = p.wpn; spark.call("forge")
+				say("%s has had runes cut into %s %s. It hums, slightly." % [p.dn, "their", D.IT[p.wpn].n])
 		"lread":                                    # the letter on the gatepost has been read
 			letter_new = false
 		"study":
@@ -2147,7 +2210,7 @@ func night_step(dt: float) -> void:
 		var k: int = N.boss
 		N.boss = -1; spawn_boss(k)
 	# with nobody left standing (all dead, or under their beds) the dead make short work of what is in their way, so the night is not dragged out
-	N.idle = 0.0 if players.any(func(p): return p.state == "ok" or p.state == "down" or p.state == "inn") else N.idle + dt
+	N.idle = 0.0 if players.any(func(p): return (p.state == "ok" and p.room != "mine") or p.state == "down" or p.state == "inn") else N.idle + dt
 	rage = minf(40, 6 + (N.idle - 12) * 0.4) if N.idle > 12 else 1.0
 	wave = N.q.size(); left = undead.size() + N.q.size() + (1 if N.boss >= 0 else 0)   # wave: how many have still to rise
 	if keepHp <= 0:
@@ -2222,7 +2285,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 			else:
 				p.coin += share; paid += 1
 		var c := D.cottage(p.slot)
-		p.x = c.sx; p.tx = p.x; p.z = c.sz; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.bite = 0
+		p.x = c.sx; p.tx = p.x; p.z = c.sz; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.bite = 0; p.room = ""
 		# blessings and Dutch courage both wear off by morning
 		p.bless = 0; p.bbod = 0; p.cg = 0; p.charge = 0; p.hang = 0; p.drinkT = 0; p.parry = 0; p.guard = 0; p.upOnce = false; p.study = false; p.order = 0; p.abCd = 0; p.useCd = 0; p.tbCd = 0; p.p1Cd = 0; p.p2Cd = 0; p.prot = 0; p.hb = 0
 	if paid: lines.append("The village passed the hat: %s for everyone who stood and fought." % D.coins(share))
@@ -2377,6 +2440,9 @@ func player_step(p: E.Player, dt: float) -> void:
 			if not p.remote: p.r = D.ang_lerp(p.r, atan2(it.x - p.x, it.z - p.z), minf(1, dt * 12))
 		elif it.type == "search":
 			p.gk = 6
+		elif it.type == "rune":
+			p.gk = 3
+			if not p.remote: p.r = D.ang_lerp(p.r, atan2(it.x - p.x, it.z - p.z), minf(1, dt * 12))
 		if p.itT >= it.dur:
 			p.itT = 0
 			match it.type:
@@ -2422,6 +2488,14 @@ func player_step(p: E.Player, dt: float) -> void:
 					pay(p, {"wood": 1, "stone": 1}); keepHp = minf(D.KEEP_HP, keepHp + 40); ev.append(["build", r1(it.x), r1(it.z)])
 				"chest":
 					open_chest(p)
+				"enter":
+					enter_room(p, it.room)
+				"leave":
+					leave_room(p)
+				"rune":
+					if rune_left[it.i] > 0 and p.rune < cap(p):
+						rune_left[it.i] -= 1; p.rune += 1; p.cc += 1; add_xp(p, 0, 3)
+						ev.append(["found", p.id, "a rune, cold to the touch" if p.rune > 1 else "a rune: a small cold stone with a mark cut in it that hurts to look at. The smithy can etch a weapon with three", r1(p.x), r1(p.z), 0, 0])
 				"search":
 					p.cc += 1; do_search(p, it.i); note("search")
 				"gather":
@@ -2595,6 +2669,9 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		var sn := sin(Ld.r)
 		var tx: float = Ld.x + f[0] * cs + f[1] * sn
 		var tz: float = Ld.z - f[0] * sn + f[1] * cs
+		if Ld.room != "":                                # the leader has gone in somewhere: wait by the door
+			var dr: Array = D.ROOMS[Ld.room].door
+			tx = dr[0] + f[0]; tz = dr[1] + 2.2 - f[1] * 0.7
 		var d := Vector2(tx - q.x, tz - q.z).length()
 		if d > 40:
 			q.x = tx; q.z = tz
@@ -2734,6 +2811,13 @@ func undead_step(dt: float) -> void:
 		u.cd = maxf(0, u.cd - dt); u.t -= dt; u.slow = maxf(0, u.slow - dt)
 		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
 		if u.dead: continue
+		if u.burn > 0:                                # alight: a scorch every half second, until it goes out
+			u.burn -= dt; u.bt -= dt
+			if u.bt <= 0:
+				u.bt = 0.5
+				hit_u(u, D.BURN_DMG * (0.5 if U.bony else 1.0), {"dot": true, "farm": false})
+				ev.append(["burn", r1(u.x), r1(u.z)])
+				if u.dead: continue
 		if u.state == "rise":
 			if u.t <= 0: u.state = "walk"
 			continue
@@ -2785,7 +2869,7 @@ func undead_step(dt: float) -> void:
 		var bd := sight
 		if not U.fly:                             # bats do not stop for anyone: they want the keep
 			for p in players:
-				if p.state == "ok":
+				if p.state == "ok" and p.room == "":
 					var d := D.d2(u.x, u.z, p.x, p.z)
 					if d < bd:
 						bd = d; tgt = p; tp = true
@@ -3046,6 +3130,7 @@ func move_player(p: E.Player, mx: float, mz: float, dt: float, t: float = 0.0) -
 	p.r = D.ang_lerp(p.r, atan2(mx, mz), minf(1, dt * 14))
 	p.x += mx * sp * dt; collide_friend(p, 0.45, 0)
 	p.z += mz * sp * dt; collide_friend(p, 0.45, 1)   # one axis at a time, so corners do not snag
+	if p.room != "": return ""
 	if p.x >= D.X1 - 0.01 or p.x <= D.X0 + 0.01: return "hedge"
 	if p.z <= D.Z0 + 0.01: return "stakes"
 	if p.z >= D.Z1 - 0.01: return "river"

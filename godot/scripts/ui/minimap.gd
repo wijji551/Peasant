@@ -112,6 +112,7 @@ func _draw() -> void:
 	for p: E.Player in R.players:
 		if p.state == "hide" or p.state == "inn": continue
 		var c := Vector2(mx(p.x), mz(p.z))
+		if p.room != "": c = Vector2(mx(D.ROOMS[p.room].door[0]), mz(D.ROOMS[p.room].door[1]))   # indoors: shown at the door
 		if p == me:                                    # which way you are looking: a fan from your dot
 			var f := Vector2(-sin(view), -cos(view))
 			draw_colored_polygon(PackedVector2Array([c, c + f.rotated(-0.42) * 17, c + f * 19, c + f.rotated(0.42) * 17]), Color(1, 0.98, 0.85, 0.42))

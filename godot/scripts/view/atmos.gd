@@ -32,6 +32,7 @@ void fragment() {
 """
 
 var weather := "clear"
+var indoors := false                # the player is inside somewhere: no rain in here
 var evil := 0                       # how far gone the castle is (0 to 3): more lightning the worse it gets
 var flash := 0.0                    # lightning: 1 at the strike, fading; main.gd brightens the sky by it
 var _mists: Array[ShaderMaterial] = []
@@ -130,9 +131,9 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 		m.set_shader_parameter("haunt", 0.3 + night * 0.4)
 		m.set_shader_parameter("tint", Color(0.84, 0.87, 0.9).lerp(Color(0.5, 0.57, 0.68), night))
 		m.set_shader_parameter("haunt_tint", Color(0.62, 0.66, 0.6).lerp(Color(0.3, 0.52, 0.36), night))
-	_rain.emitting = weather == "rain"
+	_rain.emitting = weather == "rain" and not indoors
 	_rain.global_position = focus + Vector3(0, 26, 4)
-	_snow.emitting = weather == "snow"
+	_snow.emitting = weather == "snow" and not indoors
 	_snow.global_position = focus + Vector3(0, 18, 4)
 	_moon.visible = weather == "moon" and night > 0.2
 	for w in _wisps:

@@ -120,7 +120,7 @@ const _IT := [
 	{"n": "slop bucket", "s": "t", "tier": "found", "pool": "bucket", "tint": [0.6, 0.48, 0.3], "note": "{carry} lobs it, once: every undead it splashes runs from the smell"},
 ]
 const _IT_DEF := {"dmg": 0.0, "cd": 0.0, "reach": 0.0, "arc": 0.0, "ab": "", "note": "", "swing": 0, "cost": {}, "blunt": false, "heavy": false,
-	"kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
+	"fire": false, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
 ## The smithy makes three grades. Anyone can knock out a crude weapon, which wears out: after a night's fighting it is
 ## chipped, and after a second it falls apart. Hammer and Tongs (rank 1) makes the refined ones (the first list above);
 ## from rank 4, steel, from the old steel mine. Crude, chipped and steel things are made here from the refined ones,
@@ -159,9 +159,25 @@ static func _grades() -> Array:
 ## s "c": a paper, kept in the backpack and handed in somewhere, never worn.
 const _MORE := [
 	{"n": "library card", "s": "c", "tier": "paper", "pool": "card", "note": "Hand it in at the library to give up one of your books and take up another, a rank behind where you were"},
+	{"n": "burning torch", "s": "w", "tier": "made", "dmg": 8, "cd": 0.46, "reach": 2.0, "arc": 0.35, "ab": "flare", "pool": "torch", "fire": true, "cost": {"wood": 3},
+		"note": "Sets alight whatever it hits: they burn for a few seconds after. Lights the dark, too"},
 ]
 static var IT: Array = _fill(_IT + _grades() + _MORE, _IT_DEF)
 const I_CARD := 47
+const I_TORCH := 48
+const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
+const BURN_DMG := 3.0
+const ETCH_RUNES := 3                # runes to etch a weapon: a fifth more damage, and it bites wraiths
+const RUNE_PER_VEIN := 2             # runes in each vein of the old workings, each morning
+const RUNE_TIME := 4.0
+const RUNE_VEINS := [[-6.0, 233.0], [6.0, 238.0], [-2.0, 229.9]]
+## Rooms: places you walk into. They are built far off beyond the river, out of sight; going in or out moves you there and back.
+## at: where you arrive inside (and leave from). door: the way in, outside. box: solid things inside, as [x, z, half width, half depth].
+const ROOMS := {
+	"mine": {"name": "the old workings", "x": 0.0, "z": 240.0, "hw": 7.0, "hd": 11.0, "at": [0.0, 249.4], "door": [-104.0, -40.2],
+		"in": "climb down into the old workings", "out": "climb back up into the daylight",
+		"box": [[-3.4, 243.0, 0.5, 0.5], [3.4, 243.0, 0.5, 0.5], [-3.4, 236.0, 0.5, 0.5], [3.4, 236.0, 0.5, 0.5], [1.6, 232.4, 1.0, 0.7]]},
+}
 ## The chest that never arrived: who sent it, and the note inside.
 const CHEST_FROM := [
 	["the Mayor of Nether Wopping", "To the brave peasants of Thornhallow, with the Mayor’s admiration, from a safe distance."],
@@ -193,6 +209,7 @@ const AB := {
 	"shatter": {"n": "Shatter", "cd": 9.0, "d": "cracks them open: everyone’s blows hurt them more for a while"},
 	"hook": {"n": "Hook", "cd": 8.0, "d": "drags the farthest enemy in reach out of the crowd, off its feet"},
 	"smash": {"n": "Smash", "cd": 11.0, "d": "a ground blow that flattens everything near it"},
+	"flare": {"n": "Flare", "cd": 9.0, "d": "sweeps the flame all round you: everything near catches fire and backs off"},
 	"wallop": {"n": "Wallop", "cd": 6.0, "d": "a wound-up blow that stuns and sends one enemy flying"},
 	"bury": {"n": "Bury", "cd": 7.0, "d": "puts a wounded enemy, or a heap of bones, back in the ground for good"},
 	"trip": {"n": "Trip", "cd": 8.0, "d": "sweeps a group off their feet"},
