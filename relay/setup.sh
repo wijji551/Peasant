@@ -19,8 +19,8 @@ case "$(uname -m)" in
 esac
 
 echo "== Installing the few things needed"
-sudo DEBIAN_FRONTEND=noninteractive apt-get update -y -q
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q unzip curl iptables-persistent
+sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600 update -y -q
+sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600 install -y -q unzip curl iptables-persistent
 
 echo "== Fetching Godot $GODOT_VER ($BUILD)"
 mkdir -p "$DIR"
