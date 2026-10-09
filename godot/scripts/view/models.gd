@@ -226,13 +226,16 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.62, 0.95, 0.4, 0, 0.78, 0, 0x1d1a24).box(0.18, 0.7, 0.05, 0, 0.95, 0.2, 0x7d1f27)
 			b.box(1.2, 1.9, 0.1, 0, 0.0, -0.3, 0x121016, 0, 0.1, 0).box(1.1, 1.8, 0.04, 0, 0.05, -0.24, 0x5a1520, 0, 0.1, 0)   # the cloak, red inside
 			b.box(0.15, 0.7, 0.17, -0.4, 1.0, 0, 0x1d1a24).box(0.15, 0.7, 0.17, 0.4, 1.0, 0.05, 0x1d1a24)
-			b.box(0.36, 0.44, 0.36, 0, 1.75, 0, 0xd8dccf).box(0.38, 0.12, 0.38, 0, 2.18, -0.02, 0x0c0a0e)   # pale face, black hair
-			b.box(0.08, 0.06, 0.04, -0.12, 2.1, 0.19, 0x0c0a0e, 0, 0, -0.3).box(0.08, 0.06, 0.04, 0.12, 2.1, 0.19, 0x0c0a0e, 0, 0, 0.3)
+			# as he is on the title picture: a white, beaked face under a tall black hat with a gold band and a spike
+			b.box(0.4, 0.46, 0.38, 0, 1.75, 0, 0xf1efe6).box(0.2, 0.16, 0.26, 0, 1.84, 0.3, 0xf0b62e).box(0.16, 0.07, 0.2, 0, 1.78, 0.28, 0xd9982a)
+			b.box(0.07, 0.06, 0.03, 0.2, 1.86, 0.1, 0xf2a7b0)                                 # a little colour in the cheek
 			b.box(0.9, 0.7, 0.08, -0.4, 1.55, -0.12, 0x5a1520, 0.6, 0, 0).box(0.9, 0.7, 0.08, 0.4, 1.55, -0.12, 0x5a1520, -0.6, 0, 0)   # the collar
-			b.box(0.04, 0.12, 0.02, -0.05, 1.6, 0.19, 0xffffff).box(0.04, 0.12, 0.02, 0.05, 1.6, 0.19, 0xffffff)   # fangs
-			b.box(0.36, 0.08, 0.36, 0, 2.27, 0, 0x8f7a2e)                                    # a thin gold circlet
+			b.box(0.56, 0.05, 0.54, 0, 2.2, 0, 0x0c0a0e).box(0.4, 0.3, 0.38, 0, 2.25, 0, 0x0c0a0e).box(0.42, 0.08, 0.4, 0, 2.27, 0, 0xc9a13a)   # the hat, and its band
+			b.box(0.05, 0.42, 0.05, 0, 2.55, 0, 0xe8dcb0)                                    # and its spike
+			b.box(0.12, 0.12, 0.05, 0, 1.52, 0.22, 0xc9a13a).box(0.1, 0.1, 0.05, 0, 1.36, 0.22, 0xc9a13a)   # a gold chain of office
+			b.box(0.06, 0.16, 0.06, 0.42, 1.02, 0.2, 0xc9a13a).box(0.16, 0.14, 0.16, 0.42, 1.18, 0.2, 0xd9b54a).box(0.12, 0.02, 0.12, 0.42, 1.25, 0.2, 0x8e1f1f)   # the goblet
 		"lord_eyes":
-			b.box(0.08, 0.05, 0.03, -0.08, 1.88, 0.19, 0xff2a2a).box(0.08, 0.05, 0.03, 0.08, 1.88, 0.19, 0xff2a2a)
+			b.box(0.07, 0.07, 0.03, -0.1, 1.9, 0.2, 0x1a1418).box(0.07, 0.07, 0.03, 0.1, 1.9, 0.2, 0x1a1418)
 		"cart":                                              # a merchant's cart: two wheels, an awning (white: tinted per merchant), crates and sacks
 			b.box(2.6, 0.18, 1.5, 0, 0.75, 0, P.wood2).box(2.6, 0.5, 0.08, 0, 0.93, 0.72, P.wood).box(2.6, 0.5, 0.08, 0, 0.93, -0.72, P.wood)
 			for sz in [-0.82, 0.82]:

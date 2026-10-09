@@ -20,6 +20,7 @@ const Z0 := -62.0
 const Z1 := 53.0
 const SLOTX := [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0]   # north wall foundations; the middle one is the gate
 
+const GAME := "Thornhallow: Thirty Nights"      # what the game is called
 # --- rules
 const DAY_LEN := 360.0
 const DUSK_LEN := 20.0

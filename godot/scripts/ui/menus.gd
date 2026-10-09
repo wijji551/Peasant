@@ -24,6 +24,10 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["A new name: Thornhallow, Thirty Nights", [
+		"The game has its proper name and a title screen to match. The Lord of Ashhollow now looks as he does in his portrait: beak, tall hat, goblet and all.",
+		"The names over places fade to about half when you stand near them, so you can see what is underneath.",
+	]],
 	["A camera you can turn", [
 		"You can look around now. Press the mouse wheel in and drag (or hold V and move the mouse) to swing the view round your peasant and tilt it; roll the wheel to zoom. The comma and full stop keys turn it too, and N puts it back with north up.",
 		"Moving follows the view: W is always up the screen. The map in the corner stays north up, with a pale fan on your dot to show which way you are looking. All four keys can be changed in the handbook.",
@@ -145,17 +149,12 @@ func _init(main_, window_) -> void:
 
 # ---------------------------------------------------------------- home
 func home() -> void:
-	var b: VBoxContainer = w.open("home", "Defend the Village!", "", 820, 610, false, false)
-	var cols := HBoxContainer.new()
-	cols.add_theme_constant_override("separation", 26)
-	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	b.add_child(cols)
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.add_theme_constant_override("separation", 10)
-	cols.add_child(left)
-	Look.para(left, "Every night the dead walk down from Ashhollow Castle to the keep, where Thornhallow’s families are hiding. Robert Bailiff has bolted his door. Hold for a month.", 15, Look.INK_SOFT)
-	Look.label(left, "YOUR NAME AND COLOUR", 13, Look.RUST)
+	# The title screen: the picture has the name on it, so the scroll is small and sits under the title, on the left.
+	var saved = m.read_save()
+	var b: VBoxContainer = w.open("home", "", "", 430, 436 if saved else 388, false, false)
+	w.pin = Vector2(0.045, 0.372)
+	b.add_theme_constant_override("separation", 8)
+	Look.label(b, "YOUR NAME AND COLOUR", 13, Look.RUST)
 	var name := LineEdit.new()
 	name.text = Settings.name
 	name.placeholder_text = "Peasant"
@@ -163,10 +162,10 @@ func home() -> void:
 	name.custom_minimum_size.x = 260
 	name.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	name.text_changed.connect(func(t): Settings.name = t.strip_edges(); Settings.save())
-	left.add_child(name)
+	b.add_child(name)
 	var sw := HBoxContainer.new()
 	sw.add_theme_constant_override("separation", 6)
-	left.add_child(sw)
+	b.add_child(sw)
 	for i in 8:
 		var s := Button.new()
 		s.custom_minimum_size = Vector2(30, 30)
@@ -180,31 +179,32 @@ func home() -> void:
 		for k in ["normal", "hover", "pressed"]: s.add_theme_stylebox_override(k, st)
 		s.pressed.connect(func(): Settings.col = i; Settings.save(); home())
 		sw.add_child(s)
-	var saved = m.read_save()
 	if saved:
 		var who: Array = saved.players.map(func(p): return p.dn)
-		var cb := _big(left, "Carry on from day %d" % int(saved.day), func(): m.begin(saved), true)
+		var cb := _big(b, "Carry on from day %d" % int(saved.day), func(): m.begin(saved), true)
 		cb.tooltip_text = "Saved: " + ", ".join(who) + "."
+		cb.size_flags_horizontal = Control.SIZE_FILL
 	var nr := HBoxContainer.new()
 	nr.add_theme_constant_override("separation", 8)
-	left.add_child(nr)
-	var nm := _big(nr, "A new month", func(): m.begin_new(D.MONTH), saved == null)
-	nm.tooltip_text = "Thirty nights, four bosses, and every kind of dead. Saved every morning."
+	b.add_child(nr)
+	var nm := _big(nr, "Thirty nights", func(): m.begin_new(D.MONTH), saved == null)
+	nm.tooltip_text = "A new month: thirty nights, four bosses, and every kind of dead. Saved every morning."
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.custom_minimum_size.x = 0
-	var ns := _big(nr, "A short game", func(): m.begin_new(D.WEEK), false)
-	ns.tooltip_text = "The month squeezed into seven nights: new dead every night, and the Lord on the seventh."
+	var ns := _big(nr, "Seven nights", func(): m.begin_new(D.WEEK), false)
+	ns.tooltip_text = "A short game: the month squeezed into seven nights. New dead every night, and the Lord on the seventh."
 	ns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ns.custom_minimum_size.x = 0
 	# playing together
-	Look.label(left, "PLAY TOGETHER (UP TO 8)", 13, Look.RUST)
+	Look.label(b, "PLAY TOGETHER (UP TO 8)", 13, Look.RUST)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	left.add_child(row)
+	b.add_child(row)
 	var hb := Button.new(); hb.text = "Host a village"; hb.focus_mode = Control.FOCUS_NONE
 	hb.pressed.connect(func(): _host())
 	row.add_child(hb)
 	var jc := LineEdit.new(); jc.placeholder_text = "Village code"; jc.custom_minimum_size.x = 150; jc.max_length = 21
+	jc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	jc.text_submitted.connect(func(t): _join(t))
 	row.add_child(jc)
 	var jb := Button.new(); jb.text = "Join"; jb.focus_mode = Control.FOCUS_NONE
@@ -212,29 +212,27 @@ func home() -> void:
 	row.add_child(jb)
 	var note: String = Net.me.status
 	if note != "" and not Net.me.online():
-		var nl := Look.para(left, note, 14, Look.ROSE)
+		var nl := Look.para(b, note, 14, Look.ROSE)
 		nl.custom_minimum_size.x = 300
 		Net.me.status = ""
-	w.foot_button("Handbook: guide, controls, options", func(): menu("guide"))
-	w.hint("%s move · %s attacks · hold %s to do things · Esc: the handbook" % [
-		" ".join(["up", "left", "down", "right"].map(func(a): return Keys.name(a))), Keys.name("attack"), Keys.name("interact")])
-	# the change log
-	var right := PanelContainer.new()
-	right.add_theme_stylebox_override("panel", Look.card(Color("f3e2b0"), Color(Look.OUTLINE, 0.5), 12))
-	right.custom_minimum_size.x = 300
-	cols.add_child(right)
-	var rs := ScrollContainer.new()
-	rs.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	right.add_child(rs)
-	var rv := VBoxContainer.new()
-	rv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rv.add_theme_constant_override("separation", 6)
-	rs.add_child(rv)
-	Look.label(rv, "What is new", 24, Look.INK, true)
+	var last := HBoxContainer.new()
+	last.add_theme_constant_override("separation", 8)
+	b.add_child(last)
+	for pair in [["What is new", func(): news()], ["Handbook", func(): menu("guide")]]:
+		var fb := Button.new(); fb.text = pair[0]; fb.focus_mode = Control.FOCUS_NONE
+		fb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fb.pressed.connect(pair[1])
+		last.add_child(fb)
+
+
+## What has changed, build by build: opened from the title screen.
+func news() -> void:
+	w.open("news", "What is new", "", 660, 580, true, true)
 	for c in CHANGES:
-		Look.label(rv, c[0], 15, Look.RUST).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		w.head(c[0])
 		for line in c[1]:
-			Look.para(rv, "•  " + line, 13, Look.INK)
+			w.para("•  " + line, 14, Look.INK)
+	w.foot_button("Back", func(): w.close(), true)
 
 
 func _big(parent: Control, text: String, cb: Callable, primary: bool) -> Button:

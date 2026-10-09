@@ -239,7 +239,7 @@ func _open_port() -> void:   # in its own thread: asking the router can take a f
 	var ok := false
 	var ext := ""
 	if u.discover(2000, 2, "") == UPNP.UPNP_RESULT_SUCCESS and u.get_gateway() and u.get_gateway().is_valid_gateway():
-		if u.add_port_mapping(PORT, PORT, "Defend the Village", "UDP", 0) == UPNP.UPNP_RESULT_SUCCESS:
+		if u.add_port_mapping(PORT, PORT, "Thornhallow Thirty Nights", "UDP", 0) == UPNP.UPNP_RESULT_SUCCESS:
 			ok = true
 			ext = u.query_external_address()
 	_port_result.call_deferred(ok, ext, u)

@@ -1,4 +1,4 @@
-# Defend the Village! in Godot
+# Thornhallow: Thirty Nights, in Godot
 
 The game is moving from the web version (https://wijji551.github.io/Peasant/) to Godot 4.7. The web version stays playable at that link, but is no longer being updated: everything new happens here.
 

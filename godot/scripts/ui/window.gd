@@ -10,6 +10,7 @@ var closable := true
 var _frame: PanelContainer
 var _title: Label
 var _close: Button
+var _top: HBoxContainer
 var _tabs: HBoxContainer
 var _intro: Label
 var _scroll: ScrollContainer
@@ -37,6 +38,7 @@ func _ready() -> void:
 	_frame.add_child(v)
 	var top := HBoxContainer.new()
 	v.add_child(top)
+	_top = top
 	_title = Look.label(top, "", 34, Look.INK, true)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_close = Button.new()
@@ -75,6 +77,8 @@ func open(k: String, title: String, intro: String = "", w: float = 640, h: float
 	_close.visible = can_close
 	_dim.visible = dim
 	_title.text = title
+	_top.visible = title != "" or can_close
+	pin = Vector2(-1, -1)
 	_intro.text = Keys.fill(intro)
 	_intro.visible = intro != ""
 	for c in _tabs.get_children():          # out at once: left waiting to be freed, they would widen the window
@@ -89,6 +93,7 @@ func open(k: String, title: String, intro: String = "", w: float = 640, h: float
 			_foot.remove_child(c)
 			c.queue_free()
 	_hint.text = ""
+	_foot.visible = false                   # until something is put in it
 	_want = Vector2(w, h)
 	visible = true
 	_fit()
@@ -100,6 +105,7 @@ func open(k: String, title: String, intro: String = "", w: float = 640, h: float
 
 
 var _want := Vector2(640, 560)
+var pin := Vector2(-1, -1)          # not in the middle: its top left corner, as a share of the screen (the title screen sits under the title)
 
 
 func _process(_delta: float) -> void:   # what was asked for, or what the contents need if that is more: never wider
@@ -137,6 +143,9 @@ func _place() -> void:   # centre what the frame actually came to (its contents 
 	var top := 40.0 if _dim.visible else 62.0
 	var bottom := 40.0 if _dim.visible else 78.0
 	var fs := _frame.size
+	if pin.x >= 0:
+		_frame.position = Vector2(round(clampf(vs.x * pin.x, 8, vs.x - fs.x - 8)), round(clampf(vs.y * pin.y, 8, maxf(8, vs.y - fs.y - 8))))
+		return
 	_frame.position = Vector2(round((vs.x - fs.x) / 2), round(maxf(top, top + (vs.y - top - bottom - fs.y) / 2)))
 
 
@@ -166,10 +175,12 @@ func tabs(list: Array, current: String, cb: Callable) -> void:   # list of [id, 
 
 
 func hint(text: String) -> void:
+	_foot.visible = true
 	_hint.text = Keys.fill(text)
 
 
 func foot_button(text: String, cb: Callable, primary: bool = false) -> Button:
+	_foot.visible = true
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE

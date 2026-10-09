@@ -111,6 +111,9 @@ func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 		var l := _signs[i]
 		if D.d2(focus.x, focus.z, x, z) < 30 * 30 and R.live():
 			_put(l, Vector3(x, p[3], z), true)
+			# near a place you know where you are: its sign fades to half, so you can see what is under it
+			var near := 1.0 - smoothstep(9.0, 15.0, sqrt(D.d2(me.x if me else focus.x, me.z if me else focus.z, x, z)))
+			l.modulate.a = lerpf(l.modulate.a, lerpf(1.0, 0.45, near), minf(1.0, _delta * 6.0))
 		else:
 			l.visible = false
 	for qid in _bubbles.keys():                       # what peasants are saying

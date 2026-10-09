@@ -1,6 +1,6 @@
 # The village server
 
-A small program that lets players of Defend the Village! find each other from anywhere. It does not run the game: one
+A small program that lets players of Thornhallow: Thirty Nights find each other from anywhere. It does not run the game: one
 player still hosts each village. It gives each village a five-letter code and passes messages between the host and
 the people who join. Everybody connects out to it, so nobody's router has to let anyone in, and it stays on when
 you are not playing, so your friends can host their own villages whenever they like.

@@ -1,5 +1,5 @@
 extends Node3D
-## Defend the Village!  The game in Godot.
+## Thornhallow: Thirty Nights (it began as "Defend the Village!").  The game in Godot.
 ##
 ## The rules (scripts/rules/) run the game: days and nights, gathering, building, books, items, the inn,
 ## the priest, the ruins and the dead. Everything here only shows what the rules say and passes on what
@@ -67,6 +67,7 @@ var _fx: Node3D                  # bits, and things in flight
 var _keep_a := 1.0
 var _focus := Vector3(0, 0, -4)
 var _zoom := 1.0
+var _title_art: TextureRect          # the title screen's picture
 # The view can be turned round the player, tilted and brought closer. Each has where it is and where it is going, so it glides.
 const CAM_PITCH0 := 0.8672          # the tilt the game began with: looking down from 66 up and 56 back
 const CAM_PITCH_MIN := 0.56         # as low as it goes (about 32 degrees), and as near overhead (about 78)
@@ -149,6 +150,7 @@ func _ready() -> void:
 	hud.map_slot.add_child(minimap)
 	minimap.R = R
 	labels.R = R
+	DisplayServer.window_set_title(D.GAME)
 	Net.ensure(get_tree()).attach(self)
 	Net.me.changed.connect(_net_changed)
 	_bot = OS.get_environment("DTV_BOT") != ""
@@ -191,6 +193,17 @@ func in_game() -> bool:
 func _home(quiet: bool = false) -> void:
 	screen = "home"
 	hud.playing(false)
+	if _title_art == null:                               # the title picture, behind the menu
+		_title_art = TextureRect.new()
+		_title_art.texture = load("res://art/title.jpg")
+		_title_art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_title_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_title_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		_title_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var layer := CanvasLayer.new()
+		layer.layer = hud.layer - 1                      # under the readouts and the window
+		add_child(layer)
+		layer.add_child(_title_art)
 	if not quiet: menus.home()
 
 
@@ -603,6 +616,7 @@ func inv_do(a: String, arg) -> void:
 # ---------------------------------------------------------------- the loop
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.25)
+	if _title_art: _title_art.visible = screen == "home"
 	if screen == "home":                                 # behind the home screen: a slow look round the village
 		_home_t += delta
 		var a := _home_t * 0.05
