@@ -77,17 +77,22 @@ func open(k: String, title: String, intro: String = "", w: float = 640, h: float
 	_title.text = title
 	_intro.text = Keys.fill(intro)
 	_intro.visible = intro != ""
-	for c in _tabs.get_children(): c.queue_free()
+	for c in _tabs.get_children():          # out at once: left waiting to be freed, they would widen the window
+		_tabs.remove_child(c)
+		c.queue_free()
 	_tabs.visible = false
 	for c in body.get_children():
 		body.remove_child(c)
 		c.queue_free()
 	for c in _foot.get_children():
-		if c != _hint: c.queue_free()
+		if c != _hint:
+			_foot.remove_child(c)
+			c.queue_free()
 	_hint.text = ""
 	_want = Vector2(w, h)
 	visible = true
 	_fit()
+	_fit.call_deferred()                    # and again once what goes in it has been put in and laid out
 	if not same:
 		_scroll.scroll_vertical = 0
 		Sound.play("page", 0.8)
@@ -95,6 +100,19 @@ func open(k: String, title: String, intro: String = "", w: float = 640, h: float
 
 
 var _want := Vector2(640, 560)
+
+
+func _process(_delta: float) -> void:   # what was asked for, or what the contents need if that is more: never wider
+	if not visible: return
+	var vs := get_viewport_rect().size
+	var top := 40.0 if _dim.visible else 62.0
+	var bottom := 40.0 if _dim.visible else 78.0
+	var want := Vector2(minf(_want.x, vs.x - 40), minf(_want.y, vs.y - top - bottom))
+	var m := _frame.get_combined_minimum_size()
+	var t := Vector2(maxf(want.x, m.x), maxf(want.y, m.y))
+	if absf(_frame.size.x - t.x) > 1 or absf(_frame.size.y - t.y) > 1:
+		_frame.size = t
+		_place()
 
 
 func covers() -> bool:   # does it take the whole screen (rather than sit between the readouts)?
@@ -109,6 +127,7 @@ func _fit() -> void:   # centred, and never bigger than the screen; a notice kee
 	var h := minf(_want.y, vs.y - top - bottom)
 	# the smallest size first, or the frame keeps the last window's size and sits off to the right and down
 	_frame.custom_minimum_size = Vector2(w, h)
+	_frame.reset_size()                     # down to the smallest it can be, then up to what was asked
 	_frame.size = Vector2(w, h)
 	_place()
 

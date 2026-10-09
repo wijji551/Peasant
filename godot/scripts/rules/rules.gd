@@ -218,6 +218,25 @@ func add_xp(p: E.Player, b: int, n: float) -> void:
 		say("%s has reached rank %d of %s." % [p.dn, p.books[b], D.BOOKS[b].name])
 
 
+## Someone has left a game in progress (they closed the game, or lost their connection). Their relics stay in
+## the village, where they stood; their posse goes home.
+func remove_player(id: int) -> void:
+	var p := player_by_id(id)
+	if p == null:
+		return
+	if p.state == "inn":
+		leave_inn(p, false)
+	for it in [p.wpn, p.head, p.body, p.off, p.trk] + p.inv:
+		if it > 0 and D.IT[it].tier == "relic":
+			drop_item(it, p.x, p.z)
+	players.erase(p)
+	for q in peasants:
+		if q.owner == id:
+			q.owner = 0
+			q.state = "idle" if phase == "day" else "hide"
+	say("%s has left the village." % p.dn)
+
+
 ## Sell whole spare points of learning for coin. Returns the pence paid.
 func sell_spare(p: E.Player) -> int:
 	var n := floori(p.spare)
@@ -276,7 +295,9 @@ func new_game(infos: Array) -> void:
 	clear_world(); day = 1; gseed = 1 + randi() % 1000000
 	players = []
 	for i in infos.size():
-		players.append(mk_player(infos[i].id, infos[i].name, infos[i].get("col", i), i))
+		var np := mk_player(infos[i].id, infos[i].name, infos[i].get("col", i), i)
+		np.remote = infos[i].get("remote", false)
+		players.append(np)
 	for i in D.SLOTX.size():
 		var k := "gate" if i == 3 else "wall"
 		structs.append(mk_struct(k, D.SLOTX[i], D.VN, 0, false, 0, D.SHP[k], i))

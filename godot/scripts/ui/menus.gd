@@ -10,10 +10,18 @@ const GUIDE := [
 	["Fighting", ["{attack} or a click attacks. {trick} or a right-click is your weapon’s own trick: every weapon has a different one, with a short wait between uses. {eat} eats one food.", "Knocked down, you have 15 seconds for a team-mate to hold {interact} over you. After that a relative takes over your cottage at dawn, with your books but not your gear. Relics lie where you fell.", "From dusk you can hide in your own cottage. It is safe, and the village will call you a coward until the next dusk."]],
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
 	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: shared materials and a shared arms rack. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
+	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "The host's computer asks its router to let friends in. If the router says no, the code only works for people on the same home network: for friends further away, the host opens port 24565 (UDP) on the router. The game does not pause for the handbook when others are playing."]],
 	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the Steward when he comes. Top right: the map. Left: what you carry. Bottom: your hand, bucket, posse, backpack, skills and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your backpack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
 ]
 
 const CHANGES := [
+	["Godot: playing together (stage 5 of the move: the move is done)", [
+		"Up to eight in one village. Host a village from the home screen and give your friends the code; they type it into Join.",
+		"Your computer asks your router to let them in by itself. If your router will not, the code still works for anyone on the same wifi.",
+		"A lobby shows who has come; the host starts the week, or carries on from the saved morning. The host's game keeps the save.",
+		"Your own walking happens at once on your screen; everything else follows the host's game, twelve times a second.",
+		"If someone's connection goes, their relics stay in the village and their posse goes home. If the host leaves, everyone is sent home and told so.",
+	]],
 	["Godot: sound (stage 4 of the move)", [
 		"Every sound from the web version, made again, and new ones: the dead groaning and rattling as they come near, crows, an owl, thunder after the lightning, a knock, a creaking door, a page turning when a window opens.",
 		"Birds and a breeze by day, crickets and wind at night, rain when it rains, and a low moaning drone the closer you get to the castle.",
@@ -65,7 +73,7 @@ func _init(main_, window_) -> void:
 
 # ---------------------------------------------------------------- home
 func home() -> void:
-	var b: VBoxContainer = w.open("home", "Defend the Village!", "", 800, 510, false, false)
+	var b: VBoxContainer = w.open("home", "Defend the Village!", "", 820, 560, false, false)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 26)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -106,8 +114,25 @@ func home() -> void:
 		var cb := _big(left, "Carry on from day %d" % int(saved.day), func(): m.begin(saved), true)
 		cb.tooltip_text = "Saved: " + ", ".join(who) + "."
 	_big(left, "New village", func(): m.begin(null), saved == null)
-	var co := Look.para(left, "Playing together comes back in the last stage of the move to Godot. Until then, co-op is in the web version.", 13, Look.INK_SOFT)
-	co.custom_minimum_size.x = 300
+	# playing together
+	Look.label(left, "PLAY TOGETHER (UP TO 8)", 13, Look.RUST)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	left.add_child(row)
+	var hb := Button.new(); hb.text = "Host a village"; hb.focus_mode = Control.FOCUS_NONE
+	hb.pressed.connect(func(): _host())
+	row.add_child(hb)
+	var jc := LineEdit.new(); jc.placeholder_text = "Village code"; jc.custom_minimum_size.x = 150; jc.max_length = 21
+	jc.text_submitted.connect(func(t): _join(t))
+	row.add_child(jc)
+	var jb := Button.new(); jb.text = "Join"; jb.focus_mode = Control.FOCUS_NONE
+	jb.pressed.connect(func(): _join(jc.text))
+	row.add_child(jb)
+	var note: String = Net.me.status
+	if note != "" and not Net.me.online():
+		var nl := Look.para(left, note, 14, Look.ROSE)
+		nl.custom_minimum_size.x = 300
+		Net.me.status = ""
 	w.foot_button("Handbook: guide, controls, options", func(): menu("guide"))
 	w.hint("%s move · %s attacks · hold %s to do things · Esc: the handbook" % [
 		" ".join(["up", "left", "down", "right"].map(func(a): return Keys.name(a))), Keys.name("attack"), Keys.name("interact")])
@@ -203,7 +228,9 @@ func menu(tab: String = "") -> void:
 			Look.label(g, "See through the keep when something is behind it", 15)
 			var sk := CheckBox.new(); sk.button_pressed = Settings.see_keep; sk.toggled.connect(func(on): Settings.see_keep = on; Settings.save()); g.add_child(sk)
 			w.para("These are kept on this computer.", 13, Look.INK_SOFT)
-	w.hint("The game waits while you read." if in_game else "")
+	var code_txt := ""
+	if Net.me.is_host(): code_txt = "  Village code: %s." % (Net.me.code if Net.me.code != "" else Net.me.lan_code)
+	w.hint(("The game goes on while you read: the others are still out there." if Net.me.online() else "The game waits while you read." if in_game else "") + code_txt)
 	if in_game:
 		var lv: Button = w.foot_button("Leave the village", func(): _leave())
 		lv.tooltip_text = "Back to the home screen. The village was saved this morning."
@@ -215,7 +242,7 @@ func _leave() -> void:
 	if not _leave_armed:
 		_leave_armed = true
 		bind_msg = ""
-		w.hint("Really leave? Press it again. You will carry on from this morning next time.")
+		w.hint("Really? That closes the village for everyone. Press it again." if Net.me.is_host() else "Really leave? Press it again." if Net.me.is_client() else "Really leave? Press it again. You will carry on from this morning next time.")
 		return
 	_leave_armed = false
 	w.close()
@@ -316,6 +343,75 @@ func pack(force: bool = false) -> void:
 			bt.pressed.connect(func(): m.inv_do("bless", arg))
 			w.body.add_child(bt)
 	w.hint("1 to 6: use it. {swap}: next weapon, without opening this. {pack} or Esc: close. Spare arms can go on the rack in the storehouse.")
+
+
+# ---------------------------------------------------------------- playing together
+func _host() -> void:
+	var why: String = Net.me.host(Settings.name if Settings.name != "" else "Peasant", Settings.col)
+	if why != "":
+		Net.me.status = why
+		home()
+		return
+	var saved = m.read_save()
+	Net.me.saved_day = int(saved.day) if saved else 0
+	lobby()
+
+
+func _join(text: String) -> void:
+	var why: String = Net.me.join(text, Settings.name if Settings.name != "" else "Peasant", Settings.col)
+	if why != "":
+		Net.me.status = why
+		home()
+		return
+	lobby()
+
+
+## Who is coming: the code to give your friends, and everyone who has joined. The host starts the week.
+func lobby() -> void:
+	var N: Net = Net.me
+	if not N.online():                               # the connection has gone (or never came): back home, saying why
+		home()
+		return
+	var host := N.is_host()
+	var b: VBoxContainer = w.open("lobby", "Your village" if host else "Joining a village", "", 640, 540, false, false)
+	if host:
+		w.head("The village code")
+		var cr := HBoxContainer.new()
+		cr.add_theme_constant_override("separation", 14)
+		b.add_child(cr)
+		var shown: String = N.code if N.code != "" else N.lan_code
+		var cl := Look.label(cr, shown, 34, Look.INK, true)
+		cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cp := Button.new(); cp.text = "Copy"; cp.focus_mode = Control.FOCUS_NONE
+		cp.pressed.connect(func(): DisplayServer.clipboard_set(shown); cp.text = "Copied")
+		cr.add_child(cp)
+		match N.port_open:
+			"trying": w.para("Asking your router to let friends in...", 14, Look.INK_SOFT)
+			"open": w.para("Friends type this into Join on their home screen. On the same home network, %s works too." % N.lan_code, 14, Look.INK_SOFT)
+			_: w.para("Your router would not open the way in by itself, so this is the code for your home network only: it works for anyone on the same wifi. For friends elsewhere, open port %d (UDP) to this computer on your router, then give them your internet address instead." % N.PORT, 14, Look.ROSE)
+	elif N.my_id == 0:
+		w.para(N.status if N.status != "" else "Knocking on the village gate...", 16, Look.INK)
+	w.head("Who is here (%d of %d)" % [N.lobby.size(), N.MAX_PLAYERS])
+	for l in N.lobby:
+		var r := HBoxContainer.new()
+		r.add_theme_constant_override("separation", 10)
+		b.add_child(r)
+		var dot := Panel.new()
+		var st := StyleBoxFlat.new(); st.bg_color = Color(D.PCOL[int(l.col) % 8]); st.set_corner_radius_all(9); st.border_color = Look.INK; st.set_border_width_all(1)
+		dot.add_theme_stylebox_override("panel", st)
+		dot.custom_minimum_size = Vector2(18, 18)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		r.add_child(dot)
+		Look.label(r, str(l.name) + ("  (host)" if int(l.id) == 1 else "") + ("  (you)" if int(l.id) == N.my_id else ""), 18)
+	if host:
+		w.foot_button("Close the village", func(): N.leave(); home())
+		if N.saved_day > 0:
+			w.foot_button("Carry on from day %d" % N.saved_day, func(): m.begin(m.read_save()))
+		w.foot_button("Start a new week", func(): m.begin(null), true)
+		w.hint("Start when everyone is in. Nobody can join once the week has begun.")
+	else:
+		w.foot_button("Leave", func(): N.leave(); home())
+		w.hint("Waiting for the host to start." if N.my_id != 0 else "")
 
 
 # ---------------------------------------------------------------- skills: each book as a ladder of seven ranks
@@ -514,7 +610,9 @@ func ending(won: bool) -> void:
 	w.para("Undead put down: %d  ·  Peasants lost: %d  ·  Defences built: %d  ·  Keep: %d of %d" % [R.stats.kills, R.stats.lost, R.stats.built, maxi(0, roundi(R.keepHp)), roundi(D.KEEP_HP)], 15, Look.RUST)
 	w.para("That was the first week of the month. Nights 8 to 30 arrive in later builds." if won else "Day %d was saved at dawn, so you can have it again." % R.day, 14, Look.INK_SOFT)
 	w.foot_button("Home", func(): m.to_home())
-	if won:
+	if Net.me.is_client():
+		w.hint("The host chooses what happens next.")
+	elif won:
 		w.foot_button("Start a new week", func(): m.begin(null), true)
 	else:
 		w.foot_button("Try day %d again" % R.day, func(): m.begin(m.read_save()), true)

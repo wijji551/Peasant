@@ -17,7 +17,9 @@ It opens on a home screen: your name and colour, **Carry on** from the saved mor
 3. **Menus and readouts: done.** Every notice, your pack, the dawn, the handbook and the end of the week open in one window in the middle, framed by the web version's scroll, so nothing sits on anything else; Esc or the cross closes it. The readouts have fixed places round the edge (see the handbook's "Reading the screen"). The pack is slots with pictures. The handbook has the guide, the controls (change any key) and options, and the game waits while it is open. The home screen has the change log.
    Since then, the look of the place: medieval lettering (Pirata One and IM Fell English, in `fonts/`, free to use), parchment on every card and button, pictures for each resource, the Backpack, a Skills window (K) with each book as a ladder of ranks (spare learning past rank VII sells for coin), a bigger window, Bailiff's House and the Thorny Rose Inn, a proper chapel and priest, real haybales, outer ruins that move to a new clearing every night and stay off the map until found, and weather: night mist, rain, grey and misty days, chimney smoke, and a haunted Ashhollow (dead trees, a gibbet, green fires, wisps, crows, lightning). Anti-aliasing is on.
 4. **Sound: done.** Every effect from the web version, made again, and new ones; ambience (birds and breeze, crickets and wind, rain, the castle's drone); a tune for the day and one for the night. Effects, ambience and music each have a volume in the options; M mutes. The sounds are files in `sounds/`, made by `tools/make_sounds.py` in the repository (`python3 tools/make_sounds.py` makes them again), so they can be tuned.
-5. **Co-op:** not started. The rules are written so the host runs them and the others are sent the result, as in the web version.
+5. **Co-op: done.** Up to eight players. One hosts from the home screen and reads out the village code; the others type it into Join. The host's game runs the rules for everyone and sends the result twelve times a second; each joined game sends what its player does, and walks its own player at once. Godot's own networking (ENet over UDP port 24565): the host's game asks the router to open the port by itself (UPnP), and the code is the host's address written as letters. If the router will not, the code for the same home network still works, or the host opens the port by hand.
+
+The move to Godot is finished. What comes next is in the design doc's build order: Build 4 (the month) and Build 5 (polish).
 
 ## Controls
 
@@ -31,8 +33,9 @@ The same as the web version: **W A S D** move, **Space** or left click attacks, 
 - `scripts/view/`: the models (`models.gd`, built by `mesher.gd`), the peasants, the dead, the trees, the defences, the things that move each morning, the effects, and the weather and mood (`atmos.gd`: mist, rain, wisps, crows, lightning, smoke).
 - `scripts/ui/`: the window and what goes in it (`window.gd`, `menus.gd`, `notices.gd`), the look (`look.gd`: parchment, the scroll, the pictures), the keys and settings, the map in the corner, and the signs and names over the world.
 - `scripts/hud.gd`: the readouts.
+- `scripts/net/net.gd`: playing together: hosting, joining, the lobby, and what goes back and forth.
 - `scripts/audio/sound.gd`: everything you hear. `Sound.play("chop", 1.0, Vector2(x, z))` plays an effect, quieter further from the camera.
-- `tests/`: `rules_test.gd` (115 checks: the web version's 107, and the skills and the wandering ruins), `ui_test.gd` (31 checks of the menus and the sound, driven as a player would), `click_test.gd` (clicks the home screen and the game with the mouse; needs a window, not headless) and `bot_week.gd` (a bot plays the whole week).
+- `tests/`: `rules_test.gd` (115 checks: the web version's 107, and the skills and the wandering ruins), `ui_test.gd` (31 checks of the menus and the sound, driven as a player would), `click_test.gd` (clicks the home screen and the game with the mouse; needs a window, not headless), `net_host.gd` and `net_client.gd` (co-op: run together by `net_test.sh`) and `bot_week.gd` (a bot plays the whole week).
 
 ## Tests
 
@@ -42,6 +45,7 @@ Run from this folder, with Godot on the command line:
     godot --headless --path . -s res://tests/ui_test.gd
     godot --headless --path . -s res://tests/bot_week.gd
     godot --headless --path . -s res://tests/bot_week.gd -- walls
+    tests/net_test.sh godot          # co-op: a host and a friend, two copies of the game, on one computer
 
 All 115 rule checks pass. The careful bot holds all seven nights; the bot that only builds walls falls on night 3, as it does in the web version (night 2 to 4).
 

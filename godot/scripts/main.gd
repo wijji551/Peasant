@@ -134,13 +134,19 @@ func _ready() -> void:
 	hud.map_slot.add_child(minimap)
 	minimap.R = R
 	labels.R = R
+	Net.ensure(get_tree()).attach(self)
+	Net.me.changed.connect(_net_changed)
 	_bot = OS.get_environment("DTV_BOT") != ""
 	var test := OS.get_environment("DTV_LOAD") != "" or OS.get_environment("DTV_NEW") != "" or OS.get_environment("DTV_DEMO") != "" or OS.get_environment("DTV_BOT") != "" or OS.get_environment("DTV_PHASE") != ""
-	if OS.get_environment("DTV_HOME") == "" and (test or _go_straight):
+	if Net.me.is_client():                              # a joined game, started again by the host: wait for it
+		_home(true)
+		menus.lobby()
+	elif OS.get_environment("DTV_HOME") == "" and (test or _go_straight):
 		_go_straight = false
 		begin(null if OS.get_environment("DTV_NEW") != "" or OS.get_environment("DTV_DEMO") != "" else (_go_save if _go_save else read_save()))
 	else:
 		_home()
+		if Net.me.is_host(): menus.lobby()
 
 
 static var _go_straight := false     # set when the scene is reloaded to start a game straight away
@@ -167,20 +173,54 @@ func in_game() -> bool:
 
 
 # ---------------------------------------------------------------- home and starting
-func _home() -> void:
+func _home(quiet: bool = false) -> void:
 	screen = "home"
 	hud.playing(false)
-	menus.home()
+	if not quiet: menus.home()
+
+
+## Hosting or joined: the lobby, or what is happening, has changed.
+func _net_changed() -> void:
+	if screen != "game" and (win.is_open("lobby") or Net.me.online()):
+		menus.lobby.call_deferred()
+
+
+## A joined game: the host's first picture of the village has arrived. In we go.
+func client_enter() -> void:
+	me = R.player_by_id(Net.me.my_id)
+	if me == null: return
+	minimap.me = me
+	labels.me = me
+	screen = "game"
+	hud.playing(true)
+	win.close()
+	_dawn_seen = -1
+	_prev_phase = ""
+	_focus = Vector3(me.x, 0, me.z)
+	atmos.pick(R.gseed, R.day)
+
+
+## A joined game: the host is starting again (a new week, or the same day again). Clear the village and wait.
+func client_restart() -> void:
+	get_tree().reload_current_scene()
+
+
+## A joined game: the host has gone. Back to the home screen, which says so.
+func host_left(_why: String) -> void:   # Net.status says why, on the home screen
+	get_tree().reload_current_scene()
 
 
 ## Back to the home screen: start the scene again, clean.
 func to_home() -> void:
+	if Net.me.online(): Net.me.leave()                   # leaving a game played together leaves the village too
 	get_tree().reload_current_scene()
 
 
 ## Start playing: carry on from a saved morning, or (save null) a new village.
 func begin(save) -> void:
+	if Net.me.is_client(): return                         # only the host starts things
 	if screen == "game":                                 # a game is running: start again from a clean scene
+		Net.me.restart()
 		_go_straight = true
 		_go_save = save
 		if save == null: DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
@@ -188,14 +228,15 @@ func begin(save) -> void:
 		return
 	var nm: String = Settings.name if Settings.name != "" else "Peasant"
 	var info := [{"id": 1, "name": nm, "col": Settings.col}]
-	if save:
+	if Net.me.is_host(): info = Net.me.infos()
+	if save and not Net.me.is_host():
 		info[0].name = save.players[0].name
 		info[0].col = int(save.players[0].get("col", Settings.col))
 		R.load_game(save, info)
 	else:
 		R.new_game(info)
 	_go_save = null
-	me = R.players[0]
+	me = R.player_by_id(Net.me.my_id) if Net.me.is_host() else R.players[0]
 	minimap.me = me
 	labels.me = me
 	screen = "game"
@@ -204,6 +245,7 @@ func begin(save) -> void:
 	_dawn_seen = -1
 	_prev_phase = ""
 	atmos.pick(R.gseed, R.day)
+	if Net.me.is_host(): Net.me.send_roster()
 	if OS.get_environment("DTV_PHASE") == "night":       # for testing: go straight to night
 		R.dusk_falls(); R.timeLeft = 0.5
 	if OS.get_environment("DTV_DEMO") != "":            # for testing: a village with a bit of everything in it, for pictures
@@ -314,6 +356,7 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 	var p := me
 	if Keys.is_act(e, "ready") and R.phase == "day":
 		p.ready = not p.ready
+		if Net.me.is_client(): cmd({"t": "rdy", "v": p.ready})
 		hud.banner("Ready for the night" if p.ready else "Not ready after all", "", 1.2)
 	if Keys.is_act(e, "skills"):
 		_open_skills()
@@ -324,7 +367,7 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 		_open_pack()
 	elif Keys.is_act(e, "trick") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_RIGHT):
 		if p.abCd > 0: return
-		R.aim_assist(p); R.do_ability(p)
+		R.aim_assist(p); cmd({"t": "abl", "r": p.r})
 	elif Keys.is_act(e, "swap"):
 		var i := -1
 		for j in p.inv.size():
@@ -333,20 +376,21 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 		if i < 0:
 			Sound.play("no"); hud.banner("No other weapon", "There is no weapon in your backpack that you can use.", 1.5)
 		else:
-			hud.banner(D.it_cap(p.inv[i]), "", 0.8); R.do_act(p, "eq", i)
+			hud.banner(D.it_cap(p.inv[i]), "", 0.8); cmd({"t": "act", "a": "eq", "arg": i})
 	elif Keys.is_act(e, "carry"):
 		if p.trk != 28 and p.trk != 26:
 			Sound.play("no"); hud.banner("Nothing to use", "A slop bucket or a handbell goes here. The ruins have them.", 1.5)
 		elif not (p.trk == 26 and p.useCd > 0):
-			R.aim_assist(p); R.do_use(p)
+			R.aim_assist(p); cmd({"t": "use", "r": p.r})
 	elif Keys.is_act(e, "toilet"):
 		if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
 		elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
-		else: R.do_toilet(p)
+		else: cmd({"t": "tb"})
 	elif Keys.is_act(e, "orders"):
 		if Rules.rk(p, 6) < 3: Sound.play("no"); hud.banner("No orders yet", "Orders need rank 3 of How to Win Peasants and Lead Them.", 1.7)
 		else:
-			R.do_order(p); hud.banner(["Follow me", "Hold here", "Charge!"][p.order], "", 0.9)
+			var nxt := (p.order + 1) % 3
+			cmd({"t": "ord"}); hud.banner(["Follow me", "Hold here", "Charge!"][nxt], "", 0.9)
 	elif Keys.is_act(e, "build"):
 		var b := _builds_now()
 		var i := b.find(_build_sel)
@@ -358,9 +402,9 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 		_place_ghost()
 	elif Keys.is_act(e, "eat"):
 		if p.food < 1: Sound.play("no"); hud.banner("You have no food", "The farms and the river have some.", 1.3)
-		else: R.do_eat(p)
+		else: cmd({"t": "eat"})
 	elif Keys.is_act(e, "attack") and p.gk == 5:
-		R.do_fish(p)
+		cmd({"t": "fish"})
 
 
 func _builds_now() -> Array:
@@ -383,7 +427,7 @@ func _place_ghost() -> void:
 		if D.COST[k].has("bodies") and D.inside_village(g.x, g.z):
 			Sound.play("no"); hud.banner("Not inside the village", "The fallen go outside the wall.", 1.5)
 		return
-	R.try_place(me, k, g.x, g.z, g.rot)
+	cmd({"t": "bld", "k": k, "x": g.x, "z": g.z, "rot": g.rot})
 
 
 func _open_pack() -> void:
@@ -406,15 +450,28 @@ func _open_skills() -> void:
 
 
 func sell_spare() -> void:
+	if Net.me.is_client():
+		cmd({"t": "sell"})
+		return
 	var paid := R.sell_spare(me)
 	if paid > 0:
 		hud.feed("Your spare learning fetched %s." % D.coins(paid))
 	menus.skills(true)
 
 
+## Something our player did. Alone or hosting, it goes straight to the rules; in a joined game, to the host.
+func cmd(m: Dictionary) -> void:
+	if Net.me.is_client():
+		if m.t == "atk": me.ac += 1                  # swing now; the host's answer comes a moment later
+		Net.me.send_host(m)
+	else:
+		Net.apply(R, me, m)
+
+
 func _window_closed(what: String) -> void:
-	if screen == "home":                                  # the handbook, opened from the home screen: back to it
-		menus.home.call_deferred()
+	if screen == "home":                                  # the handbook, opened from the home screen: back to it (or the lobby)
+		if Net.me.online(): menus.lobby.call_deferred()
+		else: menus.home.call_deferred()
 		return
 	if what == "notice" or what == "pack":
 		_panel = ""
@@ -438,7 +495,7 @@ func option(i: int) -> void:
 		_page = o.page
 		menus.notice(_panel, _page, true)
 	else:
-		R.do_act(me, o.a, o.get("arg"))
+		cmd({"t": "act", "a": o.a, "arg": o.get("arg")})
 
 
 ## Something done in the backpack: put on, put away, drop, bless.
@@ -455,7 +512,7 @@ func inv_do(a: String, arg) -> void:
 	if a == "uneq" and p.inv.size() >= D.PACK_MAX:
 		Sound.play("no"); hud.banner("Your backpack is full", "Drop something, or leave it on the arms rack in the storehouse.", 2.2)
 		return
-	R.do_act(p, a, arg)
+	cmd({"t": "act", "a": a, "arg": arg})
 
 
 # ---------------------------------------------------------------- the loop
@@ -474,7 +531,7 @@ func _process(delta: float) -> void:
 		Sound.me.update(delta, 0.0, _focus, "clear", 0, 0.0, false)
 		_test_hook()
 		return
-	var paused: bool = win.is_open("menu") and R.players.size() == 1   # alone, the game waits while you read the handbook
+	var paused: bool = win.is_open("menu") and R.players.size() == 1 and not Net.me.online()   # alone, the game waits while you read the handbook
 	if not paused:
 		_acc += delta
 		while _acc >= STEP:
@@ -509,8 +566,12 @@ func _tick() -> void:
 		if atk and _atk_cd <= 0 and p.gk != 5:
 			var I: Dictionary = D.IT[p.wpn]
 			_atk_cd = I.cd * (0.8 if I.rng and Rules.rk(p, 5) >= 5 else 1.0)
-			R.aim_assist(p); R.do_attack(p)
-	R.step(STEP)
+			R.aim_assist(p); cmd({"t": "atk", "r": p.r})
+	if not Net.me.is_client():                           # a joined game does not run the rules: the host does
+		R.step(STEP)
+		if Net.me.is_host():
+			Net.me.ev_out.append_array(R.ev)
+			if Net.me.ev_out.size() > 80: Net.me.ev_out = Net.me.ev_out.slice(-80)
 	for ev in R.ev:
 		_event(ev)
 	R.ev.clear()
@@ -815,6 +876,7 @@ func _test_hook() -> void:
 		var o := OS.get_environment("DTV_OPEN")
 		if o == "pack": _open_pack()
 		elif o == "skills": _open_skills()
+		elif o == "host": Net.me.host("Matt", 2); menus.lobby()
 		elif o == "none": win.close()
 		elif o.begins_with("weather:"): atmos.weather = o.substr(8); win.close()
 		elif o == "menu": menus.menu()

@@ -133,6 +133,9 @@ class Peasant:
 	var hc := 0
 	var ct := 0.0
 	var tree: Trunk = null
+	var tx := 0.0           # in a joined game: where the host last said they were (the view eases towards it)
+	var tz := 0.0
+	var tr := 0.0
 	var px := 0.0           # where they were told to hold
 	var pz := 0.0
 	var hurtT := 99.0
@@ -170,6 +173,9 @@ class Undead:
 	var revived := false
 	var march := false
 	var dd := 0.0           # scratch: distance when sorting
+	var tx := 0.0           # in a joined game: where the host last said it was
+	var tz := 0.0
+	var tr := 0.0
 
 
 class Struct:
