@@ -67,6 +67,8 @@ var _fx: Node3D                  # bits, and things in flight
 var _keep_a := 1.0
 var _focus := Vector3(0, 0, -4)
 var _zoom := 1.0
+var _pan_t := -1.0                   # the look up at the castle as night falls: how far through it (-1: not looking)
+var _fog_back := 0.0                 # how much further off than usual the camera is, so the haze can keep its distance
 var _title_art: TextureRect          # the title screen's picture
 # The view can be turned round the player, tilted and brought closer. Each has where it is and where it is going, so it glides.
 const CAM_PITCH0 := 0.8672          # the tilt the game began with: looking down from 66 up and 56 back
@@ -287,7 +289,11 @@ func _dusk_line() -> String:
 		D.U_COACH: return "The bell rings. Far off, a whip cracks, and wheels start to turn."
 		D.U_CAPTAIN: return "The bell rings. Up at the castle, someone is shouting orders."
 		D.U_LORD: return "The bell rings for the last time this month. The castle doors are open."
-	return "The bell rings. A full moon is up, and something at Ashhollow is howling." if R.weather == "moon" else "The bell rings. Something is stirring at Ashhollow Castle."
+	if R.weather == "moon": return "The bell rings. A full moon is up, and something at Ashhollow is howling."
+	return ["The bell rings. Something is stirring at Ashhollow Castle.",
+		"The bell rings. The castle has hung out its banners, and something green is burning along the walls.",
+		"The bell rings. Thorns have come up round Ashhollow, as tall as trees.",
+		"The bell rings. The sky over Ashhollow is turning like a millwheel."][Rules.week_of(R.mday()) - 1]
 
 
 ## Start a new game of the given length (D.MONTH or D.WEEK).
@@ -382,6 +388,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		Settings.save()
 		Sound.apply_settings()
 		hud.banner("Sound off" if Settings.muted else "Sound on", "%s turns it back on." % Keys.name("mute") if Settings.muted else "", 1.2)
+		return
+	if _pan_t >= 0.0 and _pan_t < 6.0 and (Keys.is_act(e, "attack") or (e is InputEventKey and e.physical_keycode == KEY_ESCAPE)):
+		_pan_t = 6.0                                       # seen it: back to the village
 		return
 	if e is InputEventKey and e.physical_keycode == KEY_ESCAPE:   # closes whatever is open; with nothing open, the handbook
 		if win.visible:
@@ -891,7 +900,7 @@ func _apply_light(nf: float) -> void:
 	env.ambient_light_color = AMB_DAY.lerp(AMB_NIGHT, nf).lerp(AMB_DUSK, k * 0.7)
 	env.ambient_light_energy = lerpf(0.32 - gl * 0.06, 0.5, nf) + fl * 0.5
 	var fog := FOG_DAY.lerp(Color(0.48, 0.52, 0.54), gl).lerp(FOG_NIGHT, nf).lerp(FOG_DUSK, k * 0.7).lerp(Color(0.6, 0.65, 0.8), fl * 0.6)
-	var back := 108.2 * _zoom * (_cam_zoom - 1.0) if screen == "game" else 0.0   # the haze keeps its distance from the player, not from the camera, when the view is brought nearer or taken further off
+	var back := _fog_back if screen == "game" else 0.0   # the haze keeps its distance from the player, not from the camera, when the view is brought nearer or taken further off
 	env.fog_depth_begin = maxf(5.0, lerpf(95.0 - gl * 15.0, 70.0 - foggy * 50.0, nf) + back)
 	env.fog_depth_end = lerpf(250.0 - gl * 40.0, 190.0 - foggy * 130.0, nf) + back
 	env.adjustment_saturation = lerpf(1.1 - gl * 0.25, 0.8, nf)
@@ -918,9 +927,33 @@ func _camera(delta: float) -> void:
 	var k := minf(1.0, delta * 14.0)
 	_cam_yaw = lerpf(_cam_yaw, _yaw_goal, k); _cam_pitch = lerpf(_cam_pitch, _pitch_goal, k); _cam_zoom = lerpf(_cam_zoom, _zoom_goal, k)
 	var dist := 108.2 * _zoom * _cam_zoom
-	camera.position = _focus + Vector3(sin(_cam_yaw) * cos(_cam_pitch), sin(_cam_pitch), cos(_cam_yaw) * cos(_cam_pitch)) * dist
-	camera.look_at(_focus + Vector3(0, 1, 0))
+	var look := _focus + Vector3(0, 1, 0)
+	var yaw := _cam_yaw
+	var pitch := _cam_pitch
+	var pk := 0.0
+	if _pan_t >= 0.0:                                     # night is falling: a long look up the road at Ashhollow, then back
+		const UP := 2.6
+		const HOLD := 3.4
+		const DOWN := 2.2
+		var before := _pan_t
+		_pan_t += delta
+		if before < UP and _pan_t >= UP:                  # as the castle comes into view, it answers
+			atmos.flash = 1.0; Sound.play("thunder0", 0.9)
+		pk = smoothstep(0.0, UP, _pan_t) if _pan_t < UP + HOLD else 1.0 - smoothstep(0.0, DOWN, _pan_t - UP - HOLD)
+		if _pan_t >= UP + HOLD + DOWN or R.phase == "day" or not R.live():
+			_pan_t = -1.0; pk = 0.0
+		look = look.lerp(Vector3(0, 18.0, -113.0), pk)
+		yaw = lerp_angle(wrapf(yaw, -PI, PI), 0.0, pk)
+		pitch = lerpf(pitch, 0.22, pk)
+		dist = lerpf(dist, 158.0, pk)
+	labels.visible = pk < 0.05
+	_fog_back = dist - 108.2 * _zoom + 70.0 * pk
+	camera.position = look + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist
+	camera.look_at(look)
 	minimap.view = _cam_yaw
+	world.night = R.nf
+	world.set_evil(Rules.week_of(R.mday()) - 1)
+	atmos.evil = Rules.week_of(R.mday()) - 1
 
 
 # ---------------------------------------------------------------- the readouts and the window
@@ -934,7 +967,8 @@ func _hud_update(delta: float) -> void:
 				_end_shown = false
 			"dusk":
 				Sound.play("bell")
-				hud.banner("Dusk", _dusk_line(), 5.0)
+				hud.banner("Dusk", _dusk_line(), 6.5 if Settings.castle_pan else 5.0)
+				if Settings.castle_pan and not _bot and OS.get_environment("DTV_SHOT") == "": _pan_t = 0.0
 				if win.is_open("dawn"): win.close()
 			"night":
 				hud.banner("Night %d" % R.day, "The dead are rising all along the graveyard, and some have brought bows." if R.day >= 4 else "The dead are rising all along the graveyard.", 4.5)
@@ -1000,6 +1034,9 @@ func _hud_update(delta: float) -> void:
 ## DTV_AT=x,z puts the player there first. DTV_LOG=1 prints how the night is going every ten seconds.
 func _test_hook() -> void:
 	_frame += 1
+	if OS.get_environment("DTV_PAN") != "":         # for pictures: DTV_PAN=day holds the look up at the castle, as on that day
+		R.day = int(OS.get_environment("DTV_PAN"))
+		if R.phase != "day": _pan_t = 4.0
 	if OS.get_environment("DTV_VIEW") != "":        # for pictures: DTV_VIEW=turn,tilt,zoom (degrees, degrees, times) turns the player's view
 		var vw := OS.get_environment("DTV_VIEW").split(",")
 		_yaw_goal = deg_to_rad(float(vw[0])); _pitch_goal = deg_to_rad(float(vw[1])); _zoom_goal = float(vw[2])

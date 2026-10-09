@@ -24,6 +24,10 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["The castle", [
+		"As night falls the view swings up the road for a long look at Ashhollow Castle, then back. Space or Esc cuts it short, and it can be turned off in the options.",
+		"The castle gets worse as the month goes on: banners and green fire in the second week, thorns as tall as trees in the third, and in the last week a black spire, red windows and the sky turning over it.",
+	]],
 	["Tidying up", [
 		"Steel is always shown under iron in what you carry. Anyone can mine it, at the old steel mine at the top of the forest, far to the north-west (the grey-blue square on the map).",
 		"A thing in your backpack can be destroyed for good: the little flame on it, pressed twice. Things left on the ground are gone on the second morning.",
@@ -319,6 +323,8 @@ func menu(tab: String = "") -> void:
 			var tg := CheckBox.new(); tg.button_pressed = Settings.tags; tg.toggled.connect(func(on): Settings.tags = on; Settings.save()); g.add_child(tg)
 			Look.label(g, "See through the keep when something is behind it", 15)
 			var sk := CheckBox.new(); sk.button_pressed = Settings.see_keep; sk.toggled.connect(func(on): Settings.see_keep = on; Settings.save()); g.add_child(sk)
+			Look.label(g, "Look up at the castle as night falls", 15)
+			var cp2 := CheckBox.new(); cp2.button_pressed = Settings.castle_pan; cp2.toggled.connect(func(on): Settings.castle_pan = on; Settings.save()); g.add_child(cp2)
 			w.para("These are kept on this computer.", 13, Look.INK_SOFT)
 	var code_txt := ""
 	if Net.me.is_host(): code_txt = "  Village code: %s." % (Net.me.code if Net.me.code != "" else Net.me.lan_code)

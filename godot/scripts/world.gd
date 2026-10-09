@@ -52,6 +52,12 @@ var maypole: Node3D                       # the maypole's ribbons and crown, whi
 var letter_paper: Node3D                  # the Lord's letter, nailed to the gatepost
 var rider: Node3D                         # the headless rider who brings it
 var _rider_t := -1.0
+var _evil: Array[Node3D] = []             # the castle's worse and worse looks, one set a week
+var _evil_now := -1
+var _castle_lit: StandardMaterial3D       # the one window that is always lit
+var storm: Node3D                         # the sky turning over the castle, in the last week
+var _storm_light: OmniLight3D
+var night := 0.0                          # how dark it is (main.gd keeps this up to date)
 var _bell_swing := 0.0
 var _dummy_hit: Array[float] = [0.0, 0.0, 0.0]
 
@@ -144,6 +150,95 @@ func _castle() -> void:
 	lit.emission = Color("ffd070")
 	lit.emission_energy_multiplier = 3.0
 	Build.glow_box(n, Vector3(1.2, 1.9, 0.2), Vector3(0, 18.4, 2.56), lit)
+	_castle_lit = lit
+	_evil_build(n)
+
+
+## Ashhollow gets worse as the month goes on. Three sets of things, hidden to begin with: one more is shown each week.
+func _evil_build(n: Node3D) -> void:
+	var red := Color("8e1f25")
+	var bone := Color("efe6cf")
+	var black := Color("17131c")
+	for i in 3:
+		var g := Node3D.new()
+		g.visible = false
+		n.add_child(g)
+		_evil.append(g)
+	# week 2: the Lord's banners on the front wall (a white stag on red), and green fire along the battlements
+	for sx in [-1.0, 1.0]:
+		var bx: float = sx * 6.4
+		Build.box(_evil[0], Vector3(2.3, 5.6, 0.12), Vector3(bx, 8.6, 6.62), red)
+		Build.box(_evil[0], Vector3(0.9, 0.5, 0.14), Vector3(bx - 0.5, 8.3, 6.62), red, 0, 0, 0.78)      # the swallow tail
+		Build.box(_evil[0], Vector3(0.9, 0.5, 0.14), Vector3(bx + 0.5, 8.3, 6.62), red, 0, 0, -0.78)
+		Build.box(_evil[0], Vector3(0.5, 0.75, 0.05), Vector3(bx, 10.6, 6.7), bone)                        # the stag's head
+		Build.box(_evil[0], Vector3(0.3, 0.35, 0.05), Vector3(bx, 10.35, 6.7), bone)
+		for ax in [-1.0, 1.0]:                                                                              # and antlers
+			Build.box(_evil[0], Vector3(0.1, 0.95, 0.05), Vector3(bx + ax * 0.34, 11.3, 6.7), bone, 0, 0, -ax * 0.45)
+			Build.box(_evil[0], Vector3(0.08, 0.45, 0.05), Vector3(bx + ax * 0.72, 11.75, 6.7), bone, 0, 0, ax * 0.5)
+			Build.box(_evil[0], Vector3(0.08, 0.4, 0.05), Vector3(bx + ax * 0.5, 11.85, 6.7), bone, 0, 0, -ax * 0.1)
+	var fire := StandardMaterial3D.new()
+	fire.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	fire.albedo_color = Color(0.45, 1.0, 0.55)
+	for fx_ in [-8.4, -3.6, 3.6, 8.4]:
+		Build.cyl(_evil[0], 0.45, 0.3, 0.6, Vector3(fx_, 16.4, 6.6), black, 6)
+		Build.cone(_evil[0], 0.4, 1.1, Vector3(fx_, 17.0, 6.6), Color.WHITE, 5).material_override = fire
+	for sx in [-1.0, 1.0]:
+		var l := OmniLight3D.new()
+		l.position = Vector3(sx * 6.0, 18.5, 8.0)
+		l.light_color = Color(0.4, 1.0, 0.5)
+		l.omni_range = 22.0
+		l.light_energy = 0.5
+		_evil[0].add_child(l)
+		haunt_lights.append(l)
+	# week 3: thorns as tall as trees, up round the hill and out of the walls
+	var rng3 := RandomNumberGenerator.new()
+	rng3.seed = 1313
+	for i in 22:
+		var a := TAU * i / 22.0 + rng3.randf_range(-0.1, 0.1)
+		var rad := rng3.randf_range(31.0, 39.0)
+		var p := Vector3(cos(a) * rad, 0, sin(a) * rad)
+		if absf(p.x) < 6 and p.z > 0: continue                         # not across the road
+		var h := rng3.randf_range(7.0, 13.0)
+		Build.cone(_evil[1], rng3.randf_range(0.7, 1.2), h, Vector3(p.x, -1.0, p.z), Color("33203a"), 5, rng3.randf() * TAU)
+		Build.cone(_evil[1], 0.35, h * 0.45, Vector3(p.x + rng3.randf_range(-1.6, 1.6), -0.5, p.z + rng3.randf_range(-1.6, 1.6)), Color("241a2c"), 4)
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			Build.cone(_evil[1], 0.5, 6.0, Vector3(sx * 13.6, 9.0, sz * 6.5), black, 4)
+			Build.cone(_evil[1], 0.4, 4.5, Vector3(sx * 10.5, 14.0, sz * 9.6), black, 4)
+	# week 4: a black spire on the keep, and the sky turning over it
+	Build.cone(_evil[2], 1.5, 13.0, Vector3(0, 28.5, -1), black, 4, PI / 4)
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			Build.cone(_evil[2], 0.9, 7.0, Vector3(sx * 10.5, 24.0, sz * 6.5), black, 5)
+	storm = Node3D.new()
+	storm.position = Vector3(0, 40, -1)
+	_evil[2].add_child(storm)
+	var cloud := StandardMaterial3D.new()
+	cloud.albedo_color = Color(0.34, 0.07, 0.1, 0.88)
+	cloud.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	cloud.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	for i in 16:
+		var a := TAU * i / 16.0
+		var rad := 19.0 if i % 2 else 12.0
+		var c := Build.box(storm, Vector3(rng3.randf_range(7, 11), rng3.randf_range(1.2, 2.2), rng3.randf_range(4, 6)), Vector3(cos(a) * rad, rng3.randf_range(-1.5, 1.5), sin(a) * rad), Color.WHITE, -a)
+		c.material_override = cloud
+	_storm_light = OmniLight3D.new()
+	_storm_light.light_color = Color(1.0, 0.2, 0.2)
+	_storm_light.omni_range = 46.0
+	_storm_light.light_energy = 0.0
+	_storm_light.position = Vector3(0, 36, -1)
+	_evil[2].add_child(_storm_light)
+
+
+## How far gone the castle is: 0 in the first week, to 3 in the last.
+func set_evil(level: int) -> void:
+	if level == _evil_now: return
+	_evil_now = level
+	for i in _evil.size(): _evil[i].visible = level > i
+	if haunt_mat: haunt_mat.emission = [Color("b45cff"), Color("b45cff"), Color("d0406a"), Color("ff2a2a")][clampi(level, 0, 3)]
+	if _castle_lit:
+		_castle_lit.albedo_color = Color("ff5a4a") if level >= 3 else Color("ffe9a8")
+		_castle_lit.emission = Color("ff2a1a") if level >= 3 else Color("ffd070")
 
 
 ## Between the stakes and the castle: dead trees, a gibbet by the road, broken railings, toppled stones, and at
@@ -898,5 +993,8 @@ func _process(delta: float) -> void:
 		rider.rotation = Vector3(-0.12 if moving else 0.0, PI if t > go + 2.2 else 0.0, 0)
 		if t > go * 2 + 2.2:
 			_rider_t = -1.0; rider.visible = false
+	if storm and _evil_now >= 3:
+		storm.rotation.y += delta * 0.35
+		_storm_light.light_energy = (1.2 + night * 4.0) * (0.8 + 0.2 * sin(Time.get_ticks_msec() / 130.0))
 	if mill_sails: mill_sails.rotation.x += delta * 0.55
 	if maypole: maypole.rotation.y += delta * 0.12

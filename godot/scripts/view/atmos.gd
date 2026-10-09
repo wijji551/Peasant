@@ -32,6 +32,7 @@ void fragment() {
 """
 
 var weather := "clear"
+var evil := 0                       # how far gone the castle is (0 to 3): more lightning the worse it gets
 var flash := 0.0                    # lightning: 1 at the strike, fading; main.gd brightens the sky by it
 var _mists: Array[ShaderMaterial] = []
 var _rain: CPUParticles3D
@@ -157,7 +158,7 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 		_bolt_t -= delta
 		if _bolt_t <= 0:
 			flash = 1.0
-			_bolt_t = _rng.randf_range(9.0, 26.0)
+			_bolt_t = _rng.randf_range(9.0, 26.0) / (1.0 + 0.7 * evil)
 		elif _bolt_t < 0.25 and _bolt_t > 0.2 and _rng.randf() < 0.5:
 			flash = 0.6                  # sometimes a second flicker just before
 	else:
