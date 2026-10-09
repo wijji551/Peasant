@@ -56,6 +56,8 @@ var bail_t := 0.0             # and how long he stays at it
 var letters: Array = []        # the Lord's letters so far: [which of D.LETTERS, the day it came]
 var letter_new := false        # one is nailed to the gatepost, and nobody has read it yet
 var seen := {}                 # things the Lord might write about, and how often each has happened
+var tenant_day := 0           # the last day the Previous Tenant was woken: once a day is plenty
+var chest := {}               # the chest that never arrived: {x, z, from, road, seen, open}, or empty when there is none
 var bail_mood := 0            # how many times he has been jeered at today: each makes his guards a shilling dearer
 var bell_t := 0.0             # the village bell, swinging
 
@@ -502,7 +504,7 @@ func clear_world() -> void:
 	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []
 	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
-	letters = []; letter_new = false; seen = {}
+	letters = []; letter_new = false; seen = {}; chest = {}; tenant_day = 0
 	for t in trees:
 		t.wood = D.TREE_WOOD; t.gd = 0; t.set_state(0, 0)
 	tv += 1; sv += 1
@@ -530,6 +532,63 @@ func new_game(infos: Array, last: int = D.MONTH) -> void:
 		add_villagers(p.slot, pm)
 	roll_day(true)
 	start_day(["The dead have begun walking down from Ashhollow Castle at night. Robert Bailiff has bolted his door and wishes you all the best.", "Start at the library: there is a book in it for each of you.", site_line()])
+
+## Once a week a chest sets out for Thornhallow and does not arrive. It lies where the messenger fell, somewhere outside the
+## village wall, until somebody finds it. Returns true on the morning one goes astray.
+static func chest_day(game_seed: int, week: int, last: int) -> int:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = game_seed * 31 + week * 1009
+	if last < D.MONTH: return 2 + rng.randi() % 3 if week == 1 else 0     # the short game: one chest, early
+	return (week - 1) * 7 + 2 + rng.randi() % 4
+
+func new_chest() -> bool:
+	if not chest.is_empty() and not chest.open: return false       # the last one is still lying out there
+	var w := floori((day - 1) / 7.0) + 1
+	if day != chest_day(gseed, w, last_day): return false
+	var rng := RandomNumberGenerator.new()
+	rng.seed = gseed * 77 + day * 131
+	for i in 200:
+		var road := rng.randi() % 3
+		var x := rng.randf_range(D.X0 + 8, -D.VW - 14) if road == 0 else rng.randf_range(D.VW + 14, D.X1 - 8) if road == 1 else rng.randf_range(D.X0 + 8, D.X1 - 8)
+		var z := rng.randf_range(D.VS + 8, D.Z1 - 6) if road == 2 else rng.randf_range(D.VN - 4, D.Z1 - 6)
+		var ok := true
+		for c in colliders:
+			if in_box(x, z, 5.0, c): ok = false
+		for c in D.RUIN_SITES:
+			if absf(x - c.x) < 12 and absf(z - c.z) < 9: ok = false
+		if x > -76 and x < -40 and z > 15 and z < 46: ok = false           # not in the farm
+		for t in near_trees(x, z):
+			if D.d2(x, z, t.x, t.z) < 2.6: ok = false
+		if not ok: continue
+		chest = {"x": snappedf(x, 0.1), "z": snappedf(z, 0.1), "from": rng.randi() % D.CHEST_FROM.size(), "road": road, "seen": false, "open": false, "rot": snappedf(rng.randf() * TAU, 0.01)}
+		return true
+	return false
+
+## Lifting the lid: a good sum, and perhaps a relic or a library card. It is the finder's; they can drop a thing for a friend.
+func open_chest(p: E.Player) -> void:
+	if chest.is_empty() or chest.open: return
+	chest.open = true; chest.seen = true
+	var w := week_of(mday())
+	var sum := 72 + 24 * w
+	var got := "nothing else"
+	var r := randf()
+	var left_ := D.RELICS.filter(func(id): return not relics.has(id))
+	if r < 0.3 and left_.size():
+		var id: int = pick(left_)
+		relics.append(id); gain_or_drop(p, id); got = D.IT[id].n
+	elif r < 0.72:
+		gain_or_drop(p, D.I_CARD); got = "a library card"
+	else:
+		sum += 48
+	p.coin += sum
+	var F: Array = D.CHEST_FROM[chest.from]
+	say("%s has found the chest %s sent. Inside: %s, %s, and a note: “%s”" % [p.dn, F[0], D.coins(sum), got, F[1]])
+	ev.append(["found", p.id, "%s’s chest: %s and %s" % [F[0], D.coins(sum), got], r1(chest.x), r1(chest.z), 1, 1 if got != "nothing else" else 0])
+	ev.append(["coin", r1(chest.x), r1(chest.z)])
+
+func gain_or_drop(p: E.Player, id: int) -> void:
+	if wears_now(p, id) or p.inv.size() < D.PACK_MAX: gain(p, id)
+	else: drop_item(id, p.x, p.z)
 
 func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and the fish have moved, and the ruins hide new things
 	if first:
@@ -661,7 +720,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
+const P_SAVE := ["card_rank", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -685,7 +744,7 @@ func save_data() -> Dictionary:
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z, "day": d.day})
 	return {"v": 3, "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
-		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "peasants": qs}
+		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "chest": chest.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "peasants": qs}
 
 # infos: the people playing now. Each takes over a saved peasant, by name where possible.
 func load_game(d: Dictionary, infos: Array) -> void:
@@ -696,6 +755,8 @@ func load_game(d: Dictionary, infos: Array) -> void:
 		stats[k] = int(d.stats.get(k, 0))
 	for l in d.get("letters", []): letters.append([int(l[0]), int(l[1])])
 	letter_new = bool(d.get("letter_new", false))
+	var ch: Dictionary = d.get("chest", {})
+	if not ch.is_empty(): chest = {"x": float(ch.x), "z": float(ch.z), "from": int(ch.from), "road": int(ch.road), "seen": bool(ch.seen), "open": bool(ch.open), "rot": float(ch.get("rot", 0.0))}
 	var sn: Dictionary = d.get("seen", {})
 	for k in sn: seen[k] = int(sn[k])
 	items = []
@@ -849,6 +910,8 @@ func find_interact(p: E.Player):
 		return null
 	if p.state == "hide":
 		return {"type": "unhide", "key": "unhide", "ok": true, "dur": 0.6, "x": p.x, "z": p.z, "rad": 1.0, "label": "Hold {interact} to come out of your cottage"}
+	if p.state == "ok" and not chest.is_empty() and not chest.open and D.d2(p.x, p.z, chest.x, chest.z) < 7.0:
+		return {"type": "chest", "key": "chest", "ok": true, "dur": 1.5, "x": chest.x, "z": chest.z, "rad": 1.1, "label": "Hold {interact} to open the chest"}
 	if p.state != "ok":
 		return null
 	var rvT := 1.5 if rk(p, 9) >= 2 else 3.0
@@ -1050,6 +1113,7 @@ func wear(p: E.Player, id: int) -> void:
 		stow(p, old)
 
 static func wears_now(p: E.Player, id: int) -> bool:   # would go straight on, not into the backpack
+	if not D.SLOTK.has(D.IT[id].s): return false           # a paper: it is kept, not worn
 	var k: String = D.SLOTK[D.IT[id].s]
 	return can_use(p, id) and (p.wpn == 0 if k == "wpn" else p.get(k) < 0)
 
@@ -1124,6 +1188,22 @@ func kill_undead(u: E.Undead) -> void:
 			var b := spawn_undead(1, u.x + cos(a) * 1.3, u.z + sin(a) * 1.3)
 			b.state = "walk"; b.t = 0
 		say("The coffin ram has fallen apart. The six skeletons carrying it turn out to have been four.")
+	if U.tenant:                                    # evicted: whoever saw to it goes through his pockets
+		var who := player_by_id(u.last)
+		if who == null and players.size(): who = players[0]
+		if who:
+			var rent := 36 + 12 * (week_of(mday()) - 1)
+			who.coin += rent
+			var extra := ""
+			var left_ := D.RELICS.filter(func(id): return not relics.has(id))
+			if left_.size() and randf() < 0.2:
+				var id: int = pick(left_)
+				relics.append(id); gain(who, id); extra = ", and " + D.IT[id].n
+			elif randf() < 0.5:
+				var id: int = pick(D.FOUND_W + D.FOUND_A)
+				gain(who, id); extra = ", and " + D.it_a(id)
+			say("%s has evicted the Previous Tenant. In his pockets: %s in back rent%s." % [who.dn, D.coins(rent), extra])
+			ev.append(["found", who.id, "the Previous Tenant’s back rent: " + D.coins(rent) + extra, r1(u.x), r1(u.z), 1, 1 if extra != "" else 0])
 	if u == boss:
 		boss = null
 		say({D.U_STEWARD: "The Steward has been dismissed.", D.U_COACH: "The hearse has lost a wheel, and the Coachman his head (again). He will not be driving tonight.",
@@ -1140,6 +1220,8 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	var U: Dictionary = D.UN[u.k]
 	var bony: bool = U.bony
 	var holy: float = s.get("holy", 0)
+	if s.get("p"): u.last = s.p.id
+	elif s.get("q"): u.last = s.q.owner
 	if U.ghost and not holy:                         # ordinary weapons pass straight through a wraith
 		ev.append(["miss", r1(u.x), r1(u.z)])
 		return
@@ -1603,6 +1685,16 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 		else:
 			found = pick(D.JUNK)
 	ev.append(["found", p.id, found, r1(sp.x), r1(sp.z), big, 1 if p.inv.size() > inv0 else 0])
+	# by day, in the outer ruins, the rummaging now and then wakes something much worse than a shambler
+	if sp.ruin and not is_night and day >= 2 and tenant_day != day and randf() < D.TENANT_CHANCE + 0.01 * (week_of(mday()) - 1):
+		tenant_day = day
+		var a := randf() * TAU
+		var t := spawn_undead(D.U_TENANT, clampf(sp.x + cos(a) * 2.6, D.X0, D.X1), clampf(sp.z + sin(a) * 2.6, D.Z0, D.Z1))
+		t.hp = roundf(D.UN[D.U_TENANT].hp * tough_of(mday()) * (1 + 0.4 * (players.size() - 1))); t.mhp = t.hp
+		t.hx = sp.x; t.hz = sp.z; t.t = 1.8; t.taunt = p.id; t.tauntT = 12
+		ev.append(["raise", r1(t.x), r1(t.z)]); ev.append(["tenant", r1(t.x), r1(t.z)])
+		say("%s has disturbed the Previous Tenant of %s. He would like a word about the noise." % [p.dn, D.RUINS[sp.ruin].name])
+		return
 	var pl := (0.6 if is_night else 0.3) if sp.ruin else (0.25 if is_night else 0.0)   # the ruins are not empty, and searching is noisy
 	if lore < 7 and randf() < pl:
 		var n := 1 + (1 if mday() >= 4 else 0) + (1 if is_night and randf() < 0.5 else 0)
@@ -1671,7 +1763,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 			if near_station(p, "store") and ia >= 0 and ia < items.size() and (p.inv.size() < D.PACK_MAX or wears_now(p, items[ia])):
 				gain(p, items.pop_at(ia))
 		"eq":
-			if ia >= 0 and ia < p.inv.size() and can_use(p, p.inv[ia]):
+			if ia >= 0 and ia < p.inv.size() and can_use(p, p.inv[ia]) and D.SLOTK.has(D.IT[p.inv[ia]].s):
 				wear(p, p.inv.pop_at(ia))
 		"uneq":
 			if D.SLOTS.has(sa) and p.get(sa) > 0 and p.inv.size() < D.PACK_MAX:
@@ -1707,6 +1799,10 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 			if near_station(p, "library") and ia >= 0 and ia < D.BOOKS.size() and not p.books[ia] and book_slots(p) > 0 and not (is_class_book(ia) and class_of(p) >= 0):
 				var t0 := title_of(p)
 				p.books[ia] = 1; say("%s has taken up %s." % [p.dn, D.BOOKS[ia].name])
+				if p.card_rank > 1:                         # a library card was handed in: not quite from the beginning
+					p.books[ia] = mini(7, p.card_rank); p.xp[ia] = need_xp(ia, p.books[ia] - 1)
+					say("%s read ahead, and starts %s at rank %d." % [p.dn, D.BOOKS[ia].name, p.books[ia]])
+				p.card_rank = 0
 				if is_class_book(ia): say("%s is training as an %s. Heaven help us all." % [p.dn, D.CLASSES[class_of(p)].name])
 				retitle(p, t0)
 				if ia == 5:
@@ -1807,6 +1903,14 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 						bail_line = pick(D.BAILIFF_JEER); bail_mood += 1; note("jeer"); ev.append(["jeer", r1(p.x), r1(p.z)])
 						say("%s has jeered at Robert Bailiff. His guards are a shilling dearer today." % p.dn)
 				bail_t = 6.0
+		"card":                                     # a library card: give up a book, to take up another
+			if near_station(p, "library") and p.inv.has(D.I_CARD) and ia >= 0 and ia < D.BOOKS.size() and p.books[ia] > 0:
+				var t0 := title_of(p)
+				p.inv.erase(D.I_CARD)
+				p.card_rank = maxi(1, p.books[ia] - 1)
+				say("%s has handed in a library card and given up %s (rank %d). The librarian has stamped something." % [p.dn, D.BOOKS[ia].name, p.books[ia]])
+				p.books[ia] = 0; p.xp[ia] = 0.0
+				retitle(p, t0); spark.call("page")
 		"lread":                                    # the letter on the gatepost has been read
 			letter_new = false
 		"study":
@@ -1827,6 +1931,12 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 
 # --- one step of the world
 func step(dt: float) -> void:
+	if not chest.is_empty() and not chest.seen:           # and the same for the chest that never arrived
+		for p in players:
+			if p.state == "ok" and D.d2(p.x, p.z, chest.x, chest.z) < 13 * 13:
+				chest.seen = true
+				ev.append(["chest", r1(chest.x), r1(chest.z)])
+				say("%s has found a dead messenger, and a chest with %s’s seal on it." % [p.dn, D.CHEST_FROM[chest.from][0]])
 	if not (ruins_seen[1] and ruins_seen[2]):             # anyone who comes near an outer ruin finds it, for everyone
 		var cs: Array = Map.ruin_layout(gseed, day).centres
 		for p in players:
@@ -2168,7 +2278,10 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 		phase = "won"; dawn = {"seq": dawn.seq + 1, "day": day, "lines": lines}
 		if save_hook.is_valid(): save_hook.call({})
 		return
+	crowd = 1.0; crowd_d = 1.0
 	day += 1; grow_trees(); roll_day(false); lines.append(site_line())
+	tough = tough_of(mday())
+	if new_chest(): lines.append("Word has come, late and by pigeon, that %s sent a chest of help to Thornhallow. The messenger set off %s and has not been seen since." % [D.CHEST_FROM[chest.from][0], D.CHEST_ROADS[chest.road]])
 	var stale := drops.filter(func(d): return day - d.day >= D.DROP_DAYS)       # things left lying about: after two days nobody cares
 	if stale.size():
 		for d in stale:
@@ -2307,6 +2420,8 @@ func player_step(p: E.Player, dt: float) -> void:
 					s.mhp += add; s.hp += add; s.hc += 1; sv += 1; add_xp(p, 2, 1); ev.append(["holy", r1(s.x), r1(s.z)])
 				"keep":
 					pay(p, {"wood": 1, "stone": 1}); keepHp = minf(D.KEEP_HP, keepHp + 40); ev.append(["build", r1(it.x), r1(it.z)])
+				"chest":
+					open_chest(p)
 				"search":
 					p.cc += 1; do_search(p, it.i); note("search")
 				"gather":
@@ -2532,6 +2647,7 @@ func guard_step(q: E.Peasant, dt: float) -> void:
 
 func undead_goal(u: E.Undead) -> Vector2:
 	var U: Dictionary = D.UN[u.k]
+	if U.tenant and phase == "day": return Vector2(u.hx, u.hz)   # by day he keeps to his ruin; after dark he goes down with the rest
 	if U.fly or (U.ghost and not U.lord) or (U.lord and u.stage >= 1):   # over the wall, or through it: straight for the keep
 		return Vector2(clampf(u.lane * 0.3, -D.KEEP_H + 0.6, D.KEEP_H - 0.6), -D.KEEP_H - 0.2)
 	if u.side != 0 and not D.inside_village(u.x, u.z):   # the Captain's guard: round to a side gateway
@@ -2663,7 +2779,7 @@ func undead_step(dt: float) -> void:
 		if U.dig and not u.dug and u.z < D.VN - 0.5 and u.z > D.VN - 7 and u.pin <= 0:
 			u.state = "dig"; u.t = 5.0
 			continue
-		var sight := 64.0 if u.k == 2 and weather == "fog" else 169.0 if u.k == 2 else 30.0 if U.boss else 49.0
+		var sight := 64.0 if u.k == 2 and weather == "fog" else 169.0 if u.k == 2 else 30.0 if U.boss else 196.0 if U.tenant else 49.0
 		var tgt = null
 		var tp := false
 		var bd := sight

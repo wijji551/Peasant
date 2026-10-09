@@ -10,6 +10,9 @@ var _jetty: MeshInstance3D
 var _ruins: Node3D
 var _spots: Array = []          # one heap of rubble per search spot, paler while something is left in it
 var _spot_mats: Array = []
+var _chest: Node3D              # the chest that never arrived, and its messenger
+var _chest_shut: MeshInstance3D
+var _chest_open: MeshInstance3D
 var _cart: Node3D               # the merchant's cart, on a merchant's day
 var _bailiff: Node3D            # Robert Bailiff, popping up at his window
 var _bail_up := 0.0
@@ -26,6 +29,13 @@ func _ready() -> void:
 	_jetty = _mi("jetty")
 	_ruins = Node3D.new()
 	add_child(_ruins)
+	_chest = Node3D.new()
+	add_child(_chest)
+	_chest.visible = false
+	_chest_shut = _mi("chest", _chest)
+	_chest_open = _mi("chest_open", _chest)
+	var ms := _mi("messenger", _chest)
+	ms.position = Vector3(1.9, 0, 0.7); ms.rotation.y = 0.9
 	_bailiff = _mi("bailiff")
 	_bailiff.position = Vector3(-14.5, 3.0, -9.05)
 	_bailiff.visible = false
@@ -111,6 +121,12 @@ func sync(R: Rules) -> void:
 			var mat := _tinted(Color(0.9, 0.86, 0.74))
 			m.material_override = mat
 			_spots.append(m); _spot_mats.append(mat)
+	_chest.visible = not R.chest.is_empty()
+	if _chest.visible:
+		_chest.position = Vector3(R.chest.x, 0, R.chest.z)
+		_chest.rotation.y = R.chest.get("rot", 0.0)
+		_chest_shut.visible = not R.chest.open
+		_chest_open.visible = R.chest.open
 	var want := R.bail_t > 0.0                  # he shows himself when he has something to say, or when someone stands at his door by day
 	if not want and R.phase == "day":
 		for p in R.players:

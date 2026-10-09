@@ -83,6 +83,7 @@ class Player:
 	var hb := 0.0           # prayed over at rank 3: the weapon is holy
 	var spare := 0.0        # learning past rank VII, in points; sold for coin in the skills window
 	var cogs := 0           # boxes of cogs, from the tinker: for contraptions
+	var card_rank := 0      # a library card has been handed in: the next book taken up starts at this rank
 	var job := false        # working on today's merchant's job
 	var jobT := 0.0         # how much of it they have done
 	var merc := false       # has hired a mercenary today
@@ -195,6 +196,9 @@ class Undead:
 	var side := 0           # the Captain's guard: -1 the west gateway, 1 the east, 0 the north gate
 	var stage := 0          # the Lord: 0 watching, 1 coming down, 2 going for the keep door
 	var dug := false        # a gravedigger that has already come up inside
+	var hx := 0.0           # the Previous Tenant: the ruin he came out of, and goes back to
+	var hz := 0.0
+	var last := 0           # whose blow (or whose posse's) landed last
 	var dd := 0.0           # scratch: distance when sorting
 	var tx := 0.0           # in a joined game: where the host last said it was
 	var tz := 0.0

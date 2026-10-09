@@ -4,7 +4,7 @@ extends RefCounted
 ## the library, the slum, the Thorny Rose Inn or the priest, and your own pack.
 ## Each option is {label, sub, ok, a (the action), arg} or {head} for a heading, or {page} to turn to another page.
 
-const WEARV := {"w": "Take in hand", "h": "Put on", "b": "Put on", "o": "Take up", "t": "Carry"}
+const WEARV := {"w": "Take in hand", "h": "Put on", "b": "Put on", "o": "Take up", "t": "Carry", "c": "Read"}
 const SLOTN := {"wpn": "In hand", "head": "Head", "body": "Body", "off": "Off hand", "trk": "Carried"}
 
 
@@ -121,7 +121,16 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				o.append({"label": "Armour, and spears for your posse", "sub": "Iron cap, chain shirt, shield.", "ok": true, "page": "armour"})
 			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Anyone can make crude weapons. Hammer and Tongs, in the library, makes refined ones, and later steel."), "o": o}
 		"library":
+			if page == "card":
+				o.append({"head": "Give up which book?"})
+				for b in D.BOOKS.size():
+					if p.books[b] > 0:
+						o.append({"label": "Give up %s (rank %d)" % [D.BOOKS[b].name, p.books[b]], "sub": "Everything it taught you goes. The next book you take up starts at rank %d." % maxi(1, p.books[b] - 1), "ok": true, "a": "card", "arg": b})
+				o.append({"label": "Keep the card for now", "sub": "", "ok": true, "page": ""})
+				return {"title": "Your library card", "intro": "The librarian will take back one of your books and let you choose another: one go, and the card is stamped. You do not start again from nothing: the new book begins a rank behind where the old one was.", "o": o}
 			var slots := Rules.book_slots(p)
+			if p.inv.has(D.I_CARD) and p.books.any(func(r): return r > 0):
+				o.append({"label": "Hand in your library card", "sub": "Give up one of your books, to take up another.", "ok": true, "page": "card"})
 			var owned: int = p.books.filter(func(r): return r > 0).size()
 			for b in D.BOOKS.size():
 				var B: Dictionary = D.BOOKS[b]
@@ -131,6 +140,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				o.append({"label": B.name + (" · rank %d of 7" % r if r else ""), "sub": sub, "ok": not r and slots > 0 and not other_call, "a": "book", "arg": b})
 			var most := 4 if p.xslot else 3
 			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of eleven books, with seven ranks in each. Choose your first. The Holy Book, at the end, makes you an apprentice priest.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four"][most] if owned >= most else "Reach rank 2 in a book to take up a second, and rank 3 in two books to take up a third." + (" Your Index of Further Reading allows a fourth." if p.xslot else " A fourth needs An Index of Further Reading, which turns up in the ruins."))
+			if p.card_rank > 1: intro += " Your card has been stamped: the next book you take up starts at rank %d." % p.card_rank
 			return {"title": "The library", "intro": intro + (" Cowards learn at half speed today." if p.coward else ""), "o": o}
 		"slum":
 			var c := {"food": Rules.slum_food(p)}

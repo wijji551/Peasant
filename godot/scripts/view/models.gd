@@ -255,6 +255,28 @@ static func _build(name: String, b: Mesher) -> void:
 			b.cyl(0.46, 0.46, 0.05, 10, 0, 1.6, 0, 0x3a2a1a).cyl(0.2, 0.26, 0.3, 8, 0, 1.64, 0, 0x3a2a1a).box(0.06, 0.3, 0.2, 0.18, 1.8, 0, 0xd8b040)
 			b.box(0.2, 0.24, 0.12, 0.3, 0.6, 0.24, 0xc9a040)
 		# the glowing bits (eyes, the candle), drawn with their own bright material
+		"tenant":                                            # the Previous Tenant: twice the size of a shambler, in a mouldy nightshirt and nightcap, with his rent book
+			b.box(0.3, 0.5, 0.32, -0.22, 0, 0, 0x4a5544).box(0.3, 0.5, 0.32, 0.22, 0, 0, 0x4a5544)
+			b.box(0.98, 1.0, 0.62, 0, 0.44, 0.04, 0xcfd2bd, 0, 0.16, 0).box(1.02, 0.14, 0.66, 0, 0.44, 0.02, 0xa9ad98, 0, 0.16, 0)   # the nightshirt, and its grubby hem
+			b.box(0.56, 0.5, 0.52, 0.03, 1.36, 0.24, 0x7f9c7a, 0, 0.12, 0.08)
+			b.box(0.2, 0.2, 0.86, -0.58, 1.08, 0.46, 0x7f9c7a, 0, -0.12, 0).box(0.2, 0.2, 0.86, 0.58, 1.0, 0.46, 0x7f9c7a, 0, 0.1, 0)
+			b.box(0.6, 0.16, 0.56, 0.03, 1.84, 0.2, 0xb9483c).cone(0.26, 0.6, 5, 0.1, 1.9, 0.12, 0xb9483c, 0, -0.5, -0.5).box(0.14, 0.14, 0.14, 0.42, 2.26, -0.12, 0xefe6cf)   # nightcap, with a bobble
+			b.box(0.3, 0.36, 0.08, 0.58, 0.98, 0.94, 0x6b3d2a).box(0.24, 0.3, 0.02, 0.58, 0.98, 0.99, 0xefe6cf)   # the rent book
+		"tenant_eyes":
+			b.box(0.11, 0.09, 0.05, -0.1, 1.56, 0.52, 0xfff0a0).box(0.11, 0.09, 0.05, 0.16, 1.6, 0.51, 0xfff0a0)
+		"chest":                                             # the chest that never arrived: iron-bound, with a seal
+			b.box(1.0, 0.5, 0.62, 0, 0, 0, P.wood2).box(1.04, 0.1, 0.66, 0, 0.5, 0, P.wood3).box(1.0, 0.16, 0.6, 0, 0.6, 0, P.wood2)
+			b.box(0.1, 0.78, 0.66, -0.34, 0, 0, P.iron).box(0.1, 0.78, 0.66, 0.34, 0, 0, P.iron).box(0.16, 0.2, 0.04, 0, 0.36, 0.32, 0xc9a13a)
+			b.cyl(0.09, 0.09, 0.03, 8, 0.28, 0.62, 0.3, 0x8e1f1f, 0, PI / 2, 0)
+		"chest_open":
+			b.box(1.0, 0.5, 0.62, 0, 0, 0, P.wood2).box(0.1, 0.52, 0.66, -0.34, 0, 0, P.iron).box(0.1, 0.52, 0.66, 0.34, 0, 0, P.iron)
+			b.box(1.0, 0.62, 0.14, 0, 0.46, -0.36, P.wood3, 0, -0.35, 0).box(0.9, 0.04, 0.5, 0, 0.46, 0, 0x2a1d14)
+		"messenger":                                         # the messenger who did not arrive, and his satchel
+			b.box(0.34, 0.2, 0.9, 0, 0.0, 0, 0x3b5a7a).box(0.3, 0.18, 0.5, 0, 0.0, -0.66, 0x5b4634).box(0.3, 0.26, 0.3, 0, 0.02, 0.62, 0xe9e4cf)
+			b.box(0.12, 0.1, 0.5, -0.32, 0.0, 0.2, 0xe9e4cf, 0.5).box(0.12, 0.1, 0.5, 0.32, 0.0, 0.3, 0xe9e4cf, -0.4)
+			b.box(0.4, 0.28, 0.3, 0.6, 0.0, -0.2, 0x7a4a2a).box(0.36, 0.05, 0.3, 0.3, 0.3, 0.6, 0x9b2c2c).cone(0.06, 0.4, 4, 0.36, 0.34, 0.6, 0xefe6cf)   # satchel; hat with a feather
+		"card":                                              # a library card, lying about
+			b.box(0.36, 0.03, 0.26, -0.5, 0.42, 0, 0xf3ead2).box(0.24, 0.035, 0.03, -0.5, 0.42, 0.06, 0x3b3340).box(0.2, 0.035, 0.03, -0.52, 0.42, -0.04, 0x3b3340)
 		"shamb_eyes":
 			b.box(0.09, 0.07, 0.05, -0.07, 1.3, 0.47, 0xe4ffb0).box(0.09, 0.07, 0.05, 0.15, 1.33, 0.46, 0xe4ffb0)
 		"skel_eyes":

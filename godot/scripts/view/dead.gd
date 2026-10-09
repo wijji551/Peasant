@@ -3,9 +3,9 @@ extends Node3D
 ## MultiMesh: every one of them is a transform and a colour, as in the web version. A flash when hit, a lean
 ## back when stunned or pinned, greener when frightened, redder when cracked open by a Shatter.
 
-const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord"]
-const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55]
-const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2]
+const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord", "tenant"]
+const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55, 1.25]
+const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4]
 
 var fx: Node3D                       # for the puffs when they are hit and when they go
 var _body := []                      # MultiMesh per kind

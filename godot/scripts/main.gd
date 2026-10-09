@@ -610,6 +610,9 @@ func inv_do(a: String, arg) -> void:
 	var p := me
 	if a == "eq" and (arg >= p.inv.size()):
 		return
+	if a == "eq" and not D.SLOTK.has(D.IT[p.inv[arg]].s):                  # a paper: nothing to put on
+		hud.banner(D.it_cap(p.inv[arg]), D.IT[p.inv[arg]].note + ".", 3.5)
+		return
 	if a == "eq" and not Rules.can_use(p, p.inv[arg]):
 		Sound.play("no"); hud.banner("Not yet", "%s needs %s. The book is in the library." % [D.it_cap(p.inv[arg]), Notices.book_need(D.IT[p.inv[arg]].need)], 3.0)
 		return
@@ -715,6 +718,11 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
 		"bellring": world.ring_bell(); Sound.play("bell", 1.0)
 		"hop": F.puff(ev[1], 0.6, ev[2], 8, F.C_WOOD, 2.5)
+		"tenant":
+			Sound.play("steward", 1.0, Vector2(ev[1], ev[2])); F.ring(ev[1], ev[2], 3.0, 20, F.C_DUST)
+			hud.banner("The Previous Tenant", "Something big is getting up out of the rubble, in its nightshirt. Fight it, or run: it will not follow far.", 4.5)
+		"chest":
+			Sound.play("find"); hud.banner("A chest!", "A messenger lies beside it. He did not make it to Thornhallow. Hold %s to open it." % Keys.name("interact"), 4.0)
 		"rider":
 			world.rider_come(); Sound.play("hooves", 0.9)
 			get_tree().create_timer(3.5).timeout.connect(func(): Sound.play("nail", 0.8))
@@ -1051,6 +1059,12 @@ func _test_hook() -> void:
 	if shot == "":
 		return
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
+	if OS.get_environment("DTV_FINDS") != "" and _frame == at + 2 and me:   # for pictures: the Previous Tenant and the lost chest, beside the player
+		R.chest = {"x": me.x + 3.0, "z": me.z - 2.0, "from": 0, "road": 0, "seen": true, "open": false, "rot": 0.4}
+		var tn := R.spawn_undead(D.U_TENANT, me.x - 3.5, me.z - 2.5)
+		tn.state = "walk"; tn.stun = 999; tn.r = 0.3
+		var sh := R.spawn_undead(0, me.x - 6.0, me.z - 2.5)
+		sh.state = "walk"; sh.stun = 999; sh.r = 0.2
 	if OS.get_environment("DTV_BAILIFF") != "" and _frame == at + 10:   # for pictures: Robert Bailiff, talking
 		R.bail_line = D.BAILIFF_TALK[0][1]; R.bail_t = 30.0
 	if OS.get_environment("DTV_LETTER") != "" and R.letters.is_empty():   # for pictures: letters from the castle, and the rider at DTV_LETTER frames

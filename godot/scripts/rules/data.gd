@@ -155,7 +155,23 @@ static func _grades() -> Array:
 		o.tint = [1.12, 1.18, 1.3]
 		out.append(o)
 	return out
-static var IT: Array = _fill(_IT + _grades(), _IT_DEF)
+## Things added later go on the end, so that every earlier thing keeps its number (saved games remember things by number).
+## s "c": a paper, kept in the backpack and handed in somewhere, never worn.
+const _MORE := [
+	{"n": "library card", "s": "c", "tier": "paper", "pool": "card", "note": "Hand it in at the library to give up one of your books and take up another, a rank behind where you were"},
+]
+static var IT: Array = _fill(_IT + _grades() + _MORE, _IT_DEF)
+const I_CARD := 47
+## The chest that never arrived: who sent it, and the note inside.
+const CHEST_FROM := [
+	["the Mayor of Nether Wopping", "To the brave peasants of Thornhallow, with the Mayor’s admiration, from a safe distance."],
+	["the Dowager Duchess of Hallowshire", "For the poor dear villagers. Do try not to be eaten. The Duchess."],
+	["the Bishop of Mirewater", "A collection was taken. Some of it is here. Pray for the rest."],
+	["the Guild of Master Thatchers", "From one roof to another. Do not spend it on the Bailiff."],
+	["a clerk to Their Majesties", "Their Majesties have been informed of your situation and are appalled. Enclosed: the sum of what could be found in the coach."],
+	["Lord Aldred’s second cousin, who feels responsible", "I told him not to let the castle to a foreigner. I am so sorry. Please accept this."],
+]
+const CHEST_ROADS := ["out to the west", "out to the east", "south, towards the river"]
 ## crude id -> chipped id, base -> crude id, base -> steel id
 static func crude_of(base: int) -> int:
 	return 29 + CRUDE_W.find(base) * 2
@@ -261,10 +277,13 @@ const _UN := [
 	{"name": "the Coachman", "hp": 1100.0, "spd": 6.0, "dmg": 22.0, "sdmg": 999.0, "kdmg": 40.0, "cd": 1.5, "r": 1.3, "boss": true, "hearse": true, "first": 14},
 	{"name": "the Captain of the Guard", "hp": 1500.0, "spd": 1.45, "dmg": 24.0, "sdmg": 45.0, "kdmg": 10.0, "cd": 1.3, "r": 0.8, "boss": true, "armour": true, "first": 21},
 	{"name": "the Lord", "hp": 2600.0, "spd": 1.6, "dmg": 30.0, "sdmg": 60.0, "kdmg": 25.0, "cd": 1.2, "r": 0.8, "boss": true, "lord": true, "first": 30},
+	{"name": "the Previous Tenant", "hp": 260.0, "spd": 2.7, "dmg": 16.0, "sdmg": 14.0, "kdmg": 6.0, "cd": 1.15, "r": 0.6, "tenant": true, "first": 99, "cost": 6.0},
 ]
 const _UN_DEF := {"rng": 0.0, "bony": false, "boss": false, "climb": false, "dig": false, "fly": false, "armour": false, "ghost": false,
-	"ram": false, "hearse": false, "lord": false, "first": 1, "cost": 1.0}
+	"ram": false, "hearse": false, "lord": false, "tenant": false, "first": 1, "cost": 1.0}
 static var UN: Array = _fill(_UN, _UN_DEF)
+const U_TENANT := 13                 # the Previous Tenant: what sometimes comes up when the outer ruins are searched by day
+const TENANT_CHANCE := 0.05          # a search: one in twenty, and a little more each week
 const U_STEWARD := 3
 const U_GHOUL := 4
 const U_DIGGER := 5

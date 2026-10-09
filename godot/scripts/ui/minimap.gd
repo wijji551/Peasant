@@ -77,6 +77,9 @@ func _draw() -> void:
 	mark.call(D.STEEL_MINE.x, D.STEEL_MINE.z, Color("7d93b5"))
 	draw_circle(Vector2(mx(D.MILL.x), mz(D.MILL.z)), 3.0, Color("8b6b47"))
 	mark.call(R.JETTY.x, R.JETTY.z + 2, Color("8fd0e0"))
+	if not R.chest.is_empty() and R.chest.seen and not R.chest.open:      # the chest that never arrived, once somebody has seen it
+		draw_rect(Rect2(mx(R.chest.x) - 3.5, mz(R.chest.z) - 3, 7, 6), Color("2f2318"))
+		draw_rect(Rect2(mx(R.chest.x) - 2.5, mz(R.chest.z) - 2, 5, 4), Color("f0c040"))
 	var L := Map.ruin_layout(R.gseed, R.day)
 	var lore := me != null and Rules.rk(me, 8) >= 2
 	for k in [1, 2]:
