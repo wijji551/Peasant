@@ -32,6 +32,26 @@ static func item_sub(p: E.Player, id: int) -> String:   # one line about a thing
 	return t
 
 
+## The Lord of Ashhollow's letters: one of them (page "l<n>"), or the list of them all.
+static func letters_page(R: Rules, page: String, title: String, intro: String, back: String) -> Dictionary:
+	var o := []
+	var one := int(page.substr(1)) if page.begins_with("l") and page != "letters" else -1
+	if one >= 0 and one < R.letters.size():
+		var L: Dictionary = D.LETTERS[R.letters[one][0]]
+		o.append({"text": "To the Occupants, Thornhallow."})
+		o.append({"text": L.t})
+		o.append({"text": D.LETTER_SIGN})
+		if R.letters.size() > 1: o.append({"label": "His earlier letters", "sub": "%d in all." % R.letters.size(), "ok": true, "page": "letters"})
+		if back != "": o.append({"label": back, "sub": "", "ok": true, "page": ""})
+		return {"title": "%s: %s" % ["The Lord’s letter" if back != "" else title, L.sub], "intro": "It came on the morning of day %d, by headless rider." % R.letters[one][1], "o": o}
+	o.append({"head": "The newest first"})
+	for i in range(R.letters.size() - 1, -1, -1):
+		var L: Dictionary = D.LETTERS[R.letters[i][0]]
+		o.append({"label": "Day %d: %s" % [R.letters[i][1], L.sub], "sub": L.t.substr(0, 78) + "…", "ok": true, "page": "l%d" % i})
+	if back != "": o.append({"label": back, "sub": "", "ok": true, "page": ""})
+	return {"title": "The Lord’s letters", "intro": intro if intro != "" else "All of them, nailed one on top of another.", "o": o}
+
+
 static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 	var o := []
 	match id:
@@ -166,6 +186,36 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var fee := R.guard_fee()
 			o.append({"label": "Hire a village guard for tonight", "sub": ("%s%s. He holds %s until dawn. %d of the %d guards are still free." % [D.coins(fee), " (the Bailiff has been jeered at today)" if R.bail_mood > 0 else "", D.POST_NAMES[R.guards % D.POSTS.size()], left, D.GUARDS]) if left > 0 else "Every guard is out tonight already.", "ok": left > 0 and p.coin >= fee, "a": "guard"})
 			return {"title": "Robert Bailiff’s back door", "intro": "You knock. After a while a voice says the Bailiff is not at home, and that his guards cost %s a night, paid in advance, through the letterbox." % D.coins(fee), "o": o}
+		"board":
+			if page == "letters" or page.begins_with("l"):
+				return letters_page(R, page, "The Lord’s letters", "Somebody has been copying the Lord of Ashhollow’s letters out and pinning them up here, with the spelling corrected.", "Back to the notices")
+			var md := R.mday()
+			var w: String = D.WEATHER_LINE.get(R.weather, "")
+			o.append({"head": "From the castle"})
+			o.append({"label": "The Lord’s letters", "sub": "%d so far. He writes every other morning, to complain." % R.letters.size() if R.letters.size() else "None yet. He is said to be a great writer of letters.", "ok": R.letters.size() > 0, "page": "letters"})
+			o.append({"head": "Today"})
+			o.append({"text": w if w != "" else "A fine, clear day. Make the most of it."})
+			if R.merchant >= 0 and R.phase == "day":
+				o.append({"text": "A merchant is in: %s, by the market, until dusk." % D.MERCHANTS[R.merchant].name})
+			o.append({"head": "Tonight"})
+			var tl := R.tonight_lines()
+			for t in tl: o.append({"text": t})
+			if tl.is_empty(): o.append({"text": "The usual. More of them than last night."})
+			var nb := 0
+			for d in D.BOSS_NIGHTS:
+				if R.last_day >= D.MONTH and int(d) > R.day and (nb == 0 or int(d) < nb): nb = int(d)
+			if nb: o.append({"text": "Something worse is expected on night %d: %s." % [nb, D.UN[D.BOSS_NIGHTS[nb]].name]})
+			o.append({"head": "Pinned up"})
+			var rng := RandomNumberGenerator.new()
+			rng.seed = R.gseed * 3 + R.day * 977
+			var pool := range(D.NOTICES.size())
+			for i in 3:
+				var j := rng.randi() % pool.size()
+				o.append({"text": D.NOTICES[pool[j]]})
+				pool.remove_at(j)
+			return {"title": "The notice board", "intro": "Day %d of %d, week %d. Robert Bailiff has the notices pinned up fresh each morning, by a servant, from the inside." % [R.day, R.last_day, Rules.week_of(md)], "o": o}
+		"letter":
+			return letters_page(R, page if page != "" else "l%d" % (R.letters.size() - 1), "A letter from the castle", "", "")
 		"window":
 			o.append({"label": "Talk to Robert Bailiff", "sub": "He has opinions. Mostly about you.", "ok": true, "a": "btalk"})
 			o.append({"label": "Knock on his door", "sub": "It will not open. It never opens.", "ok": true, "a": "bknock"})

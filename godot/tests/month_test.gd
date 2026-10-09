@@ -59,10 +59,10 @@ func _init() -> void:
 	ok("the bosses: the Steward 7, the Coachman 14, the Captain 21, the Lord 30",
 		Rules.boss_of(7, 30) == D.U_STEWARD and Rules.boss_of(14, 30) == D.U_COACH and Rules.boss_of(21, 30) == D.U_CAPTAIN and Rules.boss_of(30, 30) == D.U_LORD and Rules.boss_of(13, 30) == -1)
 	var size := func(d: int, n: int) -> float:
-		var c: Array = Rules.night_plan(d, n).c
+		var P: Dictionary = Rules.night_plan(d, n)
 		var t := 0.0
-		for k in c.size(): t += c[k] * D.UN[k].cost
-		return t
+		for k in P.c.size(): t += P.c[k] * D.UN[k].cost
+		return t * P.crowd                              # a capped horde is fewer and tougher: the same weight
 	ok("the horde keeps growing through the month", size.call(14, 4) > size.call(7, 4) and size.call(30, 4) > size.call(21, 4), [roundi(size.call(7, 4)), roundi(size.call(14, 4)), roundi(size.call(21, 4)), roundi(size.call(30, 4))])
 	ok("and eases off at the start of a week", size.call(8, 1) < size.call(7, 1))
 	ok("nights get longer, but not endless", Rules.night_plan(30, 1).dur > Rules.night_plan(7, 1).dur and Rules.night_plan(30, 1).dur < 300, Rules.night_plan(30, 1).dur)
@@ -260,6 +260,31 @@ func _init() -> void:
 	ok("the short game is seven", R.phase == "won" and days == 7, [R.phase, days])
 	var sv := R.save_data()
 	ok("the length of the game is saved", sv.last == 7)
+
+	# ---------- one to eight players
+	var heads := func(d: int, n: int) -> int:
+		var t := 0
+		for v in Rules.night_plan(d, n).c: t += v
+		return t
+	ok("alone, a night is never cut down", Rules.night_plan(30, 1).crowd == 1.0 and heads.call(30, 1) < D.NIGHT_HEADS)
+	var p8: Dictionary = Rules.night_plan(30, 8)
+	ok("eight players, the last night: about 420 rise, each several times as tough", absi(heads.call(30, 8) - D.NIGHT_HEADS) < 12 and p8.crowd > 3.0 and p8.crowd < 3.6, [heads.call(30, 8), p8.crowd])
+	ok("and every kind still comes", p8.c[D.U_RAM] >= 1 and p8.c[D.U_WRAITH] >= 1)
+	var X := Rules.new()
+	X.new_game([{"id": 1, "name": "A", "col": 0}, {"id": 2, "name": "B", "col": 1}])
+	ok("a pair start with four followers each", X.pm == 4 and X.peasants.size() == 8, [X.pm, X.peasants.size()])
+	X.new_game([{"id": 1, "name": "A", "col": 0}, {"id": 2, "name": "B", "col": 1}, {"id": 3, "name": "C", "col": 2}, {"id": 4, "name": "D", "col": 3}])
+	ok("four start with three each, and build twice as stout", X.pm == 3 and is_equal_approx(X.stout(), 2.0), [X.pm, X.stout()])
+	var wl: E.Struct = X.structs[0]
+	wl.built = true; wl.hp = wl.mhp
+	X.day = 1; X.start_night(); X.night.q = []
+	var sh := X.spawn_undead(0, wl.x, wl.z - 1.0)
+	sh.state = "walk"; sh.cd = 0
+	X.hit_struct(sh, D.UN[0], wl)
+	ok("a blow on their wall does half what it would alone", is_equal_approx(wl.mhp - wl.hp, D.UN[0].sdmg / 2.0), wl.mhp - wl.hp)
+	X.day = 7; X.start_night()
+	var st := X.spawn_undead(D.U_STEWARD, 0.0, D.SPAWN_Z)
+	ok("the Steward is worth the name, and bigger for four", st.hp == roundf(D.UN[D.U_STEWARD].hp * 2.5) and D.UN[D.U_STEWARD].hp >= 800, st.hp)
 
 	var fails := lines.filter(func(l): return l.begins_with("FAIL")).size()
 	for l in lines: print(l)

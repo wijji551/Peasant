@@ -49,6 +49,9 @@ var bell: Node3D                          # the village bell, which swings when 
 var dummies: Array[Node3D] = []           # the straw dummies in the training yard, which wobble when hit
 var mill_sails: Node3D                    # the old mill's sails, turning slowly
 var maypole: Node3D                       # the maypole's ribbons and crown, which turn in the breeze
+var letter_paper: Node3D                  # the Lord's letter, nailed to the gatepost
+var rider: Node3D                         # the headless rider who brings it
+var _rider_t := -1.0
 var _bell_swing := 0.0
 var _dummy_hit: Array[float] = [0.0, 0.0, 0.0]
 
@@ -71,6 +74,7 @@ func _ready() -> void:
 	_keep()
 	_buildings()
 	_green()
+	_gatepost()
 	_farms()
 	_downs()
 
@@ -826,6 +830,48 @@ func _farms() -> void:
 
 
 
+## The gatepost inside the north gate, where the Lord of Ashhollow's letters are nailed up, and the rider who brings them.
+func _gatepost() -> void:
+	var at := Vector3(-4.2, 0, -19.4)
+	Build.box(self, Vector3(0.3, 2.3, 0.3), at, C.timber)
+	Build.box(self, Vector3(0.42, 0.12, 0.42), at + Vector3(0, 2.3, 0), C.wood3)
+	letter_paper = Node3D.new()
+	letter_paper.position = at + Vector3(0, 1.15, 0.17)
+	letter_paper.visible = false
+	add_child(letter_paper)
+	Build.box(letter_paper, Vector3(0.62, 0.78, 0.03), Vector3(0, 0, 0), Color("f3ead2"), 0, 0, 0.06)
+	for i in 5:                                     # his handwriting, and his seal
+		Build.box(letter_paper, Vector3(0.44 - (i % 2) * 0.1, 0.035, 0.012), Vector3(-0.02, 0.6 - i * 0.1, 0.02), Color("3b3340"), 0, 0, 0.06)
+	Build.cyl(letter_paper, 0.07, 0.07, 0.03, Vector3(0.16, 0.1, 0.03), Color("8e1f1f"), 8, 0, PI / 2)
+	Build.box(letter_paper, Vector3(0.05, 0.05, 0.05), Vector3(0, 0.74, 0.02), C.iron)
+	rider = Node3D.new()
+	rider.visible = false
+	add_child(rider)
+	var black := Color("26222e")
+	var coat := Color("5a2330")
+	Build.box(rider, Vector3(0.62, 0.66, 1.7), Vector3(0, 0.95, 0), black)                    # the horse
+	Build.box(rider, Vector3(0.36, 0.95, 0.46), Vector3(0, 1.3, 0.92), black, 0, 0.55)
+	Build.box(rider, Vector3(0.3, 0.34, 0.7), Vector3(0, 2.0, 1.42), black, 0, 0.25)
+	for sx in [-0.2, 0.2]:
+		Build.box(rider, Vector3(0.14, 0.95, 0.16), Vector3(sx, 0, 0.62), black, 0, -0.2)
+		Build.box(rider, Vector3(0.14, 0.95, 0.16), Vector3(sx, 0, -0.66), black, 0, 0.2)
+		Build.box(rider, Vector3(0.07, 0.07, 0.04), Vector3(sx * 0.5, 2.2, 1.74), Color("9bff7a"))   # its eyes
+	Build.box(rider, Vector3(0.14, 0.7, 0.14), Vector3(0, 0.95, -0.95), black, 0, -0.5)        # tail
+	Build.box(rider, Vector3(0.56, 0.72, 0.36), Vector3(0, 1.6, -0.05), coat)                  # the rider, to the collar
+	Build.box(rider, Vector3(0.7, 0.16, 0.44), Vector3(0, 2.3, -0.05), Color("3a3144"))
+	Build.cyl(rider, 0.1, 0.12, 0.1, Vector3(0, 2.46, -0.05), Color("d9d2c0"), 7)              # and no further
+	Build.box(rider, Vector3(0.74, 0.9, 0.06), Vector3(0, 1.3, -0.32), Color("43182a"), 0, -0.25)   # cloak
+	for sx in [-0.34, 0.34]:
+		Build.box(rider, Vector3(0.16, 0.6, 0.18), Vector3(sx, 1.05, 0.08), coat)
+	Build.box(rider, Vector3(0.14, 0.14, 0.5), Vector3(0.36, 1.86, 0.2), coat)                 # an arm, holding out a letter
+	Build.box(rider, Vector3(0.03, 0.2, 0.28), Vector3(0.36, 1.98, 0.5), Color("f3ead2"))
+
+
+## A letter has come: the headless rider gallops down the castle road to the gate, stops, and goes home.
+func rider_come() -> void:
+	_rider_t = 0.0
+
+
 func ring_bell() -> void:
 	_bell_swing = 1.0
 
@@ -841,5 +887,16 @@ func _process(delta: float) -> void:
 	for i in dummies.size():
 		_dummy_hit[i] = maxf(0.0, _dummy_hit[i] - delta * 2.5)
 		dummies[i].rotation.x = sin(_dummy_hit[i] * 14.0) * 0.25 * _dummy_hit[i]
+	if _rider_t >= 0.0 and rider:
+		_rider_t += delta
+		var t := _rider_t
+		var go := 3.4                                 # seconds each way
+		var z := lerpf(-70.0, -24.8, clampf(t / go, 0, 1)) if t < go + 2.2 else lerpf(-24.8, -70.0, clampf((t - go - 2.2) / go, 0, 1))
+		var moving := t < go or t > go + 2.2
+		rider.visible = true
+		rider.position = Vector3(1.0, absf(sin(t * 13.0)) * 0.16 if moving else 0.0, z)
+		rider.rotation = Vector3(-0.12 if moving else 0.0, PI if t > go + 2.2 else 0.0, 0)
+		if t > go * 2 + 2.2:
+			_rider_t = -1.0; rider.visible = false
 	if mill_sails: mill_sails.rotation.x += delta * 0.55
 	if maypole: maypole.rotation.y += delta * 0.12

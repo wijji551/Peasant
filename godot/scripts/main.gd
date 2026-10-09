@@ -550,7 +550,7 @@ func option(i: int) -> void:
 	var d := Notices.data(R, _panel, me, _page)
 	if d.is_empty():
 		return
-	var opts: Array = d.o.filter(func(x): return not x.has("head"))
+	var opts: Array = d.o.filter(func(x): return not x.has("head") and not x.has("text"))
 	if i < 0 or i >= opts.size():
 		return
 	var o: Dictionary = opts[i]
@@ -669,6 +669,10 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"raise": F.puff(ev[1], 0.3, ev[2], 14, F.C_GHOST, 3); Sound.play("raise", 0.7, Vector2(ev[1], ev[2]))
 		"dig": F.puff(ev[1], 0.2, ev[2], 16, F.C_WOOD, 3); Sound.play("stone", 0.9, Vector2(ev[1], ev[2]))
 		"bellring": world.ring_bell(); Sound.play("bell", 1.0)
+		"rider":
+			world.rider_come(); Sound.play("hooves", 0.9)
+			get_tree().create_timer(3.5).timeout.connect(func(): Sound.play("nail", 0.8))
+			get_tree().create_timer(5.6).timeout.connect(func(): Sound.play("hooves", 0.6))
 		"knock": Sound.play("knock", 1.0, Vector2(ev[1], ev[2]))
 		"jeer": Sound.play("jeer", 1.0, Vector2(ev[1], ev[2]))
 		"dummy":
@@ -795,6 +799,7 @@ func _draw(delta: float) -> void:
 	_keep_a = lerpf(_keep_a, 0.3 if see else 1.0, minf(1.0, delta * 7))
 	if not see and _keep_a > 0.985: _keep_a = 1.0
 	world.keep_alpha(_keep_a)
+	world.letter_paper.visible = R.letters.size() > 0
 	# the ring under whatever holding E would work on, and the ghost of a thing being placed
 	var it = R.find_interact(me) if _build_sel == "" and R.live() and me.state == "ok" else null
 	_ring.visible = it != null
@@ -916,6 +921,8 @@ func _hud_update(delta: float) -> void:
 			if win.is_open("notice"): win.close()
 		elif not win.visible or win.kind == "notice" or win.kind == "pack" or win.kind == "dawn":
 			menus.notice(_panel, _page)
+			if _panel == "letter" and R.letter_new and win.is_open("notice"):   # it has been read: take the "new" off it
+				R.letter_new = false; cmd({"t": "act", "a": "lread"})
 	elif win.is_open("notice"):
 		win.close()
 	if _panel == "pack":
@@ -957,6 +964,11 @@ func _test_hook() -> void:
 	var at := int(OS.get_environment("DTV_SHOT_AT")) if OS.get_environment("DTV_SHOT_AT") != "" else 60
 	if OS.get_environment("DTV_BAILIFF") != "" and _frame == at + 10:   # for pictures: Robert Bailiff, talking
 		R.bail_line = D.BAILIFF_TALK[0][1]; R.bail_t = 30.0
+	if OS.get_environment("DTV_LETTER") != "" and R.letters.is_empty():   # for pictures: letters from the castle, and the rider at DTV_LETTER frames
+		for i in [0, 6, 5]: R.letters.append([i, R.letters.size() * 2 + 2])
+		R.letter_new = true
+	if OS.get_environment("DTV_LETTER") == "hold": world._rider_t = 4.0      # the rider, waiting at the gate
+	elif OS.get_environment("DTV_LETTER") != "" and _frame == int(OS.get_environment("DTV_LETTER")): world.rider_come()
 	if OS.get_environment("DTV_MERCHANT") != "" and _frame == 2:   # for pictures: a merchant in
 		R.merchant = int(OS.get_environment("DTV_MERCHANT")); R.make_wares()
 	if OS.get_environment("DTV_PRIEST") != "" and me:     # for pictures: an apprentice priest, smiting and praying

@@ -1,6 +1,8 @@
 extends SceneTree
 ## A time-limited bot plays the whole week solo to see how hard it is. Travel costs walking time; fighting uses real movement.
-## Run:  godot --headless --path godot -s res://tests/bot_week.gd -- [steady|walls]
+## Run:  godot --headless --path godot -s res://tests/bot_week.gd -- [steady|walls|month]
+## "month" plays on past the first week for all thirty nights: it also mends the keep, bands the gate with iron,
+## sits a class of holy studies (and blesses its weapon each day), and forges steel when it has the learning.
 ## The same bot as the web version's test/bot-week.js, so the two can be compared.
 
 var R: Rules
@@ -92,7 +94,7 @@ func get_res(res: String, n: int) -> void:
 	if me.get(res) >= n or not day_ok(): return
 	if res == "wood":
 		wood(n); return
-	var at := Vector2(R.QUARRY.x - R.QUARRY.hw - 1.2, R.QUARRY.z) if res == "stone" else Vector2(R.MINE.x - R.MINE.dir * 0.8, R.MINE.z) if res == "iron" else Vector2(-56, 30)
+	var at := Vector2(R.QUARRY.x - R.QUARRY.hw - 1.2, R.QUARRY.z) if res == "stone" else Vector2(R.MINE.x - R.MINE.dir * 0.8, R.MINE.z) if res == "iron" else Vector2(D.STEEL_MINE.x - 1.4, D.STEEL_MINE.z) if res == "steel" else Vector2(-56, 30)
 	go(at.x, at.y)
 	hold(120, func(): return me.get(res) >= n)
 
@@ -151,10 +153,43 @@ func fight() -> Dictionary:
 	return st
 
 
+## After the first week: the keep, the gate, holy water for the wraiths, and steel.
+func later() -> Array:
+	var did := []
+	if R.keepHp < D.KEEP_HP - 60 and day_ok():
+		var want := mini(cap_n(), ceili((D.KEEP_HP - R.keepHp) / 40.0))
+		get_res("stone", want); get_res("wood", want)
+		go(D.KEEP_X + D.KEEP_H + 1.0, D.KEEP_Z)
+		hold(40, func(): return R.keepHp >= D.KEEP_HP or me.wood < 1 or me.stone < 1)
+		did.append("mended keep to %d" % R.keepHp)
+	for s in slots():
+		if s.k == "gate" and s.built and not s.re and day_ok():
+			get_res("iron", 8)
+			if me.iron >= 8:
+				go(s.x, s.z + 1.8); hold(3, func(): return s.re); did.append("banded gate")
+	if R.day >= 15 and me.holy < 1 and day_ok():
+		act("priest", "study"); fast(D.HOLY_TIME + 3.0, func(): return me.holy < 1 and day_ok()); did.append("holy studies %d" % me.holy)
+	if me.holy >= 1 and not (me.bless & 1):
+		R.do_act(me, "bless", "w"); did.append("blessed")
+	if me.books[3] >= 4:
+		for it in [40, 45, 44, 46]:
+			var I: Dictionary = D.IT[it]
+			var slot: String = {"w": "wpn", "h": "head", "b": "body", "o": "off"}[I.s]
+			if me.get(slot) == it or not day_ok(): continue
+			var c: Dictionary = Rules.forge_cost(me, I.cost)
+			get_res("steel", c.get("steel", 0))
+			if c.get("wood", 0): get_res("wood", c.wood)
+			if day_ok():
+				act("smithy", "forge", it); did.append("steel %s" % I.n)
+			break                                     # one piece a day
+	return did
+
+
 func run() -> Array:
 	var lines := []
 	var n := 1
-	while n <= 7 and R.phase == "day":
+	var last := 30 if mode == "month" else 7
+	while n <= last and R.phase == "day":
 		var did := []
 		if n == 1: act("library", "book", 0)
 		var nb := me.books.filter(func(r): return r > 0).size()
@@ -190,7 +225,8 @@ func run() -> Array:
 				get_res("iron", 2); get_res("wood", 4)
 				if day_ok(): act("smithy", "forge", D.crude_of(2)); did.append("crude spear")
 			var wants := [null, null, ["forge", 2 if me.books[3] else D.crude_of(2), {"iron": 4, "wood": 4}], ["forge", 19, {"iron": 5}], ["forge", 22, {"iron": 10}], ["forge", 25, {"iron": 4, "wood": 4}], ["armp", null, {"iron": 9, "wood": 6}], ["armp", null, {"iron": 9, "wood": 6}]]
-			var want = wants[n]
+			var want = wants[n] if n < wants.size() else null
+			if n > 7: did.append_array(later())
 			if want and day_ok():
 				get_res("iron", want[2].iron)
 				if want[2].has("wood"): get_res("wood", want[2].wood)

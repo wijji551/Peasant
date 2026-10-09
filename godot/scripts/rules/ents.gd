@@ -164,6 +164,9 @@ class Undead:
 	var hp := 0.0
 	var mhp := 0.0
 	var state := "rise"     # rise, walk, atk, stun, pile
+	var lx := 0.0           # where it was a few seconds ago, and how long since: one that is walking and getting nowhere is wedged
+	var lz := 0.0
+	var lt := 0.0
 	var t := 1.2
 	var cd := 0.0
 	var lane := 0.0

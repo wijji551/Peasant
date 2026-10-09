@@ -9,6 +9,7 @@ const PLACES := [
 	["Old ruins: search", 10.8, -15.4, 3.4], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
 	["Old mine: steel", -108.0, -44.0, 4.0], ["The old mill", 104.0, 30.0, 9.0], ["Merchant", "cart", 0.0, 3.2], ["Bailiff’s back door", -14.5, -16.4, 2.8],
+	["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
 ]
 
 var R: Rules
@@ -87,6 +88,11 @@ func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 					continue
 				x = 10.4; z = 23.0
 				_signs[i].text = D.MERCHANTS[R.merchant].name.capitalize()
+			"letter":
+				if not R.letter_new:
+					_signs[i].visible = false
+					continue
+				x = -4.2; z = -19.4
 			"ruin1", "ruin2":                          # the outer ruins: only once someone has found them today
 				var k := 1 if p[1] == "ruin1" else 2
 				var c: Dictionary = Map.ruin_layout(R.gseed, R.day).centres[k]

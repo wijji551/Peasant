@@ -21,11 +21,16 @@ It opens on a home screen: your name and colour, **Carry on** from the saved mor
 
    Better: a **village server** (`relay/` in the repository, with a step-by-step guide for a free Oracle Cloud machine). Everyone connects out to it, so no router needs to let anyone in; villages on it have five-letter codes. Set its address in the game's Options (or as `Net.DEFAULT_RELAY`). If it does not answer, hosting falls back to direct.
 
-The move to Godot is finished. What comes next is in the design doc's build order: Build 4 (the month) and Build 5 (polish).
+The move to Godot is finished, and so are the design doc's Build 4 and Build 5:
+
+6. **Build 4, the month: done.** Thirty nights in four weeks (or the short game: the month squeezed into seven). Six more kinds of the dead (ghouls, gravediggers, bat swarms, the Lord's guard, wraiths, coffin rams), a boss at the end of each week (the Steward, the Coachman and his hearse, the Captain of the Guard, the Lord of Ashhollow), weather that matters, travelling merchants and their jobs, village guards and mercenaries for hire, six contraptions, the Holy Book (an apprentice priest: Smite and Pray), titles from what you have read, a fourth book, and relics that do more with the right book.
+7. **Build 5, polish: done.** Robert Bailiff at his window (talk, knock, jeer), a village bell to ring, training dummies, peasants who talk, a smithy for everyone (crude, refined and steel), a land a third wider with an old steel mine and an old mill, a river that runs, a village green, half-timbered houses, the Lord's letters of complaint (brought by a headless rider), and a notice board with something on it. With many players, a horde too big to show comes as fewer, tougher dead.
+
+What is left is play-testing: the numbers for weeks 2 to 4, and for more than four players, are first guesses (see `docs/build-log.md` in the repository).
 
 ## Controls
 
-The same as the web version: **W A S D** move, **Space** or left click attacks, **Shift** or right click is your weapon's trick, hold **E** to do things (gather, build, rally, search, open a place's notice), **F** eats, **I** opens your backpack, **K** your skills, **X** swaps weapon, **G** uses what you carry, **Q** gives orders, **T** is the toilet break, **Tab** or **1** to **4** picks something to place, **R** says you are ready for the night, **Esc** closes things (or quits). In a notice, press the number or click.
+**W A S D** move, **Space** or left click attacks, **Shift** or right click is your weapon's trick, hold **E** to do things (gather, build, rally, search, open a place's notice), **F** eats, **I** opens your backpack, **K** your skills, **Z** and **C** are an apprentice priest's powers, **X** swaps weapon, **G** uses what you carry, **Q** gives orders, **T** is the toilet break, **Tab** or **1** to **5** picks something to place (5 steps through the contraptions), **R** says you are ready for the night, **Esc** closes things (or quits). In a notice, press the number or click.
 
 ## How it is laid out
 
@@ -37,7 +42,7 @@ The same as the web version: **W A S D** move, **Space** or left click attacks, 
 - `scripts/hud.gd`: the readouts.
 - `scripts/net/net.gd`: playing together: hosting, joining, the lobby, and what goes back and forth.
 - `scripts/audio/sound.gd`: everything you hear. `Sound.play("chop", 1.0, Vector2(x, z))` plays an effect, quieter further from the camera.
-- `tests/`: `rules_test.gd` (115 checks: the web version's 107, and the skills and the wandering ruins), `ui_test.gd` (31 checks of the menus and the sound, driven as a player would), `click_test.gd` (clicks the home screen and the game with the mouse; needs a window, not headless), `net_host.gd` and `net_client.gd` (co-op: run together by `net_test.sh`) and `bot_week.gd` (a bot plays the whole week).
+- `tests/`: `rules_test.gd` (the web version's checks, and the skills and the wandering ruins), `month_test.gd`, `holy_test.gd`, `merchant_test.gd`, `contr_test.gd`, `village_test.gd`, `smithy_test.gd` and `letters_test.gd` (one for each stage of Builds 4 and 5), `ui_test.gd` (the menus and the sound, driven as a player would), `click_test.gd` (clicks the home screen and the game with the mouse; needs a window, not headless), `net_host.gd` and `net_client.gd` (co-op: run together by `net_test.sh`), `bot_week.gd` (a bot plays the whole week, or the month) and `balance.gd` (the same night fought by 1, 2, 4 and 8 players, to compare).
 
 ## Tests
 
@@ -47,9 +52,11 @@ Run from this folder, with Godot on the command line:
     godot --headless --path . -s res://tests/ui_test.gd
     godot --headless --path . -s res://tests/bot_week.gd
     godot --headless --path . -s res://tests/bot_week.gd -- walls
+    godot --headless --path . -s res://tests/bot_week.gd -- month
+    godot --headless --path . -s res://tests/balance.gd -- 1,7,14 1,2,4,8
     tests/net_test.sh godot          # co-op: a host and a friend, two copies of the game, on one computer
     tests/net_test.sh godot relay    # the same, through a village server run here too
 
-All 115 rule checks pass. The careful bot holds all seven nights; the bot that only builds walls falls on night 3, as it does in the web version (night 2 to 4).
+Every check passes. The careful bot holds the first seven nights; the bot that only builds walls falls on night 3, as it does in the web version (night 2 to 4).
 
 Tested in Godot 4.7.2 on Linux with the Compatibility renderer and a software graphics driver. Not yet seen on this project's own settings (Forward+ on Direct3D 12), where the lighting may come out brighter or darker.

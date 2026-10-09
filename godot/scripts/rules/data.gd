@@ -27,11 +27,13 @@ const NIGHT_BASE := 28.0
 const NIGHT_PER_PLAYER := 1.0
 const NIGHT_GROWTH := 1.24
 const ALIVE_CAP := 220
+const NIGHT_HEADS := 420             # the most that rise in one night. A bigger horde than that comes as fewer, tougher dead instead
 const NIGHT_RISE := 80.0             # seconds the dead keep rising on night 1
 const NIGHT_RISE_DAY := 10.0         # and how much longer each night after
 const CARRY := 20
 const POSSE_MAX := 3
 const POSSE_SOLO := 5
+const POSSE_PAIR := 4                # two players start with four followers each: a pair is short-handed for two hordes
 const POP_PER_PLAYER := 6
 const MAX_BODIES := 3
 const PACK_MAX := 6
@@ -247,7 +249,7 @@ const _UN := [
 	{"name": "shambler", "hp": 50.0, "spd": 1.5, "dmg": 9.0, "sdmg": 7.0, "kdmg": 3.0, "cd": 1.3, "r": 0.5, "first": 1},
 	{"name": "skeleton", "hp": 16.0, "spd": 2.9, "dmg": 6.0, "sdmg": 3.0, "kdmg": 2.0, "cd": 0.9, "r": 0.4, "bony": true, "first": 2, "cost": 0.6},
 	{"name": "skeleton archer", "hp": 14.0, "spd": 2.4, "dmg": 6.0, "sdmg": 2.0, "kdmg": 2.0, "cd": 2.4, "r": 0.4, "rng": 11.0, "bony": true, "first": 4, "cost": 0.8},
-	{"name": "the Steward", "hp": 520.0, "spd": 1.3, "dmg": 10.0, "sdmg": 8.0, "kdmg": 5.0, "cd": 1.2, "r": 0.75, "boss": true, "first": 7},
+	{"name": "the Steward", "hp": 800.0, "spd": 1.3, "dmg": 10.0, "sdmg": 8.0, "kdmg": 5.0, "cd": 1.2, "r": 0.75, "boss": true, "first": 7},
 	{"name": "ghoul", "hp": 34.0, "spd": 4.2, "dmg": 8.0, "sdmg": 5.0, "kdmg": 2.0, "cd": 0.8, "r": 0.45, "climb": true, "first": 8, "cost": 1.2},
 	{"name": "gravedigger", "hp": 44.0, "spd": 1.8, "dmg": 9.0, "sdmg": 6.0, "kdmg": 3.0, "cd": 1.1, "r": 0.5, "dig": true, "first": 10, "cost": 1.5},
 	{"name": "bat swarm", "hp": 18.0, "spd": 4.8, "dmg": 3.0, "sdmg": 0.0, "kdmg": 4.0, "cd": 0.7, "r": 0.6, "fly": true, "first": 12, "cost": 0.8},
@@ -302,6 +304,70 @@ const STATIONS := [
 	{"id": "bailiff", "x": -14.5, "z": -16.6, "r": 2.4, "name": "Robert Bailiff’s back door", "verb": "knock at Robert Bailiff’s back door"},
 	{"id": "window", "x": -14.5, "z": -8.2, "r": 2.6, "name": "Robert Bailiff’s front door", "verb": "call up to Robert Bailiff’s window"},
 	{"id": "bell", "x": 5.5, "z": -8.6, "r": 1.8, "name": "the village bell", "verb": "ring the village bell"},
+	{"id": "board", "x": -5.5, "z": -8.5, "r": 1.8, "name": "the notice board", "verb": "read the notice board"},
+	{"id": "letter", "x": -4.2, "z": -18.4, "r": 1.6, "name": "the gatepost", "verb": "read the letter nailed to the gatepost"},
+]
+# --- The Lord of Ashhollow's letters of complaint. A headless rider nails one to the gatepost at first light.
+# why: what must have happened first (a count in Rules.seen, or "kills"); the rest are sent when there is nothing new to complain of.
+const LETTERS := [
+	{"id": "intro", "sub": "An introduction", "t": "Sirs, I write as your neighbour at the Castle. Several of my household walked down last night to introduce themselves and were, I am told, struck repeatedly with a pitchfork. I am sure this was a misunderstanding. They will call again this evening, and every evening, until it is cleared up."},
+	{"id": "steward", "sub": "My Steward", "t": "Sirs, You have broken my Steward. He had been with the family four hundred years, three hundred of them after his death, and never missed a day. I shall now have to do my own accounts, and I warn you that I round up."},
+	{"id": "coach", "sub": "The hearse", "t": "Sirs, The hearse was an antique. It had carried eleven generations of my family to the vault, and nine of them back again. The Coachman is inconsolable, though with him it is hard to tell. I am informed that you used a wall."},
+	{"id": "captain", "sub": "My Captain of the Guard", "t": "Sirs, My Captain of the Guard has returned without his guard, his standard, or the lower half of himself. He asks me to say that it was a fair fight. I have told him that is exactly what was wrong with it."},
+	{"id": "final", "sub": "A visit", "t": "Sirs, I have enjoyed our correspondence, though I notice that I have done all of it. I shall call in person this evening, at about dusk, with everybody. Please do not go to any trouble."},
+	{"id": "tar", "why": "b_tar", "n": 1, "sub": "The smell", "t": "Sirs, About the tar pit. The wind has been in the south for three days and the Castle smells like a shipyard. Two of my footmen are still in it. I should like them back when you have finished with them, and I should like the smell back never."},
+	{"id": "chicken", "why": "b_chicken", "n": 1, "sub": "The chicken", "t": "Sirs, A chicken, in a cage. Six of my household spent the whole of last night trying to reason with it, and came home at dawn having achieved nothing, which I had thought was my Steward’s job. I do not consider this sporting."},
+	{"id": "thresher", "why": "b_thresher", "n": 1, "sub": "Your machine", "t": "Sirs, The machine with the flails. I am told it is agricultural. It is not agriculture when it is done to a footman. I have had what was left of him swept up, and I am sending him back down tonight with the others, in a bucket, to make my point."},
+	{"id": "pitfall", "why": "b_pitfall", "n": 1, "sub": "Holes", "t": "Sirs, I learn that you have been digging holes and covering them with twigs. My gravediggers are professionals, with four centuries in the trade, and are mortified to have fallen for it. Kindly fill them in. The holes, I mean."},
+	{"id": "logs", "why": "b_logs", "n": 1, "sub": "Logs", "t": "Sirs, Logs. Rolled down the road. Into a funeral procession. I have looked through every book of etiquette in the Castle for the proper way to put this, and there is none."},
+	{"id": "holy", "why": "smite", "n": 3, "sub": "Your clergyman", "t": "Sirs, I understand that one of you has taken holy orders, or at any rate taken a book. Shouting at the sky until something falls out of it is not theology. My chaplain agrees with me, or would, if he could be found, and if you had not hit him with it."},
+	{"id": "bodies", "why": "b_bodywall", "n": 1, "sub": "Your walls", "t": "Sirs, It has come to my attention that you are building walls out of your neighbours. I had rather thought that sort of thing was my department. I do not object. I merely note that when I do it, people write letters."},
+	{"id": "jeer", "why": "jeer", "n": 2, "sub": "Mr Bailiff", "t": "Sirs, Mr Bailiff has written to me to complain about your manners. I mention it only because he wrote to me, the besieging party, for sympathy, and I found that I had some. Please stop shouting at his window. He is the only thing in your village that is on my side."},
+	{"id": "hired", "why": "hired", "n": 1, "sub": "Staff", "t": "Sirs, I see that you have begun paying men to stand about at night. I have never paid anyone, and my staff turnover is nil. I offer this as one employer to another."},
+	{"id": "bell", "why": "bell", "n": 4, "sub": "The bell", "t": "Sirs, I must raise the matter of the bell. It has been rung a great many times, to no purpose that my staff could discover. Some of us sleep during the day, and have done for centuries. I should be obliged if it were rung only in an emergency, of which I shall give you notice."},
+	{"id": "bones", "why": "kills", "n": 60, "sub": "Breakages", "t": "Sirs, A large number of my staff have now been returned to me in pieces. Skeletons do not grow on trees. They grow in the ground, slowly, at my expense. I enclose an invoice. I do not expect you to be able to read it."},
+	{"id": "ruins", "why": "search", "n": 3, "sub": "My ruins", "t": "Sirs, The ruins on my estate are ruined on purpose. They are a feature. Your people have been seen carrying off the contents in sacks. If you should find a small brass handbell, it is mine, and I should much rather you did not ring it."},
+	{"id": "fish", "why": "fish", "n": 3, "sub": "The river", "t": "Sirs, The river is mine as far as the far bank, and so, strictly, are the fish. I do not eat them. I do not eat anything, any more. It is the principle."},
+	{"id": "trees", "sub": "The chopping", "t": "Sirs, The chopping. From first light. I had that forest planted in 1312 to keep the sound of the village out, and I now find that the village is carrying it away a log at a time."},
+	{"id": "smoke", "sub": "Your smithy", "t": "Sirs, Your smithy. The smoke blows up the valley and has turned the washing on the east tower grey. It was grey before, but it was our grey."},
+	{"id": "maypole", "sub": "The maypole", "t": "Sirs, A maypole. I can see it from my window. It is the most cheerful thing I have looked at in six hundred years, and I should be grateful if it were taken down."},
+	{"id": "sheep", "sub": "The sheep", "t": "Sirs, My household passes the old mill on its way to you each evening, and each morning I am told there were seven sheep. One of my ghouls insists there were eight. He will not be talked out of it. If there is an eighth sheep, I should like it explained."},
+	{"id": "ducks", "sub": "Your ducks", "t": "Sirs, Your ducks. There are two of them, on a pond, in the middle of a siege, doing nothing whatever about it. I find I cannot stop watching them. Please have them moved."},
+	{"id": "singing", "sub": "The singing", "t": "Sirs, The singing from the Thorny Rose carries up the valley. My household knows all the words now, and has begun joining in on the road down, which spoils the effect I am going for."},
+	{"id": "weather", "sub": "The weather", "t": "Sirs, You will have noticed the weather. I had arranged for fog throughout. I do not know what you have done to deserve sunshine, but I have complained to the proper authority, who is not answering."},
+	{"id": "reply", "sub": "My letters", "t": "Sirs, I have had no reply to any of my letters. I am told that most of you cannot read and that the rest are busy. I shall therefore write more slowly."},
+	{"id": "rent", "sub": "The neighbourhood", "t": "Sirs, I pay Lord Aldred a very fair rent for the Castle, on the understanding that the neighbourhood was quiet. It was described to me as “a sleepy village”. I have asked for some of it back."},
+	{"id": "dummies", "sub": "The straw men", "t": "Sirs, The straw men in your training yard. Several of my newer staff took them for villagers last night, attacked, and were, I am sorry to say, held to a draw."},
+	{"id": "door", "sub": "Mr Bailiff’s door", "t": "Sirs, My household has knocked at Mr Bailiff’s door every night this week, to serve him with a notice. It does not open. I begin to understand you a little."},
+	{"id": "pitchfork", "sub": "Weapons", "t": "Sirs, A point of order. A pitchfork is a tool. A lady or gentleman who has gone to the trouble of dying and getting up again is entitled to be put down by something with a proper name. I enclose a catalogue."},
+]
+const LETTER_SIGN := "I remain, &c.,\nAshhollow"
+# --- The notice board in the square. Three of these are pinned up each day, between the news.
+const NOTICES := [
+	"LOST: one husband, answers to Gerald. Last seen walking slowly towards the graveyard. If found, do not return.",
+	"BY ORDER of R. Bailiff: the dead are not to be fed, argued with, or let in.",
+	"FOR SALE: coffin, hardly used. Owner got out. Apply at the chapel.",
+	"WANTED: night watchman. Previous applicants need not reapply, and have not.",
+	"FINES. Ringing the bell without cause: 2d. Ringing the bell with cause: 2d.",
+	"The duck pond is not the well. The well is not the duck pond. This is the last time. R.B.",
+	"Would whoever has been drinking the holy water please stop. It is for the trough. (The Priest.)",
+	"CURFEW at dusk. This is advice, not a rule. The rule is: run.",
+	"Thornhallow in Bloom is postponed, for the four hundredth year running.",
+	"Choir practice is cancelled until further notice, owing to what happened to the tenors.",
+	"The stocks are closed for repair. Offenders are asked to wait their turn standing up.",
+	"FOUND: one arm. The owner may collect it from the Thorny Rose, where it is holding a tankard.",
+	"Rent is due on the first of the month, siege or no siege. R.B.",
+	"MAYPOLE DANCING, weather and the dead permitting. Bring your own ribbon.",
+	"LESSONS in the pitchfork: the pointy end, and what to do if you find you are holding the other one. Training yard, daily.",
+	"It is forbidden to bury relatives in the turnip field. The turnips have started coming up wrong.",
+	"The Thorny Rose regrets that tabs cannot be passed on to the next of kin.",
+	"REWARD of 3d for the Lord of Ashhollow, dead. (He is dead already. The reward has been claimed by Mr Bailiff.)",
+	"Sheep at the old mill are to be counted every morning. If there are more than seven, tell the priest.",
+	"Complaints about the Bailiff may be put in the box provided. The box is in the Bailiff’s house. The door is bolted.",
+	"PARISH COUNCIL: the next meeting will be held under the table at the Thorny Rose.",
+	"The smithy asks that crude swords be brought back for mending BEFORE they fall apart, and not in a bag.",
+	"Whoever chalked “HELP” on the keep door: it is spelt correctly. Well done. (The Library.)",
+	"Bodies left in the square after dawn will be assumed to be volunteering for the wall.",
 ]
 # --- Robert Bailiff, at his upstairs window. Talk, knock, or jeer; he remembers jeering, and his guards cost more.
 const BAILIFF_TALK := [

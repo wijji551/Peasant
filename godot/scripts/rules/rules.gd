@@ -43,6 +43,8 @@ var stats := {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 var rage := 1.0
 var last_day := D.MONTH        # 30 for the month, 7 for the short game
 var weather := "clear"         # tonight's weather: clear, overcast, rain, fog, snow, moon
+var crowd := 1.0              # when the horde is too big to show, there are fewer of them, each this many times as hard to put down
+var crowd_d := 1.0            # and hitting this much harder
 var tough := 1.0              # the dead hit harder and last longer as the weeks go on
 var merchant := -1            # today's merchant (an index into D.MERCHANTS), or -1
 var wares: Array = []         # what is on the cart: [{n, price, left, give, ...}]
@@ -51,6 +53,9 @@ var reserve := false          # the brewer's reserve: tonight every tankard coun
 var guards := 0               # village guards hired for tonight
 var bail_line := ""           # what Robert Bailiff last said from his window
 var bail_t := 0.0             # and how long he stays at it
+var letters: Array = []        # the Lord's letters so far: [which of D.LETTERS, the day it came]
+var letter_new := false        # one is nailed to the gatepost, and nobody has read it yet
+var seen := {}                 # things the Lord might write about, and how often each has happened
 var bail_mood := 0            # how many times he has been jeered at today: each makes his guards a shilling dearer
 var bell_t := 0.0             # the village bell, swinging
 
@@ -65,6 +70,38 @@ var STEELM := {"x": D.STEEL_MINE.x + 3.0, "z": D.STEEL_MINE.z}   # its mouth fac
 var JETTY := {"x": 12.0, "z": 53.4}
 
 var save_hook: Callable       # called with the save data each morning, when set
+
+# The solid things by 8-unit square, so each of the dead only checks the few near it (a big horde stays cheap).
+const CG := 8.0
+var _cgrid := {}
+var _cgrid_ok := false
+const _NONE := []
+
+func near_colliders(x: float, z: float) -> Array:
+	if not _cgrid_ok:
+		_cgrid = {}; _cgrid_ok = true
+		for c in colliders:
+			var e: float = (maxf(c.hw, c.hd) * 1.42 if c.rot else 0.0) + 2.6      # room for the biggest of them, and a step
+			var ex: float = e if c.rot else c.hw + e
+			var ez: float = e if c.rot else c.hd + e
+			for gx in range(floori((c.x - ex) / CG), floori((c.x + ex) / CG) + 1):
+				for gz in range(floori((c.z - ez) / CG), floori((c.z + ez) / CG) + 1):
+					var k := Vector2i(gx, gz)
+					if _cgrid.has(k): _cgrid[k].append(c)
+					else: _cgrid[k] = [c]
+	return _cgrid.get(Vector2i(floori(x / CG), floori(z / CG)), _NONE)
+
+var _tgrid := {}
+
+func near_trees(x: float, z: float) -> Array:   # every tree within 3 of here (and some further): trees do not move
+	if _tgrid.is_empty():
+		for t in trees:
+			for gx in range(floori((t.x - 3.3) / CG), floori((t.x + 3.3) / CG) + 1):
+				for gz in range(floori((t.z - 3.3) / CG), floori((t.z + 3.3) / CG) + 1):
+					var k := Vector2i(gx, gz)
+					if _tgrid.has(k): _tgrid[k].append(t)
+					else: _tgrid[k] = [t]
+	return _tgrid.get(Vector2i(floori(x / CG), floori(z / CG)), _NONE)
 
 
 func _init() -> void:
@@ -81,6 +118,41 @@ func live() -> bool:
 
 func rnd2(a: float, b: float) -> float:
 	return a + (b - a) * randf()
+
+func note(k: String, n: int = 1) -> void:   # something the Lord of Ashhollow may have a view on
+	seen[k] = int(seen.get(k, 0)) + n
+
+static func letter_ix(id: String) -> int:
+	for i in D.LETTERS.size():
+		if D.LETTERS[i].id == id: return i
+	return -1
+
+## Which letter comes this morning, or -1. He writes on the second morning, then every other morning (every morning in the
+## short game), the morning after one of his household is beaten, and on the last morning. He complains first of whatever
+## the village has newly done; when it has done nothing new, of something else.
+func next_letter() -> int:
+	var had := letters.map(func(l): return int(l[0]))
+	var want := ""
+	var b := boss_of(day - 1, last_day)
+	if day == last_day: want = "final"
+	elif day == 2: want = "intro"
+	elif b == D.U_STEWARD: want = "steward"
+	elif b == D.U_COACH: want = "coach"
+	elif b == D.U_CAPTAIN: want = "captain"
+	if want != "":
+		var w := letter_ix(want)
+		return -1 if had.has(w) else w
+	if day < 2 or (last_day >= D.MONTH and day % 2 == 1): return -1
+	var spare := []
+	for i in D.LETTERS.size():
+		var L: Dictionary = D.LETTERS[i]
+		if had.has(i) or ["intro", "steward", "coach", "captain", "final"].has(L.id): continue
+		if not L.has("why"): spare.append(i)
+		elif (stats.kills if L.why == "kills" else int(seen.get(L.why, 0))) >= L.n: return i
+	if spare.is_empty(): return -1
+	var rng := RandomNumberGenerator.new()
+	rng.seed = gseed * 13 + day * 71
+	return spare[rng.randi() % spare.size()]
 
 func pick(a: Array):
 	return a[randi() % a.size()]
@@ -167,6 +239,7 @@ func set_sites(a: Array) -> void:
 	var j: Dictionary = D.SITES[2][a[2]]
 	QUARRY.x = q.x; QUARRY.z = q.z
 	MINEC.x = m.x; MINEC.z = m.z
+	_cgrid_ok = false
 	MINE.dir = 1 if m.x >= 0 else -1
 	MINE.x = m.x - MINE.dir * 3; MINE.z = m.z
 	JETTY.x = j.x; JETTY.z = j.z
@@ -216,6 +289,12 @@ static func cap(p: E.Player) -> int:
 func posse_max(p: E.Player) -> int:
 	var r := rk(p, 6)
 	return maxi(1, pm + (3 if r >= 6 else 2 if r >= 4 else 1 if r >= 2 else 0) - (1 if p.coward else 0))
+
+## The more of you there are, the more of the dead come at the same seven foundations and the one keep. So what the
+## village builds is stouter with company: a blow from the dead does this many times less to a defence or to the keep
+## (1 alone, 1.4 for two, 2 for four, 2.8 for eight).
+func stout() -> float:
+	return sqrt(float(maxi(1, players.size())))
 
 func pop_cap() -> int:
 	return D.POP_PER_PLAYER * players.size() + (2 if players.size() == 1 else 0)
@@ -423,6 +502,7 @@ func clear_world() -> void:
 	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []
 	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
+	letters = []; letter_new = false; seen = {}
 	for t in trees:
 		t.wood = D.TREE_WOOD; t.gd = 0; t.set_state(0, 0)
 	tv += 1; sv += 1
@@ -445,7 +525,7 @@ func new_game(infos: Array, last: int = D.MONTH) -> void:
 	for i in D.SLOTX.size():
 		var k := "gate" if i == 3 else "wall"
 		structs.append(mk_struct(k, D.SLOTX[i], D.VN, 0, false, 0, D.SHP[k], i))
-	pm = D.POSSE_SOLO if players.size() == 1 else D.POSSE_MAX
+	pm = D.POSSE_SOLO if players.size() == 1 else D.POSSE_PAIR if players.size() == 2 else D.POSSE_MAX
 	for p in players:
 		add_villagers(p.slot, pm)
 	roll_day(true)
@@ -605,7 +685,7 @@ func save_data() -> Dictionary:
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z})
 	return {"v": 3, "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
-		"sites": sites.duplicate(), "stats": stats.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "peasants": qs}
+		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "peasants": qs}
 
 # infos: the people playing now. Each takes over a saved peasant, by name where possible.
 func load_game(d: Dictionary, infos: Array) -> void:
@@ -614,6 +694,10 @@ func load_game(d: Dictionary, infos: Array) -> void:
 		store[k] = int(d.store.get(k, 0))
 	for k in stats:
 		stats[k] = int(d.stats.get(k, 0))
+	for l in d.get("letters", []): letters.append([int(l[0]), int(l[1])])
+	letter_new = bool(d.get("letter_new", false))
+	var sn: Dictionary = d.get("seen", {})
+	for k in sn: seen[k] = int(sn[k])
 	items = []
 	for v in d.get("items", []): items.append(int(v))
 	relics = []
@@ -725,12 +809,12 @@ static func box_point(x: float, z: float, c) -> Vector2:   # nearest point of an
 	return Vector2(clampf(x, c.x - c.hw, c.x + c.hw), clampf(z, c.z - c.hd, c.z + c.hd))
 
 func collide_friend(e, r: float, axis: int = -1) -> void:   # villagers: buildings, built walls, trees, the edge of the map
-	for c in colliders:
+	for c in near_colliders(e.x, e.z):
 		push_out(e, r, c, axis)
 	for s in structs:
 		if s.built and s.k == "wall":
 			push_out(e, r, s, axis)
-	for t in trees:
+	for t in near_trees(e.x, e.z):
 		if t.alive:
 			var dx: float = e.x - t.x
 			var dz: float = e.z - t.z
@@ -862,6 +946,7 @@ func find_interact(p: E.Player):
 				"label": ("Hold {interact} to search the rubble" + (". It is noisy work." if sp.ruin else "")) if n > 0 else "Nothing more under here until tomorrow"}
 	for st in D.STATIONS:
 		if st.id == "cart" and (merchant < 0 or phase != "day"): continue     # the cart is only there on a merchant's day
+		if st.id == "letter" and letters.is_empty(): continue                 # and the gatepost is bare until the Lord writes
 		if st.id == "bell" and D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "bell", "key": "bell", "ok": bell_t <= 0, "dur": 0.4, "x": st.x, "z": st.z, "rad": 1.0, "label": "Hold {interact} to ring the village bell. It does nothing at all."}
 		if D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
@@ -888,7 +973,7 @@ func find_interact(p: E.Player):
 	var tgt: E.Trunk = null
 	var rad := 1.1
 	bd = 7.5
-	for t in trees:
+	for t in near_trees(p.x, p.z):
 		if t.alive:
 			var d := D.d2(p.x, p.z, t.x, t.z)
 			if d < bd:
@@ -1000,7 +1085,7 @@ func try_place(p: E.Player, k: String, x: float, z: float, rot: float) -> bool:
 	var r := rk(p, 2)
 	if not has(p, c) or D.d2(p.x, p.z, x, z) > 144 or not valid_place(k, x, z, rot):   # generous on distance, to allow for a laggy connection
 		return false
-	pay(p, c); stats.built += 1; add_xp(p, 2, 1)
+	pay(p, c); stats.built += 1; add_xp(p, 2, 1); note("b_" + k)
 	if D.CONTR.has(k) and r < D.CONTR[k].rank: p.cogs -= 1     # built from a box of cogs
 	if D.CONTR.has(k):
 		var s := mk_struct(k, x, z, rot, true, D.SHP[k], D.SHP[k], -1)
@@ -1364,6 +1449,7 @@ func priest_power(p: E.Player, i: int, r: int) -> void:
 		var dmg := 16.0 + 4.0 * r
 		var src := {"p": p, "holy": 1.5, "ranged": true, "smite": true}
 		var hit := 0
+		note("smite")
 		for u in tl.slice(0, 3 if r >= 7 else 1):
 			var U: Dictionary = D.UN[u.k]
 			ev.append(["smite", r1(u.x), r1(u.z)])
@@ -1462,7 +1548,7 @@ func do_fish(p: E.Player) -> void:
 		return
 	if p.bite > 0:
 		var n := mini(D.FISH_FOOD + (1 if rk(p, 1) >= 3 else 0), cap(p) - p.food)
-		p.food += n; add_xp(p, 1, n); p.cc += 1; ev.append(["fish", r1(JETTY.x), r1(JETTY.z + 2.6)])
+		p.food += n; add_xp(p, 1, n); p.cc += 1; ev.append(["fish", r1(JETTY.x), r1(JETTY.z + 2.6)]); note("fish")
 	p.bite = 0; p.fishT = fish_wait(p)   # pulling early scares the fish off
 
 func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of rubble
@@ -1695,7 +1781,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				q.kind = 1; q.state = "post"; q.armed = 1; q.hp = q_max(q); q.px = post[0]; q.pz = post[1]
 				peasants.append(q)
 				say("Robert Bailiff opens the door a crack, takes %s’s money, and sends %s to %s for the night." % [p.dn, D.qname(q), D.POST_NAMES[guards % D.POSTS.size()]])
-				guards += 1; spark.call("coin")
+				guards += 1; spark.call("coin"); note("hired")
 		"merc":
 			if near_station(p, "inn") and not p.merc and p.coin >= D.MERC_FEE:
 				p.coin -= D.MERC_FEE; p.merc = true
@@ -1703,7 +1789,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				var q := mk_peasant(randi() % D.MERC_NAMES.size(), p.x - 1.2, p.z + 1.2, h.x, h.z, p.id)
 				q.kind = 2; q.armed = 1; q.hp = q_max(q)
 				peasants.append(q)
-				say("%s has hired %s at the Thorny Rose Inn. What could possibly go wrong?" % [p.dn, D.qname(q)])
+				say("%s has hired %s at the Thorny Rose Inn. What could possibly go wrong?" % [p.dn, D.qname(q)]); note("hired")
 				spark.call("coin")
 		"btalk", "bknock", "bjeer":                # Robert Bailiff, at his upstairs window
 			if near_station(p, "window"):
@@ -1713,9 +1799,11 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					"bknock":
 						bail_line = pick(D.BAILIFF_KNOCK); ev.append(["knock", r1(p.x), r1(p.z)])
 					"bjeer":
-						bail_line = pick(D.BAILIFF_JEER); bail_mood += 1; ev.append(["jeer", r1(p.x), r1(p.z)])
+						bail_line = pick(D.BAILIFF_JEER); bail_mood += 1; note("jeer"); ev.append(["jeer", r1(p.x), r1(p.z)])
 						say("%s has jeered at Robert Bailiff. His guards are a shilling dearer today." % p.dn)
 				bail_t = 6.0
+		"lread":                                    # the letter on the gatepost has been read
+			letter_new = false
 		"study":
 			if near_station(p, "priest") and p.holy < 2:
 				p.study = not p.study
@@ -1845,8 +1933,17 @@ static func night_plan(d: int, n: int, last: int = D.MONTH) -> Dictionary:
 		if w[k] > 0:
 			c[k] = maxi(1 if newk.has(k) else 0, roundi(budget * w[k] / sum / D.UN[k].cost))
 	c[D.U_RAM] = mini(c[D.U_RAM], 1 + floori(n / 3.0))
+	var heads := 0
+	for v in c: heads += v
+	var crowd_ := 1.0
+	if heads > D.NIGHT_HEADS:                       # too many to show: fewer of them, and tougher (so eight players still face eight hordes' worth)
+		var keep := 0
+		for k in c.size():
+			if c[k] > 0:
+				c[k] = maxi(1, roundi(c[k] * float(D.NIGHT_HEADS) / heads)); keep += c[k]
+		crowd_ = float(heads) / keep
 	var dur := D.NIGHT_RISE + D.NIGHT_RISE_DAY * mini(d - 1, 6) + 4.0 * maxi(0, d - 7)
-	return {"c": c, "dur": dur, "boss": boss_of(d, last)}
+	return {"c": c, "dur": dur, "boss": boss_of(d, last), "crowd": crowd_}
 
 # The dead do not come in waves. They rise one after another all night, slowly at first and faster as it goes on:
 # the last of them come up a little over twice as fast as the first.
@@ -1885,7 +1982,7 @@ func spawn_undead(k: int, x = null, z = null) -> E.Undead:
 	var u := E.Undead.new()
 	u.id = nid; nid += 1
 	u.k = k; u.x = sx; u.z = D.SPAWN_Z + (randf() * 2 - 1) * 4.5 if z == null else z
-	u.hp = U.hp * tough; u.cd = randf(); u.lane = clampf(sx * 0.62 + (randf() * 2 - 1) * 3.5, -20, 20); u.jit = (randf() * 2 - 1) * 1.7
+	u.hp = U.hp * tough * crowd; u.cd = randf(); u.lane = clampf(sx * 0.62 + (randf() * 2 - 1) * 3.5, -20, 20); u.jit = (randf() * 2 - 1) * 1.7
 	if U.ram:                                       # a coffin ram goes for the gate
 		u.lane = 0; u.jit = 0
 	if U.boss:
@@ -1918,6 +2015,7 @@ func start_night() -> void:
 	phase = "night"; nf = 1; timeLeft = 0; graves = []; fallen = []
 	tough = tough_of(mday())
 	var plan := night_plan(day, players.size(), last_day)
+	crowd = plan.crowd; crowd_d = 1.0 + 0.6 * (crowd - 1.0)
 	var q := night_queue(plan)
 	night = {"t": 0.0, "q": q, "total": q.size(), "c": plan.c, "dur": plan.dur, "kills": 0, "boss": plan.boss, "idle": 0.0}
 	waves = q.size()
@@ -2067,6 +2165,10 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 		return
 	day += 1; grow_trees(); roll_day(false); lines.append(site_line())
 	lines.append_array(tonight_lines())
+	var li := next_letter()
+	if li >= 0:
+		letters.append([li, day]); letter_new = true; ev.append(["rider"])
+		lines.append("A headless rider came down from the castle at first light and nailed a letter to the gatepost by the north gate. It is from the Lord of Ashhollow, and it is a complaint.")
 	if merchant >= 0:
 		var M: Dictionary = D.MERCHANTS[merchant]
 		lines.append("A merchant has come: %s, parked by the market, selling %s. He has a job going, too." % [M.name, M.sells])
@@ -2158,7 +2260,7 @@ func player_step(p: E.Player, dt: float) -> void:
 					p.state = "ok"; p.eLock = true
 				"bell":
 					if bell_t <= 0:
-						bell_t = 2.5; ev.append(["bellring", r1(it.x), r1(it.z)])
+						bell_t = 2.5; ev.append(["bellring", r1(it.x), r1(it.z)]); note("bell")
 						if randf() < 0.4: say(pick(D.BELL_LINE))
 				"hide":
 					p.state = "hide"; p.coward = true; p.gk = 0; p.eLock = true; say("%s has gone to hide under the bed." % p.dn)
@@ -2195,7 +2297,7 @@ func player_step(p: E.Player, dt: float) -> void:
 				"keep":
 					pay(p, {"wood": 1, "stone": 1}); keepHp = minf(D.KEEP_HP, keepHp + 40); ev.append(["build", r1(it.x), r1(it.z)])
 				"search":
-					p.cc += 1; do_search(p, it.i)
+					p.cc += 1; do_search(p, it.i); note("search")
 				"gather":
 					p.cc += 1; gather_one(it.kind, it.target, p)
 		elif it.type == "search" and fmod(p.itT, 0.7) < dt:
@@ -2375,7 +2477,7 @@ func undead_goal(u: E.Undead) -> Vector2:
 func hit_struct(u: E.Undead, U: Dictionary, blk: E.Struct, dmul: float = 1.0) -> void:
 	u.state = "atk"
 	if u.cd <= 0:
-		u.cd = U.cd; u.ac += 1; blk.hp -= U.sdmg * rage * dmul; blk.hc += 1; sv += 1
+		u.cd = U.cd; u.ac += 1; blk.hp -= U.sdmg * rage * dmul / stout(); blk.hc += 1; sv += 1
 		if blk.bl: hit_u(u, 5, {"holy": 1.5})
 		if blk.hp <= 0: destroy_struct(blk)
 
@@ -2390,7 +2492,7 @@ func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void
 	u.r = D.ang_lerp(u.r, atan2(dx, dz), minf(1, dt * 4))
 	if u.march and in_box(u.x, u.z, U.r + 0.5, keep_box):
 		if u.cd <= 0:
-			u.cd = U.cd * 2; u.ac += 1; keepHp -= U.kdmg * rage; keepHc += 1; ev.append(["build", r1(u.x), r1(u.z + 1)])
+			u.cd = U.cd * 2; u.ac += 1; keepHp -= U.kdmg * rage / stout(); keepHc += 1; ev.append(["build", r1(u.x), r1(u.z + 1)])
 			u.march = false                           # turn round for another run
 		u.state = "atk"
 		return
@@ -2411,10 +2513,10 @@ func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void
 	for c in colliders: push_out(u, U.r, c)
 	for p in players:                                  # and anyone in the road is run over
 		if p.state == "ok" and D.d2(p.x, p.z, u.x, u.z) < pow(U.r + 0.6, 2) and p.hurtT > 0.8:
-			hurt_friend(p, U.dmg * tough, true, u, false); p.x += signf(p.x - u.x + 0.01) * 1.5; p.tp = tpc; tpc += 1
+			hurt_friend(p, U.dmg * tough * crowd_d, true, u, false); p.x += signf(p.x - u.x + 0.01) * 1.5; p.tp = tpc; tpc += 1
 	for q in peasants:
 		if active(q) and D.d2(q.x, q.z, u.x, u.z) < pow(U.r + 0.5, 2) and q.hurtT > 0.8:
-			hurt_friend(q, U.dmg * tough, false, u, false); q.x += signf(q.x - u.x + 0.01) * 1.5
+			hurt_friend(q, U.dmg * tough * crowd_d, false, u, false); q.x += signf(q.x - u.x + 0.01) * 1.5
 
 func undead_step(dt: float) -> void:
 	var keep_box := E.Box.new(D.KEEP_X, D.KEEP_Z, D.KEEP_H, D.KEEP_H)
@@ -2433,12 +2535,12 @@ func undead_step(dt: float) -> void:
 			continue
 		if u.state == "pile":
 			if u.t <= 0:
-				u.state = "walk"; u.hp = U.hp * tough
+				u.state = "walk"; u.hp = U.hp * tough * crowd
 			continue
 		if u.state == "dig":                      # a gravedigger, tunnelling under the north wall
 			if u.t <= 0:
 				u.dug = true; u.state = "rise"; u.t = 1.4
-				u.x = clampf(u.x + rnd2(-5, 5), -18, 18); u.z = D.VN + rnd2(4, 13)
+				u.x = clampf(u.x + rnd2(-5, 5), -8.5, 7.5); u.z = D.VN + rnd2(3, 10)   # on the green, clear of the houses
 				for c in colliders: push_out(u, U.r + 0.3, c)
 				ev.append(["dig", r1(u.x), r1(u.z)])
 			continue
@@ -2446,7 +2548,7 @@ func undead_step(dt: float) -> void:
 			u.state = "stun"
 			continue
 		if u.state == "stun": u.state = "walk"
-		var dmul := tough * (1.3 if captain and u.k == D.U_GUARD and D.d2(u.x, u.z, captain.x, captain.z) < 100 else 1.0)
+		var dmul := tough * crowd_d * (1.3 if captain and u.k == D.U_GUARD and D.d2(u.x, u.z, captain.x, captain.z) < 100 else 1.0)
 		if U.hearse:
 			hearse_step(u, U, dt, keep_box)
 			continue
@@ -2464,9 +2566,9 @@ func undead_step(dt: float) -> void:
 			u.state = "walk"; u.r = D.ang_lerp(u.r, atan2(dx, dz), minf(1, dt * 8))
 			if u.pin <= 0:
 				u.x += dx / d * sp * 1.5 * dt
-				for c in colliders: push_out(u, U.r, c, 0)
+				for c in near_colliders(u.x, u.z): push_out(u, U.r, c, 0)
 				u.z += dz / d * sp * 1.5 * dt
-				for c in colliders: push_out(u, U.r, c, 1)
+				for c in near_colliders(u.x, u.z): push_out(u, U.r, c, 1)
 				u.z = maxf(u.z, D.SPAWN_Z - 6)
 			continue
 		# a gravedigger that reaches the north wall goes under it
@@ -2592,7 +2694,7 @@ func undead_step(dt: float) -> void:
 		if tgt == null and not door and (not raiser or u.march) and in_box(u.x, u.z, U.r + 0.45, keep_box):
 			u.state = "atk"; u.r = D.ang_lerp(u.r, atan2(D.KEEP_X - u.x, D.KEEP_Z - u.z), 0.3)
 			if u.cd <= 0:
-				u.cd = U.cd; u.ac += 1; keepHp -= U.kdmg * rage * dmul; keepHc += 1
+				u.cd = U.cd; u.ac += 1; keepHp -= U.kdmg * rage * dmul / stout(); keepHc += 1
 			continue
 		if u.pin > 0:
 			u.state = "stun"
@@ -2611,10 +2713,17 @@ func undead_step(dt: float) -> void:
 			hit_struct(u, U, blk, dmul)
 			continue
 		u.state = "walk"
+		u.lt += dt
+		if u.lt >= 3.0:                               # walking for three seconds and nowhere to show for it: wedged in a corner. Shuffle sideways.
+			if D.d2(u.x, u.z, u.lx, u.lz) < 0.3:
+				var a := randf() * TAU
+				nx = u.x + cos(a) * 1.4; nz = u.z + sin(a) * 1.4
+			u.lt = 0.0; u.lx = u.x; u.lz = u.z
 		u.x = nx
-		for c in colliders: push_out(u, U.r, c, 0)
+		var nc := near_colliders(nx, nz)
+		for c in nc: push_out(u, U.r, c, 0)
 		u.z = nz
-		for c in colliders: push_out(u, U.r, c, 1)
+		for c in nc: push_out(u, U.r, c, 1)
 		if u.z > D.VN:                                # inside, the north wall is solid like any other
 			for s in structs:
 				if s.slot >= 0 and s.built: push_out(u, U.r, s)

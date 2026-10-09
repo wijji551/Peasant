@@ -9,8 +9,8 @@ extends Node
 ##                                            of day, the weather and how close the camera is to the castle
 
 const EFFECTS := ["bell", "bone", "build", "caw0", "caw1", "cheer", "chop", "clang", "coin", "dawn", "door", "eat",
-	"find", "forge", "groan0", "groan1", "groan2", "gulp", "hit", "holy", "hurt", "iron", "jeer", "keep", "knock",
-	"lost", "no", "owl", "page", "pick", "pluck", "pop", "raise", "rally", "rattle", "relic", "ring", "splash", "splat",
+	"find", "forge", "groan0", "groan1", "groan2", "gulp", "hit", "holy", "hooves", "hurt", "iron", "jeer", "keep", "knock",
+	"lost", "nail", "no", "owl", "page", "pick", "pluck", "pop", "raise", "rally", "rattle", "relic", "ring", "splash", "splat",
 	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won"]
 const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "castle": "amb_castle",
 	"music_day": "music_day", "music_night": "music_night"}

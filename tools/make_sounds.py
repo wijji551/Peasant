@@ -5,6 +5,7 @@ godot/sounds/. Run from the repository's top folder:  python3 tools/make_sounds.
 Everything is made with numpy, so nothing is downloaded and the sounds can be tuned here and made again."""
 
 import os
+import sys
 import numpy as np
 from scipy.io import wavfile
 from scipy.signal import butter, lfilter
@@ -259,8 +260,19 @@ def sfx():
     S["owl"] = reverb(hoot * V, 1.0, 0.3)
     S["door"] = mix(0.9, (tone(180, 0.7, "sawtooth", 0.12, 230), 0), (noise(0.6, 0.15, 900), 0), (tone(90, 0.15, "sine", 0.6, 60), 0.7))
     S["jeer"] = mix(0.7, (noise(0.6, 0.3, 1800), 0), (tone(260, 0.25, "sawtooth", 0.12, 200), 0), (tone(240, 0.3, "sawtooth", 0.12, 160), 0.3))
+    # a horse at the gallop, coming and going: the headless rider with the Lord's letter
+    gal = buf(3.0)
+    for i in range(7):
+        g = min(1.0, 0.35 + i * 0.16) * (1.0 if i < 5 else 0.6 if i == 5 else 0.3)
+        for j, off in enumerate((0.0, 0.11, 0.21)):
+            at = 0.05 + i * 0.41 + off
+            add(gal, tone(78 - j * 6, 0.07, "sine", 0.75 * g, 44), at)
+            add(gal, noise(0.035, 0.3 * g, 700), at)
+    S["hooves"] = reverb(gal * V, 0.5, 0.12)
+    S["nail"] = mix(0.8, *[(tone(1150, 0.05, "square", 0.16, 760), t) for t in (0, 0.2, 0.4)], *[(noise(0.03, 0.4, 2600), t) for t in (0, 0.2, 0.4)], *[(tone(210, 0.07, "sine", 0.5, 150), t) for t in (0, 0.2, 0.4)])
     for k, x in S.items():
-        save("sfx_" + k, x)
+        if not ONLY or k in ONLY:
+            save("sfx_" + k, x)
 
 
 # ------------------------------------------------------------------ ambient loops
@@ -401,8 +413,11 @@ def music():
     save("music_night", reverb(body, 1.6, 0.3)[:loop_n], 0.7)
 
 
+ONLY = set(sys.argv[1:])                         # name some effects to make just those: python3 tools/make_sounds.py hooves nail
+
 if __name__ == "__main__":
     sfx()
-    ambient()
-    music()
+    if not ONLY:
+        ambient()
+        music()
     print("made", len(os.listdir(OUT)), "sounds in", os.path.abspath(OUT))
