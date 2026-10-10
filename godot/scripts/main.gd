@@ -59,6 +59,7 @@ var pops: Control                    # numbers that jump off the dead when they 
 var _kick := Vector3.ZERO            # the camera, knocked a little by a blow, on its way back
 var _later := []                     # [seconds to go, event]: a shot's blow, shown when the shot arrives
 var _my_hc := -1                     # to notice when I am hit
+var _bells_t := 0.0                  # until the chapel bells toll again, on a night of the bells
 var _inn_up := 0.0                   # how long E has been held at the bar (-1: wait for it to be let go first)
 var atmos: Node3D                # mist, rain, wisps, crows and lightning (only for looking at)
 
@@ -335,6 +336,7 @@ func begin(save) -> void:
 
 
 func _dusk_line() -> String:
+	if R.bells(): return "The bell rings, and then every bell in the chapel. Up at Ashhollow, something has taken it personally."
 	match Rules.boss_of(R.day, R.last_day):
 		D.U_STEWARD: return "The bell rings. Somebody at the castle is polishing the silver."
 		D.U_COACH: return "The bell rings. Far off, a whip cracks, and wheels start to turn."
@@ -522,15 +524,15 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 		else:
 			var pw: Dictionary = D.CLASSES[c].powers[i]
 			var cd: float = p.p1Cd if i == 0 else p.p2Cd
-			if Rules.rk(p, D.CLASSES[c].book) < pw.rank: Sound.play("no"); hud.banner("Not yet", "%s comes at rank %d of %s." % [pw.full, pw.rank, D.BOOKS[D.CLASSES[c].book].name], 1.8)
+			if Rules.rk(p, D.CLASSES[c].book) < pw.rank: Sound.play("no"); hud.banner("Not yet", "%s comes at rank %d of %s." % [pw.full, pw.rank, D.book_title(D.CLASSES[c].book)], 1.8)
 			elif cd > 0: Sound.play("no"); hud.banner("Not yet", "%s is ready again in %d seconds." % [pw.n, ceili(cd)], 1.2)
 			else:
 				if i == 0: R.aim_assist(p)
 				cmd({"t": "pw", "i": i, "r": p.r})
 	elif Keys.is_act(e, "orders"):
-		if Rules.rk(p, 6) < 3: Sound.play("no"); hud.banner("No orders yet", "Orders need rank 3 of How to Win Peasants and Lead Them.", 1.7)
+		if Rules.rk(p, 6) < 1: Sound.play("no"); hud.banner("No orders yet", "Orders come with %s, from the library." % D.book_title(6), 2.2)
 		else:
-			var nxt := (p.order + 1) % 3
+			var nxt := (p.order + 1) % (3 if Rules.rk(p, 6) >= 3 else 2)
 			cmd({"t": "ord"}); hud.banner(["Follow me", "Hold here", "Charge!"][nxt], "", 0.9)
 	elif Keys.is_act(e, "build"):
 		var b := _builds_now()
@@ -825,6 +827,8 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"gamble":
 			if ev[1] == me.id: Sound.play("coin" if ev[2] else "no", 0.9)
 		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
+		"bells": hud.banner("The bells!", "The congregation is ringing. The dead are enraged: quicker, stronger and harder to put down, until dawn.", 6.0); world.ring_bell(); Sound.play("bell", 1.0)
+		"zap": _later.append([0.36, ev])                 # the Thunderer's Bow: the lightning jumps when the arrow lands
 		"hit":
 			if ev.size() > 8 and ev[8]: _later.append([0.36, ev.slice(0, 8)])   # a shot: when it gets there
 			else: _blow(ev)
@@ -844,11 +848,12 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			world.hit_dummy(int(ev[1])); F.puff(ev[2], 1.0, ev[3], 6, F.C_FOOD, 2.5); Sound.play("thump", 0.6, Vector2(ev[2], ev[3]))
 		"bark": labels.bark(int(ev[1]), str(ev[2]))
 		"pit": F.puff(ev[1], 0.2, ev[2], 14, F.C_WOOD, 3); Sound.play("thump", 1.0, Vector2(ev[1], ev[2])); Sound.play("groan%d" % (randi() % 3), 0.7, Vector2(ev[1], ev[2]))
-		"logs":
-			for i in 8:
-				var f := i / 7.0
-				F.puff(lerpf(ev[1], ev[3], f), 0.5, lerpf(ev[2], ev[4], f), 6, F.C_WOOD, 4)
-			Sound.play("thump", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder0", 0.5, Vector2(ev[1], ev[2]))
+		"logs":                                          # the log roller goes: the logs themselves, rolling down the road
+			F.roll_logs(ev[1], ev[2], ev[3], ev[4])
+			F.shock(ev[1], ev[2] + 1.0, 4.5, Color(0.85, 0.75, 0.6, 0.8), 0.5)
+			Sound.play("thump", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder0", 0.6, Vector2(ev[1], ev[2]))
+			for i in 4: get_tree().create_timer(0.25 + i * 0.22).timeout.connect(func(): Sound.play("thump", 0.7, Vector2(ev[1], ev[2])))
+			if me and Settings.shake and D.d2(me.x, me.z, ev[1], ev[2]) < 900.0: _kick += Vector3(0, 0, 0.9)
 		"smite": F.beam(ev[1], ev[2]); F.shock(ev[1], ev[2], 2.6, Color(1.0, 0.9, 0.5, 0.9), 0.35); Sound.play("holy", 1.0, Vector2(ev[1], ev[2])); Sound.play("thunder1", 0.25, Vector2(ev[1], ev[2]))
 		"pray": F.shock(ev[1], ev[2], 7.5, Color(1.0, 0.92, 0.55, 0.8), 0.6); F.ring(ev[1], ev[2], 7, 40, F.C_HOLY); F.puff(ev[1], 1.8, ev[2], 18, F.C_GLAD, 2.5); Sound.play("holy", 0.9, Vector2(ev[1], ev[2])); Sound.play("ring", 0.4, Vector2(ev[1], ev[2]))
 		"mist": F.puff(ev[1], 1.0, ev[2], 18, F.C_GHOST, 3.5); Sound.play("raise", 0.5, Vector2(ev[1], ev[2]))
@@ -945,6 +950,15 @@ func _draw(delta: float) -> void:
 			m.albedo_color = Color(I.tint[0], I.tint[1], I.tint[2])
 			n.material_override = m
 			add_child(n)
+			if I.tier == "relic" or I.runed:             # a relic on the ground glows, so it can be seen from across the green
+				var gc: Color = Figure.glow_of(d.it)
+				m.emission_enabled = true
+				m.emission = Color(gc.r, gc.g, gc.b)
+				m.emission_energy_multiplier = 1.4
+				var hl: MeshInstance3D = Figure.halo(gc, 2.4)
+				hl.top_level = true
+				hl.position = Vector3(d.x, 0.9, d.z)
+				n.add_child(hl)
 			if I.s == "w":
 				n.position = Vector3(d.x, 0.12, d.z - 0.5); n.rotation = Vector3(PI / 2, d.id, 0)
 			else:
@@ -1004,6 +1018,13 @@ func _draw(delta: float) -> void:
 	for u: E.Undead in R.undead:
 		if D.d2(u.x, u.z, _focus.x, _focus.z) < 22 * 22: near += 1
 	Sound.me.update(delta, R.nf, _focus, atmos.weather, near, atmos.flash, R.live())
+	var ringing: bool = R.phase == "night" and R.bells()        # a night of the bells: they toll till dawn, and the dead see red
+	dead_view.enraged = ringing
+	if ringing:
+		_bells_t -= delta
+		if _bells_t <= 0.0:
+			_bells_t = randf_range(2.2, 3.4)
+			Sound.play("bell", 0.5, Vector2(17.0, -14.0)); world.ring_bell()
 	if R.keepHc != _keep_hc_seen:
 		_keep_hc_seen = R.keepHc
 		if R.phase == "night": Sound.play("keep", 0.5)
@@ -1068,7 +1089,11 @@ func _camera(delta: float) -> void:
 	while li >= 0:
 		_later[li][0] -= delta
 		if _later[li][0] <= 0:
-			_blow(_later[li][1])
+			var lev: Array = _later[li][1]
+			if lev[0] == "zap":
+				_fx.zap(lev[1], lev[2], lev[3], lev[4]); Sound.play("thunder1", 0.3, Vector2(lev[3], lev[4])); Sound.play("holy", 0.4, Vector2(lev[3], lev[4]))
+			else:
+				_blow(lev)
 			_later.remove_at(li)
 		li -= 1
 	if me.hc != _my_hc:                                  # hit: the view jolts
@@ -1154,6 +1179,7 @@ func _hud_update(delta: float) -> void:
 			if R.dawn.day > 1: Sound.play("dawn")
 			menus.dawn(R.dawn.day, R.dawn.lines + ([D.WEATHER_LINE[R.weather]] if D.WEATHER_LINE.get(R.weather, "") != "" else []))
 			_dawn_t = 15.0
+		if R.phase == "day" and R.bells() and not R.dawn.lines.has(D.BELLS_LINE): hud.feed(D.BELLS_LINE)   # (a save from before there were bells)
 	if win.is_open("dawn"):
 		_dawn_t -= delta
 		if _dawn_t <= 0 or ph != "day": win.close()

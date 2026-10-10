@@ -102,6 +102,25 @@ func _init() -> void:
 	matt.x = 40; R.weather = "rain"
 	R.move_player(matt, 1, 0, 0.2)
 	ok("rain slows the living a little, and the dead more", matt.x - 40.0 < dry and absf((matt.x - 40.0) / dry - D.MUD) < 0.01 and R.wspeed() < D.MUD, [dry, matt.x - 40.0])
+	# ---------- the storehouse: so many in, so many out, and runes too
+	var st := D.station("store")
+	matt.x = st.x; matt.z = st.z; matt.wood = 18; matt.rune = 5; R.store.wood = 0; R.store.rune = 0
+	R.do_act(matt, "put", "wood:5")
+	ok("put in five", matt.wood == 13 and R.store.wood == 5, [matt.wood, R.store.wood])
+	R.do_act(matt, "put", "wood:1")
+	R.do_act(matt, "put", "wood")
+	ok("put in one, then all the rest", matt.wood == 0 and R.store.wood == 18)
+	R.do_act(matt, "take", "wood:1")
+	R.do_act(matt, "take", "wood:20")
+	ok("take one, then twenty: only what is there", matt.wood == 18 and R.store.wood == 0, [matt.wood, R.store.wood])
+	R.store.wood = 50
+	R.do_act(matt, "take", "wood:20")
+	ok("and never more than you can carry", matt.wood == Rules.cap(matt) and R.store.wood == 50 - (Rules.cap(matt) - 18), [matt.wood, R.store.wood])
+	R.do_act(matt, "put", "rune:5")
+	ok("runes can be left for the smith", matt.rune == 0 and R.store.rune == 5)
+	R.do_act(matt, "take", "coin:5")
+	ok("only what the storehouse keeps", true)
+	ok("the save keeps the runes in store", int(R.save_data().store.rune) == 5)
 	for l in lines: print(l)
 	var bad := lines.filter(func(l): return l.begins_with("FAIL")).size()
 	print("%d passed, %d failed" % [lines.size() - bad, bad])

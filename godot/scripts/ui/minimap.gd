@@ -77,6 +77,10 @@ func _draw() -> void:
 	mark.call(D.STEEL_MINE.x, D.STEEL_MINE.z, Color("7d93b5"))
 	draw_circle(Vector2(mx(D.MILL.x), mz(D.MILL.z)), 3.0, Color("8b6b47"))
 	mark.call(R.JETTY.x, R.JETTY.z + 2, Color("8fd0e0"))
+	var fr := Rect2(mx(D.FARM.x0), mz(D.FARM.z0), mx(D.FARM.x1) - mx(D.FARM.x0), mz(D.FARM.z1) - mz(D.FARM.z0))   # the farm: a field of its own colour, and a mark
+	draw_rect(fr, Color(0.86, 0.72, 0.3, 0.55))
+	draw_rect(fr, Color("7a5a22"), false, 1.0)
+	mark.call((D.FARM.x0 + D.FARM.x1) / 2, (D.FARM.z0 + D.FARM.z1) / 2, Color("e8c040"))
 	if not R.chest.is_empty() and R.chest.seen and not R.chest.open:      # the chest that never arrived, once somebody has seen it
 		draw_rect(Rect2(mx(R.chest.x) - 3.5, mz(R.chest.z) - 3, 7, 6), Color("2f2318"))
 		draw_rect(Rect2(mx(R.chest.x) - 2.5, mz(R.chest.z) - 2, 5, 4), Color("f0c040"))

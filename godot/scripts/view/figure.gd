@@ -246,12 +246,79 @@ func _set_held(id: int, holy: bool) -> void:
 		_held_mi.mesh = Models.get_mesh(pool)
 	var t: Array = D.IT[id].tint
 	_held_mat.albedo_color = HOLYT if holy else Color(t[0], t[1], t[2]) if pool != "axe" and pool != "rod" else Color.WHITE
+	# relics and rune weapons glow: the metal itself, a soft halo round it, and a little light on whatever is near
+	var special: bool = (D.IT[id].tier == "relic" or D.IT[id].runed) and pool != "axe" and pool != "rod"
+	if special != (_glow_col.a > 0.0) or (special and id != _glow_id):
+		_glow_id = id
+		_glow_col = glow_of(id) if special else Color(0, 0, 0, 0)
+		_held_mat.emission_enabled = special
+		_held_mat.emission = Color(_glow_col.r, _glow_col.g, _glow_col.b)
+		if special and _halo == null:
+			_halo = halo(_glow_col, 1.5)
+			_halo.position = Vector3(0, 0.95, 0.1)
+			_hand.add_child(_halo)
+			_glow_light = OmniLight3D.new()
+			_glow_light.omni_range = 4.5
+			_glow_light.position = Vector3(0, 0.9, 0.2)
+			_hand.add_child(_glow_light)
+		if _halo:
+			_halo.visible = special
+			_glow_light.visible = special
+			if special:
+				(_halo.material_override as StandardMaterial3D).albedo_color = _glow_col
+				_glow_light.light_color = Color(_glow_col.r, _glow_col.g, _glow_col.b)
 	_held_swing = (D.IT[id].swing or pool == "sling") and pool != "axe"
 	if pool == "axe": _held_swing = true
 	_held_pool = pool
 
 
 var _held_swing := false
+var _glow_col := Color(0, 0, 0, 0)       # the glow of a relic or a rune weapon in the hand (clear: none)
+var _glow_id := -1
+var _halo: MeshInstance3D
+var _glow_light: OmniLight3D
+
+
+## The colour a relic or a rune weapon glows: gold for most relics, silver for the silvered ones, violet for runes.
+static func glow_of(id: int) -> Color:
+	var I: Dictionary = D.IT[id]
+	if I.runed: return Color(0.62, 0.42, 1.0, 0.55)
+	var t: Array = I.tint
+	if t[2] > t[0]: return Color(0.7, 0.85, 1.0, 0.5)             # the Silvered Sword, the Censer: a cold light
+	return Color(1.0, 0.82, 0.35, 0.55)
+
+
+static var _halo_tex: GradientTexture2D
+## A soft disc of light that always faces the view: the halo round something that glows.
+static func halo(col: Color, size: float) -> MeshInstance3D:
+	if _halo_tex == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		g.add_point(0.35, Color(1, 1, 1, 0.35))
+		_halo_tex = GradientTexture2D.new()
+		_halo_tex.gradient = g
+		_halo_tex.fill = GradientTexture2D.FILL_RADIAL
+		_halo_tex.fill_from = Vector2(0.5, 0.5)
+		_halo_tex.fill_to = Vector2(1.0, 0.5)
+		_halo_tex.width = 64; _halo_tex.height = 64
+	var mi := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(size, size)
+	mi.mesh = q
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.billboard_keep_scale = true
+	m.albedo_texture = _halo_tex
+	m.albedo_color = col
+	m.disable_fog = true
+	m.disable_receive_shadows = true
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
 var _held_pool := ""
 
 
@@ -263,7 +330,13 @@ func _set_gear(ids: Array) -> void:
 	for id in ids:
 		if id < 0: continue
 		var t: Array = D.IT[id].tint
-		var mi := _mi(_gear, Models.gear_pool(id), _mat(Color(t[0], t[1], t[2])))
+		var gm := _mat(Color(t[0], t[1], t[2]))
+		if D.IT[id].tier == "relic":                     # a worn relic glows, steadily
+			var gc := glow_of(id)
+			gm.emission_enabled = true
+			gm.emission = Color(gc.r, gc.g, gc.b)
+			gm.emission_energy_multiplier = 0.7
+		var mi := _mi(_gear, Models.gear_pool(id), gm)
 		mi.set_meta("slot", D.IT[id].s)
 
 
@@ -334,6 +407,16 @@ func _process(delta: float) -> void:
 	else:
 		_hand.position = Vector3(0.42, 0.6, 0.14 + s2 * (0.25 if _held_swing else 0.55))
 		_hand.rotation = Vector3(0.12 + s2 * (1.7 if _held_swing else 1.4), -s2 * 0.9 if _held_swing else 0.0, 0)
+	if _glow_col.a > 0.0 and _halo:                      # the glow breathes
+		var pulse := 0.75 + 0.25 * sin(now * 3.2 + get_instance_id() % 7)
+		_held_mat.emission_energy_multiplier = 0.9 + 0.9 * pulse
+		_halo.scale = Vector3.ONE * (0.85 + 0.25 * pulse)
+		_halo.visible = _hand.visible
+		_glow_light.visible = _hand.visible
+		_glow_light.light_energy = (0.5 + 1.3 * dark) * pulse
+		if fx and _hand.visible and randf() < delta * 5.0:
+			var wp := _hand.global_position + Vector3(randf_range(-0.3, 0.3), randf_range(0.5, 1.4), randf_range(-0.3, 0.3))
+			fx.puff(wp.x, wp.y, wp.z, 1, [Color(_glow_col.r, _glow_col.g, _glow_col.b)], 0.5)
 	_carry.visible = not _down
 	if _bar.visible:                                     # the bar turns to face the view as one piece, so its fill stays inside it
 		var cam := get_viewport().get_camera_3d()

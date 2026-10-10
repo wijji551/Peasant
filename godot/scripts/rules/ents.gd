@@ -104,6 +104,7 @@ class Player:
 	var useCd := 0.0
 	var tbCd := 0.0
 	var order := 0            # 0 follow, 1 hold, 2 charge
+	var ordN := 0             # orders given today that taught something
 	var parry := 0.0
 	var guard := 0.0
 	var combo := 0

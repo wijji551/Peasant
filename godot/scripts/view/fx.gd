@@ -32,6 +32,8 @@ var _beams := []           # [node, life]: smites, columns of holy light
 var _arcs := []            # [node, age, life, kind, facing, half angle, size]: the sweep of a blade, a thrust, a shockwave
 var _arc_spare: Array[MeshInstance3D] = []
 var _arc_n := 0
+var _zaps := []            # [node, life]: the bits of a lightning bolt
+var _logs := []            # [node, time so far (negative: not set off yet), seconds it takes, from, to]: logs rolling down the road
 
 const MAX_ARCS := 72
 const WHITE := Color(1.0, 0.97, 0.88)
@@ -48,6 +50,52 @@ func slash(x: float, z: float, r: float, reach: float, half: float, col: Color =
 	n.rotation = Vector3(0, r, 0) if thrust else Vector3(0, r, randf_range(-0.22, 0.22))
 	_arcs.append([n, 0.0, 0.16 if thrust else 0.21, 1 if thrust else 0, r, half, reach])
 	_arc_step(_arcs[-1], 0.0)
+
+
+## The log roller going: five logs let loose one after another, rolling and bouncing down the road and throwing up dust.
+func roll_logs(x1: float, z1: float, x2: float, z2: float) -> void:
+	for i in 5:
+		var pivot := Node3D.new()                        # the pivot travels; the log inside it turns
+		var n := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.4 + 0.06 * (i % 2); cm.bottom_radius = cm.top_radius; cm.height = 4.0 + 0.3 * (i % 3); cm.radial_segments = 9; cm.rings = 1
+		n.mesh = cm
+		n.material_override = _tint(Color(0.5, 0.36, 0.22) if i % 2 else Color(0.58, 0.43, 0.27))
+		n.rotation.z = PI / 2                            # lying across the road
+		pivot.add_child(n)
+		pivot.position = Vector3(x1, 0.45, z1)
+		pivot.rotation.y = randf_range(-0.12, 0.12)
+		pivot.visible = false
+		add_child(pivot)
+		_logs.append([pivot, -0.16 * i, 1.25 + 0.08 * i, Vector3(x1 + randf_range(-0.3, 0.3), 0.45, z1), Vector3(x2 + randf_range(-0.5, 0.5), 0.45, z2 + 1.0 - 0.9 * i)])
+
+
+## Lightning from one place to another: a jagged line of light, gone in a blink.
+func zap(x1: float, z1: float, x2: float, z2: float) -> void:
+	var a := Vector3(x1, 1.5, z1)
+	var b := Vector3(x2, 1.4, z2)
+	var n := 4
+	var prev := a
+	for i in range(1, n + 1):
+		var pt := a.lerp(b, float(i) / n)
+		if i < n: pt += Vector3(randf_range(-0.5, 0.5), randf_range(-0.3, 0.6), randf_range(-0.5, 0.5))
+		var seg := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.12, 0.12, maxf(0.05, prev.distance_to(pt)))
+		seg.mesh = bm
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.albedo_color = Color(1.0, 0.97, 0.7, 1.0)
+		m.disable_fog = true
+		seg.material_override = m
+		seg.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(seg)
+		seg.position = (prev + pt) * 0.5
+		if prev.distance_to(pt) > 0.01: seg.look_at(pt, Vector3.UP if absf((pt - prev).normalized().y) < 0.95 else Vector3.RIGHT)
+		_zaps.append([seg, 0.2])
+		prev = pt
+	puff(x2, 1.4, z2, 6, C_HOLY, 4.0)
 
 
 ## A ring racing outwards along the ground: something heavy has landed.
@@ -274,6 +322,36 @@ func _process(delta: float) -> void:
 			(ar[0] as MeshInstance3D).visible = false
 			_arc_spare.append(ar[0])
 			_arcs.remove_at(i)
+		i -= 1
+	i = _zaps.size() - 1
+	while i >= 0:
+		var zp: Array = _zaps[i]
+		zp[1] -= delta
+		var zn: MeshInstance3D = zp[0]
+		if zp[1] <= 0:
+			zn.queue_free()
+			_zaps.remove_at(i)
+		else:
+			(zn.material_override as StandardMaterial3D).albedo_color.a = zp[1] / 0.2
+		i -= 1
+	i = _logs.size() - 1
+	while i >= 0:
+		var lg: Array = _logs[i]
+		lg[1] += delta
+		var pv: Node3D = lg[0]
+		if lg[1] >= lg[2] + 0.9:                             # it lies where it stopped for a moment, then is cleared away
+			pv.queue_free()
+			_logs.remove_at(i)
+		elif lg[1] >= 0.0:
+			var k: float = minf(1.0, lg[1] / lg[2])
+			var e := k * (2.0 - k)                            # off at a rush, slowing as it goes
+			var from: Vector3 = lg[3]
+			var to: Vector3 = lg[4]
+			pv.visible = true
+			pv.position = from.lerp(to, e) + Vector3(0, absf(sin(e * 9.0 + i)) * 0.5 * (1.0 - k), 0)
+			(pv.get_child(0) as Node3D).rotation.x = e * from.distance_to(to) / 0.42
+			if k < 1.0 and randf() < delta * 30.0: puff(pv.position.x + randf_range(-1.8, 1.8), 0.2, pv.position.z, 2, C_DUST, 2.5)
+			if k >= 1.0 and lg[1] - delta < lg[2]: puff(pv.position.x, 0.4, pv.position.z, 10, C_WOOD, 4.0)
 		i -= 1
 	i = _beams.size() - 1
 	while i >= 0:

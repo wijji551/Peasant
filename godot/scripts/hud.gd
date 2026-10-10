@@ -448,7 +448,7 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 			var cd: float = p.p1Cd if i == 0 else p.p2Cd
 			shown = true
 			_set_chip("power%d" % (i + 1), true, pw.icon, Keys.name("power%d" % (i + 1)) if has_it else "rank %d" % pw.rank, pw.n + (" %ds" % ceili(cd) if cd > 0 else ""),
-				"%s: %s. %s" % [pw.full, pw.d, "{power%d}." % (i + 1) if has_it else "It comes at rank %d of %s." % [pw.rank, D.BOOKS[D.CLASSES[cl].book].name]], cd > 0 or not has_it)
+				"%s: %s. %s" % [pw.full, pw.d, "{power%d}." % (i + 1) if has_it else "It comes at rank %d of %s." % [pw.rank, D.book_title(D.CLASSES[cl].book)]], cd > 0 or not has_it)
 		if not shown: _set_chip("power%d" % (i + 1), false, "", "", "", "")
 	_powers.visible = cl >= 0 and not _covered
 	_feed.offset_top = -148 if cl >= 0 else -76
@@ -458,9 +458,9 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 	var nv := 100.0
 	for q in R.peasants:
 		if q.owner == p.id and q.state != "body" and q.state != "hide" and q.nv < nv: nv = q.nv
-	var orders := Rules.rk(p, 6) >= 3
+	var orders := Rules.rk(p, 6) >= 1
 	_set_chip("posse", true, "posse", (Keys.name("orders") + " " + ["follow", "hold", "charge"][p.order]) if orders else "", "Posse %d/%d" % [p.posse, R.posse_max(p)],
-		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + (" {orders}: follow, hold, charge." if orders else ""), p.posse == 0)
+		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + ((" {orders}: follow, hold, charge." if Rules.rk(p, 6) >= 3 else " {orders}: follow, or hold.") if orders else ""), p.posse == 0)
 	_set_chip("pack", true, "pack", Keys.name("pack"), "Backpack %d/%d" % [p.inv.size(), D.PACK_MAX], "Your backpack: what is on you, and six places for spares. Click or press {pack}.")
 	var owned := p.books.filter(func(r): return r > 0).size()
 	_set_chip("skills", true, "book", Keys.name("skills"), ("Skills +" if p.spare >= 1 else "Skills") if owned else "No book",

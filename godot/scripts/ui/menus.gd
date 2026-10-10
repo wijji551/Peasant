@@ -6,10 +6,12 @@ const GUIDE := [
 	["The short version", ["By day, gather and build. At dusk the bell rings. At night the dead rise along the graveyard to the north, one after another without a pause and faster as the night goes on, and make for the keep, where the families are hiding. If the keep falls, Thornhallow is lost. Hold for the month: thirty nights (or seven, in the short game).", "Nearly everything is done by walking up to it and holding {interact}."]],
 	["The day", ["A day lasts six minutes, or until everyone presses {ready}.", "Wood comes from trees, stone from the rocky outcrop, iron from the mine, food from the farms to the west or the jetty on the river. The stone, the iron and the fishing move every morning: the dawn notice says where, and the map marks them. You carry 20 of each.", "At the jetty, hold {interact} and press {attack} when something bites."]],
 	["Defences", ["The north wall has seven foundations: six walls and a gate. Stand on one and hold {interact}. Barricades and spike rows go anywhere: press {build} or 1 to 4 (or click one, bottom right), then {interact} or click.", "Hold {interact} at a damaged defence to repair it with wood. Carrying stone or iron, hold {interact} again to face a wall with stone, band the gate or brace a barricade. An unbraced barricade rots by half every evening after its first night.", "Nobody can be hit through a standing wall or gate, in either direction. Go out through the gate, or shoot over."]],
-	["Your posse", ["Hold {interact} beside a neighbour to rally them. They gather when you gather and fight when you fight. The slum has more, for food. The smithy gives them spears.", "They can die, and they have nerve: when friends fall they may run for the keep until dawn. {toilet} is the emergency toilet break, which sends the dead nearby running. With rank 3 of the leadership book, {orders} tells them to follow, hold or charge."]],
+	["Your posse", ["Hold {interact} beside a neighbour to rally them. They gather when you gather and fight when you fight. The slum has more, for food. The smithy gives them spears.", "They can die, and they have nerve: when friends fall they may run for the keep until dawn. {toilet} is the emergency toilet break, which sends the dead nearby running. With How to Win Peasants and Lead Them, {orders} tells them to follow or to hold where they stand; rank 3 adds charge. That book is learned by leading: your first ten orders of a day, rallying and recruiting, the work and the blows of your posse, and every one of them still standing at dawn."]],
 	["Fighting", ["{attack} or a click attacks. {trick} or a right-click is your weapon’s own trick: every weapon has a different one, with a short wait between uses. {eat} eats one food.", "Every blow that lands shows what it did. A plain number is an ordinary blow. A big gold one means you have the right tool for the job (a mace on bones, holy things on anything, a hammer on the ram). A small grey one, with a tink, means you have the wrong one: farm tools on armour, anything swung at bats. A big orange one with a mark after it is a lucky double. Small orange ones are things burning. The numbers, and the knock your own blows give the view, can be turned off in Options.", "Knocked down, you have 15 seconds for a team-mate to hold {interact} over you. After that a relative takes over your cottage at dawn, with your books but not your gear. Relics lie where you fell.", "From dusk you can hide in your own cottage. It is safe, and the village will call you a coward until the next dusk."]],
+	["Fishing, and the farms", ["The farms feed a posse: everyone you lead forages with you. The jetty feeds one: a catch is five fish (seven at rank 3 of Field, Hook and Pot), more than a lone forager gets, and your posse cannot help. But the river keeps what falls in it. Now and then a catch brings up a purse, once in a long while a rune, and very rarely something somebody dropped."]],
+	["Relics and their books", ["There are eleven relics, and each goes with one book: carrying it with that book read does something more. The four found most recently: the Thunderer’s Bow (its arrows are lightning, and jump to two more of the dead; with Slings, Bows and Thrown Turnips, to three), Saint Walstan’s Scythe (with the Woodcutter’s Almanac, you gather a fifth faster), the Mason’s Blessed Trowel (defences near you mend themselves; with Barricades for Beginners, twice as fast, and your repairs are free), and Saint Dunstan’s Tongs (forging costs a quarter less; with Hammer and Tongs, forged weapons hit a tenth harder)."]],
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
-	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: shared materials and a shared arms rack. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
+	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: the village’s shared materials on one tab (take out 1, 5 or 20; put in 1, 5 or all) and its spare arms and armour on the other (click a thing to take it, click one of yours to put it in). Runes can be left there for whoever is the smith. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
 	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "Nobody has to be there from the start, or every time. Join a village after its week has begun and you move into an empty cottage. Drop out, or lose your connection, and your peasant is kept exactly as it was: join again under the same name and you have it back, the same day or another. When the host carries on from the save with some of you missing, the missing ones wait in the same way. Relics do not wait with you: they stay with the village.", "With a village server set (Options), villages go through it: a five-letter code that works from anywhere, and nobody's router matters. Without one, the host's computer asks its router to let friends in; if the router says no, that code only works on the same home network, unless the host opens port 24565 (UDP). The game does not pause for the handbook when others are playing."]],
 	["The lie of the land", ["Thornhallow sits in the middle, with the castle up the road to the north and the river to the south. The thorn hedges, far to the west and east, are the edge of the world. West is Hallowshire Forest, with the old steel mine at its top end; east are the downs and the old mill. The stone, the iron and the fish move every morning (the dawn notice says where), and the far places are a long walk, so go early."]],
 	["The smithy", ["Anyone can knock out a crude weapon at the smithy. It wears out: chipped after a night's fighting, in bits after a second. Hammer and Tongs makes refined weapons, which last; from rank 4, steel ones, which hit harder still. Steel comes from the old steel mine, at the top of the forest to the north-west, and the market pays well for it but sells none. Anyone can forge armour; steel armour needs rank 4."]],
@@ -21,12 +23,27 @@ const GUIDE := [
 	["Contraptions", ["Barricades for Beginners teaches the village's inventions, one every rank or so, and a box of cogs from the tinker builds any one without the book. Press 5 (or click the fifth card, bottom right) to step through the ones you can build.", "The chicken decoy (rank 1): nothing dead can ignore it, briefly. The pitfall (3): swallows four for good; good inside the wall, for gravediggers. The tar pit (4): everything wades. The holy water trough (5, and a class of holy studies or the Holy Book): burns whatever crosses it, wraiths too. The log roller (6), up the road north of the wall: once a night it flattens a crowd, or a coffin ram. The Thresher (7): a spinning flail, as long as someone stands by to turn the handle."]],
 	["Merchants and hired help", ["On about six days of the month a merchant parks a cart by the market: the tinker (iron, tools, boxes of cogs for contraptions), the armourer (forged arms, no smithy needed), the brewer (food, and ale for the inn), the relic pedlar (one real relic among the fakes: rank 2 of relic lore tells which) or the bookseller (loose pages, and An Index of Further Reading). They leave at dusk.", "Each has a job, paid with the best thing on the cart. Take it at the cart, then stay where the job is: most of a day alone, about half a day each with a team-mate. Nobody learns from a book on a day they work for a merchant.", "Robert Bailiff will lend you a village guard for 8 shillings (knock at his back door, north of his house): he holds a gate until dawn. Six guards in all, two to a gate. The Thorny Rose Inn will find you a mercenary for 8 shillings: stronger, in your posse until dawn, and about one in seven turns on you then for two more shillings."]],
 	["The Holy Book", ["The last book on the library shelf makes you an apprentice priest: a peasant's version of a mage, which is to say not much of one. {power1} is Smite, a bolt of holy light on the nearest of the dead; from rank 2, {power2} is Pray, a third less harm for ten seconds for you and everyone near you, posse included. Later ranks make the prayer bless weapons and mend wounds, and the smite burst and strike three at once. Smites are holy, so they hurt wraiths.", "One calling at a time. You learn the book by smiting and praying.", "Your title: the village names you after the two books you know best, the one you know best last (the Sooty Ringleader, the Holy Apprentice Priest). It shows top left.", "A fourth book: An Index of Further Reading turns up, rarely, in the ruins. Read it and the library lets you take up one more.", "Every relic goes with a book. Read the book and the relic does a little more: the Silvered Sword hits harder with The Art of Hitting Things, the Chapel Handbell smites with the Holy Book, and so on. Your backpack says which."]],
+	["The nights of the bells", ["Three nights a month the priest and his congregation ring the chapel bells until dawn, to keep the dead away. It enrages them instead: they come quicker, hit a quarter harder and take a quarter more putting down. There is one such night in each week after the first, never on a boss’s night or the full moon. The notice board says so that morning. The village passes the hat twice the morning after."]],
 	["The month", ["Four weeks, each ending with a boss: the Steward on night 7, the Coachman and his hearse on 14, the Captain of the Guard on 21, and the Lord of Ashhollow himself on 30. Each week the dead last a little longer and hit a little harder, and new kinds come down. The dawn notice warns you the morning before.", "Ghouls (from night 8) are fast and climb over barricades, but not walls. Gravediggers (10) tunnel under the north wall and come up inside. Bat swarms (12) fly over everything for the keep: slings, bows and the handbell bring them down. The Lord's guard (15) is armoured: farm tools barely dent it, maces and hammers do. Wraiths (18) drift through walls, and only holy things hurt them: relics, blessed weapons, blessed slop. A coffin ram (20) goes for the north gate: a warhammer, or a very strong gate.", "The weather changes the night. Rain makes mud, and the dead wade slower. Fog hides the castle road. Snow slows everyone. Night 15 is the full moon: relics are easier to find, and the dead are quicker."]],
 	["Looking around", ["The view starts from the south, with north up the screen, but you can swing it round your peasant. Press the mouse wheel in and drag, or hold {look} and move the mouse: left and right turn the view, up and down tilt it. {cam_left} and {cam_right} turn it from the keyboard. Roll the wheel to come closer or go further off. {cam_reset} puts it all back.", "Moving follows the view: {up} is always away from you, up the screen. The map in the corner stays north up, and the pale fan on your dot shows which way you are looking."]],
 	["Reading the screen", ["Top left: the day and the time left, and whether you are ready. Top middle: the keep, and the boss when one comes. Top right: the map. Left: what you carry. Bottom: your hand, bucket, posse, backpack, skills and toilet break, with their keys, and the four things you can place, bottom right. What holding {interact} would do shows just above the bar at the bottom.", "Places, your backpack, the dawn and this handbook all open in one window in the middle. Esc closes it, or the cross; walking away closes a place's notice."]],
 ]
 
 const CHANGES := [
+	["The storehouse, relics, leading and fishing", [
+		"The storehouse is laid out like a bank. Materials: take out 1, 5 or 20, put in 1, 5 or all, one row each, no more wall of text. Things: the village’s spare arms and armour in a grid; click one to take it, click one of yours to put it in. Runes can be stored too.",
+		"A relic for every book. Four new ones are out in the rubble: the Thunderer’s Bow, whose arrows are lightning; Saint Walstan’s Scythe; the Mason’s Blessed Trowel; and Saint Dunstan’s Tongs. The handbook says what each does.",
+		"Leading: {orders} works from the first rank of How to Win Peasants and Lead Them (follow, or hold; charge still comes at rank 3), and the book is now learned by leading: orders, your posse’s work as well as its blows, and bringing them through the night alive. It was nearly impossible to get to rank 3 before.",
+		"Fishing is worth the walk: a catch is five fish (seven at rank 3), and the river now and then gives up a purse, a rune, or something somebody dropped. The farm is still better for a big posse.",
+		"Books are shown by their titles, with what they are about in brackets: Hammer and Tongs (Blacksmithing).",
+		"The log roller’s logs now roll: five of them, down the road, with dust. Houses no longer have timbers sticking out of their corners.",
+	]],
+	["Tougher dead, and the nights of the bells", [
+		"The dead take more putting down as the month goes on: half as much again in the second week, twice in the third, nearly three times in the fourth. The first week is as it was. One blow no longer does for everything.",
+		"The nights of the bells: three nights a month (one in each week after the first) the priest and his congregation ring the chapel bells until dawn. It enrages the dead: quicker, a quarter stronger and a quarter harder to put down. The notice board and the morning news warn you, and the hat goes round twice afterwards.",
+		"Relics glow: the metal, a halo round it, and light on whatever is near, in the hand, on your head or back, and lying on the ground. Rune weapons glow violet.",
+		"The farm is marked on the map.",
+	]],
 	["Fixes from the first long game", [
 		"Black nights: on a foggy night the whole screen went black. The fog was being measured from the wrong place and swallowed everything. Fixed: fog now closes in just beyond you, as it was meant to.",
 		"Playing together, indoors: a joined player down the old workings or in the Rose was being held at the edge of the map by the host's game. So they could not climb out, the host could not see them, and they were stuck. Fixed.",
@@ -427,6 +444,9 @@ func notice(id: String, page: String, force: bool = false) -> void:
 	if id == "gambler":                                 # the gambler has a table of his own
 		gamble(force)
 		return
+	if id == "store":                                   # and the storehouse a counter
+		store(force)
+		return
 	var d := Notices.data(m.R, id, m.me, page)
 	if d.is_empty():
 		return
@@ -447,6 +467,100 @@ func notice(id: String, page: String, force: bool = false) -> void:
 		var i := n - 1
 		w.option(n, o.label, o.get("sub", ""), o.ok, func(): m.option(i))
 	w.hint("Press the number, or click." + ("" if m.me.state == "inn" else " Walk away or press Esc to close."))
+
+
+# ---------------------------------------------------------------- the storehouse
+var store_tab := "res" if OS.get_environment("DTV_STORE_TAB") == "" else OS.get_environment("DTV_STORE_TAB")
+var _store_sig := ""
+
+## The storehouse, laid out like a bank: materials on one tab (take 1, 5 or 20; put in 1, 5 or all), and the
+## village's spare things on the other (click one to take it; click one of yours to put it in).
+func store(force: bool = false) -> void:
+	var p: E.Player = m.me
+	var R: Rules = m.R
+	var sig := str([store_tab, R.store, R.items, p.inv, p.wpn, p.head, p.body, p.off, p.trk, D.STORE_RES.map(func(k): return p.get(k)), Settings.binds])
+	if sig == _store_sig and w.is_open("notice") and not force:
+		return
+	_store_sig = sig
+	var act := func(a: String, arg) -> void: m.cmd({"t": "act", "a": a, "arg": arg})
+	w.open("notice", "The storehouse", "", 700, 580, true, false)
+	w.tabs([["res", "Materials"], ["items", "Things (%d)" % R.items.size()]], store_tab, func(t): store_tab = t; store(true))
+	if store_tab == "res":
+		w.para("Shared by the whole village. You can carry %d of each." % Rules.cap(p), 15, Look.INK_SOFT)
+		var g := GridContainer.new()
+		g.columns = 5
+		g.add_theme_constant_override("h_separation", 14)
+		g.add_theme_constant_override("v_separation", 8)
+		w.body.add_child(g)
+		for h in ["", "", "In store", "Take out", "Put in  (you carry)"]:
+			Look.label(g, h, 13, Look.RUST)
+		for k in D.STORE_RES:
+			var have: int = p.get(k)
+			var inside: int = int(R.store.get(k, 0))
+			var room: int = Rules.cap(p) - have
+			var ic := TextureRect.new()
+			ic.texture = Look.icon(k, 30)
+			ic.custom_minimum_size = Vector2(30, 30)
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			g.add_child(ic)
+			Look.label(g, D.RES_NAME[k], 18)
+			var cnt := Look.label(g, str(inside), 20, Look.INK if inside > 0 else Color(Look.INK, 0.4), true)
+			cnt.custom_minimum_size.x = 64
+			for side in [0, 1]:                         # 0: take out, 1: put in
+				var row := HBoxContainer.new()
+				row.add_theme_constant_override("separation", 5)
+				g.add_child(row)
+				for n in ([1, 5, 20] if side == 0 else [1, 5, 0]):
+					var bt := Button.new()
+					bt.focus_mode = Control.FOCUS_NONE
+					bt.custom_minimum_size.x = 46
+					bt.text = "All" if n == 0 else str(n)
+					var key: String = k
+					var amt: int = n
+					if side == 0:
+						bt.disabled = inside <= 0 or room <= 0
+						bt.tooltip_text = ("You can carry no more %s." % k) if room <= 0 and inside > 0 else "Take %d %s (or what there is, or what you can carry)." % [n, k]
+						bt.pressed.connect(func(): act.call("take", "%s:%d" % [key, amt]))
+					else:
+						bt.disabled = have <= 0
+						bt.tooltip_text = "Put in all the %s you carry." % k if n == 0 else "Put in %d %s (or what you have)." % [n, k]
+						bt.pressed.connect(func(): act.call("put", key if amt == 0 else "%s:%d" % [key, amt]))
+					row.add_child(bt)
+				if side == 1: Look.label(row, "  %d" % have, 16, Look.INK_SOFT)
+		w.hint("Click a number to take out or put in that many. Walk away or press Esc to close.")
+	else:
+		w.head("In the storehouse (%d of 60): click a thing to take it" % R.items.size())
+		var bank := HFlowContainer.new()
+		bank.add_theme_constant_override("h_separation", 6)
+		bank.add_theme_constant_override("v_separation", 6)
+		w.body.add_child(bank)
+		if R.items.is_empty():
+			Look.para(bank, "Nothing yet. Spare arms and armour left here are for anybody in the village to take.", 15, Look.INK_SOFT).custom_minimum_size.x = 600
+		for i in R.items.size():
+			var it: int = R.items[i]
+			var j := i
+			var fits: bool = p.inv.size() < D.PACK_MAX or Rules.wears_now(p, it)
+			_slot(bank, it, "", "", "%s. %s %s" % [D.it_cap(it), Notices.item_sub(p, it), "Click to take it." if fits else "Your backpack is full."], false,
+				(func(): act.call("takei", j)) if fits else Callable(), Callable(), not Rules.can_use(p, it))
+		w.head("Yours: click a thing to put it in")
+		var mine := HFlowContainer.new()
+		mine.add_theme_constant_override("h_separation", 6)
+		mine.add_theme_constant_override("v_separation", 6)
+		w.body.add_child(mine)
+		for k in D.SLOTS:
+			var id: int = p.get(k)
+			if id > 0:
+				var slot: String = k
+				_slot(mine, id, Notices.SLOTN[k], "", "%s. %s. Click to put it in the storehouse." % [D.it_cap(id), "It is in your hand: you go back to the pitchfork" if k == "wpn" else "You are wearing it"], false, func(): act.call("pute", slot), Callable())
+		for i in D.PACK_MAX:
+			if i >= p.inv.size():
+				_slot(mine, -1, "", "", "", false, Callable(), Callable())
+				continue
+			var j := i
+			_slot(mine, p.inv[i], "", "", "%s. %s Click to put it in the storehouse." % [D.it_cap(p.inv[i]), Notices.item_sub(p, p.inv[i])], false, func(): act.call("puti", j), Callable())
+		_info = w.para("Point at a thing to read about it.", 14, Look.INK_SOFT)
+		_info.custom_minimum_size.y = 48
+		w.hint("Click a thing to move it. Walk away or press Esc to close.")
 
 
 # ---------------------------------------------------------------- the gambler's table
@@ -742,8 +856,8 @@ func skills(force: bool = false) -> void:
 	w.body.add_child(cols)
 	# left: the ten books
 	var left := VBoxContainer.new()
-	left.custom_minimum_size.x = 270
-	left.add_theme_constant_override("separation", 4)
+	left.custom_minimum_size.x = 330
+	left.add_theme_constant_override("separation", 3)
 	cols.add_child(left)
 	for i in D.BOOKS.size():
 		var bk: Dictionary = D.BOOKS[i]
@@ -754,11 +868,12 @@ func skills(force: bool = false) -> void:
 		var rr := Rules.rk(p, i)
 		bt.disabled = rr == 0
 		bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		bt.text = ("%s   %s" % [ROMAN[rr], bk.what]) if rr else "—   " + bk.what
+		bt.text = "%s   %s\n       (%s)" % [ROMAN[rr] if rr else "—", bk.name, bk.what]     # the book, and in a word what it is about
 		bt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		bt.clip_text = true
-		bt.tooltip_text = bk.name if rr else bk.name + ". In the library."
-		bt.add_theme_font_size_override("font_size", 16)
+		bt.tooltip_text = D.book_title(i) if rr else D.book_title(i) + ". In the library."
+		bt.add_theme_font_size_override("font_size", 14)
+		bt.add_theme_constant_override("line_spacing", -3)
 		var bi := i
 		bt.pressed.connect(func(): skill_book = bi; skills.call_deferred(true))
 		left.add_child(bt)
@@ -774,7 +889,7 @@ func skills(force: bool = false) -> void:
 		var bk: Dictionary = D.BOOKS[b]
 		var rank: int = Rules.rk(p, b)
 		Look.label(right, bk.name, 26, Look.INK, true)
-		Look.para(right, "%s. You learn it by %s.%s" % [bk.what, bk.by, " Halved while you are a coward." if p.coward else ""], 15, Look.INK_SOFT)
+		Look.para(right, "(%s.) You learn it by %s.%s" % [bk.what, bk.by, " Halved while you are a coward." if p.coward else ""], 15, Look.INK_SOFT)
 		var gap := Control.new(); gap.custom_minimum_size.y = 8; right.add_child(gap)
 		for r in range(1, 8):
 			var got := rank >= r

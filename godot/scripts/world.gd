@@ -514,14 +514,19 @@ func house(x: float, z: float, rot_y: float, w: float, d: float, h: float, wall_
 		if h >= 1.9:                                      # half-timbering: a rail round the middle, and braces up to it
 			var mid := f + h * 0.5
 			Build.box(n, Vector3(w + 0.08, 0.16, d + 0.08), Vector3(0, mid - 0.08, 0), C.timber)
+			# A brace runs from the foot of a corner post up and inwards to the rail, flat against the wall. (A box turns
+			# about its middle, so the middle is put where the brace's middle should be: before, the braces were turned
+			# about a point on the corner and one end stuck out past it into the air.)
 			var lean := 0.62
 			var blen := (h * 0.5) / cos(lean)
+			var run := blen * sin(lean)                 # how far along the wall a brace reaches
+			var by := f + h * 0.25 - blen * 0.5         # so that it stands between the ground and the rail
 			for sz in [-1.0, 1.0]:
 				for sx in [-1.0, 1.0]:
-					Build.box(n, Vector3(0.15, blen, 0.06), Vector3(sx * (w / 2 - 0.16), f, sz * (d / 2 + 0.03)), C.timber, 0.0, 0.0, -sx * lean)
+					Build.box(n, Vector3(0.15, blen, 0.06), Vector3(sx * (w / 2 - 0.2 - run * 0.5), by, sz * (d / 2 + 0.03)), C.timber, 0.0, 0.0, sx * lean)
 					Build.box(n, Vector3(0.15, h * 0.5, 0.06), Vector3(sx * w * 0.16, mid, sz * (d / 2 + 0.03)), C.timber)
 			for sx in [-1.0, 1.0]:
-				Build.box(n, Vector3(0.06, blen, 0.15), Vector3(sx * (w / 2 + 0.03), f, -d / 2 + 0.16), C.timber, 0.0, lean, 0.0)
+				Build.box(n, Vector3(0.06, blen, 0.15), Vector3(sx * (w / 2 + 0.03), by, -d / 2 + 0.2 + run * 0.5), C.timber, 0.0, lean, 0.0)
 	if rh < 0.0:
 		rh = minf(w, d) * 0.5
 	if w >= d:

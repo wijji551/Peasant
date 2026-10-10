@@ -47,6 +47,8 @@ const PLAYER_SPEED := 7.0
 const PEASANT_WORK_TIME := 4.0
 const TREE_WOOD := 6
 const RES := ["wood", "stone", "iron", "food", "steel"]
+const STORE_RES := ["wood", "stone", "iron", "food", "steel", "rune"]      # what the storehouse keeps (runes too, for whoever is the smith)
+const RES_NAME := {"wood": "Wood", "stone": "Stone", "iron": "Iron", "food": "Food", "steel": "Steel", "rune": "Runes"}
 const GATHER := {
 	"tree": {"res": "wood", "time": 1.5, "verb": "chop", "book": 0},
 	"stone": {"res": "stone", "time": 1.9, "verb": "quarry stone", "book": 0},
@@ -120,7 +122,7 @@ const _IT := [
 	{"n": "slop bucket", "s": "t", "tier": "found", "pool": "bucket", "tint": [0.6, 0.48, 0.3], "note": "{carry} lobs it, once: every undead it splashes runs from the smell"},
 ]
 const _IT_DEF := {"dmg": 0.0, "cd": 0.0, "reach": 0.0, "arc": 0.0, "ab": "", "note": "", "swing": 0, "cost": {}, "blunt": false, "heavy": false,
-	"fire": false, "runed": false, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
+	"fire": false, "runed": false, "chain": 0, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
 ## The smithy makes three grades. Anyone can knock out a crude weapon, which wears out: after a night's fighting it is
 ## chipped, and after a second it falls apart. Hammer and Tongs (rank 1) makes the refined ones (the first list above);
 ## from rank 4, steel, from the old steel mine. Crude, chipped and steel things are made here from the refined ones,
@@ -177,11 +179,31 @@ const _MORE := [
 	{"n": "burning torch", "s": "w", "tier": "made", "dmg": 8, "cd": 0.46, "reach": 2.0, "arc": 0.35, "ab": "flare", "pool": "torch", "fire": true, "cost": {"wood": 3},
 		"note": "Sets alight whatever it hits: they burn for a few seconds after. Lights the dark, too"},
 ]
-static var IT: Array = _fill(_IT + _grades() + _MORE + _runes(), _IT_DEF)
+## Four more relics, one for each book that had none (added after the rune weapons, so nothing earlier changes its number).
+const _RELICS2 := [
+	{"n": "the Thunderer’s Bow", "s": "w", "tier": "relic", "dmg": 20, "cd": 0.85, "rng": 16, "holy": true, "ab": "volley", "pool": "bow", "shot": 1, "chain": 2, "tint": [1.3, 1.25, 0.7],
+		"note": "Holy. Its arrows are lightning: each one jumps on to two more of the dead nearby"},
+	{"n": "Saint Walstan’s Scythe", "s": "w", "tier": "relic", "dmg": 24, "cd": 0.7, "reach": 2.9, "arc": -0.2, "holy": true, "ab": "reap", "pool": "scythe", "swing": 1, "tint": [1.25, 1.1, 0.6],
+		"note": "Holy, with a sweep that takes in nearly everything round you"},
+	{"n": "the Mason’s Blessed Trowel", "s": "t", "tier": "relic", "pool": "bucket", "tint": [0.85, 0.85, 0.8],
+		"note": "Walls, gates and barricades near you slowly mend themselves"},
+	{"n": "Saint Dunstan’s Tongs", "s": "t", "tier": "relic", "pool": "bucket", "tint": [0.5, 0.45, 0.45],
+		"note": "Whatever you forge costs a quarter less"},
+]
+static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2, _IT_DEF)
 const I_CARD := 47
 const I_TORCH := 48
 const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
 const BURN_DMG := 3.0
+## How much longer the ordinary dead last, week by week. (It was a tenth more a week, while a peasant's blows grow
+## three- or four-fold over the month: by week three everything died to one blow.) What they hit for still grows a tenth a week.
+const DEAD_HP := [1.0, 1.5, 2.1, 2.8]
+## The nights of the bells: three nights a month the priest and his congregation ring the chapel bells till dawn. It is
+## meant to keep the dead away. It enrages them: they come on faster, hit harder and take more putting down.
+const BELLS := {"n": 3, "speed": 1.12, "dmg": 1.25, "hp": 1.25, "hat": 2.0}
+const BELLS_LINE := "It is a holy day. Tonight the priest and his congregation will ring the chapel bells until dawn, to keep the dead away. Nobody has the heart to tell them what it does to the dead."
+const ORDER_XP := 3.0                # what giving an order teaches of the leading book
+const ORDERS_DAY := 10               # and how many orders a day teach anything
 const STUCK_WAIT := 20.0              # seconds between uses of "I'm a stuck little peasant"
 const MUD := 0.92                    # how fast the living walk in the rain (the dead wade at 0.85)
 const RUNE_COST := 4                 # runes in a rune weapon (with the steel a steel one takes)
@@ -251,7 +273,14 @@ static func rune_of(base: int) -> int:
 	return 29 + CRUDE_W.size() * 2 + (STEEL_W + STEEL_A).size() + _MORE.size() + STEEL_W.find(base)
 const SLOTK := {"w": "wpn", "h": "head", "b": "body", "o": "off", "t": "trk"}
 const SLOTS := ["wpn", "head", "body", "off", "trk"]
-const RELICS := [15, 16, 17, 20, 23, 26, 27]
+const I_BOW := 54                    # the Thunderer's Bow
+const I_SCYTHE := 55                 # Saint Walstan's Scythe
+const I_TROWEL := 56                 # the Mason's Blessed Trowel
+const I_TONGS := 57                  # Saint Dunstan's Tongs
+const RELICS := [15, 16, 17, 20, 23, 26, 27, 54, 55, 56, 57]     # one for every book
+const CHAIN_REACH := 4.5             # how far the Thunderer's lightning jumps (half as far again with its book)
+const TROWEL_REACH := 9.0
+const TROWEL_MEND := 3.0             # health a second it puts back into each defence near you (twice that with its book)
 const FOUND_W := [6, 7, 8, 9, 10, 11, 12]
 const FOUND_A := [18, 21, 24]
 const FORGE_W := [1, 2, 3, 4, 5, 13, 14]
@@ -279,7 +308,8 @@ const AB := {
 const PEASANT_ARM := {"iron": 3, "wood": 2}
 const STEEL_SELL := 3                # the market pays this much a piece for steel, and sells none
 const SLUM_FOOD := 5
-const FISH_FOOD := 3
+const FISH_FOOD := 5                  # fish in a catch (it was 3: no better than foraging, and a posse cannot help you fish)
+const FISH_FINDS := [0.015, 0.05, 0.2]   # the chance a catch brings up: something somebody dropped; a rune; a few coins
 const BLESS_FEE := 24
 const HOLY_TIME := 45.0
 const TANKARD := 25.0
@@ -293,12 +323,12 @@ const XPM := [1, 3, 7, 13, 21, 32]   # how much doing each further rank takes, a
 const SPARE_PAY := 12                # past rank VII, each further first step's worth of learning is a spare point, sold for this many pence
 const BOOKS := [
 	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material"]},
-	{"name": "Field, Hook and Pot", "what": "Food", "base": 40, "by": "fishing and foraging", "ranks": ["Fish and forage faster (and faster again with every rank)", "Meals heal 35", "A catch is 4 fish", "Eating heals your whole posse too", "Meals heal 50", "Slum recruits cost 3 food", "Meals heal 65 and settle your posse’s nerves"]},
+	{"name": "Field, Hook and Pot", "what": "Food", "base": 40, "by": "fishing and foraging", "ranks": ["Fish and forage faster (and faster again with every rank)", "Meals heal 35", "A catch is 7 fish", "Eating heals your whole posse too", "Meals heal 50", "Slum recruits cost 3 food", "Meals heal 65 and settle your posse’s nerves"]},
 	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank). Contraption: the chicken decoy", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger. Contraption: the pitfall", "Your barricades do not rot at dusk. Contraption: the tar pit", "Your spike rows last twice as long. Contraption: the holy water trough", "Your barricades and body walls are half as strong again. Contraption: the log roller", "Contraption: the Thresher, a spinning flail"]},
 	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge refined arms, not just crude ones, with a third less iron (and a little less with every rank)", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm your whole posse with spears in one go", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears", "You can forge rune weapons, the best there are, from steel and the runes of the old workings. Facing, banding and bracing a defence costs half"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["You hit harder up close (and harder again with every rank)", "One blow in eight against you misses", "Your weapon’s trick is ready a fifth sooner", "Your swings sweep wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow you land is twice as hard"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "Your shots never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also hits a second of the dead nearby", "Aimed stones, volleys and piercing bolts are ready in half the time"]},
-	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 50, "by": "recruiting, and your posse’s blows", "ranks": ["Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "Orders: {orders} tells your posse to follow, hold or charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away"]},
+	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 40, "by": "giving orders, recruiting, your posse’s work and blows, and bringing them through the night", "ranks": ["Orders: {orders} tells your posse to follow you or hold where they stand. Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "A third order: charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away"]},
 	{"name": "The Landlord’s Ledger", "what": "Dutch courage", "base": 4, "by": "drinking at the Thorny Rose Inn", "ranks": ["Every tankard gives more courage (and more again with every rank)", "A longer charge: 26 seconds", "Half the hangover", "No hangover", "When you drink, everyone else in the inn gets a little courage too", "A longer charge: 32 seconds", "The charge hits twice as hard"]},
 	{"name": "Relics and Where They Were Left", "what": "Relic lore", "base": 4, "by": "searching the ruins", "ranks": ["You search rubble faster (and faster again with every rank)", "Your map marks the rubble that still hides something", "Relics turn up half as often again", "You find twice the materials and coin in rubble", "Holy weapons, blessings and holy slop hit harder in your hands", "Relics turn up far more often", "Nothing lurking in the ruins notices you searching"]},
 	{"name": "Granny’s Remedies", "what": "Healing", "base": 4, "by": "bandaging and reviving", "ranks": ["Bandage a hurt ally: hold {interact} beside them (it heals more with every rank)", "Revive twice as fast, and to better health", "Each of your posse survives one fatal blow a night", "You heal slowly all the time, even in a fight", "Knocked down, you last twice as long before you die", "A bandage heals completely", "Once a night you get back up by yourself"]},
@@ -331,6 +361,10 @@ const RELIC_LORE := {
 	23: [9, "Every burn it gives mends you a little"],
 	26: [10, "Its ring smites everything it stuns"],
 	27: [8, "The dead it slows smoulder"],
+	54: [5, "The lightning jumps half as far again, and to a third"],
+	55: [0, "You and your posse gather a quarter faster while you carry it"],
+	56: [2, "It mends twice as fast, and your own repairs cost nothing"],
+	57: [3, "Forged, steel and rune weapons hit a tenth harder in your hand"],
 }
 # --- the dead. first: the night of the month they first come down. cost: how much of a night's horde one of them is
 # worth (a shambler is 1). Flags: bony (reassembles once), boss, climb (over barricades), dig (under the north wall),

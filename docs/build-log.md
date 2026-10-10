@@ -394,3 +394,42 @@ The web version is no longer updated; from here on, changes are made in Godot on
 - Six runes a day come out of the old workings (three veins of two), so a village can make about one rune weapon a day once it has a master smith.
 - The name: `D.GAME` is "Thornhallow Thirty Nights", and so are the window, the exported file's details, the release title and the READMEs.
 - Tests: torch 35 (the rune section rewritten: thirteen checks on rune weapons). The rest unchanged.
+
+## Fixes from the first long game (build 4)
+
+Three players reached day 25 and sent back a list. The breakages first.
+
+- **Black nights.** Fog is measured from the camera, which is about 120 from the player. A foggy night began at 20 and ended at 60, so the whole screen was solid fog (`main._apply_light`). Now 78 to 154: it closes in just past the player. Reproduced as a black screen before the fix, and checked after.
+- **Joined players indoors.** `Net.apply` clamped a joined player's position to the map, and the rooms are far outside the map (z about 240). So the host held them at the map's edge: they could not reach the ladder or the door, and the host could not see them. Now clamped to the room when `p.room` is set.
+- **Joining late, dropping out, coming back** (`Rules.away`, `leave_player`, `join_player`, `player_record`, `restore_player`).
+  - A village can be joined after its week has begun. A newcomer takes an empty cottage and its three villagers.
+  - A player who leaves or loses their connection is not thrown away: their record goes into `away` (relics excepted: those are dropped for the village). Joining again under the same name gives it back.
+  - The save keeps `away`. Carrying on with some people missing puts their saved peasants there too. One unmatched name and one unclaimed peasant is treated as a change of name; the host always keeps the save's first peasant.
+  - The host dropped a joined game that was quiet for 12 seconds, which a slow computer exceeds while building the village. Now 50 seconds (`QUIET_MS`), and joined games send a word every two seconds, in the lobby as well.
+  - One of the three players could not get in at all. Which of these it was is not known; all are fixed.
+- **The steel mine** was drawn with its mouth to the west and worked from the east (`sites.gd`: the model was never turned). Turned, and the reach widened a little.
+- **"I'm a stuck little peasant"**: a button at the foot of the handbook (action `unstick`, `D.STUCK_WAIT` 20 s). You and your posse are put outside your own front door, from anywhere, including a room.
+- **Health bars** were two billboards, each turning on its own centre, so the fill slid out of its frame as the view turned. The bar now turns as one piece (`figure._process`) and slides to a new value.
+- Hold E to get up from the bar. Rain is half as many drops, shorter and fainter. Rain slows the living to 0.92 (`D.MUD`); the dead wade at 0.85.
+- Standing by a training dummy says what it is for and how much practice is left today.
+- Tests: new `tests/away_test.gd` (32). The co-op test has a third player, `tests/net_late.gd`, who joins a week already going, drops out and joins again (9 checks; host 15, client 12), direct and through the village server.
+
+## The storehouse, relics, leading and fishing (build 5)
+
+- **The storehouse is a bank** (`menus.store`). Materials tab: one row a material, take out 1, 5 or 20, put in 1, 5 or all (actions `take` and `put` now take `"wood:5"`). Things tab: the village's spare things in a grid, yours below; click to move. Runes can be stored (`D.STORE_RES`).
+- **A relic for every book.** Four new relics (`D._RELICS2`, ids 54 to 57), added after the rune weapons:
+  - the Thunderer's Bow (Slings, Bows and Thrown Turnips): holy; each arrow jumps as lightning to two more of the dead within 4.5, at half strength (`Rules.lightning`, event `zap`, `Fx.zap`). With the book: three, and half as far again.
+  - Saint Walstan's Scythe (the Woodcutter's Almanac): holy, a very wide sweep. With the book: gathering takes a fifth less time.
+  - the Mason's Blessed Trowel (Barricades for Beginners): defences within 9 mend 3 a second. With the book: 6, and your own repairs are free.
+  - Saint Dunstan's Tongs (Hammer and Tongs): forging costs a quarter less. With the book: forged, steel and rune weapons hit a tenth harder.
+- **Leading is learned by leading.** Orders come at rank 1 of How to Win Peasants and Lead Them (follow, hold); charge at rank 3. The book's first step is 40, not 50, and it is taught by: the first ten orders of a day (3 each), a follower's work (0.5 a piece), a follower's blow (1, was 0.5), and each follower standing at dawn after a night you fought (4). Reaching rank 3 took about 400 posse blows before.
+- **Fishing.** A catch is 5 fish (7 at rank 3 of Field, Hook and Pot); it was 3, no better than foraging, and a posse cannot help. A catch has a 15% chance of a few coins, 3.5% of a rune and 1.5% of a found weapon or piece of armour (`D.FISH_FINDS`).
+- **Books are shown as title and gist** (`D.book_title`): "Hammer and Tongs (Blacksmithing)", in the skills window, the library and the messages.
+- **The log roller rolls** (`Fx.roll_logs`): five logs down the road, bouncing, with dust and a knock to the view.
+- **House braces** were turned about a point on the corner post, so one end stuck out into the air. They now lie flat against the wall, from the foot of the post up to the rail.
+- Tests: new `tests/relics_test.gd` (38, with the tougher dead and the bells below).
+- **Tougher dead** (`D.DEAD_HP`, `Rules.hp_of`, `R.tough_hp`): the ordinary dead have 1.0, 1.5, 2.1 and 2.8 times their health in weeks one to four. It was 1.0 to 1.3, while a peasant's blows grow three- or four-fold over the month, so by week three everything died to one blow. What they hit for still grows a tenth a week. Bosses are unchanged.
+- **The nights of the bells** (`Rules.bells_night`, `D.BELLS`): one night in each of weeks two, three and four, from the seed, never a boss's night or the full moon (the short game: its fourth night). The congregation rings till dawn and the dead are enraged: speed 1.12, damage 1.25, health 1.25. Warned of on the notice board and in the morning's news; the hat goes round twice the morning after. The dead are tinted red, and the chapel bell tolls all night.
+- **Relics glow** (`Figure.glow_of`, `Figure.halo`): emissive metal, a halo and a small light, in the hand, worn, and on the ground. Rune weapons glow violet.
+- The farm is a marked field on the map.
+- Still to decide with the designer: what the windmill does.

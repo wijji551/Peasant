@@ -12,7 +12,7 @@ static func lower(t: String) -> String:
 	return t[0].to_lower() + t.substr(1) if t.length() else t
 
 static func book_need(n: Array) -> String:
-	return "rank %d of %s" % [n[1], D.BOOKS[n[0]].name]
+	return "rank %d of %s" % [n[1], D.book_title(n[0])]
 
 static func item_sub(p: E.Player, id: int) -> String:   # one line about a thing, for a notice
 	var I: Dictionary = D.IT[id]
@@ -26,7 +26,7 @@ static func item_sub(p: E.Player, id: int) -> String:   # one line about a thing
 		t += (" " if t != "" else "") + I.note + "."
 	if D.RELIC_LORE.has(id):                         # what it does with the book it goes with
 		var L: Array = D.RELIC_LORE[id]
-		t += " With %s: %s.%s" % [D.BOOKS[L[0]].name, lower(L[1]), " (You have it.)" if Rules.rk(p, L[0]) > 0 else ""]
+		t += " With %s: %s.%s" % [D.book_title(L[0]), lower(L[1]), " (You have it.)" if Rules.rk(p, L[0]) > 0 else ""]
 	if not I.need.is_empty() and not Rules.can_use(p, id):
 		t += " You cannot use it yet: it needs %s." % book_need(I.need)
 	return t
@@ -79,14 +79,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 					o.append({"label": "Take: " + D.IT[it].n, "sub": item_sub(p, it), "ok": p.inv.size() < D.PACK_MAX or Rules.wears_now(p, it), "a": "takei", "arg": i})
 				o.append({"label": "Back to the materials", "sub": "", "ok": true, "page": ""})
 				return {"title": "The arms rack", "intro": "Spare arms, shared by the whole village: %d on the rack. Your backpack holds %d of %d." % [R.items.size(), p.inv.size(), D.PACK_MAX], "o": o}
-			o.append({"head": "Put in"})
-			for r in D.RES:
-				o.append({"label": "Put in your " + r, "sub": "You carry %d." % p.get(r), "ok": p.get(r) > 0, "a": "put", "arg": r})
-			o.append({"head": "Take out"})
-			for r in D.RES:
-				o.append({"label": "Take 5 " + r, "sub": "%d inside" % R.store[r], "ok": R.store[r] > 0 and p.get(r) < Rules.cap(p), "a": "take", "arg": r})
-			o.append({"head": "Spare arms"})
-			o.append({"label": "The arms rack", "sub": "%d spare weapon%s and bits of armour. Leave what you do not need for the others." % [R.items.size(), "" if R.items.size() == 1 else "s"], "ok": true, "page": "arms"})
+			# (The storehouse has a window of its own, menus.store(), with buttons: there is nothing here for the number keys.)
 			return {"title": "The storehouse", "intro": "Shared by the whole village. Anyone can put in or take out.", "o": o}
 		"smithy":
 			var forge := func(i: int) -> void:
@@ -132,7 +125,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				o.append({"head": "Give up which book?"})
 				for b in D.BOOKS.size():
 					if p.books[b] > 0:
-						o.append({"label": "Give up %s (rank %d)" % [D.BOOKS[b].name, p.books[b]], "sub": "Everything it taught you goes. The next book you take up starts at rank %d." % maxi(1, p.books[b] - 1), "ok": true, "a": "card", "arg": b})
+						o.append({"label": "Give up %s, rank %d" % [D.book_title(b), p.books[b]], "sub": "Everything it taught you goes. The next book you take up starts at rank %d." % maxi(1, p.books[b] - 1), "ok": true, "a": "card", "arg": b})
 				o.append({"label": "Keep the card for now", "sub": "", "ok": true, "page": ""})
 				return {"title": "Your library card", "intro": "The librarian will take back one of your books and let you choose another: one go, and the card is stamped. You do not start again from nothing: the new book begins a rank behind where the old one was.", "o": o}
 			var slots := Rules.book_slots(p)
@@ -143,8 +136,8 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				var B: Dictionary = D.BOOKS[b]
 				var r: int = Rules.rk(p, b)
 				var other_call: bool = Rules.is_class_book(b) and not r and Rules.class_of(p) >= 0
-				var sub := "One calling at a time." if other_call else ("%s. %s." % [B.what, Keys.fill(B.ranks[0])]) if not r else ("Latest: %s." % lower(B.ranks[r - 1])) + ((" Next: %s (%d of %d, by %s)." % [lower(B.ranks[r]), floori(p.xp[b]), Rules.need_xp(b, r), B.by]) if r < 7 else " You have finished it.")
-				o.append({"label": B.name + (" · rank %d of 7" % r if r else ""), "sub": sub, "ok": not r and slots > 0 and not other_call, "a": "book", "arg": b})
+				var sub := "One calling at a time." if other_call else ("%s." % Keys.fill(B.ranks[0])) if not r else ("Latest: %s." % lower(B.ranks[r - 1])) + ((" Next: %s (%d of %d, by %s)." % [lower(B.ranks[r]), floori(p.xp[b]), Rules.need_xp(b, r), B.by]) if r < 7 else " You have finished it.")
+				o.append({"label": D.book_title(b) + (" · rank %d of 7" % r if r else ""), "sub": sub, "ok": not r and slots > 0 and not other_call, "a": "book", "arg": b})
 			var most := 4 if p.xslot else 3
 			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of eleven books, with seven ranks in each. Choose your first. The Holy Book, at the end, makes you an apprentice priest.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four"][most] if owned >= most else "Reach rank 2 in a book to take up a second, and rank 3 in two books to take up a third." + (" Your Index of Further Reading allows a fourth." if p.xslot else " A fourth needs An Index of Further Reading, which turns up in the ruins."))
 			if p.card_rank > 1: intro += " Your card has been stamped: the next book you take up starts at rank %d." % p.card_rank
@@ -204,7 +197,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 					for b in p.books.size():
 						var r := Rules.rk(p, b)
 						if r > 0 and r < 7:
-							o.append({"label": "A loose page of " + D.BOOKS[b].name, "sub": D.coins(wv.price) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= wv.price and p.jobT <= 0, "a": "mbuy", "arg": "%d:%d" % [i, b]})
+							o.append({"label": "A loose page of " + D.book_title(b), "sub": D.coins(wv.price) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= wv.price and p.jobT <= 0, "a": "mbuy", "arg": "%d:%d" % [i, b]})
 					continue
 				var sub: String = D.coins(wv.price) + (". Sold." if gone else ".")
 				if wv.give == "it": sub += " " + item_sub(p, wv.it)
@@ -236,6 +229,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			o.append({"label": "The Lord’s letters", "sub": "%d so far. He writes every other morning, to complain." % R.letters.size() if R.letters.size() else "None yet. He is said to be a great writer of letters.", "ok": R.letters.size() > 0, "page": "letters"})
 			o.append({"head": "Today"})
 			o.append({"text": w if w != "" else "A fine, clear day. Make the most of it."})
+			if R.bells(): o.append({"text": D.BELLS_LINE + " The dead will be quicker, hit a quarter harder and take a quarter more putting down. The hat goes round twice in the morning."})
 			if R.merchant >= 0 and R.phase == "day":
 				o.append({"text": "A merchant is in: %s, by the market, until dusk." % D.MERCHANTS[R.merchant].name})
 			o.append({"head": "Tonight"})
