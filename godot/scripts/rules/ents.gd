@@ -123,6 +123,7 @@ class Player:
 	var eatCd := 0.0
 	var hurtT := 99.0
 	var eHold := false
+	var stuckT := 0.0       # how long before "I'm a stuck little peasant" can be used again
 	var eLock := false
 	var itT := 0.0
 	var itKey := ""

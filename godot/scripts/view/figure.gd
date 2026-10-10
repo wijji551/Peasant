@@ -83,7 +83,6 @@ static func _mat(c: Color) -> StandardMaterial3D:
 static func _bar_material(c: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	m.no_depth_test = true
 	m.render_priority = 2
 	m.albedo_color = c
@@ -219,10 +218,15 @@ var _dim := 1.0
 var _wobble := false
 
 
+var _bar_f := 1.0
+
+
 func _show_bar(y: float, w: float, frac: float, col: Color) -> void:
-	_bar.visible = true
 	_bar_y = y
 	var f := clampf(frac, 0, 1)
+	_bar_f = f if not _bar.visible or absf(f - _bar_f) > 0.5 else lerpf(_bar_f, f, 0.25)      # it slides to a new value: no flicker
+	f = _bar_f
+	_bar.visible = true
 	_bar.get_child(0).scale = Vector3(w + 0.12, 1, 1)
 	_bar_fill.scale = Vector3(maxf(0.02, w * f), 1, 1)
 	_bar_fill.position.x = -(w - w * f) / 2.0
@@ -331,4 +335,6 @@ func _process(delta: float) -> void:
 		_hand.position = Vector3(0.42, 0.6, 0.14 + s2 * (0.25 if _held_swing else 0.55))
 		_hand.rotation = Vector3(0.12 + s2 * (1.7 if _held_swing else 1.4), -s2 * 0.9 if _held_swing else 0.0, 0)
 	_carry.visible = not _down
-	_bar.global_position = global_position + Vector3(0, _bar_y, 0)
+	if _bar.visible:                                     # the bar turns to face the view as one piece, so its fill stays inside it
+		var cam := get_viewport().get_camera_3d()
+		_bar.global_transform = Transform3D(cam.global_basis.orthonormalized() if cam else Basis.IDENTITY, global_position + Vector3(0, _bar_y, 0))

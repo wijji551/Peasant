@@ -168,7 +168,7 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 
 func _make_rain() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
-	p.amount = 2200
+	p.amount = 1100                      # (it was 2200, taller and nearly opaque: people could not see through it)
 	p.lifetime = 0.9
 	p.preprocess = 1.0
 	p.local_coords = false
@@ -180,11 +180,11 @@ func _make_rain() -> CPUParticles3D:
 	p.initial_velocity_min = 30.0
 	p.initial_velocity_max = 36.0
 	var m := BoxMesh.new()
-	m.size = Vector3(0.09, 1.8, 0.09)
+	m.size = Vector3(0.06, 1.3, 0.06)
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(0.82, 0.88, 1.0, 0.6)
+	mat.albedo_color = Color(0.82, 0.88, 1.0, 0.34)
 	m.material = mat
 	p.mesh = m
 	p.emitting = false

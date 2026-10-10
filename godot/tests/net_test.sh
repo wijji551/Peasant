@@ -17,9 +17,13 @@ timeout 150 "$G" --headless --path . -s res://tests/net_host.gd > "$OUT/host.txt
 H=$!
 timeout 150 "$G" --headless --path . -s res://tests/net_client.gd > "$OUT/client.txt" 2>&1 &
 C=$!
+timeout 150 "$G" --headless --path . -s res://tests/net_late.gd > "$OUT/late.txt" 2>&1 &
+L=$!
 wait $H; HR=$?
 wait $C; CR=$?
+wait $L; LR=$?
+CR=$((CR + LR))
 [ -n "$R" ] && kill $R 2>/dev/null
-grep -hE "PASS|FAIL|SCRIPT ERROR|pass," "$OUT/host.txt" "$OUT/client.txt"
+grep -hE "PASS|FAIL|SCRIPT ERROR|pass," "$OUT/host.txt" "$OUT/client.txt" "$OUT/late.txt"
 [ "$MODE" = "relay" ] && grep -E "opened|joined|left|closed" "$OUT/relay.txt"
 exit $((HR + CR))

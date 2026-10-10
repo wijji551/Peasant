@@ -182,6 +182,8 @@ const I_CARD := 47
 const I_TORCH := 48
 const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
 const BURN_DMG := 3.0
+const STUCK_WAIT := 20.0              # seconds between uses of "I'm a stuck little peasant"
+const MUD := 0.92                    # how fast the living walk in the rain (the dead wade at 0.85)
 const RUNE_COST := 4                 # runes in a rune weapon (with the steel a steel one takes)
 const RUNE_DMG := 1.7                # a rune weapon's damage, against the refined one's (steel is 1.35)
 const RUNE_RANK := 7                 # the rank of Hammer and Tongs that can make one
@@ -572,6 +574,11 @@ static func it_a(id: int) -> String:   # "a club", "an iron cap", "the Silvered 
 static func it_cap(id: int) -> String:
 	var n: String = IT[id].n
 	return n[0].to_upper() + n.substr(1)
+
+
+## A book as it is shown everywhere: its title, and in a word or two what it is about.
+static func book_title(b: int) -> String:
+	return "%s (%s)" % [BOOKS[b].name, BOOKS[b].what]
 
 
 static func rel_name(n: String, k: int) -> String:   # who takes over the cottage after a death

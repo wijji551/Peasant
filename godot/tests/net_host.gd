@@ -29,6 +29,7 @@ func _init() -> void:
 	var relay := OS.get_environment("DTV_RELAY")
 	Settings.relay = relay if relay != "" else "none"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_code.txt"))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_started.txt"))
 	var why: String = Net.me.host("Hosty", 0)
 	ok("hosting starts", why == "" and Net.me.is_host(), why)
 	await frames(3)
@@ -57,6 +58,20 @@ func _init() -> void:
 	ok("the friend swings, and the host's rules do it", swung)
 	var bought := await wait_for(func(): return them and them.ready, 15.0)
 	ok("the friend says they are ready", bought)
+	# somebody turns up after the week has begun, goes away, and comes back
+	var fs := FileAccess.open("user://test_started.txt", FileAccess.WRITE)
+	fs.store_string("go")
+	fs.close()
+	var late_in := await wait_for(func(): return m.R.players.size() == 3 and m.R.players[2].name == "Latey", 60.0)
+	ok("a latecomer joins the week already going", late_in, m.R.players.map(func(p): return p.name))
+	if late_in:
+		var late: E.Player = m.R.players[2]
+		ok("and moves into a cottage of their own", late.slot != m.R.players[0].slot and late.slot != them.slot and late.remote, late.slot)
+		late.wood = 13; late.books[3] = 2
+		var went := await wait_for(func(): return m.R.players.size() == 2 and m.R.away.size() == 1, 60.0)
+		ok("when they drop out, their peasant is kept for them", went and m.R.away[0].name == "Latey" and int(m.R.away[0].wood) == 13, [m.R.players.size(), m.R.away.size()])
+		var came := await wait_for(func(): return m.R.players.size() == 3 and m.R.away.is_empty(), 60.0)
+		ok("and when they join again they have it back", came and m.R.players[2].name == "Latey" and m.R.players[2].wood == 13 and m.R.players[2].books[3] == 2, m.R.players.map(func(p): return [p.name, p.wood]))
 	m.R.dusk_falls(); m.R.timeLeft = 0.5                   # on to the night, so the dead go over the wire too
 	var risen := await wait_for(func(): return m.R.undead.size() >= 2, 40.0)
 	ok("night falls and the dead rise", risen, m.R.undead.size())

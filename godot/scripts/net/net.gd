@@ -49,6 +49,8 @@ var via_relay := false         # connected through the village server rather tha
 var _peer: ENetMultiplayerPeer
 var _conns := {}               # host: network peer id -> player id
 var _last_in := {}             # host: player id -> when we last heard from them
+var _ping_acc := 0.0
+const QUIET_MS := 50000        # the host lets a joined game go this long without a word before deciding it has gone
 var _next_id := 2
 var _acc := 0.0
 var _in_acc := 0.0
@@ -256,10 +258,6 @@ func _port_result(ok: bool, ext: String, u: UPNP) -> void:
 
 func _on_peer_joined(pid: int) -> void:
 	if role != "host": return
-	if main and main.screen == "game":
-		_send({"t": "no", "why": "The week has already begun in that village. Ask the host to start a new one, then join before it starts."}, pid)
-		_drop_later(pid)
-		return
 	if lobby.size() >= MAX_PLAYERS:
 		_send({"t": "no", "why": "That village is full: eight peasants already."}, pid)
 		_drop_later(pid)
@@ -288,8 +286,9 @@ func _on_peer_left(pid: int) -> void:
 	var id: int = _conns[pid]
 	_conns.erase(pid)
 	lobby = lobby.filter(func(l): return l.id != id)
+	_last_in.erase(id)
 	if main and main.screen == "game":
-		main.R.remove_player(id)
+		main.R.leave_player(id)                     # their peasant is kept: they can join again and have it back
 		send_roster()
 	else:
 		send_lobby()
@@ -479,6 +478,9 @@ func _host_msg(pid: int, m: Dictionary) -> void:
 				l.name = str(m.get("name", "Peasant")).strip_edges().substr(0, 14)
 				if l.name == "": l.name = "Peasant"
 				l.col = _free_col(int(m.get("col", -1)))
+				if main and main.screen == "game" and main.R.player_by_id(id) == null:   # joining a game already going
+					main.R.join_player(id, l.name, l.col, true)
+					send_roster()
 		send_lobby()
 		return
 	if main == null or main.screen != "game": return
@@ -492,7 +494,12 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 	match str(m.t):
 		"in":
 			if p.state == "ok" and int(m.get("tp", -1)) == p.tp:   # where they walked to (ignored just after the rules moved them)
-				p.tx = clampf(float(m.x), D.X0, D.X1); p.tz = clampf(float(m.z), D.Z0, D.Z1); p.goal_r = float(m.r)
+				if p.room != "" and D.ROOMS.has(p.room):            # indoors: the room is its own place, far outside the map
+					var M: Dictionary = D.ROOMS[p.room]
+					p.tx = clampf(float(m.x), M.x - M.hw, M.x + M.hw); p.tz = clampf(float(m.z), M.z - M.hd, M.z + M.hd)
+				else:
+					p.tx = clampf(float(m.x), D.X0, D.X1); p.tz = clampf(float(m.z), D.Z0, D.Z1)
+				p.goal_r = float(m.r)
 			p.eHold = bool(m.get("e", false)) and R.live() and (p.state == "ok" or p.state == "hide")
 		"atk": p.r = float(m.r); p.goal_r = p.r; R.do_attack(p)
 		"abl": p.r = float(m.r); p.goal_r = p.r; R.do_ability(p)
@@ -510,6 +517,11 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 
 # ---------------------------------------------------------------- every frame
 func _process(delta: float) -> void:
+	if role == "client":                          # a word to the host every two seconds, in the lobby as well as in the game
+		_ping_acc += delta
+		if _ping_acc >= 2.0:
+			_ping_acc = 0.0
+			send_host({"t": "ping"})
 	if main == null or not is_instance_valid(main) or main.screen != "game": return
 	if role == "host":
 		_host_tick(delta)
@@ -520,9 +532,9 @@ func _process(delta: float) -> void:
 func _host_tick(delta: float) -> void:
 	var R: Rules = main.R
 	var now := Time.get_ticks_msec()
-	for pid in _conns.keys():                     # gone quiet for twelve seconds: they have gone
-		var id: int = _conns[pid]
-		if now - int(_last_in.get(id, now)) > 12000:
+	for pid in _conns.keys():                     # gone quiet for most of a minute: they have gone. (It was twelve
+		var id: int = _conns[pid]                 # seconds, and a slow computer can take longer than that to build the village.)
+		if now - int(_last_in.get(id, now)) > QUIET_MS:
 			_drop(pid)
 			_on_peer_left(pid)
 	_acc += delta

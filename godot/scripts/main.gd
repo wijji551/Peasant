@@ -59,6 +59,7 @@ var pops: Control                    # numbers that jump off the dead when they 
 var _kick := Vector3.ZERO            # the camera, knocked a little by a blow, on its way back
 var _later := []                     # [seconds to go, event]: a shot's blow, shown when the shot arrives
 var _my_hc := -1                     # to notice when I am hit
+var _inn_up := 0.0                   # how long E has been held at the bar (-1: wait for it to be let go first)
 var atmos: Node3D                # mist, rain, wisps, crows and lightning (only for looking at)
 
 var screen := "home"             # "home" or "game"
@@ -711,6 +712,15 @@ func _tick() -> void:
 	var held_e := Keys.held("interact") and _build_sel == ""
 	if _bot: held_e = false
 	p.eHold = R.live() and held_e and (p.state == "ok" or p.state == "hide")
+	if p.state == "inn" and R.live():                    # sat at the bar: hold E to get up (a fresh press, not the one that sat you down)
+		if not held_e: _inn_up = 0.0
+		elif _inn_up >= 0.0:
+			_inn_up += STEP
+			if _inn_up >= 0.6:
+				_inn_up = -1.0
+				cmd({"t": "act", "a": "innout"})
+	else:
+		_inn_up = -1.0 if held_e else 0.0
 	if R.live() and p.state == "ok":
 		var mx := 0.0
 		var mz := 0.0
@@ -1015,8 +1025,10 @@ func _apply_light(nf: float) -> void:
 	env.ambient_light_energy = lerpf(0.32 - gl * 0.06, 0.5, nf) + fl * 0.5
 	var fog := FOG_DAY.lerp(Color(0.48, 0.52, 0.54), gl).lerp(FOG_NIGHT, nf).lerp(FOG_DUSK, k * 0.7).lerp(Color(0.6, 0.65, 0.8), fl * 0.6)
 	var back := _fog_back if screen == "game" else 0.0   # the haze keeps its distance from the player, not from the camera, when the view is brought nearer or taken further off
-	env.fog_depth_begin = maxf(5.0, lerpf(95.0 - gl * 15.0, 70.0 - foggy * 50.0, nf) + back)
-	env.fog_depth_end = lerpf(250.0 - gl * 40.0, 190.0 - foggy * 130.0, nf) + back
+	# (Fog is measured from the camera, which is some 120 away from the player. A foggy night used to start at 20 and
+	# end at 60, so everything on the screen was solid fog: black from edge to edge. Now it thickens just past the player.)
+	env.fog_depth_begin = maxf(5.0, lerpf(95.0 - gl * 15.0, 70.0 + foggy * 8.0, nf) + back)
+	env.fog_depth_end = maxf(env.fog_depth_begin + 30.0, lerpf(250.0 - gl * 40.0, 190.0 - foggy * 36.0, nf) + back)
 	env.adjustment_saturation = lerpf(1.1 - gl * 0.25, 0.8, nf)
 	env.background_color = fog
 	env.fog_light_color = fog
@@ -1171,6 +1183,15 @@ func _hud_update(delta: float) -> void:
 		ptxt = it.label
 	if ptxt == "" and p.state == "ok" and _edge_t > 0:
 		ptxt = EDGE.get(_edge, "")
+	if ptxt == "" and p.state == "ok" and p.room == "" and R.live():     # by a training dummy: what it is for
+		for dm in D.DUMMIES:
+			if D.d2(p.x, p.z, dm[0], dm[1]) < 7.0:
+				var bk := 5 if D.IT[p.wpn].rng else 4
+				if Rules.rk(p, bk) < 1: ptxt = "A training dummy. Hitting it teaches nothing until you have read %s, from the library." % D.book_title(bk)
+				elif p.drill >= D.DRILL_MAX: ptxt = "A training dummy. You have had all the practice it can give you today."
+				else: ptxt = "A training dummy: hit it ({attack}) to practise %s. %d more blows will teach you something today." % [D.book_title(bk), D.DRILL_MAX - p.drill]
+				break
+	if p.state == "inn" and R.live() and ptxt == "": ptxt = "Hold {interact} to get up from the bar"
 	_edge_t -= delta
 	if p.state == "down": ptxt = "You are down. A team-mate can revive you for %d more seconds." % ceili(p.downT)
 	elif p.state == "dead": ptxt = "You are dead. A relative arrives at dawn."

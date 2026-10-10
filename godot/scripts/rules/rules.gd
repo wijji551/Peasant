@@ -11,6 +11,7 @@ var nf := 0.0                 # how far into night it is: 0 by day, 1 at night
 var keepHp := D.KEEP_HP
 var keepHc := 0
 var players: Array = []       # E.Player
+var away: Array = []          # players who are not here just now, each as the save keeps a player: they come back by name
 var peasants: Array = []      # E.Peasant
 var undead: Array = []        # E.Undead
 var structs: Array = []       # E.Struct
@@ -523,7 +524,7 @@ func mk_struct(k: String, x: float, z: float, rot: float, built: bool, hp: float
 # infos: [{id, name, col}] for the people playing
 func new_game(infos: Array, last: int = D.MONTH) -> void:
 	clear_world(); day = 1; gseed = 1 + randi() % 1000000; last_day = last
-	players = []
+	players = []; away = []
 	for i in infos.size():
 		var np := mk_player(infos[i].id, infos[i].name, infos[i].get("col", i), i)
 		np.remote = infos[i].get("remote", false)
@@ -737,10 +738,7 @@ func save_data() -> Dictionary:
 		ss.append({"k": s.k, "x": s.x, "z": s.z, "rot": s.rot, "built": s.built, "hp": s.hp, "max": s.mhp, "slot": s.slot, "re": s.re, "bl": s.bl, "nr": s.nr, "age": s.age})
 	var ps := []
 	for p in players:
-		var o := {"inv": p.inv.duplicate(), "books": p.books.duplicate(), "xp": p.xp.duplicate()}
-		for k in P_SAVE:
-			o[k] = p.get(k)
-		ps.append(o)
+		ps.append(player_record(p))
 	var qs := []
 	for q in peasants:
 		var own := player_by_id(q.owner)
@@ -749,7 +747,87 @@ func save_data() -> Dictionary:
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z, "day": d.day})
 	return {"v": 3, "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
-		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "chest": chest.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "peasants": qs}
+		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "chest": chest.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "away": away.duplicate(true), "peasants": qs}
+
+## A player as the save keeps them: what they carry, wear and know.
+func player_record(p: E.Player) -> Dictionary:
+	var o := {"inv": p.inv.duplicate(), "books": p.books.duplicate(), "xp": p.xp.duplicate()}
+	for k in P_SAVE:
+		o[k] = p.get(k)
+	return o
+
+
+## Put a saved peasant's things back on a player just made (who keeps the name, colour and cottage they were made with).
+func restore_player(p: E.Player, sp: Dictionary) -> void:
+	for f in P_SAVE:
+		if f != "name" and f != "col" and f != "slot" and sp.has(f):
+			var v = sp[f]
+			if typeof(p.get(f)) == TYPE_INT: v = int(v)
+			p.set(f, v)
+	p.inv = []
+	for v in sp.inv: p.inv.append(int(v))
+	p.books = []
+	for v in sp.books: p.books.append(int(v))
+	p.xp = sp.xp.duplicate()
+	while p.books.size() < D.BOOKS.size(): p.books.append(0)   # a save from before the Holy Book
+	while p.xp.size() < D.BOOKS.size(): p.xp.append(0.0)
+	if p.hp <= 0: p.hp = D.PLAYER_HP * 0.5
+	p.dn = D.rel_name(p.name, p.deaths)
+
+
+## Somebody playing together has gone (they left, or their connection dropped). Their peasant is kept, with all it
+## had, and they can come back to it by joining again under the same name: today, or on another day from the save.
+func leave_player(id: int) -> void:
+	var p := player_by_id(id)
+	if p == null: return
+	if p.state == "inn": leave_inn(p, false)
+	for f in ["wpn", "head", "body", "off", "trk"]:           # relics stay with the village, not with whoever went home
+		var it: int = p.get(f)
+		if it > 0 and D.IT[it].tier == "relic":
+			drop_item(it, p.x if p.room == "" else D.cottage(p.slot).sx, p.z if p.room == "" else D.cottage(p.slot).sz)
+			p.set(f, 0 if f == "wpn" else -1)
+	var keep_inv := []
+	for it in p.inv:
+		if it > 0 and D.IT[it].tier == "relic": drop_item(it, p.x if p.room == "" else D.cottage(p.slot).sx, p.z if p.room == "" else D.cottage(p.slot).sz)
+		else: keep_inv.append(it)
+	p.inv = keep_inv
+	p.room = ""; p.game = {}; p.bodies = 0
+	away.append(player_record(p))
+	players.erase(p)
+	for q in peasants:
+		if q.owner == id:
+			q.owner = 0
+			q.state = "idle" if phase == "day" else "hide"
+	say("%s has gone home for now. Their cottage is kept for them." % p.dn)
+
+
+## Somebody has joined a game already going. If a peasant of that name is waiting, they get it back as it was;
+## otherwise they move into an empty cottage as a newcomer.
+func join_player(id: int, name: String, col: int, remote: bool = true) -> E.Player:
+	var sp = null
+	for i in away.size():
+		if str(away[i].name).to_lower() == name.to_lower():
+			sp = away.pop_at(i)
+			break
+	var slot := 0
+	if sp: slot = int(sp.slot)
+	else:
+		while slot < 8 and (players.any(func(o): return o.slot == slot) or away.any(func(o): return int(o.slot) == slot)): slot += 1
+		if slot >= 8:                                     # every cottage is spoken for: share one that somebody away has left
+			slot = 0
+			while slot < 7 and players.any(func(o): return o.slot == slot): slot += 1
+	var p := mk_player(id, name, col, slot % 8)
+	p.remote = remote
+	if sp:
+		restore_player(p, sp)
+		say("%s is back in the village." % p.dn)
+	else:
+		var h0 := home_spot(p.slot, 0, 3)                # (unless that cottage's villagers are there already, from somebody before)
+		if not peasants.any(func(q): return absf(q.hx - h0.x) < 0.3 and absf(q.hz - h0.z) < 0.3): add_villagers(p.slot, 3)
+		say("%s has moved into the village. Somebody show them the library." % p.dn)
+	players.append(p)
+	return p
+
 
 # infos: the people playing now. Each takes over a saved peasant, by name where possible.
 func load_game(d: Dictionary, infos: Array) -> void:
@@ -785,36 +863,34 @@ func load_game(d: Dictionary, infos: Array) -> void:
 	var left_: Array = d.players.duplicate()
 	var used := {}
 	players = []
+	var picks := []                                   # for each of those playing now: their saved peasant, or null
 	for info in infos:
 		var k := -1
 		for i in left_.size():
-			if left_[i].name == info.name:
+			if str(left_[i].name).to_lower() == str(info.name).to_lower():
 				k = i
 				break
-		if k < 0 and left_.size():
-			k = 0
-		var sp = left_.pop_at(k) if k >= 0 else null
+		picks.append(left_.pop_at(k) if k >= 0 else null)
+	if picks.count(null) == 1 and left_.size() == 1:  # one of us is not in the save, and one saved peasant is unclaimed: a change of name
+		picks[picks.find(null)] = left_.pop_at(0)
+	elif picks.size() and picks[0] == null and left_.has(d.players[0]):   # the host under a new name: the save is theirs, and its first peasant is them
+		left_.erase(d.players[0])
+		picks[0] = d.players[0]
+	away = []                                         # whoever is not here today keeps their peasant, and can come back to it
+	for o in d.get("away", []) + left_:
+		away.append(o)
+	for ii in infos.size():
+		var info: Dictionary = infos[ii]
+		var sp = picks[ii]
 		var slot: int = int(sp.slot) if sp else 0
 		if not sp:
-			while used.has(slot) or d.players.any(func(o): return int(o.slot) == slot):
+			while used.has(slot) or d.players.any(func(o): return int(o.slot) == slot) or away.any(func(o): return int(o.slot) == slot):
 				slot += 1
 		used[slot] = true
 		var p := mk_player(info.id, info.name, info.get("col", 0), slot % 8)
 		p.remote = info.get("remote", false)
 		if sp:
-			for f in P_SAVE:
-				if f != "name" and f != "col" and f != "slot" and sp.has(f):
-					var v = sp[f]
-					if typeof(p.get(f)) == TYPE_INT: v = int(v)
-					p.set(f, v)
-			p.inv = []
-			for v in sp.inv: p.inv.append(int(v))
-			p.books = []
-			for v in sp.books: p.books.append(int(v))
-			p.xp = sp.xp.duplicate()
-			while p.books.size() < D.BOOKS.size(): p.books.append(0)   # a save from before the Holy Book
-			while p.xp.size() < D.BOOKS.size(): p.xp.append(0.0)
-			p.dn = D.rel_name(info.name, p.deaths)
+			restore_player(p, sp)
 		else:
 			add_villagers(p.slot, 3)
 		players.append(p)
@@ -1100,7 +1176,7 @@ func find_interact(p: E.Player):
 		gx = pt.x; gz = pt.y
 	elif D.d2(p.x, p.z, MINE.x, MINE.z) < 8:
 		kind = "iron"; gx = MINE.x + MINE.dir * 0.6; gz = MINE.z
-	elif D.d2(p.x, p.z, STEELM.x, STEELM.z) < 8:
+	elif D.d2(p.x, p.z, STEELM.x, STEELM.z) < 11:
 		kind = "steel"; gx = STEELM.x - 0.6; gz = STEELM.z
 	elif p.x > D.FARM.x0 and p.x < D.FARM.x1 and p.z > D.FARM.z0 and p.z < D.FARM.z1:
 		kind = "food"
@@ -1891,6 +1967,17 @@ func near_station(p: E.Player, id: String) -> bool:
 func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a notice. The host checks everything again.
 	if not live():
 		return
+	if a == "unstick":                                # "I'm a stuck little peasant": back outside your own front door
+		if (p.state == "ok" or p.state == "hide" or p.state == "inn") and p.stuckT <= 0:
+			if p.state == "inn": leave_inn(p, false)
+			var c := D.cottage(p.slot)
+			p.state = "ok"; p.room = ""; p.game = {}; p.gk = 0; p.prog = 0; p.study = false
+			p.x = c.sx; p.z = c.sz; p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1; p.eLock = true; p.stuckT = D.STUCK_WAIT
+			for q in peasants:                          # and the posse comes too, wherever it had got to
+				if q.owner == p.id and active(q):
+					q.x = p.x + rnd2(-1.6, 1.6); q.z = p.z + rnd2(0.6, 2.0) * c.dir; q.tx = q.x; q.tz = q.z; q.state = "follow"; q.tree = null
+			say("%s was a stuck little peasant, and is now standing outside their own front door." % p.dn)
+		return
 	if p.state == "inn":
 		if a == "drink" and ale > 0 and p.drinkT <= 0 and p.cg < 100:
 			ale -= 1; p.drinkT = D.DRINK_TIME
@@ -2493,6 +2580,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 
 
 func player_step(p: E.Player, dt: float) -> void:
+	p.stuckT = maxf(0, p.stuckT - dt)
 	p.atkCd = maxf(0, p.atkCd - dt); p.eatCd = maxf(0, p.eatCd - dt); p.hurtT += dt; p.workT = maxf(0, p.workT - dt)
 	p.p1Cd = maxf(0, p.p1Cd - dt); p.p2Cd = maxf(0, p.p2Cd - dt); p.prot = maxf(0, p.prot - dt); p.hb = maxf(0, p.hb - dt)
 	p.abCd = maxf(0, p.abCd - dt); p.useCd = maxf(0, p.useCd - dt); p.tbCd = maxf(0, p.tbCd - dt); p.parry = maxf(0, p.parry - dt); p.guard = maxf(0, p.guard - dt); p.hang = maxf(0, p.hang - dt)
@@ -3254,7 +3342,7 @@ func move_player(p: E.Player, mx: float, mz: float, dt: float, t: float = 0.0) -
 	var l := sqrt(mx * mx + mz * mz)
 	if l <= 0:
 		return ""
-	var sp: float = D.PLAYER_SPEED * (1 - D.IT[p.body].slow if p.body >= 0 else 1.0) * (1 - 0.05 * p.bodies) * (1.35 if p.charge > 0 else 0.6 if p.hang > 0 else 1.0) * (0.85 if weather == "snow" else 1.0)
+	var sp: float = D.PLAYER_SPEED * (1 - D.IT[p.body].slow if p.body >= 0 else 1.0) * (1 - 0.05 * p.bodies) * (1.35 if p.charge > 0 else 0.6 if p.hang > 0 else 1.0) * (0.85 if weather == "snow" else D.MUD if weather == "rain" and p.room == "" else 1.0)
 	mx /= l; mz /= l
 	if p.hang > 0:                                 # the hangover wobble
 		var w := sin(t / 0.26) * 0.6

@@ -24,6 +24,7 @@ func _ready() -> void:
 	_quarry = _mi("outcrop")
 	var sm := _mi("mine")                            # the old steel mine, at the top of the forest: it does not move
 	sm.position = Vector3(D.STEEL_MINE.x, 0, D.STEEL_MINE.z)
+	sm.rotation.y = PI                               # its mouth faces east, to the village: that is where the rules let you mine it
 	sm.material_override = _tinted(Color(0.72, 0.78, 0.9))
 	_mine = _mi("mine")
 	_jetty = _mi("jetty")
