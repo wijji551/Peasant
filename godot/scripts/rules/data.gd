@@ -20,7 +20,7 @@ const Z0 := -62.0
 const Z1 := 53.0
 const SLOTX := [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0]   # north wall foundations; the middle one is the gate
 
-const GAME := "Thornhallow: Thirty Nights"      # what the game is called
+const GAME := "Thornhallow Thirty Nights"      # what the game is called
 # --- rules
 const DAY_LEN := 360.0
 const DUSK_LEN := 20.0
@@ -120,7 +120,7 @@ const _IT := [
 	{"n": "slop bucket", "s": "t", "tier": "found", "pool": "bucket", "tint": [0.6, 0.48, 0.3], "note": "{carry} lobs it, once: every undead it splashes runs from the smell"},
 ]
 const _IT_DEF := {"dmg": 0.0, "cd": 0.0, "reach": 0.0, "arc": 0.0, "ab": "", "note": "", "swing": 0, "cost": {}, "blunt": false, "heavy": false,
-	"fire": false, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
+	"fire": false, "runed": false, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
 ## The smithy makes three grades. Anyone can knock out a crude weapon, which wears out: after a night's fighting it is
 ## chipped, and after a second it falls apart. Hammer and Tongs (rank 1) makes the refined ones (the first list above);
 ## from rank 4, steel, from the old steel mine. Crude, chipped and steel things are made here from the refined ones,
@@ -155,6 +155,21 @@ static func _grades() -> Array:
 		o.tint = [1.12, 1.18, 1.3]
 		out.append(o)
 	return out
+## The top of the smithy: the five refined weapons again, made of steel with runes cut in. They go after everything
+## else (see _MORE), so nothing earlier changes its number.
+static func _runes() -> Array:
+	var out := []
+	for base in STEEL_W:
+		var r: Dictionary = _IT[base]
+		var o := r.duplicate(true)
+		o.n = "rune " + r.n
+		o.tier = "rune"; o.base = base; o.runed = true
+		o.dmg = roundf(r.dmg * RUNE_DMG)
+		o.cost = {"rune": RUNE_COST, "steel": maxi(2, ceili(r.cost.get("iron", 0) * 0.75)), "wood": r.cost.get("wood", 0)}
+		o.note = "Rune-cut steel: " + (r.note.to_lower() if r.has("note") else "the best there is") + ". It bites wraiths"
+		o.tint = [0.95, 0.78, 1.45]
+		out.append(o)
+	return out
 ## Things added later go on the end, so that every earlier thing keeps its number (saved games remember things by number).
 ## s "c": a paper, kept in the backpack and handed in somewhere, never worn.
 const _MORE := [
@@ -162,12 +177,14 @@ const _MORE := [
 	{"n": "burning torch", "s": "w", "tier": "made", "dmg": 8, "cd": 0.46, "reach": 2.0, "arc": 0.35, "ab": "flare", "pool": "torch", "fire": true, "cost": {"wood": 3},
 		"note": "Sets alight whatever it hits: they burn for a few seconds after. Lights the dark, too"},
 ]
-static var IT: Array = _fill(_IT + _grades() + _MORE, _IT_DEF)
+static var IT: Array = _fill(_IT + _grades() + _MORE + _runes(), _IT_DEF)
 const I_CARD := 47
 const I_TORCH := 48
 const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
 const BURN_DMG := 3.0
-const ETCH_RUNES := 3                # runes to etch a weapon: a fifth more damage, and it bites wraiths
+const RUNE_COST := 4                 # runes in a rune weapon (with the steel a steel one takes)
+const RUNE_DMG := 1.7                # a rune weapon's damage, against the refined one's (steel is 1.35)
+const RUNE_RANK := 7                 # the rank of Hammer and Tongs that can make one
 const RUNE_PER_VEIN := 2             # runes in each vein of the old workings, each morning
 const RUNE_TIME := 4.0
 const RUNE_VEINS := [[-6.0, 233.0], [6.0, 238.0], [-2.0, 229.9]]
@@ -183,7 +200,7 @@ const LOCALS := [
 	{"name": "Tam the Carter", "what": "a big man with a tankard, and mud to the knee", "ask": ["the roads", "the smithy", "the dead"], "treat": "he tells you what he saw on the road today",
 		"say": [
 			["West road is all forest, right out to the thorn hedge. The old steel mine is at the top of it, and there is a hole beside it I would not go down without a light.", "East is the downs, and the old mill. Count the sheep if you like. I have stopped.", "Messengers come by the roads and the river. When one goes missing, look outside the wall. Look early, before the foxes."],
-			["Anybody can knock out a crude blade, and it will see you through a night or two. For one that lasts you want Hammer and Tongs.", "Steel is the thing. Top of the forest. The smith wants rank four of his book before he will touch it.", "There are stones down the old workings with marks on. Three of them cut into a blade, and it will bite things a blade should not."],
+			["Anybody can knock out a crude blade, and it will see you through a night or two. For one that lasts you want Hammer and Tongs.", "Steel is the thing. Top of the forest. The smith wants rank four of his book before he will touch it.", "There are stones down the old workings with marks on. A smith who has read his book to the last page can work them into steel, and that blade will bite things a blade should not."],
 			["Shamblers are slow. It is the standing still that kills you. Keep moving, and hit the one at the edge.", "Bones get up again unless you break them properly. A mace, or anything blessed.", "Something big sleeps under the outer ruins. Rummage if you must, but have your running legs on."],
 		]},
 	{"name": "the stranger in the corner", "what": "hooded, a long way from the fire, with a drink that has not gone down", "ask": ["what is coming", "the Lord", "himself"], "treat": "he tells you what the next of the Lord’s household cannot abide",
@@ -228,6 +245,8 @@ static func crude_of(base: int) -> int:
 	return 29 + CRUDE_W.find(base) * 2
 static func steel_of(base: int) -> int:
 	return 29 + CRUDE_W.size() * 2 + (STEEL_W + STEEL_A).find(base)
+static func rune_of(base: int) -> int:
+	return 29 + CRUDE_W.size() * 2 + (STEEL_W + STEEL_A).size() + _MORE.size() + STEEL_W.find(base)
 const SLOTK := {"w": "wpn", "h": "head", "b": "body", "o": "off", "t": "trk"}
 const SLOTS := ["wpn", "head", "body", "off", "trk"]
 const RELICS := [15, 16, 17, 20, 23, 26, 27]
@@ -274,7 +293,7 @@ const BOOKS := [
 	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material"]},
 	{"name": "Field, Hook and Pot", "what": "Food", "base": 40, "by": "fishing and foraging", "ranks": ["Fish and forage faster (and faster again with every rank)", "Meals heal 35", "A catch is 4 fish", "Eating heals your whole posse too", "Meals heal 50", "Slum recruits cost 3 food", "Meals heal 65 and settle your posse’s nerves"]},
 	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank). Contraption: the chicken decoy", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger. Contraption: the pitfall", "Your barricades do not rot at dusk. Contraption: the tar pit", "Your spike rows last twice as long. Contraption: the holy water trough", "Your barricades and body walls are half as strong again. Contraption: the log roller", "Contraption: the Thresher, a spinning flail"]},
-	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge refined arms, not just crude ones, with a third less iron (and a little less with every rank)", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm your whole posse with spears in one go", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears", "Facing, banding and bracing a defence costs half"]},
+	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge refined arms, not just crude ones, with a third less iron (and a little less with every rank)", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm your whole posse with spears in one go", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears", "You can forge rune weapons, the best there are, from steel and the runes of the old workings. Facing, banding and bracing a defence costs half"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["You hit harder up close (and harder again with every rank)", "One blow in eight against you misses", "Your weapon’s trick is ready a fifth sooner", "Your swings sweep wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow you land is twice as hard"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "Your shots never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also hits a second of the dead nearby", "Aimed stones, volleys and piercing bolts are ready in half the time"]},
 	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 50, "by": "recruiting, and your posse’s blows", "ranks": ["Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "Orders: {orders} tells your posse to follow, hold or charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away"]},
@@ -575,7 +594,7 @@ static func coins(d: float) -> String:
 static func cost_text(c: Dictionary) -> String:
 	var a := []
 	for k in c:
-		a.append(str(c[k]) + " " + (("body" if c[k] == 1 else "bodies") if k == "bodies" else k))
+		a.append(str(c[k]) + " " + (("body" if c[k] == 1 else "bodies") if k == "bodies" else ("rune" if c[k] == 1 else "runes") if k == "rune" else k))
 	return " and ".join(a)
 
 

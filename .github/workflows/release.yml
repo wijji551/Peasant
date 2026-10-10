@@ -81,5 +81,5 @@ jobs:
             echo "If you already have the game you do not need to download anything: start it, and it fetches this build by itself."
           } > /tmp/notes.md
           gh release delete "build-$N" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "build-$N" out/Thornhallow.exe out/thornhallow.pck out/version.json --draft --title "Thornhallow: Thirty Nights, build $N" --notes-file /tmp/notes.md --target "$GITHUB_SHA"
+          gh release create "build-$N" out/Thornhallow.exe out/thornhallow.pck out/version.json --draft --title "Thornhallow Thirty Nights, build $N" --notes-file /tmp/notes.md --target "$GITHUB_SHA"
           gh release edit "build-$N" --draft=false --latest

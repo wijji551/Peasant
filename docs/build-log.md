@@ -326,7 +326,7 @@ The web version is no longer updated; from here on, changes are made in Godot on
 
 ## A new name: Thornhallow, Thirty Nights
 
-- The name is one constant, `D.GAME`. The designer's message said "Thornvale 30 Nights" and the three pictures he sent all say "Thornhallow, Thirty Nights"; the pictures won, and it is one line to change.
+- The name is one constant, `D.GAME`. The designer's message said "Thornvale 30 Nights" and the three pictures he sent all say "Thornhallow, Thirty Nights"; he has since settled it: **Thornhallow Thirty Nights**.
 - The title screen is his key art (`art/title.jpg`) on its own canvas layer under the HUD, with a small scroll pinned on the left under the title (`window.pin`): name and colour, Thirty nights, Seven nights, Host and Join, What is new, Handbook.
 - The Lord is remodelled after the lore sheet: white, beaked, a tall hat with a gold band, a chain and a goblet.
 - Place-name signs no longer overlap each other, and fade to about half when the player is near, so what is under them can be seen.
@@ -353,7 +353,7 @@ The web version is no longer updated; from here on, changes are made in Godot on
 - **The burning torch** (item 48, `D.I_TORCH`): three wood at the smithy, anyone can make one. 8 damage, but what it hits burns for `D.BURN_TIME` (4 s) at `D.BURN_DMG` (3) every half second (`Rules.ignite`, the burn tick in `undead_step`). Its trick, Flare, lights everything round you. Rain halves the burning; wraiths do not burn. It is a light at night (an `OmniLight3D` on the figure).
 - **Rooms** (`D.ROOMS`, `p.room`, `enter_room`, `leave_room`, `room_interact`): interiors are built far to the south (z about 240) and the player is moved there through a door. `collide_friend` keeps them inside the room's box and off its furniture. Stations with a `room` are only offered indoors.
 - **The old workings**: the mine is a room. It is dark without a torch. Three rune veins (`D.RUNE_VEINS`, two runes each, `R.rune_left`) can be worked only with a torch in hand.
-- **Runes** are a new thing to carry. Three (`D.ETCH_RUNES`) cut a weapon at the smithy (action `etch`, `p.etch`): 20% more damage, and it hurts wraiths.
+- **Runes** are a new thing to carry. (At first three could be cut into any weapon for 20% more damage. That was a stopgap and is gone: see Rune weapons, below.)
 
 ## Inside the Thorny Rose
 
@@ -383,3 +383,14 @@ The web version is no longer updated; from here on, changes are made in Godot on
 - The view is knocked a little along your own blows and jolted when you are hit (`main._kick`). Whatever is hit leans back for a moment; figures lunge into a blow.
 - Options: "Numbers when a blow lands" and "Your own blows knock the view a little".
 - Tests: new `tests/blow_test.gd` (14). Rules 117, month 50, Holy Book 32, merchants 38, contraptions 21, village 11, smithy 18, letters 22, tidy 13, ruins 23, torch 27, inn 30, UI 31, clicks 18, co-op 23.
+
+## Rune weapons (build 3)
+
+- The designer's ruling: runes make the top tier of weapons, and making them needs rank 7 of Hammer and Tongs.
+- **Five rune weapons** (`D._runes()`, tier `rune`, `D.rune_of(base)`): the rune sword, spear, mace, billhook and warhammer. Damage is `D.RUNE_DMG` (1.7) times the refined weapon's, where steel is 1.35: about a quarter more than steel. Cost: `D.RUNE_COST` (4) runes, the steel a steel one takes, and the wood. They are marked `runed`, which is what lets a blow hurt a wraith.
+- They are added after everything else in `D.IT`, so no earlier item changes its number and old saves load.
+- `Rules.can_forge` and `forge_why`: rank `D.RUNE_RANK` (7). The smithy lists the five at rank 7, and below that says what runes are for and what rank is needed. The last rank of Hammer and Tongs now reads that it makes rune weapons, as well as halving the cost of facing, banding and bracing.
+- Removed: the action `etch`, `p.etch` (from the player, the save and the co-op snapshot) and `D.ETCH_RUNES`.
+- Six runes a day come out of the old workings (three veins of two), so a village can make about one rune weapon a day once it has a master smith.
+- The name: `D.GAME` is "Thornhallow Thirty Nights", and so are the window, the exported file's details, the release title and the READMEs.
+- Tests: torch 35 (the rune section rewritten: thirteen checks on rune weapons). The rest unchanged.

@@ -1,5 +1,5 @@
 extends Node3D
-## Thornhallow: Thirty Nights (it began as "Defend the Village!").  The game in Godot.
+## Thornhallow Thirty Nights (it began as "Defend the Village!").  The game in Godot.
 ##
 ## The rules (scripts/rules/) run the game: days and nights, gathering, building, books, items, the inn,
 ## the priest, the ruins and the dead. Everything here only shows what the rules say and passes on what

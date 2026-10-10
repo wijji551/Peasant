@@ -126,7 +126,7 @@ func player(p: E.Player, is_me: bool) -> void:
 		var I: Dictionary = D.IT[p.wpn]
 		Sound.play("whoosh" if I.heavy and not I.rng else "swing", 0.7, Vector2(p.x, p.z))
 		if fx and not I.rng and kind == "" and p.state == "ok":            # the sweep of the blade, or the dart of the fork
-			var col: Color = Color(1.0, 0.62, 0.2) if I.fire else Color(0.72, 0.6, 1.0) if p.etch == p.wpn else Color(1.0, 0.88, 0.45) if I.holy or (p.bless & 1) or p.hb > 0 else Color(1.0, 0.8, 0.4) if p.charge > 0 else fx.WHITE
+			var col: Color = Color(1.0, 0.62, 0.2) if I.fire else Color(0.72, 0.6, 1.0) if I.runed else Color(1.0, 0.88, 0.45) if I.holy or (p.bless & 1) or p.hb > 0 else Color(1.0, 0.8, 0.4) if p.charge > 0 else fx.WHITE
 			fx.slash(p.x, p.z, p.r, I.reach * (1.12 if I.heavy else 1.0), clampf(acos(clampf(I.arc, -1.0, 1.0)), 0.5, 2.6) if I.swing else 0.17, col, true)
 	if c[2]: _atk = 1.0
 	if c[1] and p.state != "dead":

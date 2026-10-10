@@ -41,7 +41,7 @@ func _init() -> void:
 	ok("anyone can make a torch", Rules.can_forge(m, D.I_TORCH) and Rules.forge_why(m, D.I_TORCH) == "")
 	R.do_act(m, "forge", D.I_TORCH)
 	ok("three wood, and it is in your hand", m.wpn == D.I_TORCH and m.wood == 0, [m.wpn, m.wood])
-	ok("the smithy lists it, and the runes", Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("arg") == D.I_TORCH) and Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("a", "") == "etch"))
+	ok("the smithy lists it, and says what runes are for", Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("arg") == D.I_TORCH) and Notices.data(R, "smithy", m, "").o.any(func(o): return str(o.get("head", "")).begins_with("Rune weapons")))
 	# ---------- fire
 	night()
 	m.x = 0; m.z = -30; m.r = 0
@@ -119,28 +119,44 @@ func _init() -> void:
 	night()
 	fast(5.0, func(): return R.phase != "day")
 	ok("at dawn nobody is left down there", m.room == "" and R.day == day0 + 1 and R.rune_left[0] == D.RUNE_PER_VEIN, [m.room, R.day, R.rune_left])
-	# ---------- runes cut into a weapon
-	m.rune = 3; m.wpn = 2
-	var I: Dictionary = D.IT[2]
-	var d0 := Rules.dmg_of(m, I)
-	m.x = 60; m.z = 30
-	R.do_act(m, "etch")
-	ok("runes are cut at the smithy, nowhere else", m.etch == -1 and m.rune == 3)
+	# ---------- rune weapons: the top of the smithy
+	var rs := D.rune_of(2)
+	var RS: Dictionary = D.IT[rs]
+	ok("a rune spear is a spear, and the best of them", RS.n == "rune spear" and RS.tier == "rune" and RS.dmg > D.IT[D.steel_of(2)].dmg and D.IT[D.steel_of(2)].dmg > D.IT[2].dmg, [RS.n, RS.dmg, D.IT[D.steel_of(2)].dmg])
+	ok("there is one for each refined weapon, and nothing earlier has changed its number", D.STEEL_W.all(func(b): return D.IT[D.rune_of(b)].n == "rune " + D.IT[b].n) and D.IT[D.I_TORCH].n == "burning torch" and D.IT[D.I_CARD].n == "library card")
+	ok("it costs runes and steel", RS.cost.get("rune", 0) == D.RUNE_COST and RS.cost.get("steel", 0) == D.IT[D.steel_of(2)].cost.steel, RS.cost)
+	m.rune = 10; m.steel = 20; m.wood = 20; m.wpn = 0
 	m.x = sm.x; m.z = sm.z
-	R.do_act(m, "etch")
-	ok("three runes cut into the weapon in your hand", m.etch == 2 and m.rune == 0, [m.etch, m.rune])
-	ok("a fifth more damage", is_equal_approx(Rules.dmg_of(m, I), d0 * 1.2), [d0, Rules.dmg_of(m, I)])
+	m.books[3] = 6
+	ok("rank 6 of Hammer and Tongs cannot make one", not Rules.can_forge(m, rs) and Rules.forge_why(m, rs).contains("rank 7"), Rules.forge_why(m, rs))
+	R.do_act(m, "forge", rs)
+	ok("and the smithy will not be talked into it", m.wpn == 0 and m.rune == 10)
+	ok("the smithy's notice says why, in place of the list", Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("label", "") == "Not yet") and not Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("arg", -1) == rs))
+	m.books[3] = 7
+	ok("rank 7 can", Rules.can_forge(m, rs) and Rules.forge_why(m, rs) == "")
+	ok("and the notice lists all five", D.STEEL_W.all(func(b): return Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("arg", -1) == D.rune_of(b))))
+	m.x = 60; m.z = 30
+	R.do_act(m, "forge", rs)
+	ok("at the smithy, nowhere else", m.wpn == 0 and m.rune == 10)
+	m.x = sm.x; m.z = sm.z; m.rune = D.RUNE_COST - 1
+	R.do_act(m, "forge", rs)
+	ok("not with too few runes", m.wpn == 0)
+	m.rune = D.RUNE_COST
+	R.do_act(m, "forge", rs)
+	ok("four runes and the steel, and it is in your hand", m.wpn == rs and m.rune == 0 and m.steel < 20, [m.wpn, m.rune, m.steel])
 	night()
 	m.x = 0; m.z = -30; m.r = 0
 	var w2 := one(D.U_WRAITH, 0, -28.4)
 	m.atkCd = 0; R.do_attack(m)
-	ok("and it bites wraiths", w2.hp < w2.mhp, [w2.hp, w2.mhp])
-	m.wpn = 0
+	ok("it bites wraiths", w2.hp < w2.mhp, [w2.hp, w2.mhp])
+	m.wpn = D.steel_of(2)
 	var w3 := one(D.U_WRAITH, 0.3, -28.4)
+	w2.x = 40
 	m.atkCd = 0; R.do_attack(m)
-	ok("which a plain pitchfork does not", w3.hp == w3.mhp)
+	ok("which a steel spear does not", w3.hp == w3.mhp)
+	m.wpn = rs
 	var sv := R.save_data()
-	ok("runes and the cut weapon are saved", sv.players[0].has("rune") and int(sv.players[0].etch) == 2)
+	ok("runes and the rune weapon are saved", sv.players[0].has("rune") and int(sv.players[0].wpn) == rs and not sv.players[0].has("etch"))
 	var fails := 0
 	for l in lines:
 		if l.begins_with("FAIL"): fails += 1

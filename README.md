@@ -1,4 +1,4 @@
-# Thornhallow: Thirty Nights
+# Thornhallow Thirty Nights
 
 A co-op game for 1 to 8 players, in the manner of Thronefall. The peasants of Thornhallow defend their keep from the dead who walk down from Ashhollow Castle every night. Robert Bailiff has bolted his door.
 

@@ -89,7 +89,6 @@ class Player:
 	var gstreak := 0        # how many times running this player has found the pea: the cups get quicker
 	var treated := 0        # which locals have been stood a drink today (bits)
 	var rune := 0           # runes carried, from the old workings
-	var etch := -1          # the weapon that has had runes etched into it
 	var card_rank := 0      # a library card has been handed in: the next book taken up starts at this rank
 	var job := false        # working on today's merchant's job
 	var jobT := 0.0         # how much of it they have done

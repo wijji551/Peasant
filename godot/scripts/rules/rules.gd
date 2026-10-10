@@ -345,7 +345,8 @@ static func forge_cost(p: E.Player, c: Dictionary) -> Dictionary:
 	var r := rk(p, 3)
 	return c if r < 1 else scale(c, 0.67 - 0.04 * (r - 1), "iron")
 
-## What the smithy will let this player make: crude weapons, anyone; refined, Hammer and Tongs; steel, rank 4 of it.
+## What the smithy will let this player make: crude weapons, anyone; refined, Hammer and Tongs; steel, rank 4 of it;
+## rune weapons, rank 7.
 ## Heavy arms (and the crossbow) need rank 2 whatever the grade.
 static func can_forge(p: E.Player, id: int) -> bool:
 	var I: Dictionary = D.IT[id]
@@ -354,11 +355,13 @@ static func can_forge(p: E.Player, id: int) -> bool:
 	match I.tier:
 		"crude", "made": return true
 		"steel": return rk(p, 3) >= 4
+		"rune": return rk(p, 3) >= D.RUNE_RANK
 		"forged": return I.s != "w" or rk(p, 3) >= 1           # anyone can make armour; refined weapons need the book
 	return false
 
 static func forge_why(p: E.Player, id: int) -> String:   # why not, for the smithy's notice
 	var I: Dictionary = D.IT[id]
+	if I.tier == "rune" and rk(p, 3) < D.RUNE_RANK: return "Rune weapons need rank %d of Hammer and Tongs, the last." % D.RUNE_RANK
 	if I.tier == "steel" and rk(p, 3) < 4: return "Steel needs rank 4 of Hammer and Tongs."
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return "Heavy arms need rank 2 of Hammer and Tongs."
 	if I.tier == "forged" and I.s == "w" and rk(p, 3) < 1: return "Refined weapons need Hammer and Tongs, from the library."
@@ -722,7 +725,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "etch", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
+const P_SAVE := ["card_rank", "rune", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -1359,15 +1362,14 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 # --- fighting
 static func dmg_of(p: E.Player, I: Dictionary, mul: float = 1.0) -> float:
 	var d: float = I.dmg * mul * (1 + (0.08 * rk(p, 5) if I.rng else 0.06 * rk(p, 4)))
-	if (I.tier == "forged" or I.tier == "steel") and rk(p, 3) >= 4: d *= 1.1
+	if (I.tier == "forged" or I.tier == "steel" or I.tier == "rune") and rk(p, 3) >= 4: d *= 1.1
 	if p.charge > 0: d *= 2.0 if rk(p, 7) >= 7 else 1.6
 	if p.wpn == 17 and I.n == D.IT[17].n and lore(p, 17): d *= 1.25
-	if p.etch == p.wpn and I.n == D.IT[p.wpn].n: d *= 1.2      # runes cut into it
 	return d
 
 static func src_of(p: E.Player, I: Dictionary, kb: float = 0.0) -> Dictionary:
 	return {"x": p.x, "z": p.z, "p": p, "blunt": I.blunt, "holy": ((1.9 if rk(p, 8) >= 5 else 1.5) if I.holy or (p.bless & 1) or p.hb > 0 else 0.0),
-		"kb": I.kb + kb, "ranged": I.rng > 0, "farm": I.tier == "found", "heavy": I.heavy, "rune": p.etch == p.wpn and I.n == D.IT[p.wpn].n}
+		"kb": I.kb + kb, "ranged": I.rng > 0, "farm": I.tier == "found", "heavy": I.heavy, "rune": I.runed}
 
 ## The Lord fights in three stages: he watches from the road and sends his bats, then he comes down himself, then
 ## he goes for the keep door.
@@ -2102,10 +2104,6 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 						var k: int = D.BOSS_NIGHTS[nb] if nb else D.U_LORD
 						tip = "The stranger tells %s: “%s”" % [p.dn, D.BOSS_HINT[k]]
 				say(tip); ev.append(["tip", p.id, D.LOCALS[ia].name, tip])
-		"etch":                                     # three runes, cut into the weapon in your hand
-			if near_station(p, "smithy") and p.rune >= D.ETCH_RUNES and p.etch != p.wpn:
-				p.rune -= D.ETCH_RUNES; p.etch = p.wpn; spark.call("forge")
-				say("%s has had runes cut into %s %s. It hums, slightly." % [p.dn, "their", D.IT[p.wpn].n])
 		"lread":                                    # the letter on the gatepost has been read
 			letter_new = false
 		"study":
@@ -2630,7 +2628,7 @@ func player_step(p: E.Player, dt: float) -> void:
 				"rune":
 					if rune_left[it.i] > 0 and p.rune < cap(p):
 						rune_left[it.i] -= 1; p.rune += 1; p.cc += 1; add_xp(p, 0, 3)
-						ev.append(["found", p.id, "a rune, cold to the touch" if p.rune > 1 else "a rune: a small cold stone with a mark cut in it that hurts to look at. The smithy can etch a weapon with three", r1(p.x), r1(p.z), 0, 0])
+						ev.append(["found", p.id, "a rune, cold to the touch" if p.rune > 1 else "a rune: a small cold stone with a mark cut in it that hurts to look at. A master smith can work four into a steel weapon", r1(p.x), r1(p.z), 0, 0])
 				"search":
 					p.cc += 1; do_search(p, it.i); note("search")
 				"gather":

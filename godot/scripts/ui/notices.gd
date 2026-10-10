@@ -117,14 +117,16 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				if h3 >= 4:
 					o.append({"head": "Steel weapons: from the old steel mine. You carry %d steel" % p.steel})
 					for b in D.STEEL_W: forge.call(D.steel_of(b))
-				o.append({"head": "Fire, and runes"})
+				o.append({"head": "Rune weapons: the best there are. You carry %d rune%s and %d steel" % [p.rune, "" if p.rune == 1 else "s", p.steel]})
+				if h3 >= D.RUNE_RANK:
+					for b in D.STEEL_W: forge.call(D.rune_of(b))
+				else:
+					o.append({"label": "Not yet", "sub": "Rune weapons need rank %d of Hammer and Tongs, the last: you are at rank %d. They are steel with runes worked in, hit harder than anything else a smith can make, and bite wraiths. Runes come from the old workings, under the steel mine: take a torch." % [D.RUNE_RANK, h3], "ok": false})
+				o.append({"head": "Fire"})
 				forge.call(D.I_TORCH)
-				var W0: Dictionary = D.IT[p.wpn]
-				o.append({"label": "Cut runes into your " + W0.n, "sub": "It has them already." if p.etch == p.wpn else "%d runes (you carry %d): a fifth more damage, for good, and it bites wraiths as a blessed weapon does. Runes come from the old workings, under the steel mine: take a torch." % [D.ETCH_RUNES, p.rune],
-					"ok": p.etch != p.wpn and p.rune >= D.ETCH_RUNES, "a": "etch"})
 				o.append({"head": "More"})
 				o.append({"label": "Armour, and spears for your posse", "sub": "Iron cap, chain shirt, shield.", "ok": true, "page": "armour"})
-			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Anyone can make crude weapons. Hammer and Tongs, in the library, makes refined ones, and later steel."), "o": o}
+			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Anyone can make crude weapons. Hammer and Tongs, in the library, makes refined ones, then steel, and at its last rank rune weapons."), "o": o}
 		"library":
 			if page == "card":
 				o.append({"head": "Give up which book?"})
