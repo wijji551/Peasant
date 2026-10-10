@@ -6,6 +6,8 @@ G=${1:-godot}
 MODE=${2:-direct}
 cd "$(dirname "$0")/.."
 OUT=$(mktemp -d)
+# the latecomer waits for a file the host writes once the week has begun: clear away the last run's, or it sets off early
+rm -f "$HOME/.local/share/godot/app_userdata/Peasant Defence/test_started.txt" "$HOME/.local/share/godot/app_userdata/Peasant Defence/test_code.txt"
 R=""
 if [ "$MODE" = "relay" ]; then
   timeout 160 "$G" --headless --path ../relay -s relay.gd > "$OUT/relay.txt" 2>&1 &
