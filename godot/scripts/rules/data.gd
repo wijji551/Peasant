@@ -61,20 +61,21 @@ const GK := ["", "tree", "stone", "iron", "food", "fish", "search", "steel"]
 const STEEL_MINE := {"x": -108.0, "z": -44.0}      # the old steel mine, at the top of the forest. It does not move.
 const MILL := {"x": 104.0, "z": 30.0}              # the old mill, on the eastern downs: a landmark, and something to walk round
 const COST := {"barricade": {"wood": 5}, "spikes": {"wood": 8}, "wall": {"wood": 15}, "gate": {"wood": 20}, "bodywall": {"bodies": 3}, "decoy": {"bodies": 1},
-	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}}
+	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}, "platform": {"wood": 20}}
 const REINF := {
+	"platform": {"cost": {"wood": 10}, "mul": 1.0, "name": "roof it", "smith": 0},
 	"wall": {"cost": {"stone": 10}, "mul": 3.0, "name": "face it with stone", "smith": 0},
 	"gate": {"cost": {"iron": 8}, "mul": 2.0, "name": "band it with iron", "smith": 0},
 	"barricade": {"cost": {"iron": 3}, "mul": 2.0, "name": "brace it with iron", "smith": 0},
 	"spikes": {"cost": {"iron": 4}, "mul": 1.0, "name": "tip them with iron", "smith": 2},
 }
 const SHP := {"barricade": 90.0, "spikes": 40.0, "wall": 260.0, "gate": 220.0, "bodywall": 110.0, "decoy": 70.0,
-	"chicken": 40.0, "pitfall": 4.0, "tar": 100.0, "trough": 60.0, "logs": 1.0, "thresher": 160.0}   # a pitfall: how many it swallows; tar and the trough wear out with use
+	"chicken": 40.0, "pitfall": 4.0, "tar": 100.0, "trough": 60.0, "logs": 1.0, "thresher": 160.0, "platform": 200.0}   # a pitfall: how many it swallows; tar and the trough wear out with use
 const SDIM := {"barricade": Vector2(1.7, 0.45), "spikes": Vector2(1.7, 0.8), "wall": Vector2(3, 0.45), "gate": Vector2(3, 0.45), "bodywall": Vector2(1.7, 0.5), "decoy": Vector2(0.45, 0.45),
-	"chicken": Vector2(0.5, 0.5), "pitfall": Vector2(1.2, 1.2), "tar": Vector2(1.8, 1.2), "trough": Vector2(1.7, 0.5), "logs": Vector2(1.6, 1.0), "thresher": Vector2(0.9, 0.9)}
+	"chicken": Vector2(0.5, 0.5), "pitfall": Vector2(1.2, 1.2), "tar": Vector2(1.8, 1.2), "trough": Vector2(1.7, 0.5), "logs": Vector2(1.6, 1.0), "thresher": Vector2(0.9, 0.9), "platform": Vector2(1.1, 1.1)}
 const SNAME := {"barricade": "barricade", "spikes": "spike row", "wall": "palisade wall", "gate": "gate", "bodywall": "body wall", "decoy": "decoy",
-	"chicken": "chicken decoy", "pitfall": "pitfall", "tar": "tar pit", "trough": "holy water trough", "logs": "log roller", "thresher": "Thresher"}
-const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy", "chicken", "pitfall", "tar", "trough", "logs", "thresher"]
+	"chicken": "chicken decoy", "pitfall": "pitfall", "tar": "tar pit", "trough": "holy water trough", "logs": "log roller", "thresher": "Thresher", "platform": "watch platform"}
+const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy", "chicken", "pitfall", "tar", "trough", "logs", "thresher", "platform"]
 const BLOCKERS := ["wall", "gate", "barricade", "bodywall", "decoy", "chicken"]   # what the dead have to break, or go round
 ## Contraptions: the peasant community's inventions, learned from Barricades for Beginners (or built with a box of cogs).
 const CONTRAPTIONS := ["chicken", "pitfall", "tar", "trough", "logs", "thresher"]
@@ -86,7 +87,10 @@ const CONTR := {
 	"logs": {"rank": 6, "d": "A stack of logs north of the wall. Once a night, when a crowd or a coffin ram comes down the road past it, it rolls them flat"},
 	"thresher": {"rank": 7, "d": "A spinning flail. Hits everything round it, as long as someone is near enough to turn the handle"},
 }
-const BUILDS := ["barricade", "spikes", "bodywall", "decoy"]
+const BUILDS := ["barricade", "spikes", "platform", "bodywall", "decoy"]
+## The watch platform: one of your posse stands on it from dusk and throws stones over the wall at whatever comes
+## within reach. Up there the dead cannot get at them, except archers; a roof (ten more wood) stops the arrows.
+const PLAT := {"reach": 13.0, "wait": 1.5, "dmg": 8.0}
 
 # --- everything a peasant can hold or wear. s: w weapon, h head, b body, o off hand, t carried.
 # arc is the smallest cosine of the angle a swing reaches: 0.5 is a third of a circle, 0 is half. rng marks a ranged weapon and how far it carries.
@@ -201,6 +205,23 @@ const DEAD_HP := [1.0, 1.5, 2.1, 2.8]
 ## The nights of the bells: three nights a month the priest and his congregation ring the chapel bells till dawn. It is
 ## meant to keep the dead away. It enrages them: they come on faster, hit harder and take more putting down.
 const BELLS := {"n": 3, "speed": 1.12, "dmg": 1.25, "hp": 1.25, "hat": 2.0}
+## The moons of the month, by night (the thirty-night game only). Full: the dead are quick, and relics glint in the
+## rubble. Harvest: the dead slowly mend. Frost: it snows. Blood: a very hard night, two and a half hordes in one.
+const MOONS := {9: "harvest", 15: "full", 19: "frost", 23: "blood", 28: "full"}
+const HARVEST_MEND := 0.015          # of its full health, a second, that one of the dead gets back under the harvest moon
+const BLOOD_MOON := 2.5              # how many nights' worth of the dead rise under the blood moon
+const MOON_NAME := {"full": "the full moon", "harvest": "the harvest moon", "frost": "the frost moon", "blood": "the blood moon"}
+const MOON_LINE := {
+	"harvest": "Tonight is the harvest moon: big, orange and low. Under it the dead mend. Whatever you hurt and do not finish will be whole again in a minute.",
+	"frost": "Tonight is the frost moon. It will snow from dusk, and everyone will be slower in it, the dead included.",
+	"blood": "Tonight is the blood moon. The castle has emptied its cellars: two and a half nights’ worth of the dead will come down in one. The village will pass the hat accordingly.",
+}
+const MOON_DUSK := {
+	"full": "The bell rings. A full moon is up, and something at Ashhollow is howling.",
+	"harvest": "The bell rings. The harvest moon is rising, the colour of a pumpkin, and the graveyard looks well rested.",
+	"frost": "The bell rings. The moon has a ring of ice round it, and the first flakes are coming down.",
+	"blood": "The bell rings. The moon has come up red. The castle road is already full.",
+}
 const BELLS_LINE := "It is a holy day. Tonight the priest and his congregation will ring the chapel bells until dawn, to keep the dead away. Nobody has the heart to tell them what it does to the dead."
 const ORDER_XP := 3.0                # what giving an order teaches of the leading book
 const ORDERS_DAY := 10               # and how many orders a day teach anything
@@ -430,7 +451,7 @@ const STATIONS := [
 	{"id": "priest", "x": 13.6, "z": -10.6, "r": 2.3, "name": "the priest", "verb": "speak to the priest"},
 	{"id": "cart", "x": 10.4, "z": 22.6, "r": 3.0, "name": "the merchant’s cart", "verb": "see what the merchant has"},
 	{"id": "bailiff", "x": -14.5, "z": -16.6, "r": 2.4, "name": "Robert Bailiff’s back door", "verb": "knock at Robert Bailiff’s back door"},
-	{"id": "window", "x": -14.5, "z": -8.2, "r": 2.6, "name": "Robert Bailiff’s front door", "verb": "call up to Robert Bailiff’s window"},
+	{"id": "window", "x": -11.8, "z": -7.7, "r": 2.6, "name": "Robert Bailiff’s window", "verb": "call up to Robert Bailiff’s window"},
 	{"id": "bell", "x": 5.5, "z": -8.6, "r": 1.8, "name": "the village bell", "verb": "ring the village bell"},
 	{"id": "board", "x": -5.5, "z": -8.5, "r": 1.8, "name": "the notice board", "verb": "read the notice board"},
 	{"id": "letter", "x": -4.2, "z": -18.4, "r": 1.6, "name": "the gatepost", "verb": "read the letter nailed to the gatepost"},
@@ -513,6 +534,16 @@ const BAILIFF_TALK := [
 	["Nearly done now. I have had a commemorative plate made, with my face on it.", "When this is over I shall make a speech. You are all invited to listen from outside.",
 	"Courage, peasants! I shall be watching from a safe distance, which I have measured.", "Is he coming? The Lord? Tonight? I shall be under the bed. In a supervisory capacity."],
 ]
+## What Robert Bailiff shouts from his window as dusk falls, every evening, to whoever is defending his village.
+const BAILIFF_DUSK := ["“To your posts! My village is not going to defend itself. I have checked!”", "“Peasants! The dead are coming! Do something about it! That is an order, I think!”",
+	"“Defend my village! And mind the flowerbeds!”", "“It is getting dark! Why is nobody defending me? The village. I mean the village!”",
+	"“Stand firm! I shall be right behind you. Some way behind you. Indoors!”", "“Every one of the dead you stop is one I need not write to Lord Aldred about!”",
+	"“You there! With the pitchfork! Point it at the castle, not at me!”", "“I am paying good money for this village! Well. Somebody is. Defend it!”",
+	"“If the keep falls I shall be very disappointed in all of you! By letter!”", "“Hold the gate! Hold all the gates! How many gates have we got?”"]
+const BAILIFF_DUSK_BOSS := "“Is that one of the Lord’s own household on the road? Then what are you standing there for? Defend my village! Louder!”"
+const BAILIFF_DUSK_BELLS := "“Who told them to ring those bells? I can hear the castle from here! Well, it is done now. Defend my village!”"
+const BAILIFF_DUSK_BLOOD := "“The moon is red! Is it meant to be red? Never mind the moon! Defend my village! All of it!”"
+const BAILIFF_AT := {"x": -11.8, "z": -9.08}      # his window: the east one of the two on the front, clear of the back of the inn
 const BAILIFF_KNOCK := ["“Nobody is in!” calls a voice that sounds exactly like Robert Bailiff.", "“Go away! The door is load-bearing!”",
 	"You knock. Something heavy is pushed against the other side of the door.", "“If it is about the guards, use the back door. If it is about anything else, also use the back door.”",
 	"You knock. A note is slid under the door. It reads: NO."]

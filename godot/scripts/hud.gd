@@ -158,7 +158,7 @@ func _ready() -> void:
 	_builds.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_builds.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_builds.add_theme_constant_override("separation", 4)
-	var bn := {"barricade": "Barricade", "spikes": "Spikes", "bodywall": "Body wall", "decoy": "Decoy", "contr": "Contraption"}
+	var bn := {"barricade": "Barricade", "spikes": "Spikes", "bodywall": "Body wall", "decoy": "Decoy", "platform": "Platform", "contr": "Contraption"}
 	for i in D.BUILDS.size() + 1:
 		var k: String = D.BUILDS[i] if i < D.BUILDS.size() else "contr"
 		var b := Button.new()

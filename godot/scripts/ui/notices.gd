@@ -228,6 +228,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			o.append({"head": "From the castle"})
 			o.append({"label": "The Lord’s letters", "sub": "%d so far. He writes every other morning, to complain." % R.letters.size() if R.letters.size() else "None yet. He is said to be a great writer of letters.", "ok": R.letters.size() > 0, "page": "letters"})
 			o.append({"head": "Today"})
+			if D.MOON_LINE.has(R.moon()): w = D.MOON_LINE[R.moon()]
 			o.append({"text": w if w != "" else "A fine, clear day. Make the most of it."})
 			if R.bells(): o.append({"text": D.BELLS_LINE + " The dead will be quicker, hit a quarter harder and take a quarter more putting down. The hat goes round twice in the morning."})
 			if R.merchant >= 0 and R.phase == "day":

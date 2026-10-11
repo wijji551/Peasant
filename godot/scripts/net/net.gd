@@ -573,7 +573,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 	var pe := PackedFloat32Array()
 	for q in R.peasants:
 		if q.state == "gone" or q.state == "inn": continue
-		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind])
+		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind, q.plat])
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
 		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]),
@@ -715,13 +715,13 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 	for q in R.peasants: by[q.id] = q
 	var pe: PackedFloat32Array = m.pe
 	var out := []
-	for i in range(0, pe.size(), 14):
+	for i in range(0, pe.size(), 15):
 		var id := int(pe[i])
 		var q: E.Peasant = by.get(id)
 		if q == null:
 			q = E.Peasant.new(); q.id = id; q.x = pe[i + 1]; q.z = pe[i + 2]; q.r = pe[i + 3]
 		q.tx = pe[i + 1]; q.tz = pe[i + 2]; q.tr = pe[i + 3]; q.hp = pe[i + 4]; q.owner = int(pe[i + 5]); q.state = QSTATE[int(pe[i + 6])]
-		q.ac = int(pe[i + 7]); q.hc = int(pe[i + 8]); q.ni = int(pe[i + 9]); q.armed = int(pe[i + 10]); q.nv = pe[i + 11]; q.prot = pe[i + 12]; q.kind = int(pe[i + 13])
+		q.ac = int(pe[i + 7]); q.hc = int(pe[i + 8]); q.ni = int(pe[i + 9]); q.armed = int(pe[i + 10]); q.nv = pe[i + 11]; q.prot = pe[i + 12]; q.kind = int(pe[i + 13]); q.plat = int(pe[i + 14])
 		out.append(q)
 	R.peasants = out
 	if m.has("un"):

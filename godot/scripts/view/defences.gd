@@ -4,9 +4,9 @@ extends Node3D
 ## and anything damaged shows how much is left.
 
 const SH := {"wall": 3.9, "gate": 5.6, "barricade": 2.1, "spikes": 1.6, "bodywall": 1.8, "decoy": 2.6,
-	"chicken": 2.2, "pitfall": 0.8, "tar": 0.8, "trough": 1.4, "logs": 1.9, "thresher": 2.2}   # bar height
+	"chicken": 2.2, "pitfall": 0.8, "tar": 0.8, "trough": 1.4, "logs": 1.9, "thresher": 2.2, "platform": 4.6}   # bar height
 const SW := {"wall": 3.0, "gate": 3.0, "barricade": 1.8, "spikes": 1.8, "bodywall": 1.8, "decoy": 1.0,
-	"chicken": 0.8, "pitfall": 1.4, "tar": 1.8, "trough": 1.6, "logs": 1.6, "thresher": 1.2}   # bar width
+	"chicken": 0.8, "pitfall": 1.4, "tar": 1.8, "trough": 1.6, "logs": 1.6, "thresher": 1.2, "platform": 1.8}   # bar width
 const IRONED := Color(0.72, 0.76, 0.86)
 
 var fx: Node3D
@@ -59,13 +59,14 @@ func _make(s: E.Struct) -> Dictionary:
 	else:
 		_mi(body, s.k, _tinted(IRONED) if s.re and (s.k == "barricade" or s.k == "spikes") else null)
 		if s.k == "wall" and s.re: _mi(body, "wallRe")
+		if s.k == "platform" and s.re: _mi(body, "platform_roof")
 		if s.k == "thresher": e.arm = _mi(body, "thresher_arm")
 	# a small health bar, which faces the camera
 	var bar := Node3D.new()
 	bar.top_level = true
 	n.add_child(bar)
 	var bg := MeshInstance3D.new(); var q := QuadMesh.new(); q.size = Vector2(1, 0.26); bg.mesh = q
-	var bm := StandardMaterial3D.new(); bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; bm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED; bm.albedo_color = Color(0.14, 0.1, 0.1)
+	var bm := StandardMaterial3D.new(); bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; bm.no_depth_test = true; bm.albedo_color = Color(0.14, 0.1, 0.1)
 	bg.material_override = bm; bar.add_child(bg)
 	var fill := MeshInstance3D.new(); var q2 := QuadMesh.new(); q2.size = Vector2(1, 0.14); fill.mesh = q2
 	var fm := bm.duplicate(); fm.albedo_color = Color(0.88, 0.72, 0.36); fm.render_priority = 1
@@ -131,7 +132,8 @@ func sync(R: Rules, delta: float) -> void:
 		if hurt:
 			var w: float = SW[s.k]
 			var f := clampf(s.hp / s.mhp, 0, 1)
-			e.bar.global_position = Vector3(s.x, SH[s.k], s.z)
+			var cam := get_viewport().get_camera_3d()
+			e.bar.global_transform = Transform3D(cam.global_basis.orthonormalized() if cam else Basis.IDENTITY, Vector3(s.x, SH[s.k], s.z))
 			e.bg.scale = Vector3(w + 0.12, 1, 1)
 			e.fill.scale = Vector3(maxf(0.02, w * f), 1, 1)
 			e.fill.position = Vector3(-(w - w * f) / 2.0, 0, 0.01)

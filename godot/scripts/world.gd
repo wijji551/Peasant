@@ -564,6 +564,12 @@ func _buildings() -> void:
 	house(-14.5, -12.6, 0, 9, 6.4, 4.8, C.cream, C.roof2, false, true, 3.3)
 	Build.box(self, Vector3(1.5, 0.18, 0.1), Vector3(-14.5, 1.05, -9.28), C.wood3, 0.0, 0.0, 0.5)
 	Build.box(self, Vector3(1.5, 0.18, 0.1), Vector3(-14.5, 1.05, -9.28), C.wood3, 0.0, 0.0, -0.5)
+	# his window: the east one on the front, which the inn does not hide. Bigger than the rest, with shutters thrown back and a sill to lean on
+	Build.box(self, Vector3(1.5, 1.35, 0.12), Vector3(D.BAILIFF_AT.x, 2.2, -9.36), C.timber)
+	Build.box(self, Vector3(1.26, 1.12, 0.12), Vector3(D.BAILIFF_AT.x, 2.32, -9.33), Color("2a2026"))
+	Build.box(self, Vector3(1.7, 0.12, 0.34), Vector3(D.BAILIFF_AT.x, 2.14, -9.22), C.wood2)
+	for sx in [-1.0, 1.0]:
+		Build.box(self, Vector3(0.62, 1.2, 0.07), Vector3(D.BAILIFF_AT.x + sx * 1.02, 2.28, -9.3), C.red, 0.0, 0.0, 0.0)
 	# the old ruins and the priest's chapel
 	_chapel()
 	for i in 9:

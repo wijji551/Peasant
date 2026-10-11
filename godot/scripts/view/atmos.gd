@@ -33,6 +33,7 @@ void fragment() {
 
 var weather := "clear"
 var indoors := false                # the player is inside somewhere: no rain in here
+var moon := ""                      # which moon is up tonight: "", "full", "harvest", "frost" or "blood"
 var evil := 0                       # how far gone the castle is (0 to 3): more lightning the worse it gets
 var flash := 0.0                    # lightning: 1 at the strike, fading; main.gd brightens the sky by it
 var _mists: Array[ShaderMaterial] = []
@@ -135,7 +136,10 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 	_rain.global_position = focus + Vector3(0, 26, 4)
 	_snow.emitting = weather == "snow" and not indoors
 	_snow.global_position = focus + Vector3(0, 18, 4)
-	_moon.visible = weather == "moon" and night > 0.2
+	_moon.visible = moon != "" and night > 0.2
+	if _moon.visible:
+		(_moon.material_override as StandardMaterial3D).albedo_color = {"harvest": Color(1.0, 0.62, 0.22), "frost": Color(0.8, 0.93, 1.0), "blood": Color(0.95, 0.12, 0.08)}.get(moon, Color(1.0, 0.97, 0.86))
+		_moon.scale = Vector3.ONE * (1.45 if moon == "harvest" else 1.25 if moon == "blood" else 1.0)
 	for w in _wisps:
 		w.emitting = night > 0.4
 	# crows wheel round the towers, flapping now and then

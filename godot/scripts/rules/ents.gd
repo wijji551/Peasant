@@ -164,6 +164,8 @@ class Peasant:
 	var pz := 0.0
 	var prot := 0.0         # prayed over: a third less harm
 	var kind := 0           # 0 a villager, 1 a village guard (hired for the night), 2 a mercenary (in a posse until dawn)
+	var plat := 0           # the watch platform they are posted on (a structure's id), or 0
+	var roof := false       # ...and whether it has a roof over it
 	var hurtT := 99.0
 
 

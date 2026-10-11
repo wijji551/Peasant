@@ -337,6 +337,7 @@ func begin(save) -> void:
 
 func _dusk_line() -> String:
 	if R.bells(): return "The bell rings, and then every bell in the chapel. Up at Ashhollow, something has taken it personally."
+	if D.MOON_DUSK.has(R.moon()) and Rules.boss_of(R.day, R.last_day) < 0: return D.MOON_DUSK[R.moon()]
 	match Rules.boss_of(R.day, R.last_day):
 		D.U_STEWARD: return "The bell rings. Somebody at the castle is polishing the silver."
 		D.U_COACH: return "The bell rings. Far off, a whip cracks, and wheels start to turn."
@@ -827,6 +828,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"gamble":
 			if ev[1] == me.id: Sound.play("coin" if ev[2] else "no", 0.9)
 		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
+		"bshout": Sound.play("shout", 0.75)              # Robert Bailiff, at his window: he carries right across the village
 		"bells": hud.banner("The bells!", "The congregation is ringing. The dead are enraged: quicker, stronger and harder to put down, until dawn.", 6.0); world.ring_bell(); Sound.play("bell", 1.0)
 		"zap": _later.append([0.36, ev])                 # the Thunderer's Bow: the lightning jumps when the arrow lands
 		"hit":
@@ -1036,15 +1038,21 @@ func _apply_light(nf: float) -> void:
 	var gl: float = atmos.gloom() if atmos else 0.0      # the weather: overcast, rain or mist take the shine off the day
 	var fl: float = atmos.flash if atmos else 0.0        # lightning over the castle
 	sun.light_color = SUN_DAY.lerp(SUN_NIGHT, nf).lerp(SUN_DUSK, k * 0.7).lerp(Color(0.78, 0.8, 0.84), gl * (1 - nf)).lerp(Color(0.85, 0.9, 1.0), fl)
-	var moon := 1.0 if atmos and atmos.weather == "moon" else 0.0   # the full moon lights the night up silver
+	var mk: String = R.moon() if R and screen == "game" else ""
+	if atmos: atmos.moon = mk
+	var moon := 1.0 if mk != "" else 0.0                 # a moon lights the night up: silver, orange, ice-blue or red
+	var moon_col: Color = {"harvest": Color(1.0, 0.74, 0.46), "frost": Color(0.72, 0.88, 1.0), "blood": Color(1.0, 0.34, 0.28)}.get(mk, Color(0.75, 0.85, 1.0))
 	var foggy := 1.0 if atmos and atmos.weather == "fog" else 0.0   # fog closes in at night: the castle road disappears
-	sun.light_color = sun.light_color.lerp(Color(0.75, 0.85, 1.0), moon * nf)
+	sun.light_color = sun.light_color.lerp(moon_col, moon * nf * (0.7 if mk == "blood" or mk == "harvest" else 1.0))
 	sun.light_energy = lerpf(0.8 - gl * 0.45, 0.34 + moon * 0.3, nf) + fl * 1.6
 	sun.position = SUN_FROM_DAY.lerp(SUN_FROM_NIGHT, nf)
 	sun.look_at(Vector3.ZERO)
 	env.ambient_light_color = AMB_DAY.lerp(AMB_NIGHT, nf).lerp(AMB_DUSK, k * 0.7)
+	if mk == "blood" or mk == "harvest": env.ambient_light_color = env.ambient_light_color.lerp(moon_col, 0.28 * nf)
 	env.ambient_light_energy = lerpf(0.32 - gl * 0.06, 0.5, nf) + fl * 0.5
 	var fog := FOG_DAY.lerp(Color(0.48, 0.52, 0.54), gl).lerp(FOG_NIGHT, nf).lerp(FOG_DUSK, k * 0.7).lerp(Color(0.6, 0.65, 0.8), fl * 0.6)
+	if mk == "blood": fog = fog.lerp(Color(0.24, 0.05, 0.05), 0.5 * nf)
+	elif mk == "harvest": fog = fog.lerp(Color(0.22, 0.13, 0.06), 0.4 * nf)
 	var back := _fog_back if screen == "game" else 0.0   # the haze keeps its distance from the player, not from the camera, when the view is brought nearer or taken further off
 	# (Fog is measured from the camera, which is some 120 away from the player. A foggy night used to start at 20 and
 	# end at 60, so everything on the screen was solid fog: black from edge to edge. Now it thickens just past the player.)
@@ -1177,7 +1185,7 @@ func _hud_update(delta: float) -> void:
 			_panel = ""
 			atmos.pick(R.gseed, R.dawn.day)
 			if R.dawn.day > 1: Sound.play("dawn")
-			menus.dawn(R.dawn.day, R.dawn.lines + ([D.WEATHER_LINE[R.weather]] if D.WEATHER_LINE.get(R.weather, "") != "" else []))
+			menus.dawn(R.dawn.day, R.dawn.lines + ([D.WEATHER_LINE[R.weather]] if D.WEATHER_LINE.get(R.weather, "") != "" and not D.MOON_LINE.has(R.moon()) else []))
 			_dawn_t = 15.0
 		if R.phase == "day" and R.bells() and not R.dawn.lines.has(D.BELLS_LINE): hud.feed(D.BELLS_LINE)   # (a save from before there were bells)
 	if win.is_open("dawn"):
@@ -1271,6 +1279,24 @@ func _test_hook() -> void:
 			me.atkCd = 0; me.r = PI; me.goal_r = PI; R.do_attack(me)
 		elif _frame == at + 26 and OS.get_environment("DTV_FIGHT_ABL") != "":
 			me.abCd = 0; R.do_ability(me)
+	if OS.get_environment("DTV_PLAT") != "" and me and _frame == at + 2:      # for pictures: a watch platform, roofed, with a sentry up it. DTV_PLAT=the day
+		R.day = int(OS.get_environment("DTV_PLAT"))
+		me.x = -8.0; me.z = D.VN + 8.5; me.wood = 30
+		R.try_place(me, "platform", -8.0, D.VN + 5.0, 0.0)
+		R.try_place(me, "platform", -1.0, D.VN + 5.0, 0.0)
+		var k := 0
+		for s in R.structs:
+			if s.k != "platform": continue
+			if k == 0: s.re = true
+			for q in R.peasants:
+				if q.kind == 0 and q.plat == 0 and q.state != "body":
+					q.owner = me.id; q.plat = s.id; q.state = "post"; q.x = s.x; q.z = s.z
+					break
+			k += 1
+		R.sv += 1
+		for i in 5:
+			var pu := R.spawn_undead(i % 2, -9.0 + i * 2.2, D.VN - 5.0 - (i % 2))
+			pu.state = "walk"; pu.stun = 999
 	if OS.get_environment("DTV_BURN") != "" and _frame == at + 2 and me:      # for pictures: a few of the dead, alight
 		for i in 5:
 			var bu := R.spawn_undead(i % 2, me.x - 4.0 + i * 2.0, me.z - 3.0 - (i % 2))

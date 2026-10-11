@@ -38,7 +38,8 @@ func _ready() -> void:
 	var ms := _mi("messenger", _chest)
 	ms.position = Vector3(1.9, 0, 0.7); ms.rotation.y = 0.9
 	_bailiff = _mi("bailiff")
-	_bailiff.position = Vector3(-14.5, 3.0, -9.05)
+	_bailiff.position = Vector3(D.BAILIFF_AT.x, 3.0, D.BAILIFF_AT.z)
+	_bailiff.scale = Vector3.ONE * 1.3
 	_bailiff.visible = false
 	_cart = Node3D.new()
 	add_child(_cart)
@@ -131,10 +132,12 @@ func sync(R: Rules) -> void:
 	var want := R.bail_t > 0.0                  # he shows himself when he has something to say, or when someone stands at his door by day
 	if not want and R.phase == "day":
 		for p in R.players:
-			if p.state == "ok" and D.d2(p.x, p.z, -14.5, -8.2) < 16: want = true
+			if p.state == "ok" and D.d2(p.x, p.z, D.BAILIFF_AT.x, -7.7) < 16: want = true
 	_bail_up = move_toward(_bail_up, 1.0 if want else 0.0, get_process_delta_time() * 3.0)
 	_bailiff.visible = _bail_up > 0.01
-	_bailiff.position.y = 2.4 + 0.6 * _bail_up
+	_bailiff.position.y = 2.25 + 0.55 * _bail_up
+	if R.phase == "dusk" and R.bail_t > 0: _bailiff.rotation.z = sin(Time.get_ticks_msec() / 90.0) * 0.12      # shouting: he shakes with it
+	else: _bailiff.rotation.z = 0.0
 	_cart.visible = R.merchant >= 0 and (R.phase == "day" or R.phase == "title")
 	if _cart.visible:
 		var c: Color = MERCHANT_COL[R.merchant % MERCHANT_COL.size()]

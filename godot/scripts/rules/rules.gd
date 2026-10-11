@@ -190,6 +190,13 @@ static func week_of(md: int) -> int:   # 1 to 4
 static func tough_of(md: int) -> float:   # each week the dead hit a tenth harder
 	return 1.0 + 0.1 * (week_of(md) - 1)
 
+## Which moon is up tonight ("" for none): the same in every game, by the night of the month.
+static func moon_of(d: int, last: int) -> String:
+	return D.MOONS.get(d, "") if last >= D.MONTH else ""
+
+func moon() -> String:
+	return moon_of(day, last_day)
+
 static func hp_of(md: int) -> float:      # and last a good deal longer
 	return D.DEAD_HP[week_of(md) - 1]
 
@@ -197,11 +204,11 @@ static func hp_of(md: int) -> float:      # and last a good deal longer
 ## weeks two, three and four, never a boss's night and never the full moon. (In the short game: the fourth night.)
 static func bells_night(game_seed: int, d: int, last: int) -> bool:
 	if last < D.MONTH: return d == 4
-	if d < 8 or D.BOSS_NIGHTS.has(d) or d == 15: return false
+	if d < 8 or D.BOSS_NIGHTS.has(d) or D.MOONS.has(d): return false
 	var w := week_of(d)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = game_seed * 13 + w * 523
-	var days: Array = range((w - 1) * 7 + 1, w * 7).filter(func(x): return x != 15 and not D.BOSS_NIGHTS.has(x))
+	var days: Array = range((w - 1) * 7 + 1, w * 7).filter(func(x): return not D.MOONS.has(x) and not D.BOSS_NIGHTS.has(x))
 	return d == days[rng.randi() % days.size()]
 
 func bells() -> bool:
@@ -209,7 +216,10 @@ func bells() -> bool:
 
 ## The weather for a day: the same on every computer, from the game's seed. Night 15 is the full moon.
 static func weather_of(game_seed: int, d: int, last: int) -> String:
-	if last >= D.MONTH and d == 15: return "moon"
+	match moon_of(d, last):
+		"full": return "moon"
+		"frost": return "snow"
+		"harvest", "blood": return "clear"
 	if d == 1: return "clear"
 	var rng := RandomNumberGenerator.new()
 	rng.seed = game_seed * 7 + d * 191
@@ -763,7 +773,10 @@ func save_data() -> Dictionary:
 	var qs := []
 	for q in peasants:
 		var own := player_by_id(q.owner)
-		qs.append({"ni": q.ni, "x": q.x, "z": q.z, "hx": q.hx, "hz": q.hz, "hp": q.hp, "armed": q.armed, "body": q.state == "body", "os": own.slot if own else -1, "kind": q.kind})
+		var pl := -1                                   # the watch platform they are posted on, as its place in the list of structures
+		for si in structs.size():
+			if q.plat != 0 and structs[si].id == q.plat: pl = si
+		qs.append({"ni": q.ni, "x": q.x, "z": q.z, "hx": q.hx, "hz": q.hz, "hp": q.hp, "armed": q.armed, "body": q.state == "body", "os": own.slot if own else -1, "kind": q.kind, "pl": pl})
 	var ds := []
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z, "day": d.day})
@@ -923,6 +936,8 @@ func load_game(d: Dictionary, infos: Array) -> void:
 		var at_home: bool = own == null and not q.body
 		var e := mk_peasant(int(q.ni), q.hx if at_home else q.x, q.hz if at_home else q.z, q.hx, q.hz, own.id if own else 0)
 		e.hp = q.hp; e.armed = int(q.armed); e.kind = int(q.get("kind", 0))
+		var pli := int(q.get("pl", -1))
+		if pli >= 0 and pli < structs.size() and own: e.plat = structs[pli].id
 		if q.body:
 			e.state = "body"; e.owner = 0
 		peasants.append(e)
@@ -1125,6 +1140,18 @@ func find_interact(p: E.Player):
 			o.merge({"type": "repair", "key": "p%d" % s.id, "ok": ok, "dur": 0.6 if rk(p, 2) >= 2 else 1.2,
 				"label": ("Hold {interact} to repair the %s (%s)" if ok else "Repairing the %s needs %s") % [D.SNAME[s.k], D.cost_text(c)]})
 			return o
+		if s.k == "platform" and s.built:              # a watch platform: post one of your posse on it, or call them down
+			var up: E.Peasant = null
+			for q in peasants:
+				if q.plat == s.id and q.state != "body": up = q
+			var could_roof: bool = not s.re and has(p, reinf_cost(p, s.k))
+			if up == null:
+				if peasants.any(func(q): return q.owner == p.id and q.kind == 0 and q.plat == 0 and active(q)):
+					o.merge({"type": "post", "key": "w%d" % s.id, "ok": true, "dur": 0.6, "label": "Hold {interact} to post one of your posse on the watch platform. They go up at dusk and throw stones over the wall"})
+					return o
+			elif up.owner == p.id and not could_roof:
+				o.merge({"type": "unpost", "key": "u%d" % s.id, "ok": true, "dur": 0.6, "label": "Hold {interact} to call %s down from the watch platform" % D.qname(up)})
+				return o
 		if D.REINF.has(s.k) and not s.re:
 			var rf: Dictionary = D.REINF[s.k]
 			var some := false
@@ -2320,6 +2347,11 @@ func step(dt: float) -> void:
 
 func dusk_falls() -> void:
 	phase = "dusk"; timeLeft = D.DUSK_LEN
+	# Robert Bailiff throws open his window and shouts at everybody to defend his village
+	bail_line = D.BAILIFF_DUSK_BLOOD if moon() == "blood" else D.BAILIFF_DUSK_BELLS if bells() else D.BAILIFF_DUSK_BOSS if boss_of(day, last_day) >= 0 else D.BAILIFF_DUSK[(gseed + day * 7) % D.BAILIFF_DUSK.size()]
+	bail_t = 10.0
+	ev.append(["bshout"])
+	say("Robert Bailiff, from his window: " + bail_line)
 	for p in players:                              # someone in every posse has something to say about it
 		var mine := peasants.filter(func(q): return q.owner == p.id and active(q))
 		if mine.size(): bark(mine[randi() % mine.size()], D.BARK_DUSK)
@@ -2381,7 +2413,7 @@ static func new_kinds(d: int, last: int) -> Array:
 static func night_plan(d: int, n: int, last: int = D.MONTH) -> Dictionary:
 	var md := month_day(d, last)
 	var g := growth(d) if last >= D.MONTH else pow(D.NIGHT_GROWTH, d - 1)
-	var budget := D.NIGHT_BASE * (1 + D.NIGHT_PER_PLAYER * (n - 1)) * g
+	var budget := D.NIGHT_BASE * (1 + D.NIGHT_PER_PLAYER * (n - 1)) * g * (D.BLOOD_MOON if moon_of(d, last) == "blood" else 1.0)
 	var newk := new_kinds(d, last)
 	var w := mix(md, newk)
 	var sum := 0.0
@@ -2537,7 +2569,8 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 	var lines := ["Night %d is over. %d of the dead were put back down." % [day, N.kills]]
 	if fallen.size():
 		lines.append("Fallen: %s. What is left lies where it fell, and could still be useful." % ", ".join(fallen))
-	var share: int = roundi((6 + floori(N.kills / 5.0)) * (D.BELLS.hat if bells() else 1.0))
+	var share: int = roundi((6 + floori(N.kills / 5.0)) * (D.BELLS.hat if bells() else 1.0) * (D.BLOOD_MOON if moon() == "blood" else 1.0))
+	if moon() == "blood": lines.append("The blood moon has set. Thornhallow is still here, which nobody at the castle had planned for.")
 	if bells(): lines.append("The congregation rang till dawn and are very pleased with how it went. They have passed the hat twice.")
 	var paid := 0
 	for p in players:
@@ -2634,6 +2667,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 	day += 1; grow_trees(); roll_day(false); lines.append(site_line())
 	tough = tough_of(mday()); tough_hp = hp_of(mday())
 	if bells(): lines.append(D.BELLS_LINE)
+	if D.MOON_LINE.has(moon()): lines.append(D.MOON_LINE[moon()])
 	if new_chest(): lines.append("Word has come, late and by pigeon, that %s sent a chest of help to Thornhallow. The messenger set off %s and has not been seen since." % [D.CHEST_FROM[chest.from][0], D.CHEST_ROADS[chest.road]])
 	var stale := drops.filter(func(d): return day - d.day >= D.DROP_DAYS)       # things left lying about: after two days nobody cares
 	if stale.size():
@@ -2773,6 +2807,22 @@ func player_step(p: E.Player, dt: float) -> void:
 				"reinf":
 					var s: E.Struct = it.target
 					pay(p, reinf_cost(p, s.k)); s.re = true; s.mhp = float(roundi(s.mhp * D.REINF[s.k].mul)); s.hp = s.mhp; s.hc += 1; sv += 1; add_xp(p, 2, 1); ev.append(["build", r1(s.x), r1(s.z)])
+				"post":                                 # the nearest of your posse is given the watch platform
+					var s: E.Struct = it.target
+					var best_q: E.Peasant = null
+					var bq := 1e9
+					for q in peasants:
+						if q.owner == p.id and q.kind == 0 and q.plat == 0 and active(q) and D.d2(q.x, q.z, s.x, s.z) < bq:
+							bq = D.d2(q.x, q.z, s.x, s.z); best_q = q
+					if best_q:
+						best_q.plat = s.id; best_q.roof = s.re
+						say("%s has been given the watch platform, and a bucket of stones." % D.qname(best_q))
+				"unpost":
+					var s: E.Struct = it.target
+					for q in peasants:
+						if q.plat == s.id:
+							q.plat = 0
+							if q.state == "post": q.state = "follow"
 				"blessre":
 					var s: E.Struct = it.target
 					p.bodies -= 1; p.bbod -= 1; s.bl = true
@@ -2885,8 +2935,40 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		return
 	var Ld := player_by_id(q.owner)
 	if Ld == null or Ld.state == "dead":
-		q.owner = 0; q.state = "idle" if phase == "day" else "hide"
+		q.owner = 0; q.plat = 0; q.state = "idle" if phase == "day" else "hide"
 		return
+	if q.plat != 0:                                    # posted on a watch platform: up it from dusk, throwing stones at whatever comes near
+		var ps: E.Struct = null
+		for s in structs:
+			if s.id == q.plat and s.built and s.k == "platform": ps = s
+		if ps == null:
+			q.plat = 0
+			if q.state == "post": q.state = "follow"
+		elif phase == "day":
+			if q.state == "post": q.state = "follow"
+		else:
+			q.roof = ps.re; q.tree = null
+			if q.state != "post":
+				q.state = "follow"
+				if step_to(q, ps.x, ps.z, 5.4, dt, 0.2) < 0.7:
+					q.state = "post"; q.x = ps.x; q.z = ps.z
+				return
+			q.x = ps.x; q.z = ps.z
+			var pt: E.Undead = null
+			var pd: float = D.PLAT.reach * D.PLAT.reach
+			for u in undead:
+				if u.dead or u.state == "pile" or u.state == "rise": continue
+				var dd := D.d2(q.x, q.z, u.x, u.z)
+				if dd < pd:
+					pd = dd; pt = u
+			if pt:
+				q.r = D.ang_lerp(q.r, atan2(pt.x - q.x, pt.z - q.z), minf(1.0, dt * 10))
+				if q.cd <= 0:
+					q.cd = D.PLAT.wait; q.ac += 1
+					ev.append(["shot", r1(q.x), r1(q.z), r1(pt.x), r1(pt.z), 0])
+					hit_u(pt, (D.PLAT.dmg + rk(Ld, 5)) * (1.25 if rk(Ld, 6) >= 5 else 1.0), {"q": q, "ranged": true, "farm": false})
+			if q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
+			return
 	if Ld.state == "hide":
 		q.state = "hide"
 		return
@@ -3102,11 +3184,14 @@ func undead_step(dt: float) -> void:
 	var censers := players.filter(func(p): return p.trk == 27 and p.state == "ok")
 	var captain: E.Undead = boss if boss and boss.k == D.U_CAPTAIN else null
 	var ws := wspeed()
+	var mending: bool = phase == "night" and moon() == "harvest"
 	for u in undead:
 		var U: Dictionary = D.UN[u.k]
 		u.cd = maxf(0, u.cd - dt); u.t -= dt; u.slow = maxf(0, u.slow - dt)
 		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
 		if u.dead: continue
+		if mending and u.hp < u.mhp and u.burn <= 0 and u.state != "pile" and u.state != "rise":     # the harvest moon: they mend, slowly (not while alight)
+			u.hp = minf(u.mhp, u.hp + u.mhp * D.HARVEST_MEND * dt)
 		if u.burn > 0:                                # alight: a scorch every half second, until it goes out
 			u.burn -= dt; u.bt -= dt
 			if u.bt <= 0:
@@ -3171,7 +3256,7 @@ func undead_step(dt: float) -> void:
 						bd = d; tgt = p; tp = true
 			if not U.boss:
 				for q in peasants:
-					if active(q):
+					if active(q) and not (q.plat != 0 and q.state == "post" and (U.rng <= 0 or q.roof)):   # up a watch platform: out of reach
 						var d := D.d2(u.x, u.z, q.x, q.z)
 						if d < bd:
 							bd = d; tgt = q; tp = false

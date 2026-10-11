@@ -138,8 +138,8 @@ func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 		_bailiff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_bailiff.custom_minimum_size.x = 260
 	_bailiff.text = R.bail_line
-	if R.bail_t > 0 and R.bail_line != "" and D.d2(focus.x, focus.z, -14.5, -9.3) < 30 * 30:   # Robert Bailiff, from his window
-		_put(_bailiff, Vector3(-14.5, 5.6, -9.3))
+	if R.bail_t > 0 and R.bail_line != "" and D.d2(focus.x, focus.z, D.BAILIFF_AT.x, -9.3) < (60 * 60 if R.phase == "dusk" else 30 * 30):   # Robert Bailiff, from his window (at dusk he can be heard right across the village)
+		_put(_bailiff, Vector3(D.BAILIFF_AT.x, 5.3, -9.3))
 	else:
 		_bailiff.visible = false
 	var shown := R.players.filter(func(p): return p != me and p.state != "hide" and p.state != "inn") if Settings.tags else []

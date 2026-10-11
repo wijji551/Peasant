@@ -305,6 +305,19 @@ static func _build(name: String, b: Mesher) -> void:
 		"door":
 			b.box(2.25, 3.35, 0.2, 1.125, 0.12, 0, P.wood2)
 			for y in [0.8, 2.6]: b.box(2.25, 0.16, 0.26, 1.125, y, 0, P.iron)
+		"platform":                                      # a watch platform: four posts, a deck with a rail, and a ladder
+			for sx in [-1, 1]:
+				for sz in [-1, 1]: b.box(0.22, 2.9, 0.22, sx * 0.95, 0, sz * 0.95, P.timber)
+			b.box(2.3, 0.16, 2.3, 0, 1.6, 0, P.wood)
+			for sx in [-1, 1]: b.box(0.1, 0.1, 2.1, sx * 0.95, 2.45, 0, P.wood2)
+			b.box(2.1, 0.1, 0.1, 0, 2.45, -0.95, P.wood2).box(2.1, 0.5, 0.08, 0, 1.76, -1.0, P.wood3)
+			for sx in [-1, 1]: b.box(0.08, 1.9, 0.08, sx * 0.28, 0, 1.18, P.wood2, 0, -0.22, 0)
+			for yy in [0.35, 0.75, 1.15, 1.5]: b.box(0.56, 0.07, 0.07, 0, yy, 1.26 - yy * 0.22, P.wood3)
+			b.box(0.5, 0.42, 0.5, 0.6, 1.76, 0.55, P.wood3).box(0.36, 0.1, 0.36, 0.6, 2.18, 0.55, P.stone)
+		"platform_roof":
+			for sx in [-1, 1]:
+				for sz in [-1, 1]: b.box(0.16, 1.1, 0.16, sx * 0.95, 2.9, sz * 0.95, P.timber)
+			b.roof(2.9, 0.9, 2.9, 0, 3.95, 0, P.roof2, 0)
 		"barricade":
 			b.box(3.4, 0.22, 0.22, 0, 0.72, 0, P.wood).box(3.2, 0.3, 0.1, 0, 0.22, 0.3, P.wood3)
 			for x in [-1.3, -0.43, 0.43, 1.3]:

@@ -433,3 +433,16 @@ Three players reached day 25 and sent back a list. The breakages first.
 - **Relics glow** (`Figure.glow_of`, `Figure.halo`): emissive metal, a halo and a small light, in the hand, worn, and on the ground. Rune weapons glow violet.
 - The farm is a marked field on the map.
 - Still to decide with the designer: what the windmill does.
+
+## Moons, the watch platform, and Robert Bailiff at dusk (build 6)
+
+- **Five moons a month** (`D.MOONS`, `Rules.moon_of`, thirty-night game only), on fixed nights, none on a boss's night:
+  - night 9, harvest: the dead get back 1.5% of their health a second (`D.HARVEST_MEND`), not while alight;
+  - nights 15 and 28, full: the old full moon (weather `moon`: the dead 15% quicker, relics twice as often);
+  - night 19, frost: the weather is snow;
+  - night 23, blood: the night's horde is 2.5 times the size (`D.BLOOD_MOON`, in `night_plan`), and the hat goes round 2.5 times.
+  The designer named the kinds and nights 23 and 28; nights 9 and 19 and the mending rate are mine. Each has its own moon in the sky, its own light, a line on the notice board and at dawn, and a dusk line. The nights of the bells now avoid every moon.
+- **The watch platform** was in the design's Building table from the start and had never been built. Now: `platform`, 20 wood, in `D.BUILDS`. Hold E to post one of your posse (`q.plat`); from dusk they climb it and throw stones (`D.PLAT`: reach 13, every 1.5 s, 8 damage plus the leader's rank in the ranged book). Melee dead cannot target them; archers can unless it is roofed (reinforce: 10 wood, `s.re`). Saved (`pl`), and sent to joined games (the peasant record is 15 numbers now).
+- **Robert Bailiff at dusk** (`D.BAILIFF_DUSK`, event `bshout`, sound `shout`): every dusk he shouts at everybody to defend his village, with lines of his own for a boss's night, the bells and the blood moon. His window was at the middle of his front wall, 0.7 from the back of the inn, and hidden by it from the square: it is now the east window (`D.BAILIFF_AT`), larger, with shutters and a sill.
+- Structure health bars turn with the view as one piece (the same fault the posse's bars had).
+- Tests: new `tests/platform_test.gd` (35).

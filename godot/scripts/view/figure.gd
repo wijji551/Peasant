@@ -178,10 +178,12 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 	if q.state == "chop" and own:
 		kind = D.GK[own.gk] if own.gk > 0 else own.workK
 		if kind == "fish" or kind == "search": kind = ""
+	_lift = 1.76 if q.state == "post" and q.plat != 0 else 0.0      # up on a watch platform
 	var c := _counts(q.ac, q.hc, -1)
 	if c[0]:
 		_atk = 1.0
-		if q.state == "chop": _work_fx(kind if kind != "" else "tree")
+		if q.state == "post" and q.plat != 0: Sound.play("swing", 0.3, Vector2(q.x, q.z))
+		elif q.state == "chop": _work_fx(kind if kind != "" else "tree")
 		else:
 			Sound.play("swing", 0.35, Vector2(q.x, q.z))
 			if fx and q.state != "body":
@@ -219,6 +221,7 @@ var _wobble := false
 
 
 var _bar_f := 1.0
+var _lift := 0.0                    # how far off the ground this figure stands (on a watch platform)
 
 
 func _show_bar(y: float, w: float, frac: float, col: Color) -> void:
@@ -370,7 +373,7 @@ func _work_fx(kind: String) -> void:   # a blow landed on a tree, a rock, the or
 
 func _process(delta: float) -> void:
 	var before := position
-	var want := Vector3(_x, 0, _z)
+	var want := Vector3(_x, _lift, _z)
 	position = want if before.distance_to(want) > 6 else before.lerp(want, minf(1.0, delta * 14.0))
 	var sp := (position - before).length() / maxf(delta, 1e-4)
 	_mv = lerpf(_mv, minf(1.0, sp / 2.2), minf(1.0, delta * 9.0))

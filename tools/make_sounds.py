@@ -278,6 +278,13 @@ def sfx():
     wh = bandpass(rng.standard_normal(int(SR * 0.22)), 500, 2200)
     wh = wh / (np.abs(wh).max() + 1e-9) * np.sin(np.linspace(0, np.pi, len(wh))) ** 1.5 * 0.45
     S["whoosh"] = mix(0.24, (wh, 0))
+    # Robert Bailiff, shouting from his window: three blustering syllables, the last one cracking upwards
+    sh = buf(1.0)
+    for at, f0, f1, dur, g in ((0.0, 250, 215, 0.2, 0.32), (0.24, 265, 225, 0.2, 0.32), (0.5, 240, 330, 0.36, 0.36)):
+        v = tone(f0, dur, "sawtooth", g, f1, attack=0.02) + tone(f0 * 2.02, dur, "square", g * 0.25, f1 * 2.02, attack=0.02)
+        add(sh, bandpass(v, 300, 2600), at)
+        add(sh, noise(0.05, 0.12, 2400), at)
+    S["shout"] = reverb(sh * V, 0.5, 0.22)
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)
