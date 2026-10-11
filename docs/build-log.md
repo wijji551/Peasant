@@ -462,3 +462,19 @@ Nothing was built. The designer asked for the design document to be brought up t
   - The Smoking Censer's rule runs (`undead_step`: dead within about 5.5 of a player with `trk == 27` get `slow`, which halves walking speed only). It does not slow their blows and shows nothing, so in play it appears to do nothing.
   - Relics are one of each for the whole village (`Rules.relics`), not one per player.
   - Steel has no bow or crossbow, and the rune tier has neither those nor armour.
+
+## Design only: the list gone through (no build)
+
+Still nothing built. The designer went through the open questions one by one; the design document holds every answer. The main decisions, for whoever builds next:
+
+- **Dead:** twice today's health in week one, three times from week two; horde size unchanged; three new kinds (bloated dead, pallbearers, grave hound); a mild evil glow on all but bosses.
+- **Bosses:** Chaplain night 11, Cook night 18, werewolf night 28 (one blow breaks barricades, a few swipes a wall or gate; howl freezes players unless braced, in the prayer or wearing the Helm). Coachman stampedes. Lord: a shadow with health of its own that teleports, shuns fire and throws the dead; the Lord comes when it is beaten and half the horde is; 10,000 health; organ music.
+- **Controls:** space bar jumps (jump away from a sweep), left mouse attacks; action bar on 1 to 9 with health above it; building wheel.
+- **Towers:** four sites behind a wall moved forward, six peasants each from anybody's posse, rocks do 5, upkeep 4 wood and 1 iron a dawn. Side gates: one a night alternating in weeks one and two, both from week three; players may build gates there.
+- **Smithy:** crude, iron (was refined), steel, mithril (today's rune), rune (new, from the Rune Cave across the river). Bows, crossbows and armour in every tier. Posse kits: crude at rank I, iron III, steel VI; scavenged from fallen peasants.
+- **Books:** fourteen and two classes; four to a peasant (fourth when three are at rank 4), fifth from the Index; a class counts as one and nobody has two; ten ranks; a power for every book at rank III; honing 2 in the hundred a page, five pages.
+- **Relics:** one of each for every player holding its book, findable by anybody, tradable. Relic boots: no book, one of each per player. The Tithe Collector (a holy, burning flail): its own cave across the river, a minute a search, a shilling a search rising weekly, never traded.
+- **Riverside:** raft 100 wood, by day only; swimming (20 seconds, half health, 45 seconds exhausted, no posse); two merchants; the druid brews Granny's potions for a player with Granny's Remedies, price set daily.
+- **Jester:** note in the library, Prospero at the inn, three lessons with questions and a tankard each, homework of twenty dead between them.
+- **After the Lord:** a new relative each month, each month adding half the first month's strength, twelve months at most. Hallowshire Town teased.
+- **Village life:** windmill banquet (10 food a posse), riding sheep from the Herder, stray peasants who may desert, fishing by hoik, a cockerel at dawn.
