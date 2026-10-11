@@ -2413,7 +2413,7 @@ static func new_kinds(d: int, last: int) -> Array:
 static func night_plan(d: int, n: int, last: int = D.MONTH) -> Dictionary:
 	var md := month_day(d, last)
 	var g := growth(d) if last >= D.MONTH else pow(D.NIGHT_GROWTH, d - 1)
-	var budget := D.NIGHT_BASE * (1 + D.NIGHT_PER_PLAYER * (n - 1)) * g * (D.BLOOD_MOON if moon_of(d, last) == "blood" else 1.0)
+	var budget := D.NIGHT_BASE * (1 + D.NIGHT_PER_PLAYER * (n - 1)) * g
 	var newk := new_kinds(d, last)
 	var w := mix(md, newk)
 	var sum := 0.0
@@ -2433,6 +2433,7 @@ static func night_plan(d: int, n: int, last: int = D.MONTH) -> Dictionary:
 			if c[k] > 0:
 				c[k] = maxi(1, roundi(c[k] * float(D.NIGHT_HEADS) / heads)); keep += c[k]
 		crowd_ = float(heads) / keep
+	if moon_of(d, last) == "blood": crowd_ *= D.BLOOD_MOON      # the blood moon: the usual number, each of them two and a half times the trouble
 	var dur := D.NIGHT_RISE + D.NIGHT_RISE_DAY * mini(d - 1, 6) + 4.0 * maxi(0, d - 7)
 	return {"c": c, "dur": dur, "boss": boss_of(d, last), "crowd": crowd_}
 

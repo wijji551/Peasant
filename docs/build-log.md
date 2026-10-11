@@ -446,3 +446,8 @@ Three players reached day 25 and sent back a list. The breakages first.
 - **Robert Bailiff at dusk** (`D.BAILIFF_DUSK`, event `bshout`, sound `shout`): every dusk he shouts at everybody to defend his village, with lines of his own for a boss's night, the bells and the blood moon. His window was at the middle of his front wall, 0.7 from the back of the inn, and hidden by it from the square: it is now the east window (`D.BAILIFF_AT`), larger, with shutters and a sill.
 - Structure health bars turn with the view as one piece (the same fault the posse's bars had).
 - Tests: new `tests/platform_test.gd` (35).
+
+## The blood moon, corrected (build 7)
+
+- The designer's "2.5x difficulty" had been built as 2.5 times as many of the dead. He meant the difficulty. Now `night_plan` leaves the horde its usual size and multiplies `crowd` by `D.BLOOD_MOON` (2.5): each of the dead has 2.5 times the health and, by the rule the game already uses for one of the dead worth several, hits `1 + 0.6 x 1.5 = 1.9` times as hard. The dead are tinted red that night. The hat still goes round 2.5 times.
+- Tests: platform 37.

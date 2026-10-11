@@ -1021,7 +1021,7 @@ func _draw(delta: float) -> void:
 		if D.d2(u.x, u.z, _focus.x, _focus.z) < 22 * 22: near += 1
 	Sound.me.update(delta, R.nf, _focus, atmos.weather, near, atmos.flash, R.live())
 	var ringing: bool = R.phase == "night" and R.bells()        # a night of the bells: they toll till dawn, and the dead see red
-	dead_view.enraged = ringing
+	dead_view.enraged = ringing or (R.phase == "night" and R.moon() == "blood")
 	if ringing:
 		_bells_t -= delta
 		if _bells_t <= 0.0:

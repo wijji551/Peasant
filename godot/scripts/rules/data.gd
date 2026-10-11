@@ -209,18 +209,19 @@ const BELLS := {"n": 3, "speed": 1.12, "dmg": 1.25, "hp": 1.25, "hat": 2.0}
 ## rubble. Harvest: the dead slowly mend. Frost: it snows. Blood: a very hard night, two and a half hordes in one.
 const MOONS := {9: "harvest", 15: "full", 19: "frost", 23: "blood", 28: "full"}
 const HARVEST_MEND := 0.015          # of its full health, a second, that one of the dead gets back under the harvest moon
-const BLOOD_MOON := 2.5              # how many nights' worth of the dead rise under the blood moon
+const BLOOD_MOON := 2.5              # how much harder each of the dead is under the blood moon: that much more health, and (as for any
+                                     # one of the dead worth several) 1 + 0.6 x 1.5 = 1.9 times the blow. The horde is its usual size.
 const MOON_NAME := {"full": "the full moon", "harvest": "the harvest moon", "frost": "the frost moon", "blood": "the blood moon"}
 const MOON_LINE := {
 	"harvest": "Tonight is the harvest moon: big, orange and low. Under it the dead mend. Whatever you hurt and do not finish will be whole again in a minute.",
 	"frost": "Tonight is the frost moon. It will snow from dusk, and everyone will be slower in it, the dead included.",
-	"blood": "Tonight is the blood moon. The castle has emptied its cellars: two and a half nights’ worth of the dead will come down in one. The village will pass the hat accordingly.",
+	"blood": "Tonight is the blood moon. Everything that comes down the road will be two and a half times the trouble: that much harder to put down, and nearly twice as hard on whatever it hits. The village will pass the hat accordingly.",
 }
 const MOON_DUSK := {
 	"full": "The bell rings. A full moon is up, and something at Ashhollow is howling.",
 	"harvest": "The bell rings. The harvest moon is rising, the colour of a pumpkin, and the graveyard looks well rested.",
 	"frost": "The bell rings. The moon has a ring of ice round it, and the first flakes are coming down.",
-	"blood": "The bell rings. The moon has come up red. The castle road is already full.",
+	"blood": "The bell rings. The moon has come up red, and so has everything under it.",
 }
 const BELLS_LINE := "It is a holy day. Tonight the priest and his congregation will ring the chapel bells until dawn, to keep the dead away. Nobody has the heart to tell them what it does to the dead."
 const ORDER_XP := 3.0                # what giving an order teaches of the leading book

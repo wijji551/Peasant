@@ -134,7 +134,14 @@ func _init() -> void:
 		var s := 0.0
 		for k in c.size(): s += c[k] * D.UN[k].cost
 		return s * Rules.night_plan(d, 1, D.MONTH).crowd
-	ok("the blood moon brings about two and a half nights' worth of the dead", heads.call(23) > heads.call(22) * 2.1 and heads.call(23) > heads.call(24) * 2.0 and heads.call(23) < heads.call(24) * 2.9, [heads.call(22), heads.call(23), heads.call(24)])
+	ok("the blood moon is the usual number of the dead", heads.call(23) / D.BLOOD_MOON > heads.call(22) * 0.9 and heads.call(23) / D.BLOOD_MOON < heads.call(24) * 1.1 and Rules.night_plan(23, 1, D.MONTH).c == Rules.night_plan(23, 1, D.MONTH).c, [heads.call(22), heads.call(23) / D.BLOOD_MOON, heads.call(24)])
+	ok("each of them two and a half times the trouble", is_equal_approx(Rules.night_plan(23, 1, D.MONTH).crowd, 2.5) and is_equal_approx(Rules.night_plan(22, 1, D.MONTH).crowd, 1.0))
+	var RBm := Rules.new()
+	RBm.new_game([{"id": 1, "name": "Matt", "col": 0}])
+	RBm.day = 23; RBm.weather = "clear"
+	RBm.dusk_falls(); RBm.timeLeft = 0.01; RBm.step(STEP)
+	var bu := RBm.spawn_undead(0, 0, -60)
+	ok("so a shambler has 2.5 times a fourth-week shambler's health, and hits 1.9 times as hard", absf(bu.mhp - D.UN[0].hp * 2.8 * 2.5) < 0.5 and is_equal_approx(RBm.crowd_d, 1.9), [bu.mhp, RBm.crowd_d])
 	# the harvest moon: they mend
 	var RH := Rules.new()
 	RH.new_game([{"id": 1, "name": "Matt", "col": 0}])
