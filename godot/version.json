@@ -1,4 +1,5 @@
 {
-	"build": 7,
-	"what": "The blood moon is now 2.5 times the difficulty, not 2.5 times the number."
+	"build": 8,
+	"version": "7.1",
+	"what": "Version 7.1: the censer smokes and works, the relic bow is a crossbow, the storehouse stacks, quieter rain, and a cockerel at dawn."
 }

@@ -253,10 +253,10 @@ func _update_corner() -> void:
 			b.text = "Open the download page"
 			b.pressed.connect(func(): OS.shell_open(Update.PAGE))
 		else:
-			b.text = "Restart into build %d" % u.ready_build
+			b.text = "Restart into version %s" % u.their()
 			b.pressed.connect(func(): u.restart())
 		_upd.add_child(b)
-	var l := Look.label(_upd, u.line if u.line != "" else "Build %d" % Update.build(), 14, Color("f1e4c6"))
+	var l := Look.label(_upd, u.line if u.line != "" else "Version %s" % Update.version(), 14, Color("f1e4c6"))
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 
@@ -1184,7 +1184,8 @@ func _hud_update(delta: float) -> void:
 		if R.dawn.lines.size() and not win.is_open("menu"):
 			_panel = ""
 			atmos.pick(R.gseed, R.dawn.day)
-			if R.dawn.day > 1: Sound.play("dawn")
+			if R.dawn.day > 1:
+				Sound.play("dawn"); Sound.play("cockerel", 0.7)      # somebody has to be pleased about it
 			menus.dawn(R.dawn.day, R.dawn.lines + ([D.WEATHER_LINE[R.weather]] if D.WEATHER_LINE.get(R.weather, "") != "" and not D.MOON_LINE.has(R.moon()) else []))
 			_dawn_t = 15.0
 		if R.phase == "day" and R.bells() and not R.dawn.lines.has(D.BELLS_LINE): hud.feed(D.BELLS_LINE)   # (a save from before there were bells)
@@ -1279,6 +1280,15 @@ func _test_hook() -> void:
 			me.atkCd = 0; me.r = PI; me.goal_r = PI; R.do_attack(me)
 		elif _frame == at + 26 and OS.get_environment("DTV_FIGHT_ABL") != "":
 			me.abCd = 0; R.do_ability(me)
+	if OS.get_environment("DTV_CENSER") != "" and me and _frame == at + 2:    # for pictures: the Smoking Censer, and the dead in and out of its smoke
+		me.trk = 27
+		if win.visible: win.close()
+		Engine.time_scale = 0.5
+		for i in 9:
+			var ca := i * TAU / 9.0
+			var cd := 3.5 + (i % 3) * 3.4
+			var cu := R.spawn_undead(i % 2, me.x + cos(ca) * cd, me.z + sin(ca) * cd)
+			cu.state = "walk"; cu.t = 0; cu.hp = 400; cu.mhp = 400
 	if OS.get_environment("DTV_PLAT") != "" and me and _frame == at + 2:      # for pictures: a watch platform, roofed, with a sentry up it. DTV_PLAT=the day
 		R.day = int(OS.get_environment("DTV_PLAT"))
 		me.x = -8.0; me.z = D.VN + 8.5; me.wood = 30

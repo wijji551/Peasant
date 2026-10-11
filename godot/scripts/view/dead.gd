@@ -92,6 +92,8 @@ func sync(R: Rules, delta: float) -> void:
 		var col := Color(f * (1.5 if u.vuln > 0 else 1.0), f * (1.25 if u.fear > 0 else 0.75 if u.vuln > 0 else 1.0), f * (0.7 if u.fear > 0 or u.vuln > 0 else 1.0))
 		if u.stun > 0 and fx and randf() < delta * 5: fx.puff(u.x, 2, u.z, 1, fx.C_SPARK, 0.7)
 		if enraged: col = Color(col.r * 1.3, col.g * 0.78, col.b * 0.78)      # a night of the bells: they see red, and look it
+		if u.smoke > 0:                                             # in a censer's smoke: gone grey, and sluggish
+			col = Color(col.r * 0.62, col.g * 0.7, col.b * 1.05)
 		if u.burn > 0:                                              # alight: glowing, with flames coming off
 			col = Color(col.r * 1.6, col.g * 0.95, col.b * 0.5)
 			if fx and randf() < delta * 14: fx.puff(u.x + randf_range(-0.3, 0.3), randf_range(0.8, 1.8), u.z + randf_range(-0.3, 0.3), 1, fx.C_FIRE, 1.4)

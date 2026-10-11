@@ -11,7 +11,7 @@ extends Node
 const EFFECTS := ["bell", "bone", "build", "caw0", "caw1", "cheer", "chop", "clang", "coin", "dawn", "door", "eat",
 	"find", "forge", "groan0", "groan1", "groan2", "gulp", "hit", "holy", "hooves", "hurt", "iron", "jeer", "keep", "knock",
 	"lost", "nail", "no", "owl", "page", "pick", "pluck", "pop", "raise", "rally", "rattle", "relic", "ring", "splash", "splat",
-	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won", "thwack", "crit", "tink", "whoosh", "shout"]
+	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won", "thwack", "crit", "tink", "whoosh", "shout", "cockerel"]
 const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "castle": "amb_castle",
 	"music_day": "music_day", "music_night": "music_night"}
 const VARY := ["chop", "hit", "bone", "swing", "stone", "pick", "build", "splash", "thump", "splat", "groan0", "groan1", "groan2", "rattle", "caw0", "caw1", "thwack", "tink", "whoosh"]
@@ -108,7 +108,7 @@ func update(delta: float, nf: float, focus_: Vector3, weather: String, undead_ne
 	var castle := clampf(1.0 - (focus.y + 60.0) / 45.0, 0.0, 1.0)      # nearer the castle, louder its drone
 	_fade("day", (1.0 - night) * (0.75 if weather == "rain" else 1.0) * 0.7, delta)
 	_fade("night", night * 0.8, delta)
-	_fade("rain", 0.8 if weather == "rain" else 0.0, delta)
+	_fade("rain", 0.34 if weather == "rain" else 0.0, delta)      # (it was 0.8: at full volume the rain drowned the village)
 	_fade("castle", clampf(castle * 0.9 + night * 0.25, 0.0, 1.0) * 0.8, delta)
 	_fade("music_day", (1.0 - night) * 0.6, delta * 0.5)
 	_fade("music_night", night * 0.65, delta * 0.5)

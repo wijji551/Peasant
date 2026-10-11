@@ -190,6 +190,7 @@ class Undead:
 	var ac := 0
 	var hc := 0
 	var slow := 0.0
+	var smoke := 0.0        # in the smoke of a censer: it strikes slower as well as walking slower
 	var rt := 5.0
 	var stun := 0.0
 	var pin := 0.0

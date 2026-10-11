@@ -11,6 +11,7 @@ pack = os.path.join(root, "out", "thornhallow.pck")
 data = open(pack, "rb").read()
 note = {
     "build": int(ver["build"]),
+    "version": str(ver.get("version", ver["build"])),
     "what": ver.get("what", ""),
     "engine": sys.argv[1] if len(sys.argv) > 1 else "4.7",
     "pack": "thornhallow.pck",

@@ -266,7 +266,7 @@ func _on_peer_joined(pid: int) -> void:
 	_next_id += 1
 	_conns[pid] = id
 	lobby.append({"id": id, "name": "Peasant", "col": _free_col(-1)})
-	_send({"t": "you", "id": id, "b": Update.build()}, pid)
+	_send({"t": "you", "id": id, "b": Update.build(), "v": Update.version()}, pid)
 	send_lobby()
 
 
@@ -581,7 +581,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 	if with_undead:
 		var un := PackedFloat32Array()
 		for u in R.undead:
-			var fl: int = (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0) | (16 * u.stage) | (64 if u.march else 0) | (128 if u.burn > 0 else 0)
+			var fl: int = (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0) | (16 * u.stage) | (64 if u.march else 0) | (128 if u.burn > 0 else 0) | (256 if u.smoke > 0 else 0)
 			un.append_array([u.id, u.k, u.x, u.z, u.r, u.hp, u.mhp, USTATE.find(u.state), u.ac, u.hc, fl])
 		o.un = un
 	return o
@@ -610,7 +610,7 @@ func _client_msg(m: Dictionary) -> void:
 		"you":
 			var hb := int(m.get("b", Update.build()))
 			if hb != Update.build():                    # two builds cannot share a village: say which of us is behind
-				kicked = ("That village is on build %d and this game is on build %d. " % [hb, Update.build()]) + ("Restart this game and it will fetch the newer build." if hb > Update.build() else "Ask the host to restart their game, which fetches the newer build.")
+				kicked = ("That village is on version %s and this game is on version %s. " % [str(m.get("v", "build %d" % hb)), Update.version()]) + ("Restart this game and it will fetch the newer one." if hb > Update.build() else "Ask the host to restart their game, which fetches the newer one.")
 				_on_server_gone.call_deferred()
 				return
 			my_id = int(m.id)
@@ -738,7 +738,7 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 			u.state = USTATE[int(un[i + 7])]; u.ac = int(un[i + 8]); u.hc = int(un[i + 9])
 			var fl := int(un[i + 10])
 			u.stun = 1.0 if fl & 1 else 0.0; u.pin = 1.0 if fl & 2 else 0.0; u.fear = 1.0 if fl & 4 else 0.0; u.vuln = 1.0 if fl & 8 else 0.0
-			u.stage = (fl >> 4) & 3; u.march = (fl & 64) != 0; u.burn = 1.0 if fl & 128 else 0.0
+			u.stage = (fl >> 4) & 3; u.march = (fl & 64) != 0; u.burn = 1.0 if fl & 128 else 0.0; u.smoke = 1.0 if fl & 256 else 0.0
 			uo.append(u)
 		R.undead = uo
 		R.boss = null

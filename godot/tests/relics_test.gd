@@ -40,9 +40,9 @@ func _init() -> void:
 	for id in D.RELIC_LORE: books[D.RELIC_LORE[id][0]] = true
 	ok("every book has a relic that goes with it", books.size() == D.BOOKS.size(), books.keys())
 	ok("and every relic can turn up", D.RELICS.size() == D.RELIC_LORE.size() and D.RELICS.all(func(id): return D.IT[id].tier == "relic"), D.RELICS)
-	ok("the four new ones are where the rules think they are", D.IT[D.I_BOW].n == "the Thunderer’s Bow" and D.IT[D.I_SCYTHE].n == "Saint Walstan’s Scythe" and D.IT[D.I_TROWEL].n == "the Mason’s Blessed Trowel" and D.IT[D.I_TONGS].n == "Saint Dunstan’s Tongs")
+	ok("the four new ones are where the rules think they are", D.IT[D.I_BOW].n == "the Thunderer’s Crossbow" and D.IT[D.I_SCYTHE].n == "Saint Walstan’s Scythe" and D.IT[D.I_TROWEL].n == "the Mason’s Blessed Trowel" and D.IT[D.I_TONGS].n == "Saint Dunstan’s Tongs")
 	ok("and nothing before them has moved", D.IT[D.I_TORCH].n == "burning torch" and D.IT[D.rune_of(1)].n == "rune short sword" and D.IT[17].n == "the Silvered Sword")
-	# ---------- the Thunderer's Bow
+	# ---------- the Thunderer's Crossbow (a bow until version 7.1)
 	night()
 	m.x = 0; m.z = -30; m.r = 0; m.wpn = D.I_BOW; m.books[5] = 0
 	ok("anyone can draw it", Rules.can_use(m, D.I_BOW))
@@ -65,6 +65,25 @@ func _init() -> void:
 	m.atkCd = 0; R.do_attack(m)
 	ok("with its book, to a third", [b, c, d].filter(func(u): return u.hp < 900).size() == 3 and R.ev.filter(func(e): return e[0] == "zap").size() == 3)
 	R.undead.clear(); m.books[5] = 0
+	# ---------- the Smoking Censer: it has to slow their blows as well as their feet, and be seen to
+	m.wpn = 0; m.trk = 27; m.x = 0; m.z = -30
+	var s1 := one(0, 0, -24.0)                              # six paces off: in the smoke
+	var s2 := one(0, 0, -16.0)                              # fourteen: out of it
+	var sb := one(D.U_STEWARD, 3.0, -25.0)                  # a boss, in it
+	for u in [s1, s2, sb]: u.stun = 0
+	R.step(STEP)
+	ok("the dead within eight paces of the censer are in its smoke, and slowed", s1.smoke > 0 and s1.slow > 0, [s1.smoke, s1.slow])
+	ok("the dead beyond it are not", s2.smoke == 0 and s2.slow == 0, [s2.smoke, s2.slow])
+	ok("a boss is slowed on his feet, but not in his blows", sb.smoke == 0 and sb.slow > 0, [sb.smoke, sb.slow])
+	s1.cd = 1.0; s2.cd = 1.0
+	R.step(STEP)
+	ok("in the smoke they strike half as often", absf((1.0 - s1.cd) - STEP * D.CENSER.strike) < 0.001 and absf((1.0 - s2.cd) - STEP) < 0.001, [1.0 - s1.cd, 1.0 - s2.cd])
+	m.trk = -1
+	fast(0.5)
+	ok("and it clears when the censer is put down", s1.smoke == 0)
+	ok("the relic crossbow is slow and heavy, and still anybody's", D.IT[D.I_BOW].cd > D.IT[14].cd and D.IT[D.I_BOW].dmg > D.IT[14].dmg and D.IT[D.I_BOW].pool == "xbow" and Rules.can_use(m, D.I_BOW))
+	ok("a stone from a watch platform does five", D.PLAT.dmg == 5.0)
+	R.undead.clear(); m.x = 0; m.z = -30
 	# ---------- the Mason's Blessed Trowel
 	fast(0.3)                                               # (the empty night ends, and everyone is sent home)
 	var wall: E.Struct = R.structs[0]

@@ -478,3 +478,21 @@ Still nothing built. The designer went through the open questions one by one; th
 - **Jester:** note in the library, Prospero at the inn, three lessons with questions and a tankard each, homework of twenty dead between them.
 - **After the Lord:** a new relative each month, each month adding half the first month's strength, twelve months at most. Hallowshire Town teased.
 - **Village life:** windmill banquet (10 food a posse), riding sheep from the Herder, stray peasants who may desert, fishing by hoik, a cockerel at dawn.
+
+## Version 7.1: mends (build counter 8)
+
+**Version numbers from here.** The designer asked that the game stop looking as though it has had eight versions. Small additions are now x.1, x.2 and so on; a big update, which he names as such, takes the next whole number. So this is **version 7.1**.
+
+- The copies of the game already handed out compare `build` in `version.json` as a whole number (`int(d.get("build"))` in the `update.gd` they carry), so `build` must go on counting up by one: it is 8 here, and is never shown. `"version": "7.1"` beside it is what the players see. `Update.version()` and `Update.their()` give the name of this build and of the one on offer; `tools/release_info.py` copies `version` into the published note; the release is still tagged `build-N` and is titled with the version. The co-op check still compares builds and names versions (`"v"` in the `you` message).
+- **To release:** put `build` up by one, set `version` and `what`, push.
+
+**The mends**
+
+- **The Smoking Censer** (`D.CENSER`: reach 8, was about 5.5). The rule ran before, but only halved walking speed and showed nothing. Now the dead in the smoke also strike half as often (`u.smoke`: their cooldown runs at `D.CENSER.strike`), they are tinted grey with wisps coming off them (flag 256 in the co-op snapshot), and smoke rises round the carrier out to the reach (`figure.gd`). Bosses are slowed on their feet as before, not in their blows.
+- **The Thunderer's Bow is the Thunderer's Crossbow** (same item number, 54, so saved bows become crossbows): 40 damage every 1.9 s, reach 18, heavy, the piercing bolt for its trick, the lightning unchanged. It was 20 every 0.85 s. About a tenth less harm a second in all, in fewer and bigger blows.
+- **The ordinary crossbow** loads in 1.35 s, not 1.8.
+- **Watch platform stones** do 5, not 8 (`D.PLAT.dmg`).
+- **The storehouse** shows things that are the same once, with a count; clicking takes one.
+- **Rain** ambience at 0.34, not 0.8.
+- **A cockerel at dawn** (`sfx_cockerel`, made in `tools/make_sounds.py`).
+- Tests: relics 45 (seven new: the censer's smoke, reach, bosses, strike rate and clearing; the crossbow; the stones). Everything else as before; co-op host 15, friend 12, latecomer 9.

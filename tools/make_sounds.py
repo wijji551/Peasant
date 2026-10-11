@@ -285,6 +285,16 @@ def sfx():
         add(sh, bandpass(v, 300, 2600), at)
         add(sh, noise(0.05, 0.12, 2400), at)
     S["shout"] = reverb(sh * V, 0.5, 0.22)
+    # the cockerel, at dawn: cock-a-doo-dle-DOOOO, the last one held and falling away, and none of it in tune
+    ck = buf(1.5)
+    for at, f0, f1, dur, g in ((0.0, 640, 780, 0.13, 0.3), (0.17, 780, 840, 0.11, 0.3), (0.31, 840, 1010, 0.17, 0.34), (0.52, 1040, 600, 0.8, 0.4)):
+        n = int(SR * dur)
+        wob = 1 + 0.035 * np.sin(2 * np.pi * 31 * np.arange(n) / SR)            # a rasp in the throat
+        f = np.linspace(f0, f1, n) * wob
+        env = np.minimum(1.0, np.arange(n) / (SR * 0.012)) * np.exp(-np.arange(n) / (SR * dur * 0.55))
+        v = (osc(f, "sawtooth") * 0.7 + osc(f * 2.01, "square") * 0.3 + osc(f * 3.0, "sine") * 0.25) * env * g
+        add(ck, bandpass(v, 520, 3900), at)
+    S["cockerel"] = reverb(ck * V, 0.7, 0.2)
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)

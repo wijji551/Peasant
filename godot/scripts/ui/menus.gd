@@ -9,9 +9,9 @@ const GUIDE := [
 	["Your posse", ["Hold {interact} beside a neighbour to rally them. They gather when you gather and fight when you fight. The slum has more, for food. The smithy gives them spears.", "They can die, and they have nerve: when friends fall they may run for the keep until dawn. {toilet} is the emergency toilet break, which sends the dead nearby running. With How to Win Peasants and Lead Them, {orders} tells them to follow or to hold where they stand; rank 3 adds charge. That book is learned by leading: your first ten orders of a day, rallying and recruiting, the work and the blows of your posse, and every one of them still standing at dawn."]],
 	["Fighting", ["{attack} or a click attacks. {trick} or a right-click is your weapon’s own trick: every weapon has a different one, with a short wait between uses. {eat} eats one food.", "Every blow that lands shows what it did. A plain number is an ordinary blow. A big gold one means you have the right tool for the job (a mace on bones, holy things on anything, a hammer on the ram). A small grey one, with a tink, means you have the wrong one: farm tools on armour, anything swung at bats. A big orange one with a mark after it is a lucky double. Small orange ones are things burning. The numbers, and the knock your own blows give the view, can be turned off in Options.", "Knocked down, you have 15 seconds for a team-mate to hold {interact} over you. After that a relative takes over your cottage at dawn, with your books but not your gear. Relics lie where you fell.", "From dusk you can hide in your own cottage. It is safe, and the village will call you a coward until the next dusk."]],
 	["Fishing, and the farms", ["The farms feed a posse: everyone you lead forages with you. The jetty feeds one: a catch is five fish (seven at rank 3 of Field, Hook and Pot), more than a lone forager gets, and your posse cannot help. But the river keeps what falls in it. Now and then a catch brings up a purse, once in a long while a rune, and very rarely something somebody dropped."]],
-	["Relics and their books", ["There are eleven relics, and each goes with one book: carrying it with that book read does something more. The four found most recently: the Thunderer’s Bow (its arrows are lightning, and jump to two more of the dead; with Slings, Bows and Thrown Turnips, to three), Saint Walstan’s Scythe (with the Woodcutter’s Almanac, you gather a fifth faster), the Mason’s Blessed Trowel (defences near you mend themselves; with Barricades for Beginners, twice as fast, and your repairs are free), and Saint Dunstan’s Tongs (forging costs a quarter less; with Hammer and Tongs, forged weapons hit a tenth harder)."]],
+	["Relics and their books", ["There are eleven relics, and each goes with one book: carrying it with that book read does something more. The Smoking Censer smokes: the dead inside its smoke walk at half speed and strike half as often, and with Relics and Where They Were Left they smoulder as well. The four found most recently: the Thunderer’s Crossbow (heavy and slow to load; its bolts are lightning, and jump to two more of the dead; with Slings, Bows and Thrown Turnips, to three), Saint Walstan’s Scythe (with the Woodcutter’s Almanac, you gather a fifth faster), the Mason’s Blessed Trowel (defences near you mend themselves; with Barricades for Beginners, twice as fast, and your repairs are free), and Saint Dunstan’s Tongs (forging costs a quarter less; with Hammer and Tongs, forged weapons hit a tenth harder)."]],
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
-	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: the village’s shared materials on one tab (take out 1, 5 or 20; put in 1, 5 or all) and its spare arms and armour on the other (click a thing to take it, click one of yours to put it in). Runes can be left there for whoever is the smith. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
+	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: the village’s shared materials on one tab (take out 1, 5 or 20; put in 1, 5 or all) and its spare arms and armour on the other (click a thing to take it, click one of yours to put it in; things that are the same share a place, with a number on it). Runes can be left there for whoever is the smith. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
 	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "Nobody has to be there from the start, or every time. Join a village after its week has begun and you move into an empty cottage. Drop out, or lose your connection, and your peasant is kept exactly as it was: join again under the same name and you have it back, the same day or another. When the host carries on from the save with some of you missing, the missing ones wait in the same way. Relics do not wait with you: they stay with the village.", "With a village server set (Options), villages go through it: a five-letter code that works from anywhere, and nobody's router matters. Without one, the host's computer asks its router to let friends in; if the router says no, that code only works on the same home network, unless the host opens port 24565 (UDP). The game does not pause for the handbook when others are playing."]],
 	["The lie of the land", ["Thornhallow sits in the middle, with the castle up the road to the north and the river to the south. The thorn hedges, far to the west and east, are the edge of the world. West is Hallowshire Forest, with the old steel mine at its top end; east are the downs and the old mill. The stone, the iron and the fish move every morning (the dawn notice says where), and the far places are a long walk, so go early."]],
 	["The smithy", ["Anyone can knock out a crude weapon at the smithy. It wears out: chipped after a night's fighting, in bits after a second. Hammer and Tongs makes refined weapons, which last; from rank 4, steel ones, which hit harder still. Steel comes from the old steel mine, at the top of the forest to the north-west, and the market pays well for it but sells none. Anyone can forge armour; steel armour needs rank 4."]],
@@ -32,6 +32,16 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.1: mends", [
+		"A word on numbers. This is version 7.1. Small additions go up by a tenth; the big updates get the whole numbers. Nothing else about the arithmetic is guaranteed.",
+		"The Smoking Censer now does what it always said it did, and where you can see it. It smokes, out to eight paces. The dead in the smoke walk at half speed and strike half as often, and they go grey about it. (Bosses are slowed on their feet only. They did not get where they are by breathing in.)",
+		"The Thunderer’s Bow is now the Thunderer’s Crossbow. As a bow it was quick, and rather too good. As a crossbow it is heavy, slow to load and hits a great deal harder, and its bolts are still lightning. If you had the bow, you now have the crossbow. Nobody asked you.",
+		"The ordinary crossbow loads a quarter faster, having been found underwhelming.",
+		"Peasants on a watch platform throw smaller stones: five harm, where it was eight. They were enjoying it too much.",
+		"The storehouse stacks. Two steel warhammers are one place on the shelf with a 2 on it, not two places.",
+		"The rain is a good deal quieter. It is still raining.",
+		"A cockerel at dawn. Somebody has to be pleased about it.",
+	]],
 	["The blood moon, corrected", [
 		"The blood moon (night 23) was two and a half times as many of the dead. It is now two and a half times the difficulty instead: the horde is its usual size, and every one of them takes two and a half times as much putting down and hits nearly twice as hard. They come down the road red.",
 	]],
@@ -485,7 +495,8 @@ var store_tab := "res" if OS.get_environment("DTV_STORE_TAB") == "" else OS.get_
 var _store_sig := ""
 
 ## The storehouse, laid out like a bank: materials on one tab (take 1, 5 or 20; put in 1, 5 or all), and the
-## village's spare things on the other (click one to take it; click one of yours to put it in).
+## village's spare things on the other (click one to take it; click one of yours to put it in). Things that are
+## the same are shown once, with how many there are.
 func store(force: bool = false) -> void:
 	var p: E.Player = m.me
 	var R: Rules = m.R
@@ -547,11 +558,19 @@ func store(force: bool = false) -> void:
 		w.body.add_child(bank)
 		if R.items.is_empty():
 			Look.para(bank, "Nothing yet. Spare arms and armour left here are for anybody in the village to take.", 15, Look.INK_SOFT).custom_minimum_size.x = 600
+		var kinds := []                                  # things that are the same share a place, with a number on it
+		var first := {}
+		var many := {}
 		for i in R.items.size():
-			var it: int = R.items[i]
-			var j := i
+			var id0: int = R.items[i]
+			if not first.has(id0):
+				first[id0] = i; many[id0] = 0; kinds.append(id0)
+			many[id0] += 1
+		for it in kinds:
+			var j: int = first[it]
+			var n: int = many[it]
 			var fits: bool = p.inv.size() < D.PACK_MAX or Rules.wears_now(p, it)
-			_slot(bank, it, "", "", "%s. %s %s" % [D.it_cap(it), Notices.item_sub(p, it), "Click to take it." if fits else "Your backpack is full."], false,
+			_slot(bank, it, "", "× %d" % n if n > 1 else "", "%s%s. %s %s" % [D.it_cap(it), " (there are %d)" % n if n > 1 else "", Notices.item_sub(p, it), ("Click to take one." if n > 1 else "Click to take it.") if fits else "Your backpack is full."], false,
 				(func(): act.call("takei", j)) if fits else Callable(), Callable(), not Rules.can_use(p, it))
 		w.head("Yours: click a thing to put it in")
 		var mine := HFlowContainer.new()

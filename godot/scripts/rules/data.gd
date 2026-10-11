@@ -90,7 +90,9 @@ const CONTR := {
 const BUILDS := ["barricade", "spikes", "platform", "bodywall", "decoy"]
 ## The watch platform: one of your posse stands on it from dusk and throws stones over the wall at whatever comes
 ## within reach. Up there the dead cannot get at them, except archers; a roof (ten more wood) stops the arrows.
-const PLAT := {"reach": 13.0, "wait": 1.5, "dmg": 8.0}
+const PLAT := {"reach": 13.0, "wait": 1.5, "dmg": 5.0}
+## The Smoking Censer: how far its smoke reaches, and what it does to the dead inside it (walking, and striking).
+const CENSER := {"reach": 8.0, "walk": 0.5, "strike": 0.5}
 
 # --- everything a peasant can hold or wear. s: w weapon, h head, b body, o off hand, t carried.
 # arc is the smallest cosine of the angle a swing reaches: 0.5 is a third of a circle, 0 is half. rng marks a ranged weapon and how far it carries.
@@ -109,7 +111,7 @@ const _IT := [
 	{"n": "frying pan", "s": "w", "tier": "found", "dmg": 8, "cd": 0.34, "reach": 1.6, "arc": 0.5, "blunt": true, "ab": "clang", "pool": "pan", "swing": 1, "note": "Weak and quick"},
 	{"n": "sling", "s": "w", "tier": "found", "dmg": 9, "cd": 0.8, "rng": 12, "ab": "aimed", "pool": "sling", "shot": 0, "note": "A weak ranged attack, and no shortage of stones"},
 	{"n": "bow", "s": "w", "tier": "forged", "dmg": 16, "cd": 0.9, "rng": 16, "ab": "volley", "pool": "bow", "shot": 1, "need": [5, 1], "cost": {"iron": 2, "wood": 8}, "note": "Solid ranged damage, over the wall"},
-	{"n": "crossbow", "s": "w", "tier": "forged", "dmg": 34, "cd": 1.8, "rng": 18, "heavy": true, "ab": "pierce", "pool": "xbow", "shot": 1, "need": [5, 3], "cost": {"iron": 10, "wood": 8}, "note": "Heavy. Slow to load, hits very hard"},
+	{"n": "crossbow", "s": "w", "tier": "forged", "dmg": 34, "cd": 1.35, "rng": 18, "heavy": true, "ab": "pierce", "pool": "xbow", "shot": 1, "need": [5, 3], "cost": {"iron": 10, "wood": 8}, "note": "Heavy. Slow to load, hits very hard"},
 	{"n": "the Slightly Blessed Spade", "s": "w", "tier": "relic", "dmg": 26, "cd": 0.6, "reach": 2.1, "arc": 0.4, "kb": 1.6, "holy": true, "ab": "bury", "pool": "spade", "swing": 1, "tint": [1.25, 1.1, 0.6], "note": "Holy, with a heavy knock-back"},
 	{"n": "Saint Wilbur’s Pitchfork", "s": "w", "tier": "relic", "dmg": 20, "cd": 0.4, "reach": 2.7, "arc": 0.5, "holy": true, "line": true, "ab": "pin", "pool": "fork", "tint": [1.25, 1.1, 0.6], "note": "Holy. Its Pin goes through a whole line"},
 	{"n": "the Silvered Sword", "s": "w", "tier": "relic", "dmg": 28, "cd": 0.34, "reach": 2.0, "arc": 0.5, "holy": true, "ab": "parry", "pool": "sword", "swing": 1, "tint": [1.2, 1.25, 1.35], "note": "Holy, quick and sharp"},
@@ -122,7 +124,7 @@ const _IT := [
 	{"n": "barrel lid", "s": "o", "tier": "found", "cut": 0.08, "arrow": 0.3, "pool": "shield", "tint": [0.8, 0.66, 0.46]},
 	{"n": "iron-rimmed shield", "s": "o", "tier": "forged", "cut": 0.15, "arrow": 0.5, "pool": "shield", "tint": [1, 1, 1], "cost": {"iron": 4, "wood": 4}},
 	{"n": "the Chapel Handbell", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.3, 1.0, 0.35], "note": "{carry} rings it: every undead nearby is stunned. A long wait between rings"},
-	{"n": "the Smoking Censer", "s": "t", "tier": "relic", "pool": "bucket", "tint": [0.9, 0.9, 1.1], "note": "Undead near you are slowed"},
+	{"n": "the Smoking Censer", "s": "t", "tier": "relic", "pool": "bucket", "tint": [0.9, 0.9, 1.1], "note": "It smokes. The dead inside the smoke walk at half speed, and strike half as often"},
 	{"n": "slop bucket", "s": "t", "tier": "found", "pool": "bucket", "tint": [0.6, 0.48, 0.3], "note": "{carry} lobs it, once: every undead it splashes runs from the smell"},
 ]
 const _IT_DEF := {"dmg": 0.0, "cd": 0.0, "reach": 0.0, "arc": 0.0, "ab": "", "note": "", "swing": 0, "cost": {}, "blunt": false, "heavy": false,
@@ -185,8 +187,8 @@ const _MORE := [
 ]
 ## Four more relics, one for each book that had none (added after the rune weapons, so nothing earlier changes its number).
 const _RELICS2 := [
-	{"n": "the Thunderer’s Bow", "s": "w", "tier": "relic", "dmg": 20, "cd": 0.85, "rng": 16, "holy": true, "ab": "volley", "pool": "bow", "shot": 1, "chain": 2, "tint": [1.3, 1.25, 0.7],
-		"note": "Holy. Its arrows are lightning: each one jumps on to two more of the dead nearby"},
+	{"n": "the Thunderer’s Crossbow", "s": "w", "tier": "relic", "dmg": 40, "cd": 1.9, "rng": 18, "heavy": true, "holy": true, "ab": "pierce", "pool": "xbow", "shot": 1, "chain": 2, "tint": [1.3, 1.25, 0.7],
+		"note": "Holy, and heavy. Slow to load, and worth the wait: its bolts are lightning, and each one jumps on to two more of the dead nearby"},
 	{"n": "Saint Walstan’s Scythe", "s": "w", "tier": "relic", "dmg": 24, "cd": 0.7, "reach": 2.9, "arc": -0.2, "holy": true, "ab": "reap", "pool": "scythe", "swing": 1, "tint": [1.25, 1.1, 0.6],
 		"note": "Holy, with a sweep that takes in nearly everything round you"},
 	{"n": "the Mason’s Blessed Trowel", "s": "t", "tier": "relic", "pool": "bucket", "tint": [0.85, 0.85, 0.8],
@@ -295,7 +297,7 @@ static func rune_of(base: int) -> int:
 	return 29 + CRUDE_W.size() * 2 + (STEEL_W + STEEL_A).size() + _MORE.size() + STEEL_W.find(base)
 const SLOTK := {"w": "wpn", "h": "head", "b": "body", "o": "off", "t": "trk"}
 const SLOTS := ["wpn", "head", "body", "off", "trk"]
-const I_BOW := 54                    # the Thunderer's Bow
+const I_BOW := 54                    # the Thunderer's Crossbow (a bow until version 7.1: quick, and rather too good)
 const I_SCYTHE := 55                 # Saint Walstan's Scythe
 const I_TROWEL := 56                 # the Mason's Blessed Trowel
 const I_TONGS := 57                  # Saint Dunstan's Tongs

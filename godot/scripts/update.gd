@@ -20,6 +20,7 @@ const STATE := DIR + "/state.json"
 static var me: Update
 static var _build := -1
 static var _what := ""
+static var _ver := ""
 
 var line := ""               # one line for the title screen
 var ready_build := 0         # a newer build is on the disk, waiting for a restart
@@ -36,8 +37,15 @@ static func build() -> int:
 		_build = 0
 		var d = JSON.parse_string(FileAccess.get_file_as_string("res://version.json"))
 		if d is Dictionary:
-			_build = int(d.get("build", 0)); _what = str(d.get("what", ""))
+			_build = int(d.get("build", 0)); _what = str(d.get("what", "")); _ver = str(d.get("version", ""))
 	return _build
+
+
+## What the players are shown. The build number only ever counts up by one, because the copies of the game already
+## handed out compare it as a whole number; the version is the name of it: 7.1, 7.2 for additions, 8 for a big update.
+static func version() -> String:
+	build()
+	return _ver if _ver != "" else str(_build)
 
 
 ## Only the handed-out game updates itself (or a test that asks for it).
@@ -83,7 +91,7 @@ static func mark_ok() -> void:
 # ---------------------------------------------------------------- looking for a newer build
 func _ready() -> void:
 	me = self
-	line = "Build %d" % build()
+	line = "Version %s" % version()
 	if not on():
 		return
 	_http = HTTPRequest.new()
@@ -107,20 +115,20 @@ func _got_note(result: int, code: int, _h: PackedStringArray, body: PackedByteAr
 	_note = d
 	var n := int(d.get("build", 0))
 	if n <= build():
-		_say("Build %d, the newest" % build())
+		_say("Version %s, the newest" % version())
 		return
 	var st := _read()
 	if int(st.get("bad", 0)) == n:
-		_say("Build %d (build %d would not start here)" % [build(), n])
+		_say("Version %s (version %s would not start here)" % [version(), their()])
 		return
 	var eng := Engine.get_version_info()
 	if str(d.get("engine", "")) != "%d.%d" % [eng.major, eng.minor]:
 		need_full = true
-		_say("Build %d is out, and needs a fresh download" % n)
+		_say("Version %s is out, and needs a fresh download" % their())
 		return
 	if int(st.get("build", 0)) == n and FileAccess.file_exists(_pack(n)):
 		ready_build = n
-		_say("This is build %d. Build %d is ready" % [build(), n])
+		_say("This is version %s. Version %s is ready" % [version(), their()])
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(DIR))
 	_part = _pack(n) + ".part"
@@ -132,7 +140,7 @@ func _got_note(result: int, code: int, _h: PackedStringArray, body: PackedByteAr
 	if _dl.request(base_url() + str(d.get("pack", "thornhallow.pck"))) != OK:
 		_dl.queue_free(); _dl = null
 		return
-	_say("Fetching build %d" % n)
+	_say("Fetching version %s" % their())
 	set_process(true)
 
 
@@ -142,7 +150,7 @@ func _process(_dt: float) -> void:
 		return
 	var size := int(_note.get("size", 0))
 	if size > 0:
-		var t := "Fetching build %d: %d%%" % [int(_note.build), clampi(int(100.0 * _dl.get_downloaded_bytes() / size), 0, 99)]
+		var t := "Fetching version %s: %d%%" % [their(), clampi(int(100.0 * _dl.get_downloaded_bytes() / size), 0, 99)]
 		if t != line: _say(t)
 
 
@@ -156,15 +164,21 @@ func _got_pack(result: int, code: int, _h: PackedStringArray, _body: PackedByteA
 		good = FileAccess.get_sha256(_part) == str(_note.sha256)
 	if not good:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(_part))
-		_say("Build %d (could not fetch build %d; it will try again next time)" % [build(), n])
+		_say("Version %s (could not fetch version %s; it will try again next time)" % [version(), their()])
 		return
 	DirAccess.rename_absolute(ProjectSettings.globalize_path(_part), ProjectSettings.globalize_path(_pack(n)))
 	var st := _read()
 	st["build"] = n
 	_write(st)
 	ready_build = n
-	_say("This is build %d. Build %d is ready" % [build(), n])
+	_say("This is version %s. Version %s is ready" % [version(), their()])
 	if OS.get_environment("DTV_UPDATE_RESTART") != "": restart()       # for testing: straight into it
+
+
+## The name of the build the note is about: its version, or its build number if the note is an old one without.
+func their() -> String:
+	var v := str(_note.get("version", ""))
+	return v if v != "" else str(int(_note.get("build", 0)))
 
 
 ## What the newer build is, in a few words, if its note says.

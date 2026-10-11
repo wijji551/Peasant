@@ -1573,7 +1573,7 @@ func do_attack(p: E.Player) -> void:
 		if I.fire: ignite(u, p, D.BURN_TIME)
 	if not hit: drill(p, I.reach + 0.5, I.arc, 4)
 
-## The Thunderer's Bow: the arrow that struck jumps on, as lightning, to the nearest few of the dead.
+## The Thunderer's Crossbow: the bolt that struck jumps on, as lightning, to the nearest few of the dead.
 func lightning(p: E.Player, I: Dictionary, from: E.Undead, mul: float = 1.0) -> void:
 	var book := lore(p, D.I_BOW)
 	var reach2 := pow(D.CHAIN_REACH * (1.5 if book else 1.0), 2)
@@ -3188,7 +3188,7 @@ func undead_step(dt: float) -> void:
 	var mending: bool = phase == "night" and moon() == "harvest"
 	for u in undead:
 		var U: Dictionary = D.UN[u.k]
-		u.cd = maxf(0, u.cd - dt); u.t -= dt; u.slow = maxf(0, u.slow - dt)
+		u.cd = maxf(0, u.cd - dt * (D.CENSER.strike if u.smoke > 0 else 1.0)); u.t -= dt; u.slow = maxf(0, u.slow - dt); u.smoke = maxf(0, u.smoke - dt)
 		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
 		if u.dead: continue
 		if mending and u.hp < u.mhp and u.burn <= 0 and u.state != "pile" and u.state != "rise":     # the harvest moon: they mend, slowly (not while alight)
@@ -3223,8 +3223,9 @@ func undead_step(dt: float) -> void:
 			hearse_step(u, U, dt, keep_box)
 			continue
 		for p in censers:
-			if D.d2(u.x, u.z, p.x, p.z) < 30:
+			if D.d2(u.x, u.z, p.x, p.z) < D.CENSER.reach * D.CENSER.reach:
 				u.slow = maxf(u.slow, 0.3)
+				if not U.boss: u.smoke = 0.3              # a boss is slowed on his feet, as he always was, but not in his blows
 				if lore(p, 27) and randf() < dt: hit_u(u, 3, {"holy": 1.5})   # smouldering
 		var sp: float = U.spd * (0.5 if u.slow > 0 else 1.0) * ws
 		if U.lord and u.stage == 2: sp *= 1.6

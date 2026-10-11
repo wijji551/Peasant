@@ -116,6 +116,7 @@ func _place(x: float, z: float, r: float, snap: bool) -> void:
 func player(p: E.Player, is_me: bool) -> void:
 	visible = p.state != "hide"                                                # (drinking at the bar of the Rose, you can be seen: it is a room now)
 	_place(p.x, p.z, p.r, false)
+	_censer(p.trk == 27 and p.state == "ok" and p.room == "")      # the Smoking Censer: smoke, out as far as it works
 	var kind: String = D.GK[p.gk] if p.gk < D.GK.size() else ""
 	var c := _counts(p.ac, p.hc, p.cc)
 	if c[2] and p.state != "inn": _work_fx(kind if kind != "" else "tree")
@@ -278,6 +279,70 @@ func _set_held(id: int, holy: bool) -> void:
 var _held_swing := false
 var _glow_col := Color(0, 0, 0, 0)       # the glow of a relic or a rune weapon in the hand (clear: none)
 var _glow_id := -1
+var _smoke: Node3D          # the Smoking Censer's smoke, made the first time it is carried
+
+
+## The Smoking Censer: a ring on the ground at the edge of what it reaches, and smoke rising everywhere inside it.
+func _censer(on: bool) -> void:
+	if on and _smoke == null:
+		_smoke = Node3D.new()
+		add_child(_smoke)
+		var reach: float = D.CENSER.reach
+		for rim in [false, true]:
+			var ps := CPUParticles3D.new()
+			ps.amount = 54 if rim else 38
+			ps.lifetime = 3.4
+			ps.preprocess = 2.0
+			ps.local_coords = false
+			ps.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+			ps.emission_ring_axis = Vector3.UP
+			ps.emission_ring_radius = reach
+			ps.emission_ring_inner_radius = reach - 0.6 if rim else 0.5
+			ps.emission_ring_height = 0.2
+			ps.direction = Vector3.UP
+			ps.spread = 30.0
+			ps.gravity = Vector3(0.12, 0.2, 0.0)
+			ps.initial_velocity_min = 0.25
+			ps.initial_velocity_max = 0.6
+			ps.scale_amount_min = 0.7
+			ps.scale_amount_max = 1.25
+			var curve := Curve.new()
+			curve.add_point(Vector2(0, 0.9)); curve.add_point(Vector2(1, 2.6))
+			ps.scale_amount_curve = curve
+			var grad := Gradient.new()
+			grad.set_color(0, Color(0.82, 0.84, 0.95, 0.62))
+			grad.set_color(1, Color(0.82, 0.84, 0.95, 0.0))
+			ps.color_ramp = grad
+			var sm := SphereMesh.new()
+			sm.radius = 0.45; sm.height = 0.9; sm.radial_segments = 6; sm.rings = 3
+			var mat := StandardMaterial3D.new()
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.vertex_color_use_as_albedo = true
+			sm.material = mat
+			ps.mesh = sm
+			ps.position.y = 0.3
+			ps.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			_smoke.add_child(ps)
+		var edge := MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = reach - 0.09; tm.outer_radius = reach + 0.09; tm.rings = 48; tm.ring_segments = 4
+		edge.mesh = tm
+		var em := StandardMaterial3D.new()
+		em.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		em.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		em.albedo_color = Color(0.86, 0.88, 1.0, 0.45)
+		edge.material_override = em
+		edge.scale = Vector3(1, 0.3, 1)
+		edge.position.y = 0.07
+		edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_smoke.add_child(edge)
+	if _smoke and _smoke.visible != on:
+		_smoke.visible = on
+		for c in _smoke.get_children():
+			if c is CPUParticles3D: c.emitting = on
+
+
 var _halo: MeshInstance3D
 var _glow_light: OmniLight3D
 

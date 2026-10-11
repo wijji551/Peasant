@@ -71,6 +71,7 @@ jobs:
         run: |
           set -e
           N=$(python3 -c "import json; print(json.load(open('out/version.json'))['build'])")
+          V=$(python3 -c "import json; print(json.load(open('out/version.json'))['version'])")
           WHAT=$(python3 -c "import json; print(json.load(open('out/version.json'))['what'])")
           {
             echo "$WHAT"
@@ -78,8 +79,8 @@ jobs:
             echo "**To play:** download **Thornhallow.exe** below and double-click it. There is nothing to install."
             echo "The first time, Windows may say it protected your PC: choose *More info*, then *Run anyway*."
             echo
-            echo "If you already have the game you do not need to download anything: start it, and it fetches this build by itself."
+            echo "If you already have the game you do not need to download anything: start it, and it fetches this version by itself."
           } > /tmp/notes.md
           gh release delete "build-$N" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "build-$N" out/Thornhallow.exe out/thornhallow.pck out/version.json --draft --title "Thornhallow Thirty Nights, build $N" --notes-file /tmp/notes.md --target "$GITHUB_SHA"
+          gh release create "build-$N" out/Thornhallow.exe out/thornhallow.pck out/version.json --draft --title "Thornhallow Thirty Nights, version $V" --notes-file /tmp/notes.md --target "$GITHUB_SHA"
           gh release edit "build-$N" --draft=false --latest
