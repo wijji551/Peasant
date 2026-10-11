@@ -451,3 +451,14 @@ Three players reached day 25 and sent back a list. The breakages first.
 
 - The designer's "2.5x difficulty" had been built as 2.5 times as many of the dead. He meant the difficulty. Now `night_plan` leaves the horde its usual size and multiplies `crowd` by `D.BLOOD_MOON` (2.5): each of the dead has 2.5 times the health and, by the rule the game already uses for one of the dead worth several, hits `1 + 0.6 x 1.5 = 1.9` times as hard. The dead are tinted red that night. The hat still goes round 2.5 times.
 - Tests: platform 37.
+
+## Design only: the second long game (no build)
+
+Nothing was built. The designer asked for the design document to be brought up to date first, and for a yes before any further update.
+
+- **Written into the design document:** the next big update in three parts (three more books and boots; the Jester, taught by Prospero at the Thorny Rose in three lessons; the raft to the Riverside); everything from the second long game (three times the health for the dead, new kinds, harder bosses and three new ones with a werewolf on night 28, the Lord's fight in two parts at 10,000 health, watch towers behind the wall, the side gates, five smithy tiers with today's rune renamed mithril and a new rune tier above it, the Rune Cave, posse kits, ten ranks to every book with honing, a power for every book on an action bar, a building wheel, relics for every player); a table of where the three lists ask for the same thing; a proposed order of building (updates A to J); and the open questions.
+- **Review of the old design against the game:** thirty-seven things are in the design and not in the game (or there in another form). They are listed in the document under "Designed but not in the game", each awaiting build, drop or leave.
+- **Found while reading the code, not yet mended:**
+  - The Smoking Censer's rule runs (`undead_step`: dead within about 5.5 of a player with `trk == 27` get `slow`, which halves walking speed only). It does not slow their blows and shows nothing, so in play it appears to do nothing.
+  - Relics are one of each for the whole village (`Rules.relics`), not one per player.
+  - Steel has no bow or crossbow, and the rune tier has neither those nor armour.
