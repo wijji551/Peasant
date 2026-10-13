@@ -83,6 +83,14 @@ class Player:
 	var hb := 0.0           # prayed over at rank 3: the weapon is holy
 	var spare := 0.0        # learning past rank X (rank VII until version 7.7), in points; sold for coin, or honed into a book
 	var pages: Array = []   # pages honed into each book (five at most), each two in the hundred on what it does
+	var pwCd: Array = []    # each book's power: seconds before it can be used again (version 7.8)
+	var p3Cd := 0.0         # the calling's third power (Consecrate)
+	var many := 0.0         # Many Hands: gathering twice as fast, this long
+	var whet := 0.0         # The Whetstone: a fifth harder, this long
+	var mist := 0.0         # Red Mist: swinging a third faster, unmovable, this long
+	var cry := 0.0          # War Cry: the posse hits harder and keeps its nerve, this long
+	var hone_i := -1        # Hone: the heap of rubble it points to (an index into the day's search spots), or -1
+	var hone_t := 0.0       # and for how long
 	var flask := false      # a hip flask of ale, carried out of the inn (rank 9 of the Landlord's Ledger)
 	var sure := false       # the day's certain find has been used (rank 10 of Relics and Where They Were Left)
 	var shots := 0          # shots loosed, for the free volley every tenth (rank 10 of Slings, Bows and Thrown Turnips)
@@ -215,6 +223,7 @@ class Undead:
 	var stun := 0.0
 	var pin := 0.0
 	var vuln := 0.0
+	var mark := 0.0         # The Marked Man: everyone is shooting at it, and it takes a quarter more, this long
 	var fear := 0.0
 	var fx := 0.0
 	var fz := 0.0

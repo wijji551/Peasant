@@ -144,9 +144,10 @@ func _ready() -> void:
 	win = hud.window
 	win.closed.connect(_window_closed)
 	hud.build_pressed.connect(func(k):
-		if screen == "game" and me.state == "ok":
-			if k == "contr": _next_contraption()
-			else: _build_sel = "" if _build_sel == k else k)
+		if screen == "game" and me.state == "ok" and k != "":
+			_build_sel = "" if _build_sel == k else k
+			_wheel_t = -1.0)
+	hud.bar_pressed.connect(func(id): if screen == "game": bar_do(id))
 	hud.pack_pressed.connect(func(): if screen == "game" and me.state == "ok": _open_pack())
 	hud.menu_pressed.connect(func(): menus.menu())
 	hud.skills_pressed.connect(func(): if screen == "game": _open_skills())
@@ -497,8 +498,10 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 	if Keys.is_act(e, "pack"):
 		_open_pack()
 	elif Keys.is_act(e, "trick") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_RIGHT):
-		if p.abCd > 0: return
-		R.aim_assist(p); cmd({"t": "abl", "r": p.r})
+		bar_do("trick")
+	elif dg >= 1 and dg <= 9 and _build_sel == "":     # the action bar: 1 to 9
+		var sl := bar_slots()
+		if dg - 1 < sl.size(): bar_do(sl[dg - 1])
 	elif Keys.is_act(e, "swap"):
 		var i := -1
 		for j in p.inv.size():
@@ -508,42 +511,13 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 			Sound.play("no"); hud.banner("No other weapon", "There is no weapon in your backpack that you can use.", 1.5)
 		else:
 			hud.banner(D.it_cap(p.inv[i]), "", 0.8); cmd({"t": "act", "a": "eq", "arg": i})
-	elif Keys.is_act(e, "carry"):
-		if p.trk != 28 and p.trk != 26:
-			Sound.play("no"); hud.banner("Nothing to use", "A slop bucket or a handbell goes here. The ruins have them.", 1.5)
-		elif not (p.trk == 26 and p.useCd > 0):
-			R.aim_assist(p); cmd({"t": "use", "r": p.r})
-	elif Keys.is_act(e, "toilet"):
-		if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
-		elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
-		else: cmd({"t": "tb"})
-	elif Keys.is_act(e, "power1") or Keys.is_act(e, "power2"):
-		var i := 0 if Keys.is_act(e, "power1") else 1
-		var c := Rules.class_of(p)
-		if c < 0:
-			Sound.play("no"); hud.banner("No calling", "Powers come from a calling. The Holy Book, in the library, makes you an apprentice priest.", 2.0)
-		else:
-			var pw: Dictionary = D.CLASSES[c].powers[i]
-			var cd: float = p.p1Cd if i == 0 else p.p2Cd
-			if Rules.rk(p, D.CLASSES[c].book) < pw.rank: Sound.play("no"); hud.banner("Not yet", "%s comes at rank %d of %s." % [pw.full, pw.rank, D.book_title(D.CLASSES[c].book)], 1.8)
-			elif cd > 0: Sound.play("no"); hud.banner("Not yet", "%s is ready again in %d seconds." % [pw.n, ceili(cd)], 1.2)
-			else:
-				if i == 0: R.aim_assist(p)
-				cmd({"t": "pw", "i": i, "r": p.r})
-	elif Keys.is_act(e, "orders"):
-		if Rules.rk(p, 6) < 1: Sound.play("no"); hud.banner("No orders yet", "Orders come with %s, from the library." % D.book_title(6), 2.2)
-		else:
-			var nxt := (p.order + 1) % (3 if Rules.rk(p, 6) >= 3 else 2)
-			cmd({"t": "ord"}); hud.banner(["Follow me", "Hold here", "Charge!"][nxt], "", 0.9)
-	elif Keys.is_act(e, "build"):
-		var b := _builds_now()
-		var i := b.find(_build_sel)
-		_build_sel = b[i + 1] if i + 1 < b.size() else ""
-	elif dg >= 1 and dg <= D.BUILDS.size():
-		var k: String = D.BUILDS[dg - 1]
-		_build_sel = "" if _build_sel == k or not _builds_now().has(k) else k
-	elif dg == D.BUILDS.size() + 1:
-		_next_contraption()
+	elif Keys.is_act(e, "carry"): bar_do("carry")
+	elif Keys.is_act(e, "toilet"): bar_do("toilet")
+	elif Keys.is_act(e, "power1"): bar_do("c0")
+	elif Keys.is_act(e, "power2"): bar_do("c1")
+	elif Keys.is_act(e, "orders"): bar_do("orders")
+	elif Keys.is_act(e, "build"):                     # held, the wheel opens (see _wheel_step); a tap steps through
+		_wheel_t = 0.0
 	elif (Keys.is_act(e, "interact") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT)) and _build_sel != "":
 		_place_ghost()
 	elif Keys.is_act(e, "eat"):
@@ -555,6 +529,144 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 		var jx := (1.0 if Keys.held("right") else 0.0) - (1.0 if Keys.held("left") else 0.0)
 		var jz := (1.0 if Keys.held("down") else 0.0) - (1.0 if Keys.held("up") else 0.0)
 		if R.jump(p, jx * cos(_cam_yaw) + jz * sin(_cam_yaw), jz * cos(_cam_yaw) - jx * sin(_cam_yaw)): Sound.play("whoosh", 0.5)
+
+
+# ---------------------------------------------------------------- the action bar (version 7.8)
+## Everything on your bar, in order: your weapon's trick, a power for each book you have read, your calling's powers,
+## what you carry, posse orders and the toilet break. Anything put in order by hand comes first; anything taken off
+## (in the skills window) is left off. The first nine are on the number keys.
+func bar_all() -> Array:
+	var p := me
+	var out := ["trick"]
+	for b in D.BOOKS.size():
+		if R.can_book_power(p, b): out.append("b%d" % b)
+	var c := Rules.class_of(p)
+	if c >= 0:
+		for i in D.CLASSES[c].powers.size():
+			if Rules.rk(p, D.CLASSES[c].book) >= D.CLASSES[c].powers[i].rank: out.append("c%d" % i)
+	if p.trk == 26 or p.trk == 28: out.append("carry")
+	if Rules.rk(p, 6) >= 1: out.append("orders")
+	if p.posse > 0: out.append("toilet")
+	return out
+
+
+func bar_slots() -> Array:
+	if me == null: return []
+	var all := bar_all().filter(func(x): return not Settings.bar_off.has(x))
+	var out := Settings.bar_order.filter(func(x): return all.has(x))
+	for x in all:
+		if not out.has(x): out.append(x)
+	return out
+
+
+## What one slot shows: [icon, name, seconds still to wait, a line about it].
+func bar_info(id: String) -> Array:
+	var p := me
+	match id:
+		"trick":
+			var A: Dictionary = D.AB[D.IT[p.wpn].ab]
+			return [str(p.wpn), A.n, p.abCd, "Your %s’s trick: %s. Right-click does it too." % [D.IT[p.wpn].n, A.d]]
+		"carry":
+			return [str(p.trk), "Handbell" if p.trk == 26 else "Bucket", p.useCd if p.trk == 26 else 0.0, D.IT[p.trk].note]
+		"orders":
+			return ["posse", ["Follow", "Hold", "Charge"][p.order], 0.0, "Posse orders: follow you, hold where they stand%s." % (", or charge" if Rules.rk(p, 6) >= 3 else "")]
+		"toilet":
+			return ["toilet", "Toilet", p.tbCd, "Emergency toilet break: the dead nearby run from your posse."]
+	if id.begins_with("b"):
+		var b := int(id.substr(1))
+		var P: Dictionary = D.POWERS[b]
+		return [P.icon, P.n, float(p.pwCd[b]) if b < p.pwCd.size() else 0.0, "%s (%s): %s." % [P.n, D.book_title(b), P.d]]
+	if id.begins_with("c"):
+		var i := int(id.substr(1))
+		var pw: Dictionary = D.CLASSES[Rules.class_of(p)].powers[i]
+		return [pw.icon, pw.n, [p.p1Cd, p.p2Cd, p.p3Cd][i], "%s: %s." % [pw.full, pw.d]]
+	return ["", id, 0.0, ""]
+
+
+func bar_do(id: String) -> void:
+	var p := me
+	if p == null or p.state != "ok": return
+	match id:
+		"trick":
+			if p.abCd > 0: return
+			R.aim_assist(p); cmd({"t": "abl", "r": p.r})
+		"carry":
+			if p.trk != 28 and p.trk != 26:
+				Sound.play("no"); hud.banner("Nothing to use", "A slop bucket or a handbell goes here. The ruins have them.", 1.5)
+			elif not (p.trk == 26 and p.useCd > 0):
+				R.aim_assist(p); cmd({"t": "use", "r": p.r})
+		"toilet":
+			if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
+			elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
+			else: cmd({"t": "tb"})
+		"orders":
+			if Rules.rk(p, 6) < 1: Sound.play("no"); hud.banner("No orders yet", "Orders come with %s, from the library." % D.book_title(6), 2.2)
+			else:
+				var nxt := (p.order + 1) % (3 if Rules.rk(p, 6) >= 3 else 2)
+				cmd({"t": "ord"}); hud.banner(["Follow me", "Hold here", "Charge!"][nxt], "", 0.9)
+		_:
+			if id.begins_with("b"):
+				var b := int(id.substr(1))
+				if not R.can_book_power(p, b): return
+				var wait: float = float(p.pwCd[b]) if b < p.pwCd.size() else 0.0
+				if wait > 0: Sound.play("no"); hud.banner("Not yet", "%s is ready again in %d seconds." % [D.POWERS[b].n, ceili(wait)], 1.2); return
+				if b == 1 and p.food < 1: Sound.play("no"); hud.banner("No food", "Pot Luck needs one food to put in the pot.", 1.5); return
+				if b == 5: R.aim_assist(p)
+				cmd({"t": "bp", "b": b, "r": p.r})
+			elif id.begins_with("c"):
+				var i := int(id.substr(1))
+				var c := Rules.class_of(p)
+				if c < 0 or i >= D.CLASSES[c].powers.size(): return
+				var pw: Dictionary = D.CLASSES[c].powers[i]
+				var cd: float = [p.p1Cd, p.p2Cd, p.p3Cd][i]
+				if Rules.rk(p, D.CLASSES[c].book) < pw.rank: Sound.play("no"); hud.banner("Not yet", "%s comes at rank %d of %s." % [pw.full, pw.rank, D.book_title(D.CLASSES[c].book)], 1.8)
+				elif cd > 0: Sound.play("no"); hud.banner("Not yet", "%s is ready again in %d seconds." % [pw.n, ceili(cd)], 1.2)
+				else:
+					if i == 0: R.aim_assist(p)
+					cmd({"t": "pw", "i": i, "r": p.r})
+
+
+# ---------------------------------------------------------------- the building wheel (version 7.8)
+var _wheel_t := -1.0                 # how long the build key has been held, or -1
+
+## Called every frame: held long enough, the wheel opens round your peasant; let go over one, and it is chosen.
+## A quick tap steps on to the next thing instead, as the key always did.
+func _wheel_step(delta: float) -> void:
+	if _wheel_t < 0.0: return
+	if Keys.held("build") and screen == "game" and me and me.state == "ok":
+		_wheel_t += delta
+		if _wheel_t > 0.22 and not hud.wheel_open(): hud.open_wheel(_builds_now(), me, _build_sel)
+		return
+	if hud.wheel_open():
+		var k: String = hud.close_wheel()
+		if k != "": _build_sel = "" if k == _build_sel else k
+	elif _wheel_t >= 0.0:
+		var b := _builds_now()
+		var i := b.find(_build_sel)
+		_build_sel = b[i + 1] if i + 1 < b.size() else ""
+	_wheel_t = -1.0
+
+
+var _marked := [0, 0.0]              # The Marked Man: [which of the dead, seconds left]
+var _mark_node: MeshInstance3D
+
+func _mark_step(delta: float) -> void:
+	_marked[1] -= delta
+	var u: E.Undead = null
+	if _marked[1] > 0:
+		for o in R.undead:
+			if o.id == _marked[0] and not o.dead: u = o
+	if _mark_node == null:
+		_mark_node = MeshInstance3D.new()
+		var cm := CylinderMesh.new(); cm.top_radius = 0.32; cm.bottom_radius = 0.0; cm.height = 0.55; cm.radial_segments = 4
+		_mark_node.mesh = cm
+		var mm := StandardMaterial3D.new(); mm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; mm.albedo_color = Color(0.95, 0.22, 0.16); mm.no_depth_test = true
+		_mark_node.material_override = mm
+		add_child(_mark_node)
+	_mark_node.visible = u != null
+	if u:
+		_mark_node.position = Vector3(u.x, 2.9 + D.UN[u.k].r + 0.2 * sin(_marked[1] * 6.0), u.z)
+		_mark_node.rotation.y += delta * 3.0
 
 
 func _builds_now() -> Array:
@@ -716,6 +828,8 @@ func _process(delta: float) -> void:
 			_tick()
 	_draw(delta)
 	_hud_update(delta)
+	_wheel_step(delta)
+	if R: _mark_step(delta)
 	_test_hook()
 
 
@@ -918,6 +1032,18 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"howl":
 			Sound.play("howl", 1.0); F.shock(ev[1], ev[2], D.HOWL.reach, Color(0.72, 0.8, 1.0), 1.2)
 		"unbothered": F.puff(ev[2], 1.8, ev[3], 8, F.C_HOLY, 1.5)
+		"power":                                          # a book's power, used: a ring of its colour, and a word for whoever used it
+			F.shock(ev[3], ev[4], D.POWER_NEAR if ev[2] in [1, 3, 7, 9] else 3.0, Color(1.0, 0.86, 0.5, 0.8))
+			Sound.play(["chop", "eat", "build", "forge", "swing", "pop", "rally", "cheer", "pick", "pop"][int(ev[2])] if int(ev[2]) < 10 else "holy", 0.9, Vector2(ev[3], ev[4]))
+			if ev[1] == me.id: hud.banner(D.POWERS[int(ev[2])].n, "", 1.0)
+		"mark": _marked = [int(ev[1]), float(ev[2])]        # The Marked Man: a red mark over it, while it lasts
+		"hone":
+			F.pillar(ev[2], ev[3], ev[4])
+			if ev[1] == me.id: hud.banner("Hone", "The relic is %s." % D.compass(ev[2] - me.x, ev[3] - me.z), 2.4)
+		"consecrate":
+			F.fan(ev[1], ev[2], 0.0, ev[3], PI, Color(1.0, 0.92, 0.6), ev[4]); F.puff(ev[1], 0.4, ev[2], 18, F.C_HOLY, 2.0)
+			Sound.play("holy", 1.0, Vector2(ev[1], ev[2]))
+		"revive": F.puff(ev[1], 1.2, ev[2], 10, F.C_HOLY, 2.0)
 		"helpme":                                         # So Help Me Lord, Please?: the hasty prayer worked. A small cross over them
 			F.cross(ev[2], ev[3]); F.puff(ev[2], 2.2, ev[3], 6, F.C_HOLY, 1.0); Sound.play("holy", 0.6, Vector2(ev[2], ev[3]))
 		"bloat":                                          # one of the bloated dead, going off
@@ -1344,6 +1470,7 @@ func _hud_update(delta: float) -> void:
 	if ph == "day":
 		ready_line = ("You are ready (%d of %d). %s to change your mind." % [rd, R.players.size(), Keys.name("ready")]) if p.ready else "Press %s when you are ready for the night." % Keys.name("ready")
 	hud.update(R, p, ptxt, p.prog if it and it.ok and p.gk != 5 else 0.0, it == null or it.ok, _build_sel, ready_line)
+	hud.bar(bar_slots().map(func(id): return [id, bar_info(id)]))
 
 
 ## For testing from the command line: DTV_SHOT=file.png saves a picture after DTV_SHOT_AT frames and stops.
@@ -1478,6 +1605,13 @@ func _test_hook() -> void:
 			if q.kind == 0 and q.state != "body" and n < ks.size():
 				q.owner = me.id; q.state = "follow"; q.kit = ks[n]; q.x = me.x - 3.0 + n * 1.2; q.z = me.z + 1.6; q.r = 0.0; n += 1
 		me.head = D.tier_item(19, "rune"); me.body = D.blessed_of(D.tier_item(22, "rune")); me.off = D.tier_item(25, "mithril"); me.wpn = D.tier_item(2, "rune")
+	if _frame == at - 2 and OS.get_environment("DTV_BOOKS") != "" and me:   # for pictures: books read, as book:rank,book:rank
+		for br in OS.get_environment("DTV_BOOKS").split(","):
+			var bb := br.split(":")
+			me.books[int(bb[0])] = int(bb[1])
+		me.trk = 28; me.wood = 20; me.stone = 10
+	if _frame == at + 20 and OS.get_environment("DTV_WHEEL") != "" and me:   # for pictures: the building wheel, open
+		hud.open_wheel(_builds_now(), me, "")
 	if _frame == at - 2 and OS.get_environment("DTV_RICH") != "" and me:   # for pictures: a master smith with plenty to work with
 		me.books[3] = 7; me.wood = 30; me.iron = 30; me.steel = 30; me.mith = 12
 	if _frame == at and OS.get_environment("DTV_OPEN") != "":   # open a window for the picture

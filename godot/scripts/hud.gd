@@ -12,6 +12,7 @@ extends CanvasLayer
 const ScrollWindow := preload("res://scripts/ui/window.gd")
 
 signal build_pressed(k: String)
+signal bar_pressed(id: String)
 signal pack_pressed
 signal skills_pressed
 signal menu_pressed
@@ -30,7 +31,6 @@ var _boss_num: Label
 var _boss_name: Label
 var _title: Label
 var _steel_row: HBoxContainer
-var _powers: HBoxContainer
 var _res := {}                       # name -> Label
 var _carry: Label
 var _hp_bar: ProgressBar
@@ -40,9 +40,13 @@ var _prompt: Label
 var _prompt_bar: ProgressBar
 var _prompt_box: Control
 var _hotbar: HBoxContainer
+var _bottom: VBoxContainer           # health over the action bar, at the bottom in the middle
+var _abar: HBoxContainer             # the action bar
+var _abar_sig := ""
+var _abar_btns := {}                 # id -> {b, cd, name}
+var _wheel: Control                  # the building wheel
+var _wheel_hover := ""
 var _chips := {}                     # name -> {box, icon, text, key}
-var _builds: HBoxContainer
-var _build_cards := {}
 var _banner: Label
 var _banner_sub: Label
 var _banner_box: Control
@@ -137,74 +141,45 @@ func _ready() -> void:
 	_carry = Look.para(rv, "", 14, Look.INK_SOFT)
 	_zones.append(lc)
 
-	# --- bottom left: health, and above it the news
-	var hb := _card(root)
-	_pin(hb, Control.PRESET_BOTTOM_LEFT, 14, -14, 254, -14)
-	hb.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var hv := _vbox(hb, 3)
-	_hp_lab = Look.label(hv, "Your health", 13, Look.INK)
-	_hp_bar = _bar(hv, Look.ROSE, 12)
+	# --- bottom middle (version 7.8): your health, and under it the action bar, with your posse, backpack and skills beside it
 	_feed = VBoxContainer.new()
 	root.add_child(_feed)
-	_pin(_feed, Control.PRESET_BOTTOM_LEFT, 16, -76, 300, -76)
+	_pin(_feed, Control.PRESET_BOTTOM_LEFT, 16, -20, 300, -20)
 	_feed.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_feed.add_theme_constant_override("separation", 2)
-
-	# --- bottom right: the things you can place
-	_builds = HBoxContainer.new()
-	root.add_child(_builds)
-	_pin(_builds, Control.PRESET_BOTTOM_RIGHT, -14, -14, -14, -14)
-	_builds.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_builds.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_builds.add_theme_constant_override("separation", 4)
-	var bn := {"barricade": "Barricade", "spikes": "Spikes", "bodywall": "Body wall", "decoy": "Decoy", "platform": "Platform", "contr": "Contraption"}
-	for i in D.BUILDS.size() + 1:
-		var k: String = D.BUILDS[i] if i < D.BUILDS.size() else "contr"
-		var b := Button.new()
-		b.focus_mode = Control.FOCUS_NONE
-		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(64, 70)
-		b.tooltip_text = "Place a %s (%d, or %s steps through these)" % [D.SNAME.get(k, "contraption"), i + 1, "{build}"]
-		b.pressed.connect(func(): build_pressed.emit(k))
-		var bv := VBoxContainer.new()
-		bv.set_anchors_preset(Control.PRESET_FULL_RECT)
-		bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		bv.alignment = BoxContainer.ALIGNMENT_CENTER
-		bv.add_theme_constant_override("separation", 0)
-		b.add_child(bv)
-		var top := HBoxContainer.new(); top.alignment = BoxContainer.ALIGNMENT_CENTER; bv.add_child(top)
-		top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var num := Look.label(top, str(i + 1) + " ", 12, Look.ROSE)
-		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var ic := TextureRect.new(); ic.texture = Look.icon(k, 22); ic.mouse_filter = Control.MOUSE_FILTER_IGNORE; top.add_child(ic)
-		var nm := Look.label(bv, bn[k], 12, Look.INK); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var cost := Look.label(bv, "", 11, Look.INK_SOFT); cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		for l in [nm, cost]: l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_builds.add_child(b)
-		_build_cards[k] = {"b": b, "cost": cost, "name": nm, "icon": ic}
-	_zones.append(_builds)
-
-	# --- bottom middle: your hand and the rest, and above them what holding E would do
+	_bottom = VBoxContainer.new()
+	root.add_child(_bottom)
+	_pin(_bottom, Control.PRESET_CENTER_BOTTOM, 0, -12, 0, -12)
+	_bottom.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_bottom.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_bottom.add_theme_constant_override("separation", 4)
+	_bottom.alignment = BoxContainer.ALIGNMENT_END
+	var hb := _card(_bottom)
+	hb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	hb.custom_minimum_size.x = 360
+	var hv := _vbox(hb, 3)
+	_hp_lab = Look.label(hv, "Your health", 13, Look.INK)
+	_hp_bar = _bar(hv, Look.ROSE, 12)
+	var brow := HBoxContainer.new()
+	brow.add_theme_constant_override("separation", 10)
+	brow.alignment = BoxContainer.ALIGNMENT_CENTER
+	_bottom.add_child(brow)
+	_abar = HBoxContainer.new()
+	_abar.add_theme_constant_override("separation", 3)
+	brow.add_child(_abar)
 	_hotbar = HBoxContainer.new()
-	root.add_child(_hotbar)
-	_pin(_hotbar, Control.PRESET_CENTER_BOTTOM, -56, -14, -56, -14)   # a little left of centre, to leave room for the five things you can place
-	_hotbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_hotbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	brow.add_child(_hotbar)
 	_hotbar.add_theme_constant_override("separation", 3)
-	for c in ["hand", "carry", "posse", "pack", "skills", "toilet", "courage"]:
+	for c in ["posse", "pack", "skills", "courage"]:
 		_chip(c)
-	_zones.append(_hotbar)
-	# a calling's two powers: their own little bar, above your health
-	_powers = HBoxContainer.new()
-	root.add_child(_powers)
-	_pin(_powers, Control.PRESET_BOTTOM_LEFT, 14, -80, 14, -80)
-	_powers.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_powers.add_theme_constant_override("separation", 3)
-	_chip("power1", _powers)
-	_chip("power2", _powers)
-	_zones.append(_powers)
+	_zones.append(_bottom)
+	# the building wheel: hold the build key and it opens round you
+	_wheel = Control.new()
+	_wheel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_wheel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_wheel.visible = false
+	root.add_child(_wheel)
 	_prompt_box = VBoxContainer.new()
 	root.add_child(_prompt_box)
 	_pin(_prompt_box, Control.PRESET_CENTER_BOTTOM, -280, -96, 280, -96)
@@ -226,7 +201,7 @@ func _ready() -> void:
 
 	window = ScrollWindow.new()
 	root.add_child(window)
-	_zones.append_array([tl, tm, hb])
+	_zones.append_array([tl, tm])
 
 
 func _pin(c: Control, preset: Control.LayoutPreset, left: float, top: float, right: float, bottom: float) -> void:
@@ -333,7 +308,8 @@ func playing(on: bool) -> void:
 	_playing = on
 	_covered = false
 	for c in root.get_children():
-		if c != window: c.visible = on
+		if c != window and c != _wheel: c.visible = on
+	_wheel.visible = false
 	if not on: _banner_t = 0.0
 
 
@@ -386,6 +362,13 @@ func _process(delta: float) -> void:
 	if _banner_t <= 0 and _queued.size() and not (window.visible and window.kind != "notice" and window.kind != "pack"):
 		var q: Array = _queued.pop_front()
 		banner(q[0], q[1], q[2])
+	if _bottom:                                      # nothing along the bottom is pushed off the screen: it shrinks to fit
+		var w := _bottom.get_combined_minimum_size().x
+		var room := root.size.x - 28.0
+		var k := minf(1.0, room / maxf(1.0, w))
+		_bottom.scale = Vector2(k, k)
+		_bottom.pivot_offset = Vector2(_bottom.size.x / 2.0, _bottom.size.y)
+		_prompt_box.offset_top = -(_bottom.size.y * k + 26.0); _prompt_box.offset_bottom = _prompt_box.offset_top
 	_banner_t -= delta
 	_banner_box.modulate.a = clampf(_banner_t / 0.6, 0.0, 1.0)
 	_banner_box.visible = _banner_t > 0 and not (window.visible and window.kind != "notice" and window.kind != "pack")
@@ -434,67 +417,138 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 	# health
 	_hp_bar.value = p.hp / Rules.max_hp(p)
 	_hp_lab.text = "Your health. %s eats." % Keys.name("eat") if p.food > 0 and p.hp < Rules.max_hp(p) and p.state == "ok" else "Your health"
-	# the bar at the bottom
-	var W: Dictionary = D.IT[p.wpn]
-	var A: Dictionary = D.AB[W.ab]
-	_set_chip("hand", true, str(p.wpn), Keys.name("trick"), A.n + (" %ds" % ceili(p.abCd) if p.abCd > 0 else ""),
-		"In your hand: %s%s. {trick} or right-click: %s, %s." % [W.n, " (blessed)" if p.bless & 1 else "", A.n, A.d], p.abCd > 0)
-	var cl := Rules.class_of(p)
-	for i in 2:
-		var shown := false
-		if cl >= 0:
-			var pw: Dictionary = D.CLASSES[cl].powers[i]
-			var has_it: bool = Rules.rk(p, D.CLASSES[cl].book) >= pw.rank
-			var cd: float = p.p1Cd if i == 0 else p.p2Cd
-			shown = true
-			_set_chip("power%d" % (i + 1), true, pw.icon, Keys.name("power%d" % (i + 1)) if has_it else "rank %d" % pw.rank, pw.n + (" %ds" % ceili(cd) if cd > 0 else ""),
-				"%s: %s. %s" % [pw.full, pw.d, "{power%d}." % (i + 1) if has_it else "It comes at rank %d of %s." % [pw.rank, D.book_title(D.CLASSES[cl].book)]], cd > 0 or not has_it)
-		if not shown: _set_chip("power%d" % (i + 1), false, "", "", "", "")
-	_powers.visible = cl >= 0 and not _covered
-	_feed.offset_top = -148 if cl >= 0 else -76
-	_feed.offset_bottom = _feed.offset_top
-	_set_chip("carry", p.trk >= 0, str(p.trk) if p.trk >= 0 else "pack", Keys.name("carry"), (["Handbell", "Censer", "Bucket"][p.trk - 26] if p.trk >= 26 else D.IT[p.trk].n) if p.trk >= 0 else "",
-		(D.IT[p.trk].note if p.trk >= 0 else ""), p.trk == 26 and p.useCd > 0)
+	# the action bar: main says what is on it (bar())
 	var nv := 100.0
 	for q in R.peasants:
 		if q.owner == p.id and q.state != "body" and q.state != "hide" and q.nv < nv: nv = q.nv
 	var orders := Rules.rk(p, 6) >= 1
-	_set_chip("posse", true, "posse", (Keys.name("orders") + " " + ["follow", "hold", "charge"][p.order]) if orders else "", "Posse %d/%d" % [p.posse, R.posse_max(p)],
-		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + ((" {orders}: follow, hold, charge." if Rules.rk(p, 6) >= 3 else " {orders}: follow, or hold.") if orders else ""), p.posse == 0)
+	_set_chip("posse", true, "posse", ["following", "holding", "charging"][p.order] if orders else "", "Posse %d/%d" % [p.posse, R.posse_max(p)],
+		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + ((" Orders, on the action bar: follow, hold, charge." if Rules.rk(p, 6) >= 3 else " Orders, on the action bar: follow, or hold.") if orders else ""), p.posse == 0)
 	_set_chip("pack", true, "pack", Keys.name("pack"), "Backpack %d/%d" % [p.inv.size(), D.PACK_MAX], "Your backpack: what is on you, and six places for spares. Click or press {pack}.")
 	var owned := p.books.filter(func(r): return r > 0).size()
 	_set_chip("skills", true, "book", Keys.name("skills"), ("Skills +" if p.spare >= 1 else "Skills") if owned else "No book",
 		"Your skills: each book you have read, what every rank does, and how close the next is. Click or press {skills}." if owned else "The library has a book for you.", owned == 0)
-	_set_chip("toilet", p.posse > 0, "toilet", Keys.name("toilet"), "Toilet" if p.tbCd <= 0 else "Toilet %ds" % ceili(p.tbCd), "Emergency toilet break: the dead nearby run from your posse.", p.tbCd > 0)
 	var cg := p.state == "inn" or p.cg > 0 or p.charge > 0 or p.hang > 0
 	_set_chip("courage", cg, "ale", "", "Charging %ds" % ceili(p.charge) if p.charge > 0 else "Hangover %ds" % ceili(p.hang) if p.hang > 0 else "Courage %d%%" % p.cg, "Dutch courage, from the Thorny Rose Inn.")
-	# what you can place
-	for k in _build_cards:
-		var e: Dictionary = _build_cards[k]
-		if k == "contr":                             # one card for every contraption: 5 steps through the ones you can build
-			var avail := D.CONTRAPTIONS.filter(func(c): return Rules.can_contr(p, c))
-			e.b.visible = avail.size() > 0
-			var cur: String = build_sel if D.CONTR.has(build_sel) else avail[0] if avail.size() else ""
-			e.b.button_pressed = D.CONTR.has(build_sel)
-			if cur != "":
-				var nm_: String = D.SNAME[cur]
-				e.name.text = {"chicken": "Chicken", "pitfall": "Pitfall", "tar": "Tar pit", "trough": "Holy water", "logs": "Log roller", "thresher": "Thresher"}[cur]
-				e.cost.text = D.cost_text(Rules.cost_of(p, cur)).replace(" and ", ", ")
-				e.b.tooltip_text = Keys.fill("%s. %s. Press %d to step through your contraptions%s." % [nm_[0].to_upper() + nm_.substr(1), D.CONTR[cur].d, D.BUILDS.size() + 1,
-					" (a box of cogs will be used: you have %d)" % p.cogs if Rules.rk(p, 2) < D.CONTR[cur].rank else ""])
-			continue
-		var need_bodies: bool = D.COST[k].has("bodies")
-		e.b.visible = not need_bodies or p.bodies >= D.COST[k].bodies
-		e.b.button_pressed = build_sel == k
-		e.cost.text = D.cost_text(Rules.cost_of(p, k)).replace(" and ", ", ")
-		e.b.tooltip_text = Keys.fill("Place a %s. Press %d, or {build} to step through these." % [D.SNAME[k], D.BUILDS.find(k) + 1])
-	_builds.visible = p.state == "ok" and R.live() and not _covered
 	# the prompt
 	_prompt.text = Keys.fill(prompt)
 	_prompt.modulate = Color.WHITE if prompt_ok else Color(1, 0.75, 0.7, 0.95)
 	_prompt_bar.visible = prog > 0.0
 	_prompt_bar.value = prog
 	_prompt_box.visible = prompt != "" and not window.visible
+
+
+## The action bar: slots is [[id, [icon, name, wait, line]], ...], in order. The first nine have their number.
+func bar(slots: Array) -> void:
+	var sig := str(slots.map(func(s): return [s[0], s[1][0], s[1][1]]))
+	if sig != _abar_sig:
+		_abar_sig = sig
+		for c in _abar.get_children(): c.queue_free()
+		_abar_btns = {}
+		for i in slots.size():
+			var id: String = slots[i][0]
+			var info: Array = slots[i][1]
+			var b := Button.new()
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(66, 58)
+			b.pressed.connect(func(): bar_pressed.emit(id))
+			var v := VBoxContainer.new()
+			v.set_anchors_preset(Control.PRESET_FULL_RECT)
+			v.alignment = BoxContainer.ALIGNMENT_CENTER
+			v.add_theme_constant_override("separation", -1)
+			v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(v)
+			var ic := TextureRect.new()
+			ic.texture = Look.icon(int(info[0]) if str(info[0]).is_valid_int() else info[0], 26)
+			ic.custom_minimum_size = Vector2(26, 26)
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			v.add_child(ic)
+			var nm := Look.label(v, info[1], 12, Look.INK)
+			nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			v.offset_top = 6
+			if i < 9:
+				var num := Look.label(b, str(i + 1), 14, Look.ROSE, true)
+				num.position = Vector2(6, 1)
+				num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var cd := Look.label(b, "", 15, Look.RUST, true)
+			cd.set_anchors_preset(Control.PRESET_CENTER)
+			cd.position = Vector2(40, 4)
+			cd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.custom_minimum_size.x = maxf(66, nm.get_minimum_size().x + 14)
+			_abar.add_child(b)
+			_abar_btns[id] = {"b": b, "cd": cd, "name": nm}
+	for s in slots:
+		var e: Dictionary = _abar_btns.get(s[0], {})
+		if e.is_empty(): continue
+		var wait: float = s[1][2]
+		e.cd.text = str(ceili(wait)) if wait > 0 else ""
+		e.b.modulate = Color(1, 1, 1, 0.6) if wait > 0 else Color.WHITE
+		e.name.text = s[1][1]
+		e.b.tooltip_text = Keys.fill(s[1][3])
+
+
+# ---------------------------------------------------------------- the building wheel
+func wheel_open() -> bool:
+	return _wheel.visible
+
+
+## Open the wheel round the middle of the screen (where your peasant is): one button for each thing you can build.
+func open_wheel(ks: Array, p: E.Player, sel: String) -> void:
+	for c in _wheel.get_children(): c.queue_free()
+	_wheel_hover = ""
+	if ks.is_empty(): return
+	var centre := root.size * Vector2(0.5, 0.5)
+	var rad := 150.0 if ks.size() > 4 else 120.0
+	var hint := Look.label(_wheel, "Let go over one to place it", 17, Look.PAPER_LIGHT, true)
+	hint.position = centre + Vector2(-hint.get_minimum_size().x / 2, -rad - 78)
+	for i in ks.size():
+		var k: String = ks[i]
+		var a := -PI / 2 + TAU * i / ks.size()
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.toggle_mode = true
+		b.button_pressed = k == sel
+		b.custom_minimum_size = Vector2(98, 78)
+		b.size = b.custom_minimum_size
+		b.position = centre + Vector2(cos(a), sin(a)) * rad - b.size / 2
+		var c := Rules.cost_of(p, k)
+		b.modulate = Color.WHITE if Rules.has(p, c) else Color(1, 1, 1, 0.55)
+		var v := VBoxContainer.new()
+		v.set_anchors_preset(Control.PRESET_FULL_RECT)
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_theme_constant_override("separation", 0)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(v)
+		var ic := TextureRect.new()
+		ic.texture = Look.icon(k if Look.ICON.has(k) else "contr", 26)
+		ic.custom_minimum_size = Vector2(26, 26)
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(ic)
+		var nm_: String = D.SNAME[k]
+		var nm := Look.label(v, nm_[0].to_upper() + nm_.substr(1), 13, Look.INK)
+		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var cl := Look.label(v, D.cost_text(c).replace(" and ", ", "), 11, Look.INK_SOFT)
+		cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		for l in [nm, cl]: l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.custom_minimum_size.x = maxf(98, maxf(nm.get_minimum_size().x, cl.get_minimum_size().x) + 16)
+		b.mouse_entered.connect(func(): _wheel_hover = k)
+		b.mouse_exited.connect(func(): if _wheel_hover == k: _wheel_hover = "")
+		b.pressed.connect(func(): _wheel_hover = k; build_pressed.emit(close_wheel()))
+		b.tooltip_text = D.CONTR[k].d if D.CONTR.has(k) else ""
+		_wheel.add_child(b)
+	_wheel.visible = true
+
+
+## Close it. What was under the mouse, if anything.
+func close_wheel() -> String:
+	var k := _wheel_hover
+	_wheel.visible = false
+	for c in _wheel.get_children(): c.queue_free()
+	_wheel_hover = ""
+	return k
 
 
 static func _fmt(s: float) -> String:

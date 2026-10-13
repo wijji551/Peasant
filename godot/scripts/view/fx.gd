@@ -82,6 +82,26 @@ func fan(x: float, z: float, r: float, reach: float, half: float, col: Color, li
 	_fans.append([mi, 0.0, life])
 
 
+## Hone: a pillar of soft gold light over a heap of rubble, seen from a long way off, for as long as it lasts.
+var _pillars := []                    # [node, age, life, material]
+func pillar(x: float, z: float, life: float) -> void:
+	var mi := MeshInstance3D.new()
+	var cm := CylinderMesh.new(); cm.top_radius = 0.35; cm.bottom_radius = 0.6; cm.height = 14.0; cm.radial_segments = 10; cm.rings = 1
+	mi.mesh = cm
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.albedo_color = Color(1.0, 0.82, 0.4, 0.35)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = Vector3(x, 7.0, z)
+	var l := OmniLight3D.new(); l.light_color = Color(1.0, 0.8, 0.45); l.omni_range = 6.0; l.light_energy = 1.4; l.position.y = -6.0
+	mi.add_child(l)
+	add_child(mi)
+	_pillars.append([mi, 0.0, life, m])
+
 ## A small holy cross over somebody's head (So Help Me Lord, Please?): it glows, rises a little and fades.
 var _crosses := []                    # [node, age]
 func cross(x: float, z: float) -> void:
@@ -104,6 +124,15 @@ func cross(x: float, z: float) -> void:
 
 
 func _fans_step(delta: float) -> void:
+	var pi_ := _pillars.size() - 1
+	while pi_ >= 0:
+		var pl: Array = _pillars[pi_]
+		pl[1] += delta
+		if pl[1] >= pl[2]:
+			pl[0].queue_free(); _pillars.remove_at(pi_)
+		else:
+			pl[3].albedo_color.a = (0.25 + 0.12 * sin(pl[1] * 3.0)) * clampf((pl[2] - pl[1]) / 2.0, 0.0, 1.0)
+		pi_ -= 1
 	var j := _crosses.size() - 1
 	while j >= 0:
 		var c: Array = _crosses[j]

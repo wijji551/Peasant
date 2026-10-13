@@ -21,6 +21,8 @@ var store := {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0
 var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
 var lobs: Array = []          # the dead in the air, thrown: [the undead, where it lands x, z, seconds left]
+var holy_ground: Array = []   # Consecrate: [x, z, radius, seconds left]; the dead will not step into it
+var marked: E.Undead = null   # The Marked Man: the one of the dead everyone is shooting at
 var pools: Array = []         # the Cook's stew on the ground: [x, z, seconds left, seconds before it is hot, tick]
 var spots: Array = [0, 0, 0, 0, 0, 0, 0, 0]   # searches left in each heap of rubble
 var ruins_seen: Array = [true, false, false]   # has anyone found the outer ruins today? Until then the map and the signs keep quiet
@@ -418,7 +420,7 @@ static func reinf_cost(p: E.Player, k: String) -> Dictionary:
 static func gather_time(p: E.Player, kind: String) -> float:
 	var g: Dictionary = D.GATHER[kind]
 	var r := rk(p, g.book)
-	return g.time * (1.0 if r < 1 else (0.7 if g.book else 0.78) - 0.04 * (mini(r, 7) - 1) - 0.02 * maxi(0, r - 7)) * (0.8 if lore(p, D.I_SCYTHE) else 1.0) / hn(p, g.book)
+	return g.time * (1.0 if r < 1 else (0.7 if g.book else 0.78) - 0.04 * (mini(r, 7) - 1) - 0.02 * maxi(0, r - 7)) * (0.8 if lore(p, D.I_SCYTHE) else 1.0) / hn(p, g.book) * (0.5 if p.many > 0 else 1.0)   # Many Hands
 
 func fish_wait(p: E.Player) -> float:
 	return rnd2(2.2, 4.8) * (1.0 if rk(p, 1) < 1 else 0.7 - 0.04 * (rk(p, 1) - 1))
@@ -571,7 +573,7 @@ func add_villagers(slot: int, n: int) -> void:
 		peasants.append(q)
 
 func clear_world() -> void:
-	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []; lobs = []
+	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []; lobs = []; holy_ground = []; marked = null
 	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0, "rune": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
 	letters = []; letter_new = false; seen = {}; chest = {}; tenant_day = 0
@@ -1551,6 +1553,7 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	var d0 := d                                      # what the blow was worth before what it landed on is counted
 	if holy: d *= holy
 	if u.vuln > 0: d *= 1.5
+	if u.mark > 0: d *= 1.25                         # The Marked Man
 	if bony and s.get("blunt", false): d *= 2
 	if U.armour:                                     # armour: farm tools and pitchforks barely dent it; a mace or a hammer does
 		d *= 1.3 if s.get("blunt", false) else 1.0 if holy else 0.35 if s.get("farm", true) else 0.75
@@ -1624,7 +1627,7 @@ func nerve_hit(q: E.Peasant, n: float) -> void:   # a fright. At no nerve left, 
 	var own := player_by_id(q.owner)
 	if q.kind != 0 or own == null or (q.state != "follow" and q.state != "fight" and q.state != "chop"):
 		return
-	if own.head == 20 or rk(own, 6) >= 7 or own.charge > 0:
+	if own.head == 20 or rk(own, 6) >= 7 or own.charge > 0 or crying(own):
 		return
 	q.nv -= n * (1 - 0.1 * mini(rk(own, 6), 7)) / hn(own, 6)
 	if q.nv <= 0:
@@ -1687,6 +1690,7 @@ static func dmg_of(p: E.Player, I: Dictionary, mul: float = 1.0) -> float:
 	var d: float = I.dmg * mul * (1 + (0.08 * mini(rk(p, 5), 7) if I.rng else 0.06 * mini(rk(p, 4), 7))) * hn(p, 5 if I.rng else 4) * (1.1 if I.tier == "relic" and rk(p, 8) >= 8 else 1.0)
 	if (I.tier == "forged" or I.tier == "steel" or I.tier == "mithril" or I.tier == "rune") and rk(p, 3) >= 4: d *= 1.1
 	if p.charge > 0: d *= 2.0 if rk(p, 7) >= 7 else 1.6
+	if p.whet > 0: d *= 1.2                          # The Whetstone
 	if p.wpn == 17 and I.n == D.IT[17].n and lore(p, 17): d *= 1.25
 	if (I.tier == "forged" or I.tier == "steel" or I.tier == "mithril" or I.tier == "rune") and lore(p, D.I_TONGS): d *= 1.1
 	return d
@@ -1725,11 +1729,12 @@ func targets(p, reach: float, arc: float, over: bool = false) -> Array:
 	return out
 
 func shoot(p: E.Player, I: Dictionary, mul: float, o: Dictionary = {}) -> E.Undead:   # one shot at the nearest enemy ahead. Returns what it hit.
-	var t: E.Undead = null
-	for u in targets(p, I.rng, 0.3, true):
-		if u.state != "pile":
-			t = u
-			break
+	var t: E.Undead = marked_in(p.x, p.z, I.rng)      # the Marked Man first, if he is in reach
+	if t == null:
+		for u in targets(p, I.rng, 0.3, true):
+			if u.state != "pile":
+				t = u
+				break
 	var fx := sin(p.r)
 	var fz := cos(p.r)
 	var tx: float = t.x if t else p.x + fx * I.rng * 0.7
@@ -1774,7 +1779,7 @@ func do_attack(p: E.Player) -> void:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	if phase == "night": p.fought = true
-	p.atkCd = I.cd * ((0.6 if rk(p, 5) >= 8 else 0.8) if I.rng and rk(p, 5) >= 4 else 1.0); p.ac += 1
+	p.atkCd = I.cd * ((0.6 if rk(p, 5) >= 8 else 0.8) if I.rng and rk(p, 5) >= 4 else 1.0) * (0.67 if p.mist > 0 else 1.0); p.ac += 1   # Red Mist: a third faster
 	var mul := 1.0
 	if rk(p, 4) >= 7:                                  # every fifth blow twice as hard (every fourth from rank 9)
 		p.combo += 1
@@ -1940,19 +1945,131 @@ func do_power(p: E.Player, i: int) -> void:
 	if p.state != "ok" or not live() or p.frozen > 0:
 		return
 	var c := class_of(p)
-	if c < 0 or i < 0 or i > 1:
+	if c < 0 or i < 0 or i > 2:
 		return
 	var C: Dictionary = D.CLASSES[c]
 	var r := rk(p, C.book)
-	if r < C.powers[i].rank or (p.p1Cd if i == 0 else p.p2Cd) > 0:
+	if r < C.powers[i].rank or [p.p1Cd, p.p2Cd, p.p3Cd][i] > 0:
 		return
 	if i == 0: p.p1Cd = power_wait(p, 0)
-	else: p.p2Cd = power_wait(p, 1)
+	elif i == 1: p.p2Cd = power_wait(p, 1)
+	else: p.p3Cd = 45.0
 	p.ac += 1
 	match c:
 		0: priest_power(p, i, r)
 
+## Is (x, z), give or take r, on consecrated ground?
+func on_holy(x: float, z: float, r: float) -> bool:
+	for g in holy_ground:
+		if D.d2(x, z, g[0], g[1]) < (g[2] + r) * (g[2] + r): return true
+	return false
+
+## Is a War Cry heard by this leader's posse? Their own, or anyone's at rank 10 of leading.
+func crying(Ld: E.Player) -> bool:
+	return Ld.cry > 0 or players.any(func(o): return o.cry > 0 and rk(o, 6) >= 10)
+
+## The Marked Man, if there is one, alive and within reach of (x, z).
+func marked_in(x: float, z: float, reach: float) -> E.Undead:
+	if marked == null or marked.dead or marked.mark <= 0 or D.d2(x, z, marked.x, marked.z) > reach * reach: return null
+	return marked
+
+## A book's own power (version 7.8): what it does, used from the action bar. Every book has one from its first rank.
+func can_book_power(p: E.Player, b: int) -> bool:
+	return b >= 0 and b < D.POWERS.size() and not D.POWERS[b].is_empty() and rk(p, b) >= 1
+
+func book_power(p: E.Player, b: int) -> void:
+	if p.state != "ok" or not live() or p.frozen > 0 or not can_book_power(p, b): return
+	while p.pwCd.size() < D.BOOKS.size(): p.pwCd.append(0.0)
+	if float(p.pwCd[b]) > 0: return
+	var P: Dictionary = D.POWERS[b]
+	var long: float = P.t * hn(p, b)
+	var near := func(x: float, z: float) -> bool: return D.d2(x, z, p.x, p.z) < D.POWER_NEAR * D.POWER_NEAR
+	var lines_ := ""
+	match b:
+		0:                                          # Many Hands
+			p.many = long
+			lines_ = "%s has rolled up their sleeves, and so has the posse."
+		1:                                          # Pot Luck: one meal, for everyone round you
+			if p.food < 1: return
+			p.food -= 1
+			var heal := meal_hp(p)
+			for o in players:
+				if o.state == "ok" and near.call(o.x, o.z): o.hp = minf(max_hp(o), o.hp + heal)
+			for q in peasants:
+				if q.state != "body" and near.call(q.x, q.z): q.hp = minf(q_max(q), q.hp + heal)
+			lines_ = "%s has put one pot on, and everyone has had some. Nobody asks what was in it."
+		2:                                          # Shore It Up
+			for s in structs:
+				if s.built and s.hp < s.mhp and D.d2(s.x, s.z, p.x, p.z) < 100:
+					s.hp = minf(s.mhp, s.hp + s.mhp / 3.0 * hn(p, 2)); s.hc += 1; sv += 1
+			lines_ = "%s has shored it all up, with whatever was to hand."
+		3:                                          # The Whetstone
+			for o in players:
+				if o.state == "ok" and near.call(o.x, o.z): o.whet = long
+			lines_ = "%s has passed the whetstone round. Everyone near them is a little sharper."
+		4:                                          # Red Mist
+			p.mist = long
+			lines_ = "%s has seen red."
+		5:                                          # The Marked Man
+			var t: E.Undead = null
+			for u in targets(p, 22.0, 0.3, true):
+				if u.state != "pile": t = u; break
+			if t == null:
+				var bd := 22.0 * 22.0
+				for u in undead:
+					if not u.dead and u.state != "rise" and u.state != "pile" and D.d2(u.x, u.z, p.x, p.z) < bd:
+						bd = D.d2(u.x, u.z, p.x, p.z); t = u
+			if t == null: return
+			t.mark = long; marked = t
+			ev.append(["mark", t.id, long])
+			lines_ = "%s has pointed at one of the dead. Everyone is now looking at it."
+		6:                                          # War Cry
+			p.cry = long
+			for q in peasants:
+				if q.owner == p.id or rk(p, 6) >= 10: q.nv = 100
+			lines_ = "%s has let out a war cry. The posse%s found it encouraging." % ["%s", " (and everyone else’s)" if rk(p, 6) >= 10 else ""]
+		7:                                          # A Round on Me
+			for o in players:
+				if o.state == "ok" and near.call(o.x, o.z):
+					o.cg = minf(100, o.cg + 30.0 * hn(p, 7))
+					if o.cg >= 100:
+						o.cg = 0; o.charge = charge_len(o); ev.append(["burst", r1(o.x), r1(o.z)])
+			lines_ = "%s is buying. Nobody saw where the ale came from, and nobody is asking."
+		8:                                          # Hone: towards a heap that still hides a relic
+			var best := -1
+			var bd := 1e12
+			var lay := Map.ruin_layout(gseed, day)
+			for i in lay.spots.size():
+				var sp: Dictionary = lay.spots[i]
+				if int(spots[i]) > 0 and D.d2(sp.x, sp.z, p.x, p.z) < bd:
+					bd = D.d2(sp.x, sp.z, p.x, p.z); best = i
+			if best < 0 or D.RELICS.all(func(id): return relics.has(id)):
+				say("%s has tried to Hone, and the rubble has nothing left worth finding today." % p.dn)
+				p.pwCd[b] = 20.0
+				return
+			p.hone_i = best; p.hone_t = long
+			var sp2: Dictionary = lay.spots[best]
+			ev.append(["hone", p.id, r1(sp2.x), r1(sp2.z), long])
+			lines_ = "%s has a feeling about a heap of rubble %s." % ["%s", D.compass(sp2.x - p.x, sp2.z - p.z)]
+		9:                                          # Smelling Salts
+			var n := 0
+			for o in players:
+				if o.state == "down" and near.call(o.x, o.z):
+					o.state = "ok"; o.hp = maxf(o.hp, 30.0); o.downT = 0; n += 1
+					ev.append(["revive", r1(o.x), r1(o.z)])
+			if n == 0: return
+			lines_ = "%s has waved the smelling salts about. Everyone is up, and wishing they were not."
+	p.pwCd[b] = P.cd
+	p.ac += 1; add_xp(p, b, 1)
+	ev.append(["power", p.id, b, r1(p.x), r1(p.z)])
+	if lines_ != "": say(lines_ % p.dn)
+
 func priest_power(p: E.Player, i: int, r: int) -> void:
+	if i == 2:                                       # Consecrate: ground the dead will not cross
+		holy_ground.append([p.x, p.z, 3.5, 8.0 * hn(p, D.B_HOLY)])
+		ev.append(["consecrate", r1(p.x), r1(p.z), 3.5, 8.0 * hn(p, D.B_HOLY)]); note("smite")
+		say("%s has consecrated a patch of Thornhallow. The dead have been asked to keep off it." % p.dn)
+		return
 	if i == 0:                                       # Smite: a bolt of holy light from on high
 		var tl := targets(p, 14, 0.3, true).filter(func(u): return u.state != "pile")
 		if tl.is_empty():
@@ -2101,7 +2218,9 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 	var big := 0
 	var certain := lore >= 10 and not p.sure           # rank 10: once a day, a heap that is certain to hold something good
 	if certain: p.sure = true
-	if left_.size() and (certain or randf() < pr):
+	var honed := p.hone_i == i and p.hone_t > 0         # Hone pointed here: the relic is in this heap
+	if honed: p.hone_i = -1; p.hone_t = 0
+	if left_.size() and (honed or certain or randf() < pr):
 		var id: int = pick(left_)
 		relics.append(id); gain(p, id); found = D.IT[id].n; big = 1
 		say("%s has found %s in %s!" % [p.dn, D.IT[id].n, D.RUINS[sp.ruin].name])
@@ -2916,8 +3035,9 @@ func grow_trees() -> void:   # dawn in the forest: saplings that are old enough 
 
 func end_night() -> void:   # dawn: count the cost, bring people home, start the next day
 	var N: Dictionary = night
-	pools = []; lobs = []
-	for p in players: p.frozen = 0
+	pools = []; lobs = []; holy_ground = []; marked = null
+	for p in players:
+		p.frozen = 0; p.many = 0; p.whet = 0; p.mist = 0; p.cry = 0
 	var lines := ["Night %d is over. %d of the dead were put back down." % [day, N.kills]]
 	if fallen.size():
 		lines.append("Fallen: %s. What is left lies where it fell, and could still be useful." % ", ".join(fallen))
@@ -3055,6 +3175,10 @@ func player_step(p: E.Player, dt: float) -> void:
 	p.stuckT = maxf(0, p.stuckT - dt); p.frozen = maxf(0, p.frozen - dt)
 	p.atkCd = maxf(0, p.atkCd - dt); p.eatCd = maxf(0, p.eatCd - dt); p.hurtT += dt; p.workT = maxf(0, p.workT - dt)
 	p.p1Cd = maxf(0, p.p1Cd - dt); p.p2Cd = maxf(0, p.p2Cd - dt); p.prot = maxf(0, p.prot - dt); p.hb = maxf(0, p.hb - dt)
+	p.p3Cd = maxf(0, p.p3Cd - dt); p.many = maxf(0, p.many - dt); p.whet = maxf(0, p.whet - dt); p.mist = maxf(0, p.mist - dt); p.cry = maxf(0, p.cry - dt)
+	p.hone_t = maxf(0, p.hone_t - dt)
+	if p.hone_t <= 0: p.hone_i = -1
+	for i in p.pwCd.size(): p.pwCd[i] = maxf(0.0, float(p.pwCd[i]) - dt)
 	p.abCd = maxf(0, p.abCd - dt); p.useCd = maxf(0, p.useCd - dt); p.tbCd = maxf(0, p.tbCd - dt); p.parry = maxf(0, p.parry - dt); p.guard = maxf(0, p.guard - dt); p.hang = maxf(0, p.hang - dt)
 	if p.charge > 0:
 		p.charge -= dt
@@ -3333,11 +3457,13 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 			var pt: E.Undead = null
 			var reach: float = D.TOWER.reach if ps.k == "tower" else D.PLAT.reach
 			var pd: float = reach * reach
+			var mk := marked_in(q.x, q.z, reach)
 			for u in undead:
 				if u.dead or u.state == "pile" or u.state == "rise": continue
 				var dd := D.d2(q.x, q.z, u.x, u.z)
 				if dd < pd:
 					pd = dd; pt = u
+			if mk: pt = mk
 			if pt:
 				q.r = D.ang_lerp(q.r, atan2(pt.x - q.x, pt.z - q.z), minf(1.0, dt * 10))
 				if q.cd <= 0:
@@ -3366,10 +3492,11 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		if d < 144: near = true
 		if d < bd and (order == 2 or (D.d2(q.px, q.pz, u.x, u.z) < 36 + (lead - 64) if order == 1 else D.d2(q.x if Ld.room != "" else Ld.x, q.z if Ld.room != "" else Ld.z, u.x, u.z) < lead)) and (shoot > 0 or not wall_between(q.x, q.z, u.x, u.z)):
 			bd = d; tgt = u
+	if shoot > 0 and marked_in(q.x, q.z, shoot): tgt = marked
 	if not near and q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
 	if tgt:
 		q.state = "fight"; q.tree = null
-		var bonus: float = (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0) * hn(Ld, 6)
+		var bonus: float = (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0) * hn(Ld, 6) * (1.3 if crying(Ld) else 1.0)
 		if shoot > 0:                                  # a ranger: keeps back, and shoots
 			var d := sqrt(D.d2(q.x, q.z, tgt.x, tgt.z))
 			if d > shoot: step_to(q, tgt.x, tgt.z, 5.2, dt, shoot - 1.0)
@@ -3392,7 +3519,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		if Vector2(q.px - q.x, q.pz - q.z).length() > 0.5: step_to(q, q.px, q.pz, 5.4, dt, 0.3)
 	elif Ld.workT > 0 and Ld.workK != "fish" and (Ld.get(D.GATHER[Ld.workK].res) < cap(Ld) or (rk(Ld, 0) >= 10 and store.has(D.GATHER[Ld.workK].res))) and D.d2(q.x, q.z, Ld.x, Ld.z) < 400:
 		q.state = "chop"
-		var wt := D.PEASANT_WORK_TIME * (0.65 if rk(Ld, 0) >= 3 else 1.0)
+		var wt := D.PEASANT_WORK_TIME * (0.65 if rk(Ld, 0) >= 3 else 1.0) * (0.5 if Ld.many > 0 else 1.0)   # Many Hands
 		if Ld.workK == "tree":
 			if q.tree == null or not q.tree.alive or D.d2(q.tree.x, q.tree.z, Ld.x, Ld.z) > 196:
 				q.tree = null
@@ -3540,6 +3667,7 @@ func hit_struct(u: E.Undead, U: Dictionary, blk: E.Struct, dmul: float = 1.0) ->
 func shove(p: E.Player, dx: float, dz: float, dist: float, quiet: bool = false) -> void:
 	if p.state != "ok" or p.room != "": return
 	if p.charge > 0 and rk(p, 7) >= 10: return       # charging, at rank 10 of the Ledger: nothing knocks you back
+	if p.mist > 0: return                            # nor in a Red Mist
 	if help_me(p, quiet): return
 	var l := sqrt(dx * dx + dz * dz)
 	if l < 0.001:
@@ -3885,6 +4013,9 @@ func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void
 
 func undead_step(dt: float) -> void:
 	pool_step(dt)
+	for g in holy_ground: g[3] -= dt               # consecrated ground wears off
+	holy_ground = holy_ground.filter(func(g): return g[3] > 0)
+	if marked and (marked.dead or marked.mark <= 0): marked = null
 	lob_step(dt)
 	var keep_box := E.Box.new(D.KEEP_X, D.KEEP_Z, D.KEEP_H, D.KEEP_H)
 	var decoys := structs.filter(func(s): return s.k == "decoy")
@@ -3896,7 +4027,7 @@ func undead_step(dt: float) -> void:
 	for u in undead:
 		var U: Dictionary = D.UN[u.k]
 		u.cd = maxf(0, u.cd - dt * (D.CENSER.strike if u.smoke > 0 else 1.0)); u.t -= dt; u.slow = maxf(0, u.slow - dt); u.smoke = maxf(0, u.smoke - dt)
-		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
+		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.mark = maxf(0, u.mark - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
 		if u.dead: continue
 		if mending and u.hp < u.mhp and u.burn <= 0 and u.state != "pile" and u.state != "rise":     # the harvest moon: they mend, slowly (not while alight)
 			u.hp = minf(u.mhp, u.hp + u.mhp * D.HARVEST_MEND * dt)
@@ -4086,6 +4217,9 @@ func undead_step(dt: float) -> void:
 		var nz: float = u.z + gdz / gd * sp * dt
 		if through:                                # bats fly over everything; wraiths and the Lord drift through it
 			u.state = "walk"; u.x = nx; u.z = nz
+			continue
+		if not U.boss and on_holy(nx, nz, U.r) and not on_holy(u.x, u.z, 0.0):   # Consecrate: they will not step on it
+			u.state = "walk"
 			continue
 		var blk := blocking_struct(nx, nz, U.r)
 		if blk and blk.slot >= 0 and u.z > D.VN:   # already inside: the north wall is just in the way, not something to break

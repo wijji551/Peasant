@@ -18,6 +18,8 @@ static var numbers := true           # numbers that jump off the dead when they 
 static var shake := true             # the view is knocked a little by your own blows
 static var see_keep := true          # see through the keep when something is behind it
 static var binds := {}               # action -> [physical keycodes]; empty means the usual keys
+static var bar_order: Array = []     # the action bar: the ids put in order by hand, first (the rest follow as they come)
+static var bar_off: Array = []       # and the ones taken off it
 static var _loaded := false
 
 
@@ -40,6 +42,10 @@ static func load_all() -> void:
 	castle_pan = bool(d.get("castle_pan", true))
 	numbers = bool(d.get("numbers", true))
 	shake = bool(d.get("shake", true))
+	var bo = d.get("bar_order", [])
+	if bo is Array: bar_order = bo.map(func(x): return str(x))
+	var bf = d.get("bar_off", [])
+	if bf is Array: bar_off = bf.map(func(x): return str(x))
 	var b = d.get("binds", {})
 	if b is Dictionary:
 		for a in b:
@@ -67,4 +73,4 @@ static func set_volume(k: String, v: int) -> void:
 
 static func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
-	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "relay": relay, "tags": tags, "see_keep": see_keep, "castle_pan": castle_pan, "numbers": numbers, "shake": shake, "binds": binds}))
+	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "relay": relay, "tags": tags, "see_keep": see_keep, "castle_pan": castle_pan, "numbers": numbers, "shake": shake, "binds": binds, "bar_order": bar_order, "bar_off": bar_off}))

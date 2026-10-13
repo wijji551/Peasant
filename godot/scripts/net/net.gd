@@ -30,7 +30,7 @@ const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
 const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
 	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "room", "rune", "mith", "game", "gwon", "treated", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
-	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask"]
+	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t"]
 
 static var me: Net
 
@@ -507,6 +507,7 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 		"use": p.r = float(m.r); p.goal_r = p.r; R.do_use(p)
 		"tb": R.do_toilet(p)
 		"pw": p.r = float(m.get("r", p.r)); p.goal_r = p.r; R.do_power(p, int(m.i))
+		"bp": p.r = float(m.get("r", p.r)); p.goal_r = p.r; R.book_power(p, int(m.b))     # a book's own power, from the action bar
 		"ord": R.do_order(p)
 		"bld": R.try_place(p, str(m.k), float(m.x), float(m.z), float(m.rot))
 		"rdy": if R.phase == "day": p.ready = bool(m.v)

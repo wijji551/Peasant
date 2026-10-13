@@ -469,7 +469,7 @@ const BOOKS := [
 	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge iron arms, not just crude ones, with a third less iron (and a little less with every rank), and crude kits for your posse", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm or kit out your whole posse in one go, and forge iron kits", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears, and you can forge steel kits", "You can forge mithril arms and armour, from steel and the mithril of the old workings. Facing, banding and bracing a defence costs half", "Armour you wear stops a tenth more", "Kits you hand out do not wear out", "You can forge rune arms and armour, given runes, which are across the river"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["You hit harder up close (and harder again with every rank)", "One blow in eight against you misses", "Your weapon’s trick is ready a fifth sooner", "Your swings sweep wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow you land is twice as hard", "20 more health again", "Every fourth blow is twice as hard", "A killing blow carries on into the next of the dead"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "Your shots never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also hits a second of the dead nearby", "Aimed stones, volleys and piercing bolts are ready in half the time", "You shoot a third faster", "Your shots go through to the one behind", "Every tenth shot is a volley, free"]},
-	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 40, "by": "giving orders, recruiting, your posse’s work and blows, and bringing them through the night", "ranks": ["Orders: {orders} tells your posse to follow you or hold where they stand. Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "A third order: charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away", "A posse four larger", "Your peasants in a watch tower throw faster", "The war cry reaches everybody’s posse. (There is no war cry yet. When there is, it will.)"]},
+	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 40, "by": "giving orders, recruiting, your posse’s work and blows, and bringing them through the night", "ranks": ["Orders: {orders} tells your posse to follow you or hold where they stand. Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "A third order: charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away", "A posse four larger", "Your peasants in a watch tower throw faster", "The war cry reaches everybody’s posse"]},
 	{"name": "The Landlord’s Ledger", "what": "Dutch courage", "base": 4, "by": "drinking at the Thorny Rose Inn", "ranks": ["Every tankard gives more courage (and more again with every rank)", "A longer charge: 26 seconds", "Half the hangover", "No hangover", "When you drink, everyone else in the inn gets a little courage too", "A longer charge: 32 seconds", "The charge hits twice as hard", "A longer charge: 38 seconds", "A hip flask: you carry one tankard out of the inn, to drink later from your backpack", "While you charge, nothing can knock you back"]},
 	{"name": "Relics and Where They Were Left", "what": "Relic lore", "base": 4, "by": "searching the ruins", "ranks": ["You search rubble faster (and faster again with every rank)", "Your map marks the rubble that still hides something", "Relics turn up half as often again", "You find twice the materials and coin in rubble", "Holy weapons, blessings and holy slop hit harder in your hands", "Relics turn up far more often", "Nothing lurking in the ruins notices you searching", "The relics you carry work a tenth better", "You search twice as fast at night", "Once a day, one heap you search is certain to hold something good"]},
 	{"name": "Granny’s Remedies", "what": "Healing", "base": 4, "by": "bandaging and reviving", "ranks": ["Bandage a hurt ally: hold {interact} beside them (it heals more with every rank)", "Revive twice as fast, and to better health", "Each of your posse survives one fatal blow a night", "You heal slowly all the time, even in a fight", "Knocked down, you last twice as long before you die", "A bandage heals completely", "Once a night you get back up by yourself", "A bandage also cures a fright (and burning, should anyone take it up)", "Each of your posse survives two fatal blows a night", "Your bandage reaches across the road"]},
@@ -483,16 +483,33 @@ const BOOKS := [
 		"Divine Intervention, Probably: a smite strikes three of the dead at once, and wraiths and bosses twice as hard",
 		"So Help Me Lord, Please?: when a boss would throw, pull or freeze you, you pray in haste, by yourself, and two times in three it works (a small cross shows above you). And the lasting blessing on rune armour costs you half",
 		"The prayer lasts fifteen seconds",
-		"Consecrate: a patch of ground the dead will not cross. (It arrives with the other powers, shortly. It is being consecrated.)"]},
+		"Consecrate: a third power, a patch of ground round you that the dead will not cross for eight seconds"]},
 ]
 ## Callings: a book that makes you something more than a peasant, with two powers on their own keys. One calling at a
 ## time. The Holy Book is the first; more can follow (each needs its book, and its two powers in rules.gd).
 const CLASSES := [
 	{"name": "Apprentice Priest", "book": 10, "powers": [
 		{"n": "Smite", "full": "Minor Smiting", "rank": 1, "icon": "smite", "d": "a bolt of holy light on the nearest of the dead"},
-		{"n": "Pray", "full": "A Word of Protection", "rank": 2, "icon": "pray", "d": "a third less harm for you and everyone near you, for ten seconds"}]},
+		{"n": "Pray", "full": "A Word of Protection", "rank": 2, "icon": "pray", "d": "a third less harm for you and everyone near you, for ten seconds"},
+		{"n": "Consecrate", "full": "Consecrate", "rank": 10, "icon": "consecrate", "d": "a patch of ground round you that the dead will not cross, for eight seconds"}]},
 ]
 const B_HOLY := 10
+## A power for every book (version 7.8), from its first rank, on the action bar. cd: seconds before it can be used again;
+## t: how long it lasts, where it lasts. Honed pages make each a little longer or stronger. (The Holy Book's are its calling's.)
+const POWERS := [
+	{"n": "Many Hands", "icon": "wood", "cd": 90.0, "t": 20.0, "d": "for twenty seconds you and your posse gather twice as fast"},
+	{"n": "Pot Luck", "icon": "food", "cd": 60.0, "t": 0.0, "d": "one meal feeds and heals everyone near you: the living and their posses"},
+	{"n": "Shore It Up", "icon": "shore", "cd": 90.0, "t": 0.0, "d": "every defence near you is mended by a third, at once"},
+	{"n": "The Whetstone", "icon": "whet", "cd": 120.0, "t": 30.0, "d": "you and everyone near you hit a fifth harder, for thirty seconds"},
+	{"n": "Red Mist", "icon": "mist", "cd": 45.0, "t": 8.0, "d": "for eight seconds you swing a third faster and nothing can knock you back"},
+	{"n": "The Marked Man", "icon": "mark", "cd": 30.0, "t": 15.0, "d": "mark one of the dead: everyone’s shots and every tower aim at it, and it takes a quarter more harm"},
+	{"n": "War Cry", "icon": "cry", "cd": 60.0, "t": 15.0, "d": "your posse hits harder and keeps its nerve, for fifteen seconds"},
+	{"n": "A Round on Me", "icon": "ale", "cd": 120.0, "t": 0.0, "d": "everyone near you gets a little Dutch courage, wherever you are"},
+	{"n": "Hone", "icon": "hone", "cd": 120.0, "t": 60.0, "d": "it points you towards a heap of rubble that still hides a relic, and the relic glows"},
+	{"n": "Smelling Salts", "icon": "salts", "cd": 90.0, "t": 0.0, "d": "everyone near you who is down gets up"},
+	{},
+]
+const POWER_NEAR := 8.0              # what "near you" is, for the powers that reach the people round you
 ## A title from the books you have read: the one you know best, and the next best.
 const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest"]
 const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy"]
@@ -859,6 +876,12 @@ static func qname(q) -> String:
 	if q.kind == 2: return MERC_NAMES[q.ni % MERC_NAMES.size()]
 	return PNAMES[q.ni % PNAMES.size()]
 
+
+## Which way something lies, in words: "to the north", "to the south-east". (x east, z south.)
+static func compass(dx: float, dz: float) -> String:
+	if absf(dx) < 0.01 and absf(dz) < 0.01: return "right here"
+	var a := fposmod(atan2(dx, -dz), TAU)                # 0 north, clockwise
+	return "to the " + ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"][int(roundf(a / (PI / 4))) % 8]
 
 static func station(id: String) -> Dictionary:
 	if id.begins_with("tower"):                     # a watch tower: somewhere to stand and see about it
