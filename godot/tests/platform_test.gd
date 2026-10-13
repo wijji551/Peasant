@@ -141,7 +141,7 @@ func _init() -> void:
 	RBm.day = 23; RBm.weather = "clear"
 	RBm.dusk_falls(); RBm.timeLeft = 0.01; RBm.step(STEP)
 	var bu := RBm.spawn_undead(0, 0, -60)
-	ok("so a shambler has 2.5 times a fourth-week shambler's health, and hits 1.9 times as hard", absf(bu.mhp - D.UN[0].hp * 2.8 * 2.5) < 0.5 and is_equal_approx(RBm.crowd_d, 1.9), [bu.mhp, RBm.crowd_d])
+	ok("so a shambler has 2.5 times a fourth-week shambler's health, and hits 1.9 times as hard", absf(bu.mhp - D.UN[0].hp * D.DEAD_HP[3] * 2.5) < 0.5 and is_equal_approx(RBm.crowd_d, 1.9), [bu.mhp, RBm.crowd_d])
 	# the harvest moon: they mend
 	var RH := Rules.new()
 	RH.new_game([{"id": 1, "name": "Matt", "col": 0}])

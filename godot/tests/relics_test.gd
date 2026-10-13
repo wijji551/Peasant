@@ -174,11 +174,11 @@ func _init() -> void:
 	ok("a rune once in a long while", runes > 2000 * 0.015 and runes < 2000 * 0.06, runes)
 	ok("and very rarely something somebody dropped", things > 5 and things < 70, things)
 	# ---------- the dead last longer as the month goes on
-	ok("week by week the dead take more putting down", Rules.hp_of(3) == 1.0 and Rules.hp_of(10) == 1.5 and Rules.hp_of(17) == 2.1 and Rules.hp_of(25) == 2.8)
+	ok("week by week the dead take more putting down", Rules.hp_of(3) == D.DEAD_HP[0] and Rules.hp_of(10) == D.DEAD_HP[1] and Rules.hp_of(17) == D.DEAD_HP[2] and Rules.hp_of(25) == D.DEAD_HP[3] and D.DEAD_HP == [2.0, 4.5, 6.3, 8.4])
 	ok("while what they hit for grows as before", is_equal_approx(Rules.tough_of(25), 1.3))
 	R.day = 16; R.dusk_falls(); R.timeLeft = 0.01; R.step(STEP)
 	var sh := R.spawn_undead(0, 0, -60)
-	ok("a shambler of the third week has rather more than twice the health", absf(sh.mhp / (D.UN[0].hp * R.crowd) - 2.1 * (D.BELLS.hp if R.bells() else 1.0)) < 0.01, sh.mhp)
+	ok("a shambler of the third week has the third week's health", absf(sh.mhp / (D.UN[0].hp * R.crowd) - D.DEAD_HP[2] * (D.BELLS.hp if R.bells() else 1.0)) < 0.01, sh.mhp)
 	# ---------- the nights of the bells
 	var by_week := {2: 0, 3: 0, 4: 0}
 	var bad_day := false
@@ -198,7 +198,7 @@ func _init() -> void:
 	RB.dusk_falls(); RB.timeLeft = 0.01; RB.step(STEP)
 	ok("on the night, the bells are rung", RB.phase == "night" and RB.bells() and RB.ev.any(func(e): return e[0] == "bells"), [bd, RB.phase])
 	var su := RB.spawn_undead(0, 0, -60)
-	ok("and the dead are enraged: more health, harder blows, quicker", absf(su.mhp / (D.UN[0].hp * RB.crowd) - 1.5 * D.BELLS.hp) < 0.01 and is_equal_approx(RB.tough, 1.1 * D.BELLS.dmg) and is_equal_approx(RB.wspeed(), D.BELLS.speed), [su.mhp, RB.tough, RB.wspeed()])
+	ok("and the dead are enraged: more health, harder blows, quicker", absf(su.mhp / (D.UN[0].hp * RB.crowd) - D.DEAD_HP[1] * D.BELLS.hp) < 0.01 and is_equal_approx(RB.tough, 1.1 * D.BELLS.dmg) and is_equal_approx(RB.wspeed(), D.BELLS.speed), [su.mhp, RB.tough, RB.wspeed()])
 	RB.day = bd + 1 if not Rules.bells_night(R.gseed, bd + 1, D.MONTH) else bd - 1
 	ok("the night after is an ordinary one", not RB.bells())
 	for l in lines: print(l)

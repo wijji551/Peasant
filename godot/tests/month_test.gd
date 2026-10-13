@@ -288,7 +288,7 @@ func _init() -> void:
 		return t
 	ok("alone, a night is never cut down", Rules.night_plan(30, 1).crowd == 1.0 and heads.call(30, 1) < D.NIGHT_HEADS)
 	var p8: Dictionary = Rules.night_plan(30, 8)
-	ok("eight players, the last night: about 420 rise, each several times as tough", absi(heads.call(30, 8) - D.NIGHT_HEADS) < 12 and p8.crowd > 3.0 and p8.crowd < 3.6, [heads.call(30, 8), p8.crowd])
+	ok("eight players, the last night: about 420 rise, each twice as tough or more", absi(heads.call(30, 8) - D.NIGHT_HEADS) < 12 and p8.crowd > 1.8 and p8.crowd < 2.8, [heads.call(30, 8), p8.crowd])   # (3 to 3.6 before version 7.2: the hard kinds are dearer, so fewer of them fill the horde)
 	ok("and every kind still comes", p8.c[D.U_RAM] >= 1 and p8.c[D.U_WRAITH] >= 1)
 	var X := Rules.new()
 	X.new_game([{"id": 1, "name": "A", "col": 0}, {"id": 2, "name": "B", "col": 1}])

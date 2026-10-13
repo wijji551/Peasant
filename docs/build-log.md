@@ -496,3 +496,12 @@ Still nothing built. The designer went through the open questions one by one; th
 - **Rain** ambience at 0.34, not 0.8.
 - **A cockerel at dawn** (`sfx_cockerel`, made in `tools/make_sounds.py`).
 - Tests: relics 45 (seven new: the censer's smoke, reach, bosses, strike rate and clearing; the crossbow; the stones). Everything else as before; co-op host 15, friend 12, latecomer 9.
+
+## Version 7.2: the harder dead (build counter 9)
+
+- **Health** (`D.DEAD_HP`): `[2.0, 4.5, 6.3, 8.4]`, was `[1, 1.5, 2.1, 2.8]`: twice in the first week, three times after, the weekly rise kept. Bosses take their own health and are not touched (that is 7.3).
+- **Three new kinds, from night 1** (appended to `D.UN`, so the old numbers stand): the bloated dead (14, `burst`: on death `burst()` does `D.BURST.living` × the week's harm to players and peasants within 2.8, and 60 to the dead, other bloated ones included, so they go off in chains); the pallbearer (15, `lid`: in `hit_u`, a blow whose source is in front of it, within about 72 degrees of where it faces, does `D.LID` = a quarter, unless it is heavy or a burn); the grave hound (16, `hound`: quick and frail; it counts a player as six times further off than a peasant when choosing whom to go for, and sees further). Each has its own shape in `models.gd`, a lines in the dusk notice, and the handbook.
+- **The mix by week** (`Rules.mix`): the old weights are kept within each class, then each class is scaled to `D.MIX_SHARE` for the week: easy (shamblers, skeletons, hounds), middling (everything else), hard (the guard, wraiths, coffin rams). A class with nobody in it yet passes its share down. One consequence: on the last night with eight players the horde is still 420 heads, but each is about 2.1 times as tough where it was 3 to 3.6, because the hard kinds are dearer.
+- **The glow**: every one of the dead but the bosses (and the wraith, which has its own) is drawn with a shader that gives a faint green-white rim (`dead.gd` `_evil()`).
+- Picture hook `DTV_KINDS=14,15,16` lines up the named kinds in front of the player.
+- Tests: new `dead_test` (18); the old tests that had the health numbers written into them now read `D.DEAD_HP`; month 50, rules 117, relics 45, platform 37; co-op host 15, friend 12, latecomer 9.

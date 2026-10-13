@@ -828,6 +828,9 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"gamble":
 			if ev[1] == me.id: Sound.play("coin" if ev[2] else "no", 0.9)
 		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
+		"burst":                                          # one of the bloated dead, going off
+			F.puff(ev[1], 0.8, ev[2], 34, F.C_BURST, 6.5); F.shock(ev[1], ev[2], D.BURST.reach, Color(0.62, 0.72, 0.3))
+			Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
 		"bshout": Sound.play("shout", 0.75)              # Robert Bailiff, at his window: he carries right across the village
 		"bells": hud.banner("The bells!", "The congregation is ringing. The dead are enraged: quicker, stronger and harder to put down, until dawn.", 6.0); world.ring_bell(); Sound.play("bell", 1.0)
 		"zap": _later.append([0.36, ev])                 # the Thunderer's Bow: the lightning jumps when the arrow lands
@@ -1280,6 +1283,12 @@ func _test_hook() -> void:
 			me.atkCd = 0; me.r = PI; me.goal_r = PI; R.do_attack(me)
 		elif _frame == at + 26 and OS.get_environment("DTV_FIGHT_ABL") != "":
 			me.abCd = 0; R.do_ability(me)
+	if OS.get_environment("DTV_KINDS") != "" and me and _frame == at + 2:     # for pictures: a row of the dead, standing still. DTV_KINDS=14,15,16
+		if win.visible: win.close()
+		var ks := OS.get_environment("DTV_KINDS").split(",")
+		for i in ks.size():
+			var ku := R.spawn_undead(int(ks[i]), me.x - (ks.size() - 1) * 1.3 + i * 2.6, me.z - 4.0)
+			ku.state = "walk"; ku.t = 0; ku.stun = 999; ku.r = PI * 0.15; ku.hp = 400; ku.mhp = 400
 	if OS.get_environment("DTV_CENSER") != "" and me and _frame == at + 2:    # for pictures: the Smoking Censer, and the dead in and out of its smoke
 		me.trk = 27
 		if win.visible: win.close()

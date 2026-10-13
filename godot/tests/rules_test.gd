@@ -190,11 +190,11 @@ func run() -> void:
 	X.do_act(m, "bless", "w"); ok("the priest blesses a sword for two shillings", (m.bless & 1) == 1 and m.coin == 6, m.coin)
 	var hu: E.Undead = mob(1, 0, 1.4)[0]
 	m.atkCd = 0; m.r = 0; m.combo = 0; X.do_attack(m)
-	var holy_dmg: float = D.UN[0].hp - hu.hp
+	var holy_dmg: float = hu.mhp - hu.hp
 	clear_u(); m.bless = 0
 	var pu2: E.Undead = mob(1, 0, 1.4)[0]
 	m.atkCd = 0; m.combo = 0; X.do_attack(m)
-	var plain: float = D.UN[0].hp - pu2.hp
+	var plain: float = pu2.mhp - pu2.hp
 	clear_u()
 	ok("a blessed blow does half as much again", absf(holy_dmg / plain - 1.5) < 0.02, "%.1f vs %.1f" % [holy_dmg, plain])
 	X.do_act(m, "bless", "w"); ok("no blessing without the fee", m.bless == 0 and m.coin == 6)
@@ -277,7 +277,7 @@ func run() -> void:
 	X.do_act(m, "drink"); fast(3.2); ok("the fourth sends you out charging", m.state == "ok" and m.charge > 15 and m.cg == 0 and R.peasants.any(func(q): return q.state == "follow"), "%s %.1f" % [m.state, m.charge])
 	m.r = 0
 	var cu: E.Undead = mob(1, 0, 1.4)[0]
-	m.wpn = 1; m.bless = 0; m.atkCd = 0; m.combo = 0; X.do_attack(m); ok("a charging blow is far stronger", (D.UN[0].hp - cu.hp) > plain * 1.5, "%.1f" % (D.UN[0].hp - cu.hp))
+	m.wpn = 1; m.bless = 0; m.atkCd = 0; m.combo = 0; X.do_attack(m); ok("a charging blow is far stronger", (cu.mhp - cu.hp) > plain * 1.5, "%.1f" % (cu.mhp - cu.hp))
 	clear_u()
 	fast(21); ok("then the hangover", m.charge == 0 and m.hang > 5, m.hang)
 	fast(11); ok("which passes", m.hang == 0)

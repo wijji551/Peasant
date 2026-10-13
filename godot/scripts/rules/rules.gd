@@ -1354,6 +1354,7 @@ func kill_undead(u: E.Undead) -> void:
 	u.dead = true; stats.kills += 1
 	if night: night.kills += 1
 	var U: Dictionary = D.UN[u.k]
+	if U.burst: burst(u)
 	if not big(u) and not U.fly and not U.ghost:
 		graves.append({"x": u.x, "z": u.z, "k": u.k})
 		if graves.size() > 40: graves.pop_front()
@@ -1409,6 +1410,14 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if U.fly and not s.get("ranged", false) and not s.get("ring", false): d *= 0.35   # bats are hard to hit with anything you swing
 	if U.ram and s.get("heavy", false): d *= 2
 	if U.lord and not holy: d *= 0.6
+	if U.lid and not s.get("heavy", false) and not s.get("dot", false):   # a pallbearer: the coffin lid takes what comes from the front
+		var who = s.get("p", s.get("q"))
+		var ax: float = s.x if s.has("x") else who.x if who else u.x
+		var az: float = s.z if s.has("z") else who.z if who else u.z
+		var vx := ax - u.x
+		var vz := az - u.z
+		var l := sqrt(vx * vx + vz * vz)
+		if l > 0.05 and (vx * sin(u.r) + vz * cos(u.r)) / l > 0.3: d *= D.LID
 	u.hp -= d
 	if s.get("p") or s.get("q") or s.get("dot", false):          # for the view: where, how much, and how it told
 		# 0 an ordinary blow, 1 a telling one, 2 a feeble one (wrong tool for the job), 3 a lucky double, 4 burning
@@ -1433,6 +1442,18 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 			u.state = "pile"; u.t = 3.6; u.revived = true; u.hp = 0; u.stun = 0; u.pin = 0; u.fear = 0
 		else:
 			kill_undead(u)
+
+## The bloated dead, put down: they go off, and everything near them, living or dead, gets the worst of it.
+func burst(u: E.Undead) -> void:
+	var r2: float = D.BURST.reach * D.BURST.reach
+	ev.append(["burst", r1(u.x), r1(u.z)])
+	for p in players:
+		if p.state == "ok" and p.room == "" and D.d2(u.x, u.z, p.x, p.z) < r2: hurt_friend(p, D.BURST.living * tough, true, u, false)
+	for q in peasants:
+		if active(q) and D.d2(u.x, u.z, q.x, q.z) < r2: hurt_friend(q, D.BURST.living * tough, false, u, false)
+	for o in undead.duplicate():
+		if o != u and not o.dead and o.state != "rise" and D.d2(u.x, u.z, o.x, o.z) < r2: hit_u(o, D.BURST.dead, {"farm": false})
+
 
 func nerve_hit(q: E.Peasant, n: float) -> void:   # a fright. At no nerve left, a peasant runs for the keep until dawn.
 	var own := player_by_id(q.owner)
@@ -2397,7 +2418,18 @@ static func mix(md: int, newk: Array) -> Array:
 	if md >= 15: w[D.U_GUARD] = 0.18
 	if md >= 18: w[D.U_WRAITH] = 0.12
 	if md >= 20: w[D.U_RAM] = 0.12
+	w[D.U_HOUND] = 0.25; w[D.U_BLOAT] = 0.14; w[D.U_PALL] = 0.16
 	for k in newk: w[k] *= 1.5                      # the night they first come, there are rather a lot of them
+	# then shared out between the easy, the middling and the hard, by the week: the later, the harder
+	var share: Array = D.MIX_SHARE[clampi(week_of(md) - 1, 0, 3)].duplicate()
+	var cls := func(k: int) -> int: return 0 if D.MIX_EASY.has(k) else 2 if D.MIX_HARD.has(k) else 1
+	var tot := [0.0, 0.0, 0.0]
+	for k in w.size(): tot[cls.call(k)] += w[k]
+	for c in [2, 1]:                                # nobody hard yet: their share goes to the middling, and so on down
+		if tot[c] <= 0: share[c - 1] += share[c]; share[c] = 0.0
+	for k in w.size():
+		var c: int = cls.call(k)
+		if w[k] > 0 and tot[c] > 0: w[k] = w[k] / tot[c] * share[c]
 	return w
 
 ## The kinds of dead coming down for the first time on night d.
@@ -2545,7 +2577,10 @@ func tonight_lines() -> Array:
 		D.U_BATS: "bat swarms, which fly over everything straight for the keep. Slings, bows and the handbell bring them down",
 		D.U_GUARD: "the Lord’s guard: armoured, hard on walls, and barely dented by farm tools. Maces and hammers",
 		D.U_WRAITH: "wraiths, which drift through walls. Ordinary weapons pass straight through them: only holy things hurt them",
-		D.U_RAM: "a coffin ram, carried down the road at the north gate. A warhammer, or a very strong gate"}
+		D.U_RAM: "a coffin ram, carried down the road at the north gate. A warhammer, or a very strong gate",
+		D.U_BLOAT: "the bloated dead, slow and very full, who burst when they are put down and take everything near them along. Do it from a distance",
+		D.U_PALL: "pallbearers, carrying a coffin lid in front of them like a shield. Go round the side, or bring something heavy, or fire",
+		D.U_HOUND: "grave hounds, quick and frail, who go for your posse before they go for you. Keep your peasants close"}
 	var nk := new_kinds(day, last_day)
 	if nk.size():
 		var bits := []
@@ -3246,14 +3281,14 @@ func undead_step(dt: float) -> void:
 		if U.dig and not u.dug and u.z < D.VN - 0.5 and u.z > D.VN - 7 and u.pin <= 0:
 			u.state = "dig"; u.t = 5.0
 			continue
-		var sight := 64.0 if u.k == 2 and weather == "fog" else 169.0 if u.k == 2 else 30.0 if U.boss else 196.0 if U.tenant else 49.0
+		var sight := 64.0 if u.k == 2 and weather == "fog" else 169.0 if u.k == 2 else 30.0 if U.boss else 196.0 if U.tenant else 121.0 if U.hound else 49.0
 		var tgt = null
 		var tp := false
 		var bd := sight
 		if not U.fly:                             # bats do not stop for anyone: they want the keep
 			for p in players:
 				if p.state == "ok" and p.room == "":
-					var d := D.d2(u.x, u.z, p.x, p.z)
+					var d := D.d2(u.x, u.z, p.x, p.z) * (6.0 if U.hound else 1.0)   # a grave hound would much rather have a peasant
 					if d < bd:
 						bd = d; tgt = p; tp = true
 			if not U.boss:

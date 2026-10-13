@@ -203,7 +203,7 @@ const BURN_TIME := 4.0               # how long a thing set alight burns, and wh
 const BURN_DMG := 3.0
 ## How much longer the ordinary dead last, week by week. (It was a tenth more a week, while a peasant's blows grow
 ## three- or four-fold over the month: by week three everything died to one blow.) What they hit for still grows a tenth a week.
-const DEAD_HP := [1.0, 1.5, 2.1, 2.8]
+const DEAD_HP := [2.0, 4.5, 6.3, 8.4]   # (version 7.1 and before: 1, 1.5, 2.1, 2.8. Twice that in the first week, three times after: they were too easy)
 ## The nights of the bells: three nights a month the priest and his congregation ring the chapel bells till dawn. It is
 ## meant to keep the dead away. It enrages them: they come on faster, hit harder and take more putting down.
 const BELLS := {"n": 3, "speed": 1.12, "dmg": 1.25, "hp": 1.25, "hat": 2.0}
@@ -409,13 +409,26 @@ const _UN := [
 	{"name": "the Captain of the Guard", "hp": 1500.0, "spd": 1.45, "dmg": 24.0, "sdmg": 45.0, "kdmg": 10.0, "cd": 1.3, "r": 0.8, "boss": true, "armour": true, "first": 21},
 	{"name": "the Lord", "hp": 2600.0, "spd": 1.6, "dmg": 30.0, "sdmg": 60.0, "kdmg": 25.0, "cd": 1.2, "r": 0.8, "boss": true, "lord": true, "first": 30},
 	{"name": "the Previous Tenant", "hp": 260.0, "spd": 2.7, "dmg": 16.0, "sdmg": 14.0, "kdmg": 6.0, "cd": 1.15, "r": 0.6, "tenant": true, "first": 99, "cost": 6.0},
+	# version 7.2: three more, from the first night
+	{"name": "bloated dead", "hp": 80.0, "spd": 1.0, "dmg": 8.0, "sdmg": 8.0, "kdmg": 3.0, "cd": 1.5, "r": 0.62, "burst": true, "first": 1, "cost": 1.8},
+	{"name": "pallbearer", "hp": 60.0, "spd": 1.45, "dmg": 10.0, "sdmg": 9.0, "kdmg": 4.0, "cd": 1.3, "r": 0.55, "lid": true, "first": 1, "cost": 1.6},
+	{"name": "grave hound", "hp": 20.0, "spd": 4.4, "dmg": 6.0, "sdmg": 2.0, "kdmg": 1.0, "cd": 0.75, "r": 0.4, "hound": true, "first": 1, "cost": 0.6},
 ]
 const _UN_DEF := {"rng": 0.0, "bony": false, "boss": false, "climb": false, "dig": false, "fly": false, "armour": false, "ghost": false,
-	"ram": false, "hearse": false, "lord": false, "tenant": false, "first": 1, "cost": 1.0}
+	"ram": false, "hearse": false, "lord": false, "tenant": false, "burst": false, "lid": false, "hound": false, "first": 1, "cost": 1.0}
 static var UN: Array = _fill(_UN, _UN_DEF)
 const U_TENANT := 13                 # the Previous Tenant: what sometimes comes up when the outer ruins are searched by day
 const TENANT_CHANCE := 0.05          # a search: one in twenty, and a little more each week
 const U_STEWARD := 3
+const U_BLOAT := 14                  # bursts when put down, and takes whatever is near with it
+const U_PALL := 15                   # carries a coffin lid in front: blows from the front do a quarter
+const U_HOUND := 16                  # quick and frail, and goes for the posse first
+const BURST := {"reach": 2.8, "living": 22.0, "dead": 60.0}
+const LID := 0.25                    # what a blow from the front does to a pallbearer, unless it is heavy or fire
+## How a night's horde is shared out, week by week: [easy, middling, hard]. The easy dead thin out as the month goes on.
+const MIX_SHARE := [[0.75, 0.25, 0.0], [0.5, 0.333, 0.167], [0.333, 0.333, 0.334], [0.167, 0.333, 0.5]]
+const MIX_EASY := [0, 1, 16]                     # shamblers, skeletons, grave hounds
+const MIX_HARD := [7, 8, 9]                      # the Lord's guard, wraiths, coffin rams (everything else is middling)
 const U_GHOUL := 4
 const U_DIGGER := 5
 const U_BATS := 6

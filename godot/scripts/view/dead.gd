@@ -3,9 +3,9 @@ extends Node3D
 ## MultiMesh: every one of them is a transform and a colour, as in the web version. A flash when hit, a lean
 ## back when stunned or pinned, greener when frightened, redder when cracked open by a Shatter.
 
-const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord", "tenant"]
-const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55, 1.25]
-const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4]
+const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord", "tenant", "bloat", "pall", "hound"]
+const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55, 1.25, 1.15, 1.1, 1.0]
+const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4, 120, 120, 160]
 
 var fx: Node3D                       # for the puffs when they are hit and when they go
 var _body := []                      # MultiMesh per kind
@@ -16,8 +16,29 @@ var _v := {}                         # undead id -> what the view remembers: [x,
 
 func _ready() -> void:
 	for k in KINDS.size():
-		_body.append(_mm(Models.get_mesh(KINDS[k]), MAX[k], _ghostly() if k == D.U_WRAITH else null))
+		_body.append(_mm(Models.get_mesh(KINDS[k]), MAX[k], _ghostly() if k == D.U_WRAITH else null if D.UN[k].boss else _evil()))
 		_eyes.append(_mm(Models.get_mesh(KINDS[k] + "_eyes"), MAX[k], Models.glow()))
+
+
+## Every one of the dead that is not a boss: a mild, evil glow about the edges, which shows best at night.
+static var _evil_mat: Material
+static func _evil() -> Material:
+	if _evil_mat == null:
+		var sh := Shader.new()
+		sh.code = """shader_type spatial;
+uniform vec3 hue = vec3(0.42, 1.0, 0.36);
+void fragment() {
+	ALBEDO = COLOR.rgb;
+	ROUGHNESS = 1.0;
+	SPECULAR = 0.15;
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.4);
+	EMISSION = hue * (rim * 0.5 + 0.035);
+}
+"""
+		var m := ShaderMaterial.new()
+		m.shader = sh
+		_evil_mat = m
+	return _evil_mat
 
 
 static var _ghost_mat: Material
@@ -113,6 +134,11 @@ func sync(R: Rules, delta: float) -> void:
 			xf = _xf(v[0], absf(sin(walk * 1.2)) * 0.08 * mv, v[1], v[2], sin(atk * PI) * -0.15, sin(walk * 1.2) * 0.03, Vector3(s, s, s))
 		elif k == D.U_COACH:                                        # the hearse rocks along
 			xf = _xf(v[0], absf(sin(walk * 2.0)) * 0.06 * mv, v[1], v[2], sin(atk * PI) * 0.1, sin(walk * 1.3) * 0.04 * mv, Vector3(s, s, s))
+		elif k == D.U_BLOAT:                                       # waddling, and wobbling as it goes
+			var wob := sin(walk * 1.4) * 0.05 * mv
+			xf = _xf(v[0], y, v[1], v[2], dz * 0.6 + sin(atk * PI) * 0.25, sin(walk * 0.7) * 0.14, Vector3(s * (1 + wob), s * (1 - wob), s * (1 + wob)))
+		elif k == D.U_HOUND:                                       # loping, low to the ground
+			xf = _xf(v[0], y + absf(sin(walk * 1.6)) * 0.12 * mv, v[1], v[2], sin(walk * 1.6) * 0.08 * mv + sin(atk * PI) * 0.35, 0.0, Vector3(s, s, s))
 		elif k == 0 or k == D.U_DIGGER:
 			xf = _xf(v[0], y, v[1], v[2], 0.08 + dz + sin(atk * PI) * 0.5, sin(walk * 0.8) * 0.11, Vector3(s, s, s))
 		elif k == 3 or k == D.U_CAPTAIN or k == D.U_LORD:
