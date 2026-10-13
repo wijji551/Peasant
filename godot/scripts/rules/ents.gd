@@ -241,6 +241,8 @@ class Struct:
 	var hp := 0.0
 	var mhp := 0.0
 	var slot := -1          # a north wall foundation (0-6), or -1 for something placed
+	var site := -1          # a watch tower site (0-3) or a side gate (4 west, 5 east), or -1
+	var kept := true        # a watch tower: seen to today (its upkeep paid), so somebody will climb it
 	var hc := 0
 	var re := false         # reinforced
 	var bl := false         # a blessed body built in

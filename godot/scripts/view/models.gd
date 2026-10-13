@@ -397,6 +397,27 @@ static func _build(name: String, b: Mesher) -> void:
 			for sx in [-1, 1]: b.box(0.08, 1.9, 0.08, sx * 0.28, 0, 1.18, P.wood2, 0, -0.22, 0)
 			for yy in [0.35, 0.75, 1.15, 1.5]: b.box(0.56, 0.07, 0.07, 0, yy, 1.26 - yy * 0.22, P.wood3)
 			b.box(0.5, 0.42, 0.5, 0.6, 1.76, 0.55, P.wood3).box(0.36, 0.1, 0.36, 0.6, 2.18, 0.55, P.stone)
+		"tower":                                         # a watch tower: four tall posts, a deck all round with a parapet, braces and a ladder
+			for sx in [-1, 1]:
+				for sz in [-1, 1]: b.box(0.32, 4.2, 0.32, sx * 1.05, 0, sz * 1.05, P.timber)
+			for sx in [-1, 1]: b.box(0.12, 0.12, 2.4, sx * 1.05, 1.2, 0, P.wood2, 0, 0.75, 0)
+			for sz in [-1, 1]: b.box(2.4, 0.12, 0.12, 0, 1.2, sz * 1.05, P.wood2, 0, 0, 0.75)
+			b.box(2.9, 0.2, 2.9, 0, 2.8, 0, P.wood)
+			for sx in [-1, 1]: b.box(0.12, 0.7, 2.9, sx * 1.4, 3.0, 0, P.wood3)
+			b.box(2.9, 0.7, 0.12, 0, 3.0, -1.4, P.wood3).box(1.1, 0.7, 0.12, -0.9, 3.0, 1.4, P.wood3).box(1.1, 0.7, 0.12, 0.9, 3.0, 1.4, P.wood3)
+			for i in 4: b.box(0.32, 0.3, 0.16, -1.05 + i * 0.7, 3.7, -1.42, P.wood2)
+			for sx in [-1, 1]: b.box(0.08, 2.9, 0.08, sx * 0.3, 0, 1.55, P.wood2, 0, -0.18, 0)
+			for yy in [0.4, 0.95, 1.5, 2.05, 2.6]: b.box(0.62, 0.07, 0.07, 0, yy, 1.62 - yy * 0.18, P.wood3)
+			b.box(0.55, 0.45, 0.55, 0.85, 3.0, 0.75, P.wood3).box(0.4, 0.12, 0.4, 0.85, 3.45, 0.75, P.stone)
+		"tower_roof":
+			for sx in [-1, 1]:
+				for sz in [-1, 1]: b.box(0.18, 1.3, 0.18, sx * 1.3, 3.6, sz * 1.3, P.timber)
+			b.cyl(0, 2.3, 1.3, 4, 0, 4.9, 0, P.roof2, PI / 4)
+		"foundTower":
+			b.box(2.7, 0.14, 2.7, 0, 0, 0, P.stone2)
+			for sx in [-1, 1]:
+				for sz in [-1, 1]: b.box(0.42, 0.45, 0.42, sx * 1.05, 0, sz * 1.05, P.stone3)
+			for i in 3: b.box(2.2, 0.05, 0.18, 0, 0.14, -0.7 + i * 0.7, P.wood3)
 		"platform_roof":
 			for sx in [-1, 1]:
 				for sz in [-1, 1]: b.box(0.16, 1.1, 0.16, sx * 0.95, 2.9, sz * 0.95, P.timber)

@@ -38,6 +38,20 @@ func _init() -> void:
 	m.jumpCd = 0; m.frozen = 1.0
 	ok("nor when frozen", not R.jump(m, 1.0, 0.0))
 	m.frozen = 0
+	m.jumpCd = 0; m.r = PI; m.x = 0.0; m.z = -40.0          # on the castle road, facing north; jump south, backwards, and keep facing north
+	var z0 := m.z; x0 = m.x
+	R.jump(m, 0.0, 1.0)
+	for i in 15: R.move_player(m, 0.0, 0.0, STEP)
+	ok("a jump backwards goes backwards, still facing forwards", absf(m.z - z0 - D.JUMP.dist) < 0.3 and absf(m.r - PI) < 0.01, [m.z - z0, m.r])
+	m.jumpCd = 0; x0 = m.x
+	R.jump(m, -1.0, 0.0)
+	for i in 15: R.move_player(m, 0.0, 0.0, STEP)
+	ok("and to the side goes to the side", absf(x0 - m.x - D.JUMP.dist) < 0.3, x0 - m.x)
+	m.jumpCd = 0; x0 = m.x; z0 = m.z
+	ok("with nothing pressed, a jump on the spot", R.jump(m, 0.0, 0.0) and m.jumpT > 0)
+	for i in 15: R.move_player(m, 0.0, 0.0, STEP)
+	ok("which goes nowhere", absf(m.x - x0) < 0.01 and absf(m.z - z0) < 0.01)
+	m.jumpCd = 0
 	# ---------- the last night begins with his shadow
 	R.day = 30
 	R.weather = "clear"

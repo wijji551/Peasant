@@ -5,7 +5,7 @@ extends RefCounted
 
 # --- the map (x east, z south; north is -z)
 const VW := 28.0
-const VN := -22.0
+const VN := -25.0                    # moved forward three paces in version 7.5, to make room for the watch towers behind it
 const VS := 26.0
 const GATE_Z := 2.0
 const KEEP_X := 0.0
@@ -61,22 +61,23 @@ const GK := ["", "tree", "stone", "iron", "food", "fish", "search", "steel"]
 const STEEL_MINE := {"x": -108.0, "z": -44.0}      # the old steel mine, at the top of the forest. It does not move.
 const MILL := {"x": 104.0, "z": 30.0}              # the old mill, on the eastern downs: a landmark, and something to walk round
 const COST := {"barricade": {"wood": 5}, "spikes": {"wood": 8}, "wall": {"wood": 15}, "gate": {"wood": 20}, "bodywall": {"bodies": 3}, "decoy": {"bodies": 1},
-	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}, "platform": {"wood": 20}}
+	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}, "platform": {"wood": 20}, "tower": {"wood": 25, "stone": 8}}
 const REINF := {
 	"platform": {"cost": {"wood": 10}, "mul": 1.0, "name": "roof it", "smith": 0},
+	"tower": {"cost": {"wood": 10}, "mul": 1.0, "name": "roof it", "smith": 0},
 	"wall": {"cost": {"stone": 10}, "mul": 3.0, "name": "face it with stone", "smith": 0},
 	"gate": {"cost": {"iron": 8}, "mul": 2.0, "name": "band it with iron", "smith": 0},
 	"barricade": {"cost": {"iron": 3}, "mul": 2.0, "name": "brace it with iron", "smith": 0},
 	"spikes": {"cost": {"iron": 4}, "mul": 1.0, "name": "tip them with iron", "smith": 2},
 }
 const SHP := {"barricade": 90.0, "spikes": 40.0, "wall": 260.0, "gate": 220.0, "bodywall": 110.0, "decoy": 70.0,
-	"chicken": 40.0, "pitfall": 4.0, "tar": 100.0, "trough": 60.0, "logs": 1.0, "thresher": 160.0, "platform": 200.0}   # a pitfall: how many it swallows; tar and the trough wear out with use
+	"chicken": 40.0, "pitfall": 4.0, "tar": 100.0, "trough": 60.0, "logs": 1.0, "thresher": 160.0, "platform": 200.0, "tower": 320.0}   # a pitfall: how many it swallows; tar and the trough wear out with use
 const SDIM := {"barricade": Vector2(1.7, 0.45), "spikes": Vector2(1.7, 0.8), "wall": Vector2(3, 0.45), "gate": Vector2(3, 0.45), "bodywall": Vector2(1.7, 0.5), "decoy": Vector2(0.45, 0.45),
-	"chicken": Vector2(0.5, 0.5), "pitfall": Vector2(1.2, 1.2), "tar": Vector2(1.8, 1.2), "trough": Vector2(1.7, 0.5), "logs": Vector2(1.6, 1.0), "thresher": Vector2(0.9, 0.9), "platform": Vector2(1.1, 1.1)}
+	"chicken": Vector2(0.5, 0.5), "pitfall": Vector2(1.2, 1.2), "tar": Vector2(1.8, 1.2), "trough": Vector2(1.7, 0.5), "logs": Vector2(1.6, 1.0), "thresher": Vector2(0.9, 0.9), "platform": Vector2(1.1, 1.1), "tower": Vector2(1.25, 1.25)}
 const SNAME := {"barricade": "barricade", "spikes": "spike row", "wall": "palisade wall", "gate": "gate", "bodywall": "body wall", "decoy": "decoy",
-	"chicken": "chicken decoy", "pitfall": "pitfall", "tar": "tar pit", "trough": "holy water trough", "logs": "log roller", "thresher": "Thresher", "platform": "watch platform"}
-const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy", "chicken", "pitfall", "tar", "trough", "logs", "thresher", "platform"]
-const BLOCKERS := ["wall", "gate", "barricade", "bodywall", "decoy", "chicken"]   # what the dead have to break, or go round
+	"chicken": "chicken decoy", "pitfall": "pitfall", "tar": "tar pit", "trough": "holy water trough", "logs": "log roller", "thresher": "Thresher", "platform": "watch platform", "tower": "watch tower"}
+const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy", "chicken", "pitfall", "tar", "trough", "logs", "thresher", "platform", "tower"]
+const BLOCKERS := ["wall", "gate", "barricade", "bodywall", "decoy", "chicken", "tower"]   # what the dead have to break, or go round
 ## Contraptions: the peasant community's inventions, learned from Barricades for Beginners (or built with a box of cogs).
 const CONTRAPTIONS := ["chicken", "pitfall", "tar", "trough", "logs", "thresher"]
 const CONTR := {
@@ -87,10 +88,26 @@ const CONTR := {
 	"logs": {"rank": 6, "d": "A stack of logs north of the wall. Once a night, when a crowd or a coffin ram comes down the road past it, it rolls them flat"},
 	"thresher": {"rank": 7, "d": "A spinning flail. Hits everything round it, as long as someone is near enough to turn the handle"},
 }
-const BUILDS := ["barricade", "spikes", "platform", "bodywall", "decoy"]
+const BUILDS := ["barricade", "spikes", "bodywall", "decoy"]   # the watch platform went in version 7.5: it became the watch tower, and moved
 ## The watch platform: one of your posse stands on it from dusk and throws stones over the wall at whatever comes
 ## within reach. Up there the dead cannot get at them, except archers; a roof (ten more wood) stops the arrows.
 const PLAT := {"reach": 13.0, "wait": 1.5, "dmg": 5.0}
+## The watch towers (version 7.5): four sites just behind the north wall, one in each corner and one either side of the gate.
+## Up to six peasants, from anybody's posse, stand in each and throw stones as the platform did, a little further.
+## Each dawn a tower wants seeing to (its upkeep), or nobody will climb it that night. Taking one down gives back half.
+const TOWER_SITES := [[-24.5, VN + 5.0], [-10.0, VN + 5.0], [10.0, VN + 5.0], [24.5, VN + 5.0]]
+const TOWER_NAMES := ["the north-west corner", "west of the north gate", "east of the north gate", "the north-east corner"]
+const TOWER := {"seats": 6, "reach": 15.0, "upkeep": {"wood": 4, "iron": 1}, "back": 0.5}
+## The side gates: the west and east gateways, which the dead now use too (sites 4 and 5). In the first two weeks
+## they use one a night, east one night and west the next; from the third week, both. share: of the horde, for each.
+const SIDE_SITES := [[-VW, GATE_Z], [VW, GATE_Z]]
+const TOWER_UP := ["%s has gone up the watch tower with a bucket of stones, and will be up there from dusk.",
+	"%s has been given a place in the watch tower. They have asked whether there is a roof. There may be.",
+	"%s is to go up the watch tower at dusk, and has gone very quiet about it."]
+const TOWER_DOWN := ["%s has been coaxed down from the safety of the watch tower, with some difficulty.",
+	"%s has come down from the watch tower, wanting to know what was wrong with it up there.",
+	"%s has been talked down from the watch tower. It took a while, and a promise."]
+const SIDE := {"share": 0.2, "both": 3}
 ## The Smoking Censer: how far its smoke reaches, and what it does to the dead inside it (walking, and striking).
 const CENSER := {"reach": 8.0, "walk": 0.5, "strike": 0.5}
 
@@ -631,7 +648,7 @@ const FAKES := ["a Splinter of the True Fence", "Saint Bob’s Left Toenail", "a
 const GUARD_FEE := 96                # 8 shillings, at Robert Bailiff's back door: a guard holds a gate for the night
 const MERC_FEE := 96                 # 8 shillings, at the Thorny Rose: a mercenary in your posse until dawn
 const GUARDS := 6
-const POSTS := [[0.0, -19.4], [-25.4, 2.0], [25.4, 2.0]]   # the north gate, the west gateway, the east gateway
+const POSTS := [[0.0, VN + 2.6], [-25.4, 2.0], [25.4, 2.0]]   # the north gate, the west gateway, the east gateway
 const POST_NAMES := ["the north gate", "the west gateway", "the east gateway"]
 const GUARD_NAMES := ["Sergeant Pike", "Corporal Dunn", "Old Gerald", "Watchman Hobb", "Halbert", "Young Gerald"]
 const MERC_NAMES := ["Gunter the Unreliable", "Big Margery", "Swiss Hans", "Ulf (no surname)", "Sir Reginald (allegedly)", "Mad Agnes", "Two-Swords Tom", "the Bastard of Bruges"]
@@ -741,6 +758,11 @@ static func qname(q) -> String:
 
 
 static func station(id: String) -> Dictionary:
+	if id.begins_with("tower"):                     # a watch tower: somewhere to stand and see about it
+		var i := int(id.substr(5))
+		if i >= 0 and i < TOWER_SITES.size():
+			return {"id": id, "x": TOWER_SITES[i][0], "z": TOWER_SITES[i][1], "r": 2.5, "name": "the watch tower " + TOWER_NAMES[i], "verb": "see about the watch tower"}
+		return {}
 	for s in STATIONS:
 		if s.id == id:
 			return s

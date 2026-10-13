@@ -1418,6 +1418,22 @@ func _test_hook() -> void:
 		for i in 5:
 			var pu := R.spawn_undead(i % 2, -9.0 + i * 2.2, D.VN - 5.0 - (i % 2))
 			pu.state = "walk"; pu.stun = 999
+	if OS.get_environment("DTV_TOWER") != "" and me and _frame == at + 2:     # for pictures: all four watch towers built and manned, and both side gates
+		var tk := 0
+		for s in R.structs:
+			if s.site < 0: continue
+			s.built = true; s.mhp = D.SHP[s.k]; s.hp = s.mhp; s.kept = true
+			if s.k != "tower": continue
+			if tk % 2 == 0: s.re = true
+			var n := 0
+			for q in R.peasants:
+				if n < 3 + tk and q.kind == 0 and q.plat == 0 and q.state != "body":
+					q.owner = me.id; q.plat = s.id; q.state = "post"; q.x = s.x; q.z = s.z; n += 1
+			tk += 1
+		R.sv += 1
+		for i in 6:
+			var pu := R.spawn_undead(i % 2, -12.0 + i * 4.5, D.VN - 5.0 - (i % 2))
+			pu.state = "walk"; pu.stun = 999
 	if OS.get_environment("DTV_BURN") != "" and _frame == at + 2 and me:      # for pictures: a few of the dead, alight
 		for i in 5:
 			var bu := R.spawn_undead(i % 2, me.x - 4.0 + i * 2.0, me.z - 3.0 - (i % 2))

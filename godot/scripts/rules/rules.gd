@@ -557,6 +557,34 @@ func mk_struct(k: String, x: float, z: float, rot: float, built: bool, hp: float
 	s.hw = D.SDIM[k].x; s.hd = D.SDIM[k].y
 	return s
 
+## The watch tower sites and the side gates, each an empty foundation until somebody builds on it.
+## Called on a new game, and after loading a save from before version 7.5 (which had neither).
+func add_sites() -> void:
+	for i in D.TOWER_SITES.size() + D.SIDE_SITES.size():
+		if structs.any(func(s): return s.site == i): continue
+		var tw := i < D.TOWER_SITES.size()
+		var at: Array = D.TOWER_SITES[i] if tw else D.SIDE_SITES[i - D.TOWER_SITES.size()]
+		var k := "tower" if tw else "gate"
+		var s := mk_struct(k, at[0], at[1], 0.0 if tw else PI / 2, false, 0, D.SHP[k], -1)
+		s.site = i
+		structs.append(s)
+
+## The watch tower on site i, if it is built.
+func tower(i) -> E.Struct:
+	if i == null: return null
+	for s in structs:
+		if s.site == int(i) and s.k == "tower" and s.built: return s
+	return null
+
+## Whoever has been given this tower (whether or not it is dark yet).
+func tower_crew(s: E.Struct) -> Array:
+	return peasants.filter(func(q): return q.plat == s.id and q.state != "body")
+
+## Which side gates the dead use tonight: -1 the west, 1 the east. One a night in the first two weeks, east then west; both after.
+func side_gates() -> Array:
+	if week_of(mday()) >= D.SIDE.both: return [-1, 1]
+	return [1] if day % 2 == 1 else [-1]
+
 # infos: [{id, name, col}] for the people playing
 func new_game(infos: Array, last: int = D.MONTH) -> void:
 	clear_world(); day = 1; gseed = 1 + randi() % 1000000; last_day = last
@@ -568,6 +596,7 @@ func new_game(infos: Array, last: int = D.MONTH) -> void:
 	for i in D.SLOTX.size():
 		var k := "gate" if i == 3 else "wall"
 		structs.append(mk_struct(k, D.SLOTX[i], D.VN, 0, false, 0, D.SHP[k], i))
+	add_sites()
 	pm = D.POSSE_SOLO if players.size() == 1 else D.POSSE_PAIR if players.size() == 2 else D.POSSE_MAX
 	for p in players:
 		add_villagers(p.slot, pm)
@@ -771,7 +800,7 @@ func save_data() -> Dictionary:
 			tree_codes.append([t.i, t.st, t.par, t.gd])
 	var ss := []
 	for s in structs:
-		ss.append({"k": s.k, "x": s.x, "z": s.z, "rot": s.rot, "built": s.built, "hp": s.hp, "max": s.mhp, "slot": s.slot, "re": s.re, "bl": s.bl, "nr": s.nr, "age": s.age})
+		ss.append({"k": s.k, "x": s.x, "z": s.z, "rot": s.rot, "built": s.built, "hp": s.hp, "max": s.mhp, "slot": s.slot, "re": s.re, "bl": s.bl, "nr": s.nr, "age": s.age, "site": s.site, "kept": s.kept})
 	var ps := []
 	for p in players:
 		ps.append(player_record(p))
@@ -898,7 +927,10 @@ func load_game(d: Dictionary, infos: Array) -> void:
 	for s in d.structs:
 		var st := mk_struct(s.k, s.x, s.z, s.rot, s.built, s.hp, s.max, int(s.slot))
 		st.re = s.re; st.bl = s.bl; st.nr = s.get("nr", false); st.age = int(s.get("age", 0))
+		st.site = int(s.get("site", -1)); st.kept = s.get("kept", true)
+		if st.slot >= 0: st.z = D.VN                   # a save from before the wall moved forward
 		structs.append(st)
+	add_sites()
 	var left_: Array = d.players.duplicate()
 	var used := {}
 	players = []
@@ -1032,7 +1064,7 @@ func collide_friend(e, r: float, axis: int = -1) -> void:   # villagers: buildin
 	for c in near_colliders(e.x, e.z):
 		push_out(e, r, c, axis)
 	for s in structs:
-		if s.built and s.k == "wall":
+		if s.built and (s.k == "wall" or s.k == "tower") and not (e is E.Peasant and e.plat == s.id):
 			push_out(e, r, s, axis)
 	for t in near_trees(e.x, e.z):
 		if t.alive:
@@ -1130,6 +1162,12 @@ func find_interact(p: E.Player):
 				var ok := has(p, c)
 				return {"type": "found", "target": s, "key": "s%d" % s.id, "ok": ok, "dur": 1.1, "x": s.x, "z": s.z, "rad": 3.2, "wide": true,
 					"label": ("Hold {interact} to build a %s (%s)" if ok else "A %s needs %s") % [D.SNAME[s.k], D.cost_text(c)]}
+		if not s.built and s.site >= 0 and in_box(p.x, p.z, 1.6, s):     # a tower site, or a side gate
+			var c := cost_of(p, s.k)
+			var ok := has(p, c)
+			var what := "watch tower" if s.k == "tower" else "gate on the %s gateway" % ("west" if s.x < 0 else "east")
+			return {"type": "found", "target": s, "key": "s%d" % s.id, "ok": ok, "dur": 1.1, "x": s.x, "z": s.z, "rad": 3.2 if s.k == "gate" else 1.6, "wide": s.k == "gate", "rot": s.rot,
+				"label": ("Hold {interact} to build a %s (%s)" if ok else "A %s needs %s") % [what, D.cost_text(c)]}
 	best = null; bd = 1e9
 	for s in structs:
 		if s.built and in_box(p.x, p.z, 1.7, s):
@@ -1139,6 +1177,9 @@ func find_interact(p: E.Player):
 	if best:
 		var s: E.Struct = best
 		var o := {"target": s, "x": s.x, "z": s.z, "rad": D.SDIM[s.k].x + 0.2, "wide": true, "rot": s.rot}
+		if s.k == "tower" and s.site >= 0:            # a watch tower: its own notice, with the choices on it
+			var st := D.station("tower%d" % s.site)
+			return {"type": "station", "st": st, "key": "sttower%d" % s.site, "ok": true, "dur": 0.12, "x": s.x, "z": s.z, "rad": 1.6, "label": "Hold {interact} to see about the watch tower"}
 		if s.hp < s.mhp - 0.5:
 			var c := repair_cost(p, s)
 			var ok := has(p, c)
@@ -1347,8 +1388,14 @@ func try_place(p: E.Player, k: String, x: float, z: float, rot: float) -> bool:
 	return true
 
 func destroy_struct(s: E.Struct) -> void:
-	if s.slot >= 0:
+	if s.slot >= 0 or s.site >= 0:
 		s.built = false; s.hp = 0; s.re = false; s.bl = false; s.mhp = D.SHP[s.k]
+		if s.k == "tower":
+			for q in peasants:
+				if q.plat == s.id:
+					q.plat = 0
+					if q.state == "post": q.state = "follow"
+			ev.append(["towerdown", r1(s.x), r1(s.z)])
 	else:
 		structs.erase(s)
 	sv += 1
@@ -2275,6 +2322,43 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				peasants.append(q)
 				say("%s has hired %s at the Thorny Rose Inn. What could possibly go wrong?" % [p.dn, D.qname(q)]); note("hired")
 				spark.call("coin")
+		"tup", "tdown", "tkeep", "troof", "trep", "tdis":   # at a watch tower
+			var s := tower(ia)
+			if s == null or not near_station(p, "tower%d" % ia): return
+			var mine := peasants.filter(func(q): return q.plat == s.id and q.owner == p.id and q.state != "body")
+			match a:
+				"tup":                                 # the nearest free one of your posse goes up (at dusk)
+					if tower_crew(s).size() >= D.TOWER.seats: return
+					var best_q: E.Peasant = null
+					var bq := 1e9
+					for q in peasants:
+						if q.owner == p.id and q.kind == 0 and q.plat == 0 and active(q) and D.d2(q.x, q.z, s.x, s.z) < bq:
+							bq = D.d2(q.x, q.z, s.x, s.z); best_q = q
+					if best_q:
+						best_q.plat = s.id; best_q.roof = s.re
+						say(pick(D.TOWER_UP) % D.qname(best_q))
+				"tdown":                               # one of yours is coaxed down, from the safety of the tower
+					if mine.is_empty(): return
+					var q: E.Peasant = mine[mine.size() - 1]
+					q.plat = 0
+					if q.state == "post": q.state = "follow"
+					say(pick(D.TOWER_DOWN) % D.qname(q))
+				"tkeep":
+					if s.kept or not has(p, D.TOWER.upkeep): return
+					pay(p, D.TOWER.upkeep); s.kept = true; sv += 1; ev.append(["build", r1(s.x), r1(s.z)])
+					say("%s has seen to the watch tower %s: new rungs, and the stones counted." % [p.dn, D.TOWER_NAMES[s.site]])
+				"troof":
+					if s.re or not has(p, reinf_cost(p, "tower")): return
+					pay(p, reinf_cost(p, "tower")); s.re = true; s.hc += 1; sv += 1; add_xp(p, 2, 1); ev.append(["build", r1(s.x), r1(s.z)])
+					for q in tower_crew(s): q.roof = true
+				"trep":
+					if s.hp >= s.mhp - 0.5 or not has(p, repair_cost(p, s)): return
+					pay(p, repair_cost(p, s)); s.hp = s.mhp; s.hc += 1; sv += 1; add_xp(p, 2, 0.5); ev.append(["build", r1(s.x), r1(s.z)])
+				"tdis":                                # taken down: everybody off it, and half of what it cost back
+					var c := cost_of(p, "tower")
+					for k in c: p.set(k, mini(cap(p), p.get(k) + floori(c[k] * D.TOWER.back)))
+					say("%s has taken the watch tower %s down again, and kept what wood could be saved." % [p.dn, D.TOWER_NAMES[s.site]])
+					destroy_struct(s)
 		"btalk", "bknock", "bjeer":                # Robert Bailiff, at his upstairs window
 			if near_station(p, "window"):
 				var w := week_of(mday())
@@ -2583,7 +2667,7 @@ func start_night() -> void:
 	var plan := night_plan(day, players.size(), last_day)
 	crowd = plan.crowd; crowd_d = 1.0 + 0.6 * (crowd - 1.0)
 	var q := night_queue(plan)
-	night = {"t": 0.0, "q": q, "total": q.size(), "c": plan.c, "dur": plan.dur, "kills": 0, "boss": plan.boss, "idle": 0.0}
+	night = {"t": 0.0, "q": q, "total": q.size(), "c": plan.c, "dur": plan.dur, "kills": 0, "boss": plan.boss, "idle": 0.0, "sides": [] if plan.boss == D.U_LORD else side_gates()}
 	waves = q.size()
 	for p in players: p.ready = false
 
@@ -2591,7 +2675,11 @@ func night_step(dt: float) -> void:
 	var N: Dictionary = night
 	N.t += dt
 	while N.q.size() and N.q[0].t <= N.t and undead.size() < D.ALIVE_CAP:
-		spawn_undead(N.q.pop_front().k)
+		var u := spawn_undead(N.q.pop_front().k)
+		var U: Dictionary = D.UN[u.k]
+		var sg: Array = N.get("sides", [])
+		if sg.size() and not (U.fly or U.ghost or U.ram or U.hearse or U.boss or U.get("dig", false)) and randf() < D.SIDE.share * sg.size():
+			u.side = sg[randi() % sg.size()]           # round to the west or east gate, and in
 	# a boss arrives once the night is well under way (the Coachman sooner, the Lord later)
 	var when := 0.8 if N.boss == D.U_COACH else 0.6
 	if N.boss == D.U_LORD:                          # the last night: first his shadow; then, with it beaten and half the horde, the Lord
@@ -2636,6 +2724,10 @@ func tonight_lines() -> Array:
 			D.U_COOK: "Tonight the Castle Cook comes down. Stay out of whatever he ladles, and out of reach of the cauldron.",
 			D.U_WOLF: "Tonight is the full moon, and the Lord’s Gamekeeper comes down on four legs. He breaks barricades at a blow, and his howl freezes whoever hears it, unless they are being prayed over or are thoroughly unbothered.",
 			D.U_LORD: "Tonight is the last night. The Lord of Ashhollow is coming down in person."}[b])
+	if b != D.U_LORD:
+		var sg := side_gates()
+		out.append("Some of them will come round to both side gates tonight, the west and the east. They have been comparing notes." if sg.size() > 1
+			else "Some of them will come round to the %s gate tonight, rather than queue at the north one." % ("east" if sg[0] == 1 else "west"))
 	return out
 
 func grow_trees() -> void:   # dawn in the forest: saplings that are old enough become trees, and yesterday's stumps rot into saplings
@@ -2720,6 +2812,10 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 								break
 					if D.IT[id].tier == "relic": relics.erase(id)
 					lines.append("%s turned on %s at dawn and demanded two more shillings. %s could not pay, was given a good hiding, and lost %s." % [D.qname(q), own.dn, own.dn, D.it_a(id)])
+	var towers := structs.filter(func(s): return s.k == "tower" and s.built)
+	for s in towers: s.kept = false
+	if towers.size():
+		lines.append("The watch tower%s want%s seeing to before dark: %s each, or nobody will climb %s." % ["s" if towers.size() > 1 else "", "" if towers.size() > 1 else "s", D.cost_text(D.TOWER.upkeep), "them" if towers.size() > 1 else "it"])
 	if guards > 0: lines.append("The village guards have gone back inside Robert Bailiff’s house for their breakfast.")
 	guards = 0
 	var row := {}
@@ -2884,7 +2980,8 @@ func player_step(p: E.Player, dt: float) -> void:
 					peasants.erase(it.target); p.bodies += 1
 				"found":
 					var s: E.Struct = it.target
-					pay(p, cost_of(p, s.k)); s.built = true; s.mhp = D.SHP[s.k]; s.hp = s.mhp; s.re = false; s.bl = false; stats.built += 1; sv += 1; add_xp(p, 2, 1)
+					pay(p, cost_of(p, s.k)); s.built = true; s.mhp = D.SHP[s.k]; s.hp = s.mhp; s.re = false; s.bl = false; s.kept = true; stats.built += 1; sv += 1; add_xp(p, 2, 1)
+					if s.k == "tower": say("%s has put up a watch tower %s. Somebody will have to climb it." % [p.dn, D.TOWER_NAMES[s.site]])
 				"repair":
 					var s: E.Struct = it.target
 					pay(p, repair_cost(p, s)); s.hp = s.mhp; s.hc += 1; sv += 1; add_xp(p, 2, 0.5); ev.append(["build", r1(s.x), r1(s.z)])
@@ -3021,25 +3118,32 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 	if Ld == null or Ld.state == "dead":
 		q.owner = 0; q.plat = 0; q.state = "idle" if phase == "day" else "hide"
 		return
-	if q.plat != 0:                                    # posted on a watch platform: up it from dusk, throwing stones at whatever comes near
+	if q.plat != 0:                                    # posted on a watch platform or tower: up it from dusk, throwing stones at whatever comes near
 		var ps: E.Struct = null
 		for s in structs:
-			if s.id == q.plat and s.built and s.k == "platform": ps = s
+			if s.id == q.plat and s.built and (s.k == "platform" or s.k == "tower"): ps = s
 		if ps == null:
 			q.plat = 0
 			if q.state == "post": q.state = "follow"
-		elif phase == "day":
+		elif phase == "day" or not ps.kept:            # by day, or up a tower nobody has seen to: with their leader
 			if q.state == "post": q.state = "follow"
 		else:
 			q.roof = ps.re; q.tree = null
+			var at := Vector2(ps.x, ps.z)
+			if ps.k == "tower":                        # six to a tower: each has their own corner of it
+				var n := 0
+				for o in peasants:
+					if o.plat == ps.id and o.id < q.id and o.state != "body": n += 1
+				at += Vector2((n % 3 - 1) * 0.55, (n / 3) * 0.7 - 0.35)
 			if q.state != "post":
 				q.state = "follow"
-				if step_to(q, ps.x, ps.z, 5.4, dt, 0.2) < 0.7:
-					q.state = "post"; q.x = ps.x; q.z = ps.z
+				if step_to(q, at.x, at.y, 5.4, dt, 0.2) < 0.7 or (ps.k == "tower" and in_box(q.x, q.z, 0.6, ps)):
+					q.state = "post"; q.x = at.x; q.z = at.y
 				return
-			q.x = ps.x; q.z = ps.z
+			q.x = at.x; q.z = at.y
 			var pt: E.Undead = null
-			var pd: float = D.PLAT.reach * D.PLAT.reach
+			var reach: float = D.TOWER.reach if ps.k == "tower" else D.PLAT.reach
+			var pd: float = reach * reach
 			for u in undead:
 				if u.dead or u.state == "pile" or u.state == "rise": continue
 				var dd := D.d2(q.x, q.z, u.x, u.z)
@@ -3214,14 +3318,14 @@ func undead_goal(u: E.Undead) -> Vector2:
 		var sx := -1.0 if u.x < 0 else 1.0
 		if u.z > D.VS - 0.5 and absf(u.x) < D.VW + 2.5: return Vector2(sx * (D.VW + 4.5), D.VS + 3)   # south of the wall: along it to the corner
 		return Vector2(sx * (D.VW + 4.5), D.GATE_Z) if absf(u.z - D.GATE_Z) > 1.4 else Vector2(sx * (D.VW - 3), D.GATE_Z)
-	if u.z < -18.6 and absf(u.x) > 6.5: return Vector2(signf(u.x) * 5.5, -19.9)   # sidle along the inside of the wall to the avenue
+	if u.z < D.VN + 3.4 and absf(u.x) > 6.5: return Vector2(signf(u.x) * 5.5, D.VN + 2.1)   # sidle along the inside of the wall to the avenue
 	return Vector2(clampf(u.lane * 0.3, -D.KEEP_H + 0.6, D.KEEP_H - 0.6), -D.KEEP_H - 0.2)   # somewhere along the keep's north face
 
 func hit_struct(u: E.Undead, U: Dictionary, blk: E.Struct, dmul: float = 1.0) -> void:
 	u.state = "atk"
 	if u.cd <= 0:
 		u.cd = U.cd; u.ac += 1; blk.hc += 1; sv += 1
-		if U.get("wolf", false): blk.hp -= blk.mhp if blk.slot < 0 else blk.mhp * D.HOWL.wall   # a barricade at a blow; a wall or a gate in four
+		if U.get("wolf", false): blk.hp -= blk.mhp if blk.slot < 0 and blk.site < 0 else blk.mhp * D.HOWL.wall   # a barricade at a blow; a wall or a gate in four
 		else: blk.hp -= U.sdmg * rage * dmul / stout()
 		if blk.bl: hit_u(u, 5, {"holy": 1.5})
 		if blk.hp <= 0: destroy_struct(blk)
@@ -3902,9 +4006,10 @@ func spikes_step(dt: float) -> void:
 func jump(p: E.Player, mx: float, mz: float) -> bool:
 	if p.state != "ok" or p.frozen > 0 or p.jumpCd > 0 or p.jumpT > 0 or p.room != "": return false
 	var l := sqrt(mx * mx + mz * mz)
-	if l < 0.01:
-		mx = sin(p.r); mz = cos(p.r); l = 1.0
-	p.jdx = mx / l; p.jdz = mz / l
+	if l < 0.01:                                    # nothing pressed: straight up, on the spot
+		p.jdx = 0.0; p.jdz = 0.0
+	else:                                           # whichever way is pressed, forwards, sideways or back; you keep facing the way you were
+		p.jdx = mx / l; p.jdz = mz / l
 	p.jumpT = D.JUMP.t; p.jumpCd = D.JUMP.cd
 	return true
 

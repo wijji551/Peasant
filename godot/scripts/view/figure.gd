@@ -181,7 +181,11 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 	if q.state == "chop" and own:
 		kind = D.GK[own.gk] if own.gk > 0 else own.workK
 		if kind == "fish" or kind == "search": kind = ""
-	_lift = 1.76 if q.state == "post" and q.plat != 0 else 0.0      # up on a watch platform
+	_lift = 0.0
+	if q.state == "post" and q.plat != 0:                          # up on a watch platform, or higher up in a watch tower
+		_lift = 1.76
+		for t in D.TOWER_SITES:
+			if absf(q.x - t[0]) < 1.4 and absf(q.z - t[1]) < 1.4: _lift = 2.9
 	var c := _counts(q.ac, q.hc, -1)
 	if c[0]:
 		_atk = 1.0

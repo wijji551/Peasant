@@ -5,7 +5,7 @@ extends Node3D
 const Build := preload("res://scripts/build.gd")
 
 const VW := 28.0          # half the village's width
-const VN := -22.0         # the north wall
+const VN := D.VN          # the north wall (moved forward three paces in version 7.5)
 const VS := 26.0          # the south wall
 const GATE_Z := 2.0       # the west and east gateways
 const KEEP_H := 3.3       # half the keep's width
@@ -406,9 +406,9 @@ func _walls() -> void:
 	_gateway(Vector3(VW, 0, GATE_Z), PI / 2, 0.9)
 	# two braziers on the road outside the north gate
 	for s in [-1.0, 1.0]:
-		Build.cyl(self, 0.3, 0.42, 1.5, Vector3(s * 4.4, 0, -24.6), C.stone3, 6)
-		Build.cyl(self, 0.55, 0.34, 0.4, Vector3(s * 4.4, 1.5, -24.6), C.iron, 6)
-		lantern(Vector3(s * 4.4, 1.85, -24.6), 16.0)
+		Build.cyl(self, 0.3, 0.42, 1.5, Vector3(s * 4.4, 0, VN - 2.6), C.stone3, 6)
+		Build.cyl(self, 0.55, 0.34, 0.4, Vector3(s * 4.4, 1.5, VN - 2.6), C.iron, 6)
+		lantern(Vector3(s * 4.4, 1.85, VN - 2.6), 16.0)
 	# draw every log at once
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.36
@@ -1230,7 +1230,7 @@ func _process(delta: float) -> void:
 		_rider_t += delta
 		var t := _rider_t
 		var go := 3.4                                 # seconds each way
-		var z := lerpf(-70.0, -24.8, clampf(t / go, 0, 1)) if t < go + 2.2 else lerpf(-24.8, -70.0, clampf((t - go - 2.2) / go, 0, 1))
+		var z := lerpf(-70.0, VN - 2.8, clampf(t / go, 0, 1)) if t < go + 2.2 else lerpf(VN - 2.8, -70.0, clampf((t - go - 2.2) / go, 0, 1))
 		var moving := t < go or t > go + 2.2
 		rider.visible = true
 		rider.position = Vector3(1.0, absf(sin(t * 13.0)) * 0.16 if moving else 0.0, z)

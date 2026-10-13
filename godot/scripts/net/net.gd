@@ -547,7 +547,7 @@ func _host_tick(delta: float) -> void:
 		_send({"t": "dawn", "d": R.dawn})
 	if R.sv != _sent_sv:
 		_sent_sv = R.sv
-		_send({"t": "st", "a": R.structs.map(func(s): return [s.id, s.k, s.x, s.z, s.rot, s.built, s.hp, s.mhp, s.slot, s.hc, s.re, s.bl, s.nr])})
+		_send({"t": "st", "a": R.structs.map(func(s): return [s.id, s.k, s.x, s.z, s.rot, s.built, s.hp, s.mhp, s.slot, s.hc, s.re, s.bl, s.nr, s.site, s.kept])})
 	if R.tv != _sent_tv:
 		_sent_tv = R.tv
 		var codes := []
@@ -657,6 +657,7 @@ func _client_msg(m: Dictionary) -> void:
 					s.id = int(a[0])
 				s.k = str(a[1]); s.x = a[2]; s.z = a[3]; s.rot = a[4]; s.built = a[5]; s.hp = a[6]; s.mhp = a[7]
 				s.slot = int(a[8]); s.hc = int(a[9]); s.re = a[10]; s.bl = a[11]; s.nr = a[12]
+				s.site = int(a[13]) if a.size() > 13 else -1; s.kept = a[14] if a.size() > 14 else true
 				s.hw = D.SDIM[s.k].x; s.hd = D.SDIM[s.k].y
 				out.append(s)
 			R.structs = out

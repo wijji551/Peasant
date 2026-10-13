@@ -52,8 +52,41 @@ static func letters_page(R: Rules, page: String, title: String, intro: String, b
 	return {"title": "The Lord’s letters", "intro": intro if intro != "" else "All of them, nailed one on top of another.", "o": o}
 
 
+## A watch tower's notice: who is up it, and the two choices (send one up, coax one down), and the upkeep.
+static func tower_page(R: Rules, i: int, p: E.Player) -> Dictionary:
+	var s := R.tower(i)
+	if s == null: return {}
+	var o := []
+	var crew := R.tower_crew(s)
+	var mine := crew.filter(func(q): return q.owner == p.id)
+	var free := R.peasants.any(func(q): return q.owner == p.id and q.kind == 0 and q.plat == 0 and Rules.active(q))
+	var full := crew.size() >= D.TOWER.seats
+	var names := []
+	for q in crew:
+		var own := R.player_by_id(q.owner)
+		names.append(D.qname(q) + (" (%s’s)" % own.dn if own and own != p else ""))
+	o.append({"label": "Send one of your posse up", "sub": "It is full: six is as many as it holds." if full else "You have nobody free to send." if not free else "They go up at dusk and throw stones over the wall at anything within about fifteen paces.", "ok": free and not full, "a": "tup", "arg": i})
+	o.append({"label": "Coax one of yours down", "sub": "None of yours are up it." if mine.is_empty() else "From the safety of the tower. %s is nearest the ladder." % D.qname(mine[mine.size() - 1]), "ok": not mine.is_empty(), "a": "tdown", "arg": i})
+	o.append({"head": "The tower"})
+	var up: Dictionary = D.TOWER.upkeep
+	o.append({"label": "See to it (%s)" % D.cost_text(up), "sub": "Seen to today." if s.kept else "Nobody will climb it tonight until somebody has.", "ok": not s.kept and Rules.has(p, up), "a": "tkeep", "arg": i})
+	if s.hp < s.mhp - 0.5:
+		var rc := Rules.repair_cost(p, s)
+		o.append({"label": "Repair it (%s)" % D.cost_text(rc), "sub": "%d of %d left." % [ceili(s.hp), roundi(s.mhp)], "ok": Rules.has(p, rc), "a": "trep", "arg": i})
+	if not s.re:
+		var rf := Rules.reinf_cost(p, "tower")
+		o.append({"label": "Roof it (%s)" % D.cost_text(rf), "sub": "Keeps the arrows off whoever is up it. The only thing that can reach them otherwise.", "ok": Rules.has(p, rf), "a": "troof", "arg": i})
+	o.append({"label": "Take it down", "sub": "Everybody off it, and half of what it cost back. The site stays, for next time.", "ok": true, "a": "tdis", "arg": i})
+	var intro := ("%d of %d places taken: %s." % [crew.size(), D.TOWER.seats, ", ".join(names)]) if crew.size() else "Nobody is up it. Six can be, from anybody’s posse."
+	if not s.kept: intro += " Nobody has seen to it today, and nobody will climb it until somebody has."
+	if s.re: intro += " It has a roof."
+	return {"title": "The watch tower, %s" % D.TOWER_NAMES[i], "intro": intro, "o": o}
+
+
 static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 	var o := []
+	if id.begins_with("tower"):
+		return tower_page(R, int(id.substr(5)), p)
 	match id:
 		"market":
 			var pr := func(n: int) -> int: return floori(n * 1.5) if p.gab else n
