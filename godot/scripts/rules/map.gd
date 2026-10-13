@@ -114,7 +114,7 @@ static func ruin_layout(game_seed: int, day: int) -> Dictionary:   # the same on
 		return _ruin_now
 	var rub := []
 	var pil := []
-	var spots := [{"x": 9.8, "z": -14.3, "ruin": 0}, {"x": 12.3, "z": -16.6, "ruin": 0}]
+	var spots := [{"x": 10.0, "z": -14.0, "ruin": 0}, {"x": 11.8, "z": -15.6, "ruin": 0}]
 	var pick := RandomNumberGenerator.new()
 	pick.seed = game_seed * 17 + day * 733 + 5
 	var a := pick.randi_range(0, D.RUIN_SITES.size() - 1)

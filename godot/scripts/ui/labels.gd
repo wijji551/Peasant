@@ -6,7 +6,7 @@ const PLACES := [
 	["Market", 0.0, 21.6, 3.2], ["Smithy", 16.5, -4.7, 6.0], ["Storehouse", 17.0, 10.6, 6.5], ["Library", 17.0, 20.4, 8.0],
 	["Slum", -17.6, 20.5, 3.4], ["The Thorny Rose Inn", -17.5, -4.7, 7.5], ["Bailiff’s House", -14.5, -12.6, 8.6],
 	["Farms: food", -58.0, 30.0, 1.5], ["The keep", 0.0, 0.0, 12.4], ["Chapel: the priest", 17.0, -14.0, 8.4],
-	["Old ruins: search", 10.8, -15.4, 3.4], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
+	["Old ruins: search", 10.9, -14.8, 3.0], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
 	["Old mine: steel", -108.0, -44.0, 4.0], ["The old mill", 104.0, 30.0, 9.0], ["Merchant", "cart", 0.0, 3.2], ["Bailiff’s back door", -14.5, -16.4, 2.8],
 	["A chest", "chest", 0.0, 1.9], ["The bar", 60.0, 235.3, 2.6], ["Old Marge", 55.4, 240.9, 2.3], ["Tam the Carter", 64.4, 241.2, 2.4], ["A stranger", 52.6, 235.0, 2.3],

@@ -572,10 +572,10 @@ func _buildings() -> void:
 		Build.box(self, Vector3(0.62, 1.2, 0.07), Vector3(D.BAILIFF_AT.x + sx * 1.02, 2.28, -9.3), C.red, 0.0, 0.0, 0.0)
 	# the old ruins and the priest's chapel
 	_chapel()
-	for i in 9:
-		Build.box(self, Vector3(rr(1, 2.6), rr(0.5, 2.3), 0.5), Vector3(rr(8.3, 13.2), 0, rr(-18.2, -12.4)), C.stone2 if i % 2 else C.stone3, rr(0, 3))
-	for p in [Vector2(9.2, -16), Vector2(8.4, -11.6)]:
-		Build.cyl(self, 0.36, 0.42, rr(1.4, 2.6), Vector3(p.x, 0, p.y), C.stone2, 6)
+	for i in 6:                                     # (smaller since version 7.6: the towers wanted the elbow room)
+		Build.box(self, Vector3(rr(0.7, 1.6), rr(0.4, 1.5), 0.42), Vector3(rr(9.4, 12.4), 0, rr(-16.2, -12.8)), C.stone2 if i % 2 else C.stone3, rr(0, 3))
+	for p in [Vector2(9.6, -15.2), Vector2(9.0, -12.4)]:
+		Build.cyl(self, 0.3, 0.36, rr(1.0, 1.7), Vector3(p.x, 0, p.y), C.stone2, 6)
 	# the Thorny Rose Inn
 	house(-17.5, -4.7, PI / 2, 8, 6, 4.2, C.cream, C.roof, false, true, 3.0)
 	Build.box(self, Vector3(0.18, 3, 0.18), Vector3(-13.4, 0, -1.4), C.timber)
