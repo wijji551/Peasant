@@ -124,6 +124,10 @@ class Player:
 	var eatCd := 0.0
 	var hurtT := 99.0
 	var eHold := false
+	var jumpT := 0.0        # in the air: seconds left of the leap
+	var jumpCd := 0.0
+	var jdx := 0.0          # and which way
+	var jdz := 0.0
 	var frozen := 0.0       # frozen with fright by a werewolf's howl: cannot move or strike
 	var stuckT := 0.0       # how long before "I'm a stuck little peasant" can be used again
 	var eLock := false

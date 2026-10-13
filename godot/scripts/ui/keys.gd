@@ -7,7 +7,7 @@ extends RefCounted
 const ACTIONS := [
 	["up", "Move up the screen"], ["left", "Move left"], ["down", "Move down the screen"], ["right", "Move right"],
 	["cam_left", "Turn the view left"], ["cam_right", "Turn the view right"], ["look", "Look around: hold, and move the mouse"], ["cam_reset", "Put the view back: north up"],
-	["attack", "Attack, and land a fish"], ["trick", "Your weapon’s trick"],
+	["attack", "Attack (the left mouse button does it too)"], ["jump", "Jump (and, at the water, land a fish)"], ["trick", "Your weapon’s trick"],
 	["interact", "Gather, build, search, rally, use a place (hold)"], ["eat", "Eat"], ["pack", "Open your backpack"], ["skills", "Your skills: books and ranks"],
 	["carry", "Use what you carry: bucket or handbell"], ["swap", "Swap to the next weapon in your backpack"],
 	["orders", "Posse orders: follow, hold, charge"], ["toilet", "Emergency toilet break"],
@@ -16,7 +16,7 @@ const ACTIONS := [
 ]
 const DEF := {
 	"up": [KEY_W, KEY_UP], "left": [KEY_A, KEY_LEFT], "down": [KEY_S, KEY_DOWN], "right": [KEY_D, KEY_RIGHT],
-	"attack": [KEY_SPACE], "trick": [KEY_SHIFT], "interact": [KEY_E], "eat": [KEY_F], "pack": [KEY_I], "skills": [KEY_K],
+	"attack": [], "jump": [KEY_SPACE], "trick": [KEY_SHIFT], "interact": [KEY_E], "eat": [KEY_F], "pack": [KEY_I], "skills": [KEY_K],
 	"carry": [KEY_G], "swap": [KEY_X], "orders": [KEY_Q], "toilet": [KEY_T], "build": [KEY_TAB], "power1": [KEY_Z], "power2": [KEY_C],
 	"ready": [KEY_R], "mute": [KEY_M],
 	"cam_left": [KEY_COMMA], "cam_right": [KEY_PERIOD], "look": [KEY_V], "cam_reset": [KEY_N],
@@ -30,6 +30,8 @@ static func keys_of(a: String) -> Array:
 ## Make the input actions from the keys as they are set now.
 static func setup() -> void:
 	Settings.load_all()
+	if Settings.binds.has("attack") and not Settings.binds.has("jump") and (Settings.binds.attack as Array).has(KEY_SPACE):
+		Settings.binds.attack.erase(KEY_SPACE)        # (version 7.4: the space bar jumps now; the left mouse button attacks)
 	for a in DEF:
 		var act: String = "dtv_" + a
 		if InputMap.has_action(act):
@@ -104,6 +106,7 @@ static func key_name(k: int) -> String:
 static func name(a: String) -> String:
 	if not DEF.has(a): return a
 	var l := keys_of(a)
+	if l.is_empty() and a == "attack": return "left click"
 	return key_name(l[0]) if l.size() else "no key"
 
 

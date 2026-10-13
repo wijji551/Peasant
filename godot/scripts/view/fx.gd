@@ -54,6 +54,48 @@ func slash(x: float, z: float, r: float, reach: float, half: float, col: Color =
 	_arc_step(_arcs[-1], 0.0)
 
 
+## A warning on the ground in the shape of what is coming: a fan, from (x, z) facing r, out to reach, either side
+## by half. It fills in over its life, and goes.
+var _fans := []                       # [node, age, life]
+func fan(x: float, z: float, r: float, reach: float, half: float, col: Color, life: float) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var n := 18
+	for i in n:
+		var a0 := -half + 2.0 * half * i / n
+		var a1 := -half + 2.0 * half * (i + 1) / n
+		st.add_vertex(Vector3.ZERO)
+		st.add_vertex(Vector3(sin(a1) * reach, 0, cos(a1) * reach))
+		st.add_vertex(Vector3(sin(a0) * reach, 0, cos(a0) * reach))
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.albedo_color = Color(col.r, col.g, col.b, 0.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = Vector3(x, 0.09, z)
+	mi.rotation.y = r
+	add_child(mi)
+	_fans.append([mi, 0.0, life])
+
+
+func _fans_step(delta: float) -> void:
+	var i := _fans.size() - 1
+	while i >= 0:
+		var f: Array = _fans[i]
+		f[1] += delta
+		var mi: MeshInstance3D = f[0]
+		if f[1] >= f[2]:
+			mi.queue_free(); _fans.remove_at(i)
+		else:
+			var m: StandardMaterial3D = mi.material_override
+			m.albedo_color.a = 0.12 + 0.4 * f[1] / f[2]
+		i -= 1
+
+
 ## The log roller going: five logs let loose one after another, rolling and bouncing down the road and throwing up dust.
 func roll_logs(x1: float, z1: float, x2: float, z2: float) -> void:
 	for i in 5:
@@ -295,6 +337,7 @@ func _tint(c: Color) -> Material:
 
 
 func _process(delta: float) -> void:
+	_fans_step(delta)
 	var i := _bits.size() - 1
 	while i >= 0:
 		var b: Array = _bits[i]

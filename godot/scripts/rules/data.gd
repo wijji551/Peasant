@@ -407,7 +407,7 @@ const _UN := [
 	{"name": "coffin ram", "hp": 320.0, "spd": 1.25, "dmg": 12.0, "sdmg": 70.0, "kdmg": 30.0, "cd": 2.6, "r": 1.2, "ram": true, "first": 20, "cost": 10.0},
 	{"name": "the Coachman", "hp": 4500.0, "spd": 6.0, "dmg": 22.0, "sdmg": 999.0, "kdmg": 40.0, "cd": 1.5, "r": 1.3, "boss": true, "hearse": true, "first": 14},
 	{"name": "the Captain of the Guard", "hp": 6000.0, "spd": 1.45, "dmg": 24.0, "sdmg": 45.0, "kdmg": 10.0, "cd": 1.3, "r": 0.8, "boss": true, "armour": true, "first": 21},
-	{"name": "the Lord", "hp": 2600.0, "spd": 1.6, "dmg": 30.0, "sdmg": 60.0, "kdmg": 25.0, "cd": 1.2, "r": 0.8, "boss": true, "lord": true, "first": 30},
+	{"name": "the Lord", "hp": 10000.0, "spd": 1.7, "dmg": 30.0, "sdmg": 60.0, "kdmg": 25.0, "cd": 1.2, "r": 0.8, "boss": true, "lord": true, "first": 30},
 	{"name": "the Previous Tenant", "hp": 260.0, "spd": 2.7, "dmg": 16.0, "sdmg": 14.0, "kdmg": 6.0, "cd": 1.15, "r": 0.6, "tenant": true, "first": 99, "cost": 6.0},
 	# version 7.2: three more, from the first night
 	{"name": "bloated dead", "hp": 80.0, "spd": 1.0, "dmg": 8.0, "sdmg": 8.0, "kdmg": 3.0, "cd": 1.5, "r": 0.62, "burst": true, "first": 1, "cost": 1.8},
@@ -417,9 +417,11 @@ const _UN := [
 	{"name": "the Lord’s Chaplain", "hp": 3800.0, "spd": 1.25, "dmg": 14.0, "sdmg": 10.0, "kdmg": 6.0, "cd": 1.4, "r": 0.7, "boss": true, "chaplain": true, "first": 11},
 	{"name": "the Castle Cook", "hp": 5200.0, "spd": 1.3, "dmg": 20.0, "sdmg": 20.0, "kdmg": 8.0, "cd": 1.4, "r": 0.85, "boss": true, "cook": true, "first": 18},
 	{"name": "the Gamekeeper", "hp": 6700.0, "spd": 3.3, "dmg": 26.0, "sdmg": 40.0, "kdmg": 12.0, "cd": 1.1, "r": 0.8, "boss": true, "wolf": true, "first": 28},
+	# version 7.4: the Lord's shadow (20), which comes before him on the last night
+	{"name": "the Lord’s shadow", "hp": 2500.0, "spd": 2.2, "dmg": 12.0, "sdmg": 6.0, "kdmg": 4.0, "cd": 1.2, "r": 0.7, "boss": true, "shadow": true, "first": 99},
 ]
 const _UN_DEF := {"rng": 0.0, "bony": false, "boss": false, "climb": false, "dig": false, "fly": false, "armour": false, "ghost": false,
-	"ram": false, "hearse": false, "lord": false, "tenant": false, "burst": false, "lid": false, "hound": false, "chaplain": false, "cook": false, "wolf": false, "first": 1, "cost": 1.0}
+	"ram": false, "hearse": false, "lord": false, "tenant": false, "burst": false, "lid": false, "hound": false, "chaplain": false, "cook": false, "wolf": false, "shadow": false, "first": 1, "cost": 1.0}
 static var UN: Array = _fill(_UN, _UN_DEF)
 const U_TENANT := 13                 # the Previous Tenant: what sometimes comes up when the outer ruins are searched by day
 const TENANT_CHANCE := 0.05          # a search: one in twenty, and a little more each week
@@ -454,6 +456,18 @@ const STEW := {"every": 7.0, "wind": 1.0, "r": 1.8, "last": 6.0, "dmg": 8.0, "fa
 const SWING := {"every": 11.0, "wind": 0.8, "reach": 3.5, "throw": 6.0, "dmg": 14.0}         # the Cook's cauldron
 const SHIELD := {"every": 10.0, "wind": 1.0, "speed": 9.0, "far": 12.0, "width": 1.3, "throw": 4.0, "dmg": 18.0}   # the Captain's charge
 const HOWL := {"every": 14.0, "reach": 18.0, "freeze": 2.5, "wall": 0.25}
+const U_SHADOW := 20                 # the Lord's shadow: it must be beaten, and half the horde with it, before he comes
+## The last night (version 7.4). The shadow: blinks about the front of the village, raises the fallen, throws the dead
+## at you, slips away from fire, and is driven back by anything holy.
+const SHADOW := {"blink": 6.0, "raise": 7.0, "lob": 8.0, "drive": 3.0, "douse": 6.0}
+const LOB := {"t": 1.0, "r": 2.0, "dmg": 12.0, "sdmg": 40.0, "throw": 2.0}
+## The Lord himself: his attacks, all shown before they land. sweep: his cloak, in front of him. bats: a rush along a
+## line. slam: a blow on the ground. blink: he vanishes and comes back behind whoever is furthest off.
+const LORD := {"gap": 3.0, "sweep_reach": 5.0, "sweep_half": 1.2, "sweep_wind": 0.6, "sweep_dmg": 30.0, "sweep_throw": 4.0,
+	"bats_wind": 0.9, "bats_dmg": 20.0, "bats_far": 16.0, "bats_w": 1.3, "slam_reach": 4.0, "slam_wind": 0.9, "slam_dmg": 22.0, "slam_throw": 5.0,
+	"blink": 12.0, "lob": 10.0}
+## The jump (the space bar): a quick leap the way you are going. Out of a sweep, if it is away from him.
+const JUMP := {"t": 0.35, "dist": 3.2, "cd": 1.1}
 const WOLF_NIGHT := 0.25             # the werewolf's night: a quarter of the usual horde comes with him
 const MONTH := 30
 const WEEK := 7

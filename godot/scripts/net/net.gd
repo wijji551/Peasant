@@ -30,7 +30,7 @@ const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
 const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
 	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "room", "rune", "game", "gwon", "treated", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
-	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen"]
+	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT"]
 
 static var me: Net
 
@@ -500,6 +500,7 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 				else:
 					p.tx = clampf(float(m.x), D.X0, D.X1); p.tz = clampf(float(m.z), D.Z0, D.Z1)
 				p.goal_r = float(m.r)
+			p.jumpT = float(m.get("j", 0.0))                   # (only for showing them in the air)
 			p.eHold = bool(m.get("e", false)) and R.live() and (p.state == "ok" or p.state == "hide")
 		"atk": p.r = float(m.r); p.goal_r = p.r; R.do_attack(p)
 		"abl": p.r = float(m.r); p.goal_r = p.r; R.do_ability(p)
@@ -601,7 +602,7 @@ func _client_tick(delta: float) -> void:
 	var p: E.Player = R.player_by_id(my_id)
 	if _in_acc >= INPUT_RATE and p:
 		_in_acc = 0.0
-		send_host({"t": "in", "x": p.x, "z": p.z, "r": p.r, "e": p.eHold, "tp": p.tp})
+		send_host({"t": "in", "x": p.x, "z": p.z, "r": p.r, "e": p.eHold, "tp": p.tp, "j": p.jumpT})
 
 
 func _client_msg(m: Dictionary) -> void:
@@ -704,6 +705,7 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 			if f == "z": p.tz = v; continue
 			if f == "r": p.goal_r = v; continue
 			if mine and f == "ac": continue                                   # we count our own swings
+			if mine and f == "jumpT": continue                                # and do our own jumping
 			p.set(f, v)
 		p.inv = a[PF.size() + 1]; p.books = a[PF.size() + 2]; p.xp = a[PF.size() + 3]
 		var moved: bool = p.tp != old_tp or (mine and p.state != "ok" and old_state == "ok")

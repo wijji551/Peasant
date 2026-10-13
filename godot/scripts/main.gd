@@ -443,7 +443,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		Sound.apply_settings()
 		hud.banner("Sound off" if Settings.muted else "Sound on", "%s turns it back on." % Keys.name("mute") if Settings.muted else "", 1.2)
 		return
-	if _pan_t >= 0.0 and _pan_t < 6.0 and (Keys.is_act(e, "attack") or (e is InputEventKey and e.physical_keycode == KEY_ESCAPE)):
+	if _pan_t >= 0.0 and _pan_t < 6.0 and (Keys.is_act(e, "attack") or Keys.is_act(e, "jump") or (e is InputEventKey and e.physical_keycode == KEY_ESCAPE)):
 		_pan_t = 6.0                                       # seen it: back to the village
 		return
 	if e is InputEventKey and e.physical_keycode == KEY_ESCAPE:   # closes whatever is open; with nothing open, the handbook
@@ -549,8 +549,12 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 	elif Keys.is_act(e, "eat"):
 		if p.food < 1: Sound.play("no"); hud.banner("You have no food", "The farms and the river have some.", 1.3)
 		else: cmd({"t": "eat"})
-	elif Keys.is_act(e, "attack") and p.gk == 5:
-		cmd({"t": "fish"})
+	elif (Keys.is_act(e, "attack") or Keys.is_act(e, "jump") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed)) and p.gk == 5:
+		cmd({"t": "fish"})                                  # at the water: the space bar (or a click) hoiks the catch out
+	elif Keys.is_act(e, "jump") and p.gk != 5:
+		var jx := (1.0 if Keys.held("right") else 0.0) - (1.0 if Keys.held("left") else 0.0)
+		var jz := (1.0 if Keys.held("down") else 0.0) - (1.0 if Keys.held("up") else 0.0)
+		if R.jump(p, jx * cos(_cam_yaw) + jz * sin(_cam_yaw), jz * cos(_cam_yaw) - jx * sin(_cam_yaw)): Sound.play("whoosh", 0.5)
 
 
 func _builds_now() -> Array:
@@ -772,6 +776,8 @@ func _bot_move() -> Vector2:
 ## A blow has landed on one of the dead: the number, the noise, the chips, and (if it was mine) a knock to the camera.
 ## ev: ["hit", x, z, how much, how it told, whose (a player's id, or 0), what kind of dead, did it finish them]
 var _was_frozen := false
+var _cut_t := 0.0                    # the Lord's entrance: seconds left of looking at him instead of at you
+var _cut_at := Vector3.ZERO
 var _pool_nodes: Array[MeshInstance3D] = []
 static var _pool_mat: StandardMaterial3D
 static var _pool_warm: StandardMaterial3D
@@ -862,9 +868,12 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"gamble":
 			if ev[1] == me.id: Sound.play("coin" if ev[2] else "no", 0.9)
 		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
-		"warn": F.shock(ev[1], ev[2], ev[3], Color(1.0, 0.36, 0.2), ev[4])              # a boss winding up: what is inside the ring is in trouble
+		"warn":                                           # a boss winding up: what is inside the ring is in trouble
+			F.shock(ev[1], ev[2], ev[3], Color(1.0, 0.36, 0.2), ev[4])
+			if R.boss and D.UN[R.boss.k].lord: dead_view.lord_pose("slam_up", ev[4])
 		"slam":
 			F.shock(ev[1], ev[2], ev[3], Color(1.0, 0.86, 0.6)); F.puff(ev[1], 0.3, ev[2], 18, F.C_DUST, 6.0)
+			if R.boss and D.UN[R.boss.k].lord: dead_view.lord_pose("slam", 0.4)
 			Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
 		"thrown":
 			F.puff(ev[2], 0.4, ev[3], 8, F.C_DUST, 3.0); Sound.play("whoosh", 0.9, Vector2(ev[2], ev[3]))
@@ -879,9 +888,25 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"ladle":
 			F.fly(ev[1], ev[2], ev[3], ev[4], 3); F.shock(ev[3], ev[4], D.STEW.r, Color(0.95, 0.5, 0.2), ev[5])
 			Sound.play("splash", 0.9, Vector2(ev[3], ev[4]))
-		"line":                                           # the Captain lining up his charge: a trail of warnings along the road he means to take
+		"line":                                           # a charge or a rush of bats lined up: a trail of warnings along the way it will come
+			if R.boss and D.UN[R.boss.k].lord: dead_view.lord_pose("bats_up", ev[6])
 			for i in range(1, int(ev[5]) + 1, 2): F.shock(ev[1] + ev[3] * i, ev[2] + ev[4] * i, 0.7, Color(1.0, 0.36, 0.2), ev[6])
 			Sound.play("clang", 0.8, Vector2(ev[1], ev[2]))
+		"lord":                                           # his entrance: the view cuts to the gate, and the organ starts
+			_cut_t = 4.5; _cut_at = Vector3(ev[1], 0, ev[2])
+			hud.banner("The Lord of Ashhollow", "He has come down in person. Everything else has had the sense to leave.", 4.2)
+			Sound.play("thunder0", 1.0); Sound.play("bell", 0.6)
+		"cone":
+			F.fan(ev[1], ev[2], ev[3], ev[4], ev[5], Color(1.0, 0.25, 0.15), ev[6]); dead_view.lord_pose("sweep_up", ev[6])
+		"sweep":
+			F.slash(ev[1], ev[2], ev[3], ev[4], ev[5], Color(0.35, 0.05, 0.12), true, 0.7); Sound.play("whoosh", 1.0, Vector2(ev[1], ev[2]))
+			dead_view.lord_pose("sweep", 0.45)
+		"batrush":                                        # a rush of bats along the line
+			for i in int(ev[5]): F.puff(ev[1] + ev[3] * i, 1.6, ev[2] + ev[4] * i, 3, F.C_STEWARD, 2.5)
+			Sound.play("caw0", 1.0, Vector2(ev[1], ev[2])); Sound.play("whoosh", 1.0, Vector2(ev[1], ev[2])); dead_view.lord_pose("bats", 0.5)
+		"lob":
+			F.fly(ev[1], ev[2], ev[3], ev[4], 3); F.shock(ev[3], ev[4], D.LOB.r, Color(1.0, 0.3, 0.2), ev[5])
+			Sound.play("whoosh", 0.8, Vector2(ev[1], ev[2]))
 		"howl":
 			Sound.play("howl", 1.0); F.shock(ev[1], ev[2], D.HOWL.reach, Color(0.72, 0.8, 1.0), 1.2)
 		"unbothered": F.puff(ev[2], 1.8, ev[3], 8, F.C_HOLY, 1.5)
@@ -927,7 +952,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"fish": F.puff(ev[1], 0.3, ev[2], 10, F.C_SPLASH, 3); Sound.play("splash", 1.0, Vector2(ev[1], ev[2]))
 		"bite":
 			F.puff(R.JETTY.x, 0.2, R.JETTY.z + 2.6, 4, F.C_SPLASH, 1.5)
-			if ev[1] == me.id: hud.banner("A bite!", "Press %s" % Keys.name("attack"), 1.0); Sound.play("pop")
+			if ev[1] == me.id: hud.banner("A bite!", "Press %s" % Keys.name("jump"), 1.0); Sound.play("pop")
 		"abl":                                           # a weapon's trick: show where it landed
 			var k: String = ev[1]
 			var x: float = ev[2]
@@ -1002,6 +1027,7 @@ func _draw(delta: float) -> void:
 	_pools_view(delta)
 	if me and me.frozen > 0 and not _was_frozen: hud.banner("Frozen with fright", "The howl has you rooted to the spot. It will pass. Probably.", 2.4)
 	_was_frozen = me != null and me.frozen > 0
+	Sound.boss_music = R.boss != null and D.UN[R.boss.k].lord and R.phase == "night"
 	# things lying on the ground, which glint
 	var seen_d := {}
 	for d: E.Drop in R.drops:
@@ -1210,6 +1236,15 @@ func _camera(delta: float) -> void:
 	look += _kick
 	camera.position = look + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist
 	camera.look_at(look)
+	if _cut_t > 0:                                       # the Lord arriving at the gate: the view is his for a moment
+		_cut_t -= delta
+		var lp := _cut_at
+		if R.boss and D.UN[R.boss.k].lord: lp = Vector3(R.boss.x, 0, R.boss.z)
+		camera.fov = 38.0
+		camera.position = Vector3(lp.x + 5.5, 4.2 + _cut_t * 0.3, D.VN + 6.0)
+		camera.look_at(lp + Vector3(0, 2.0, 0))
+	elif camera.fov != 20.0 and OS.get_environment("DTV_CAM") == "":
+		camera.fov = 20.0
 	minimap.view = _cam_yaw
 	world.night = R.nf
 	world.set_evil(Rules.week_of(R.mday()) - 1)
@@ -1343,6 +1378,13 @@ func _test_hook() -> void:
 			me.atkCd = 0; me.r = PI; me.goal_r = PI; R.do_attack(me)
 		elif _frame == at + 26 and OS.get_environment("DTV_FIGHT_ABL") != "":
 			me.abCd = 0; R.do_ability(me)
+	if OS.get_environment("DTV_LORDSHOT") != "" and me and _frame == at + 2:  # for pictures: the Lord's entrance. DTV_LORDSHOT=a pose, or 1
+		if win.visible: win.close()
+		Engine.time_scale = 0.2
+		R.spawn_boss(D.U_LORD)
+		var lu: E.Undead = R.boss
+		lu.state = "walk"; lu.t = 0; lu.stun = 999; lu.r = 0.0
+		if OS.get_environment("DTV_LORDSHOT") != "1": dead_view.lord_pose(OS.get_environment("DTV_LORDSHOT"), 999.0)
 	if OS.get_environment("DTV_KINDS") != "" and me and _frame == at + 2:     # for pictures: a row of the dead, standing still. DTV_KINDS=14,15,16
 		if win.visible: win.close()
 		var ks := OS.get_environment("DTV_KINDS").split(",")

@@ -3,9 +3,9 @@ extends Node3D
 ## MultiMesh: every one of them is a transform and a colour, as in the web version. A flash when hit, a lean
 ## back when stunned or pinned, greener when frightened, redder when cracked open by a Shatter.
 
-const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord", "tenant", "bloat", "pall", "hound", "chaplain", "cook", "wolf"]
-const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55, 1.25, 1.15, 1.1, 1.0, 1.45, 1.55, 1.6]
-const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4, 120, 120, 160, 2, 2, 2]
+const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord", "tenant", "bloat", "pall", "hound", "chaplain", "cook", "wolf", "shadow"]
+const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55, 1.25, 1.15, 1.1, 1.0, 1.45, 1.55, 1.6, 1.6]
+const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4, 120, 120, 160, 2, 2, 2, 2]
 
 var fx: Node3D                       # for the puffs when they are hit and when they go
 var _body := []                      # MultiMesh per kind
@@ -16,8 +16,61 @@ var _v := {}                         # undead id -> what the view remembers: [x,
 
 func _ready() -> void:
 	for k in KINDS.size():
-		_body.append(_mm(Models.get_mesh(KINDS[k]), MAX[k], _ghostly() if k == D.U_WRAITH else null if D.UN[k].boss else _evil()))
+		_body.append(_mm(Models.get_mesh(KINDS[k]), MAX[k], _ghostly() if k == D.U_WRAITH or k == D.U_SHADOW else null if D.UN[k].boss else _evil()))
 		_eyes.append(_mm(Models.get_mesh(KINDS[k] + "_eyes"), MAX[k], Models.glow()))
+
+
+# ---------------------------------------------------------------- the Lord, in pieces (version 7.4)
+var _lord: Node3D
+var _lord_id := -1
+var _cloak: Node3D
+var _arm_l: Node3D
+var _arm_r: Node3D
+var _pose := ""                      # what he is doing, from the events: "sweep_up", "sweep", "slam_up", "slam", "bats_up", "bats"
+var _pose_t := 0.0
+
+
+## Called from the events: the Lord winding up or letting go.
+func lord_pose(p: String, t: float) -> void:
+	_pose = p; _pose_t = t
+
+
+func _lord_build() -> void:
+	_lord = Node3D.new()
+	add_child(_lord)
+	var body := MeshInstance3D.new(); body.mesh = Models.get_mesh("lord_body"); _lord.add_child(body)
+	_cloak = Node3D.new(); _cloak.position = Vector3(0, 1.9, -0.3); _lord.add_child(_cloak)
+	var cm := MeshInstance3D.new(); cm.mesh = Models.get_mesh("lord_cloak"); _cloak.add_child(cm)
+	_arm_l = Node3D.new(); _arm_l.position = Vector3(-0.4, 1.7, 0); _lord.add_child(_arm_l)
+	var al := MeshInstance3D.new(); al.mesh = Models.get_mesh("lord_arm"); _arm_l.add_child(al)
+	_arm_r = Node3D.new(); _arm_r.position = Vector3(0.4, 1.7, 0.05); _lord.add_child(_arm_r)
+	var ar := MeshInstance3D.new(); ar.mesh = Models.get_mesh("lord_arm"); _arm_r.add_child(ar)
+	var gb := MeshInstance3D.new(); gb.mesh = Models.get_mesh("lord_goblet"); _arm_r.add_child(gb)
+
+
+func _lord_show(u: E.Undead, xf: Transform3D, col: Color, delta: float, now: float, mv: float, did_atk: bool) -> void:
+	if _lord == null: _lord_build()
+	_lord.visible = true; _lord_id = u.id
+	_lord.transform = xf
+	_pose_t = maxf(0.0, _pose_t - delta)
+	if _pose_t <= 0: _pose = ""
+	var walk := sin(now * 4.0) * 0.5 * mv
+	# what each part wants to be doing: (cloak back-and-out, cloak width, left arm forward, right arm forward, arms out)
+	var want := Vector4(0.12 + sin(now * 1.3) * 0.05 + mv * 0.25, 1.0, walk, -walk)
+	var spread := 0.0
+	match _pose:
+		"sweep_up": want = Vector4(0.9, 1.35, 0.3, -2.4); spread = 0.4                 # the cloak gathered up, the arm drawn back
+		"sweep": want = Vector4(1.3, 1.5, 0.3, 1.6); spread = 0.2                      # and swung across
+		"slam_up": want = Vector4(0.5, 1.1, -2.8, -2.8)                                # both arms up
+		"slam": want = Vector4(0.2, 1.0, 0.6, 0.6)                                     # and down
+		"bats_up", "bats": want = Vector4(1.1, 1.6, -0.2, -0.2); spread = 1.3          # arms flung wide: here come the bats
+	var k := minf(1.0, delta * (14.0 if _pose == "sweep" or _pose == "slam" else 7.0))
+	_cloak.rotation.x = lerpf(_cloak.rotation.x, want.x, k)
+	_cloak.scale.x = lerpf(_cloak.scale.x, want.y, k)
+	_arm_l.rotation.x = lerpf(_arm_l.rotation.x, want.z, k)
+	_arm_r.rotation.x = lerpf(_arm_r.rotation.x, want.w, k)
+	_arm_l.rotation.z = lerpf(_arm_l.rotation.z, -spread, k)
+	_arm_r.rotation.z = lerpf(_arm_r.rotation.z, spread, k)
 
 
 ## Every one of the dead that is not a boss: a mild, evil glow about the edges, which shows best at night.
@@ -153,11 +206,16 @@ func sync(R: Rules, delta: float) -> void:
 		else:
 			v[9] = 0.0
 			xf = _xf(v[0], y + absf(sin(walk)) * 0.1 * mv, v[1], v[2], dz + sin(atk * PI) * (-0.2 if k == 2 else 0.45), sin(walk) * 0.08, Vector3(s, s, s))
+		if k == D.U_LORD:                                          # the Lord moves properly: a figure of his own
+			_lord_show(u, xf, col, delta, now, mv, did_atk)
+			continue
+		if k == D.U_SHADOW: col.a = 0.6 + sin(now * 3.0 + u.id) * 0.15
 		_body[k].set_instance_transform(n[k], xf)
 		_body[k].set_instance_color(n[k], col)
 		_eyes[k].set_instance_transform(n[k], xf)
 		_eyes[k].set_instance_color(n[k], Color(1, 1, 1) if u.state != "pile" else Color(0, 0, 0, 0))
 		n[k] += 1
+	if _lord and not seen.has(_lord_id): _lord.visible = false
 	for k in KINDS.size():
 		_body[k].visible_instance_count = n[k]
 		_eyes[k].visible_instance_count = n[k]

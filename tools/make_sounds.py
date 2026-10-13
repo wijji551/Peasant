@@ -460,6 +460,51 @@ def music():
     save("music_night", reverb(body, 1.6, 0.3)[:loop_n], 0.7)
 
 
+def organ(f, dur, g=0.3):
+    """A church organ pipe: a stack of harmonics, a slow start and a short release, and a little wind in it."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    v = np.zeros(n)
+    for h, a in ((1, 1.0), (2, 0.55), (3, 0.35), (4, 0.28), (6, 0.16), (8, 0.12)):
+        v += a * np.sin(2 * np.pi * f * h * t)
+    env = np.minimum(1.0, t / 0.06) * np.clip((dur - t) / 0.12, 0, 1)
+    return v * env * g / 2.4
+
+
+def boss_music():
+    """The Lord of Ashhollow, on the field: a church organ in D minor, a pedal note under it, and a timpani."""
+    r = np.random.default_rng(30)
+    bpm = 84
+    beat = 60 / bpm
+    chords = [["D3", "A3", "D4", "F4"], ["Bb2", "F3", "Bb3", "D4"], ["G2", "D3", "G3", "Bb3"], ["A2", "E3", "A3", "C#4"],
+              ["D3", "A3", "D4", "F4"], ["F2", "C3", "F3", "A3"], ["C3", "G3", "C4", "E4"], ["A2", "E3", "G3", "C#4"],
+              ["D3", "F3", "A3", "D4"], ["Eb3", "Bb3", "Eb4", "G4"], ["G2", "D3", "G3", "Bb3"], ["A2", "E3", "A3", "C#4"],
+              ["Bb2", "F3", "Bb3", "D4"], ["G2", "D3", "G3", "Bb3"], ["A2", "E3", "A3", "C#4"], ["A2", "E3", "A3", "C#4"]]
+    tune = ["D5", "F5", "A5", "G5", "F5", "E5", "D5", "C#5", "D5", "E5", "F5", "D5", "Bb4", "D5", "E5", "C#5",
+            "A5", "G5", "F5", "Eb5", "D5", "Bb4", "G4", "Bb4", "D5", "C5", "Bb4", "A4", "D5", "C#5", "E5", "A4"]
+    bars = len(chords)
+    total = bars * 4 * beat
+    b = buf(total + 3)
+    for i, ch in enumerate(chords):
+        at = i * 4 * beat
+        for k, note in enumerate(ch):                # the chord, held for the bar
+            add(b, organ(hz(note), 4 * beat + 0.1, 0.18), at)
+        add(b, organ(hz(ch[0]) / 2, 4 * beat + 0.1, 0.22), at)   # the pedal, an octave down
+        for half in (0, 1):                          # the tune: two notes a bar
+            add(b, organ(hz(tune[i * 2 + half]), 2 * beat, 0.16), at + half * 2 * beat)
+        for bt, g in ((0, 0.9), (2, 0.6)):           # the timpani, on one and three
+            add(b, tone(62, 0.6, "sine", g, 44), at + bt * beat)
+            add(b, lowpass(r.standard_normal(int(SR * 0.08)), 400) * 0.25 * g, at + bt * beat)
+        if i % 4 == 3:                               # and a roll into every fourth bar
+            for k in range(8):
+                add(b, tone(66, 0.25, "sine", 0.25 + k * 0.05, 50), at + 3 * beat + k * beat / 8)
+    loop_n = int(total * SR)
+    tail = b[loop_n:]
+    body = b[:loop_n].copy()
+    body[: len(tail)] += tail
+    save("music_boss", reverb(body, 2.2, 0.35)[:loop_n], 0.75)
+
+
 ONLY = set(sys.argv[1:])                         # name some effects to make just those: python3 tools/make_sounds.py hooves nail
 
 if __name__ == "__main__":
@@ -467,4 +512,7 @@ if __name__ == "__main__":
     if not ONLY:
         ambient()
         music()
+        boss_music()
+    elif "music_boss" in ONLY:
+        boss_music()
     print("made", len(os.listdir(OUT)), "sounds in", os.path.abspath(OUT))

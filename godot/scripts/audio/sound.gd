@@ -13,11 +13,12 @@ const EFFECTS := ["bell", "bone", "build", "caw0", "caw1", "cheer", "chop", "cla
 	"lost", "nail", "no", "owl", "page", "pick", "pluck", "pop", "raise", "rally", "rattle", "relic", "ring", "splash", "splat",
 	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won", "thwack", "crit", "tink", "whoosh", "shout", "cockerel", "howl", "whip", "sermon"]
 const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "castle": "amb_castle",
-	"music_day": "music_day", "music_night": "music_night"}
+	"music_day": "music_day", "music_night": "music_night", "music_boss": "music_boss"}
 const VARY := ["chop", "hit", "bone", "swing", "stone", "pick", "build", "splash", "thump", "splat", "groan0", "groan1", "groan2", "rattle", "caw0", "caw1", "thwack", "tink", "whoosh"]
 const HEAR := 34.0               # further from the camera than this, an effect is not heard
 
 static var me: Sound
+static var boss_music := false         # the Lord is on the field: the organ
 var focus := Vector2.ZERO
 var _fx: Dictionary = {}          # name -> AudioStream
 var _pool: Array[AudioStreamPlayer] = []
@@ -110,8 +111,10 @@ func update(delta: float, nf: float, focus_: Vector3, weather: String, undead_ne
 	_fade("night", night * 0.8, delta)
 	_fade("rain", 0.34 if weather == "rain" else 0.0, delta)      # (it was 0.8: at full volume the rain drowned the village)
 	_fade("castle", clampf(castle * 0.9 + night * 0.25, 0.0, 1.0) * 0.8, delta)
-	_fade("music_day", (1.0 - night) * 0.6, delta * 0.5)
-	_fade("music_night", night * 0.65, delta * 0.5)
+	var bm := 1.0 if boss_music else 0.0
+	_fade("music_day", (1.0 - night) * 0.6 * (1.0 - bm), delta * (2.0 if boss_music else 0.5))
+	_fade("music_night", night * 0.65 * (1.0 - bm), delta * (2.0 if boss_music else 0.5))
+	_fade("music_boss", bm * 0.8, delta * (1.5 if boss_music else 0.4))
 	if not playing:
 		return
 	# now and then: an owl at night, crows by the castle, the dead groaning when they are close

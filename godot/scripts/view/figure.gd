@@ -117,7 +117,8 @@ func player(p: E.Player, is_me: bool) -> void:
 	visible = p.state != "hide"                                                # (drinking at the bar of the Rose, you can be seen: it is a room now)
 	_place(p.x, p.z, p.r, false)
 	_censer(p.trk == 27 and p.state == "ok" and p.room == "")
-	_frozen = p.frozen > 0                                          # frozen with fright: rooted, and trembling      # the Smoking Censer: smoke, out as far as it works
+	_frozen = p.frozen > 0                                          # frozen with fright: rooted, and trembling
+	_hop = sin(PI * (1.0 - p.jumpT / D.JUMP.t)) * 0.75 if p.jumpT > 0 else 0.0   # in the air      # the Smoking Censer: smoke, out as far as it works
 	var kind: String = D.GK[p.gk] if p.gk < D.GK.size() else ""
 	var c := _counts(p.ac, p.hc, p.cc)
 	if c[2] and p.state != "inn": _work_fx(kind if kind != "" else "tree")
@@ -281,6 +282,7 @@ var _held_swing := false
 var _glow_col := Color(0, 0, 0, 0)       # the glow of a relic or a rune weapon in the hand (clear: none)
 var _glow_id := -1
 var _frozen := false
+var _hop := 0.0
 var _smoke: Node3D          # the Smoking Censer's smoke, made the first time it is carried
 
 
@@ -440,7 +442,7 @@ func _work_fx(kind: String) -> void:   # a blow landed on a tree, a rock, the or
 
 func _process(delta: float) -> void:
 	var before := position
-	var want := Vector3(_x, _lift, _z)
+	var want := Vector3(_x, _lift + _hop, _z)
 	position = want if before.distance_to(want) > 6 else before.lerp(want, minf(1.0, delta * 14.0))
 	var sp := (position - before).length() / maxf(delta, 1e-4)
 	_mv = lerpf(_mv, minf(1.0, sp / 2.2), minf(1.0, delta * 9.0))

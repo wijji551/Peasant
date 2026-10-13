@@ -222,19 +222,12 @@ func _init() -> void:
 	ok("the Captain of the Guard comes down with his guard behind him", R.boss.k == D.U_CAPTAIN and guards.size() >= 5 and guards.all(func(u): return u.side == R.boss.side))
 	R.undead.clear(); R.boss = null
 
-	# ---------- the Lord, in three stages
+	# ---------- the Lord (version 7.4: lord_test.gd has the rest of the last night)
 	night_of(30); peace()
+	R.spawn_undead(0, 5, -30)
 	R.spawn_boss(D.U_LORD)
 	var lord: E.Undead = R.boss
-	lord.x = 0; lord.z = -35
-	var n0 := R.undead.size()
-	fast(10)
-	ok("at first the Lord watches from the road and calls down his bats", lord.stage == 0 and R.undead.filter(func(u): return u.k == D.U_BATS).size() > 0, R.undead.size() - n0)
-	R.undead = [lord]
-	R.hit_u(lord, lord.mhp * 0.4, {"holy": 1.0})
-	ok("hurt, he comes down himself", lord.stage == 1, lord.stage)
-	R.hit_u(lord, lord.mhp * 0.3, {"holy": 1.0})
-	ok("and at the last he goes for the keep door", lord.stage == 2, lord.stage)
+	ok("the Lord arrives at the north gate, and everything else is cleared away", R.undead == [lord] and absf(lord.z - (D.VN - 7.0)) < 0.1, R.undead.size())
 	var kp3 := R.keepHp
 	fast(40, func(): return R.keepHp >= kp3)
 	ok("straight through the wall to it", R.keepHp < kp3, R.keepHp)

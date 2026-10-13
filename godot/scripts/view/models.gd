@@ -237,6 +237,30 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.05, 0.42, 0.05, 0, 2.55, 0, 0xe8dcb0)                                    # and its spike
 			b.box(0.12, 0.12, 0.05, 0, 1.52, 0.22, 0xc9a13a).box(0.1, 0.1, 0.05, 0, 1.36, 0.22, 0xc9a13a)   # a gold chain of office
 			b.box(0.06, 0.16, 0.06, 0.42, 1.02, 0.2, 0xc9a13a).box(0.16, 0.14, 0.16, 0.42, 1.18, 0.2, 0xd9b54a).box(0.12, 0.02, 0.12, 0.42, 1.25, 0.2, 0x8e1f1f)   # the goblet
+		# the Lord in pieces, for when he is on the field and has to move properly (version 7.4): his body, his cloak
+		# (hung from the shoulders: its top is at the origin), and an arm (hung from the shoulder, the same)
+		"lord_body":
+			b.box(0.2, 0.8, 0.22, -0.14, 0, 0, 0x121016).box(0.2, 0.8, 0.22, 0.14, 0, 0, 0x121016)
+			b.box(0.62, 0.95, 0.4, 0, 0.78, 0, 0x1d1a24).box(0.18, 0.7, 0.05, 0, 0.95, 0.2, 0x7d1f27)
+			b.box(0.4, 0.46, 0.38, 0, 1.75, 0, 0xf1efe6).box(0.2, 0.16, 0.26, 0, 1.84, 0.3, 0xf0b62e).box(0.16, 0.07, 0.2, 0, 1.78, 0.28, 0xd9982a)
+			b.box(0.07, 0.06, 0.03, 0.2, 1.86, 0.1, 0xf2a7b0)
+			b.box(0.9, 0.7, 0.08, -0.4, 1.55, -0.12, 0x5a1520, 0.6, 0, 0).box(0.9, 0.7, 0.08, 0.4, 1.55, -0.12, 0x5a1520, -0.6, 0, 0)
+			b.box(0.56, 0.05, 0.54, 0, 2.2, 0, 0x0c0a0e).box(0.4, 0.3, 0.38, 0, 2.25, 0, 0x0c0a0e).box(0.42, 0.08, 0.4, 0, 2.27, 0, 0xc9a13a)
+			b.box(0.05, 0.42, 0.05, 0, 2.55, 0, 0xe8dcb0)
+			b.box(0.12, 0.12, 0.05, 0, 1.52, 0.22, 0xc9a13a).box(0.1, 0.1, 0.05, 0, 1.36, 0.22, 0xc9a13a)
+			b.box(0.07, 0.07, 0.03, -0.1, 1.9, 0.2, 0x1a1418).box(0.07, 0.07, 0.03, 0.1, 1.9, 0.2, 0x1a1418)
+		"lord_cloak":
+			b.box(1.2, 1.9, 0.1, 0, -1.9, 0, 0x121016).box(1.1, 1.8, 0.04, 0, -1.85, 0.06, 0x5a1520)
+		"lord_arm":
+			b.box(0.15, 0.7, 0.17, 0, -0.7, 0, 0x1d1a24).box(0.13, 0.12, 0.15, 0, -0.8, 0.02, 0xf1efe6)
+		"lord_goblet":
+			b.box(0.06, 0.16, 0.06, 0, -0.9, 0.12, 0xc9a13a).box(0.16, 0.14, 0.16, 0, -0.74, 0.12, 0xd9b54a).box(0.12, 0.02, 0.12, 0, -0.67, 0.12, 0x8e1f1f)
+		"shadow":                                            # the Lord's shadow: his shape, in smoke
+			b.box(0.62, 1.7, 0.4, 0, 0, 0, 0x14101a).box(1.3, 1.9, 0.1, 0, 0.1, -0.3, 0x0d0a12, 0, 0.1, 0)
+			b.box(0.4, 0.46, 0.38, 0, 1.7, 0, 0x1a1420).box(0.56, 0.05, 0.54, 0, 2.15, 0, 0x0c0a0e).box(0.4, 0.3, 0.38, 0, 2.2, 0, 0x0c0a0e)
+			b.box(0.9, 0.7, 0.08, -0.4, 1.5, -0.12, 0x2a0d14, 0.6, 0, 0).box(0.9, 0.7, 0.08, 0.4, 1.5, -0.12, 0x2a0d14, -0.6, 0, 0)
+		"shadow_eyes":
+			b.box(0.08, 0.06, 0.03, -0.1, 1.86, 0.2, 0xff4040).box(0.08, 0.06, 0.03, 0.1, 1.86, 0.2, 0xff4040)
 		"lord_eyes":
 			b.box(0.07, 0.07, 0.03, -0.1, 1.9, 0.2, 0x1a1418).box(0.07, 0.07, 0.03, 0.1, 1.9, 0.2, 0x1a1418)
 		"cart":                                              # a merchant's cart: two wheels, an awning (white: tinted per merchant), crates and sacks
