@@ -241,6 +241,39 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var fee := R.guard_fee()
 			o.append({"label": "Hire a village guard for tonight", "sub": ("%s%s. He holds %s until dawn. %d of the %d guards are still free." % [D.coins(fee), " (the Bailiff has been jeered at today)" if R.bail_mood > 0 else "", D.POST_NAMES[R.guards % D.POSTS.size()], left, D.GUARDS]) if left > 0 else "Every guard is out tonight already.", "ok": left > 0 and p.coin >= fee, "a": "guard"})
 			return {"title": "Robert Bailiff’s back door", "intro": "You knock. After a while a voice says the Bailiff is not at home, and that his guards cost %s a night, paid in advance, through the letterbox." % D.coins(fee), "o": o}
+		"mill", "plate":                              # the windmill's banquet, paid for at the mill or from the plate by the east gate
+			var mill := id == "mill"
+			var c: Dictionary = D.BANQUET.mill if mill else D.BANQUET.plate
+			var carrier := R.peasants.any(func(q): return q.owner == p.id and q.kind == 0 and q.plat == 0 and Rules.active(q) and not q.errand)
+			var why := "Your posse has a banquet tonight already." if p.banq == R.day else "One of your posse is on his way to the windmill with it." if p.banqP else \
+				"The miller only cooks by day. He is a miller." if R.phase != "day" else "Somebody from your posse has to carry it out to the windmill, and you have nobody." if not mill and not carrier else ""
+			o.append({"label": "Lay on a banquet for your posse tonight (%s)" % D.cost_text(c), "sub": why if why != "" else "It mends your posse slowly, all night long. Not you: only them." + ("" if mill else " One of them carries it out to the windmill, and comes back."), "ok": why == "" and Rules.has(p, c), "a": "banq", "arg": id})
+			var fed := []
+			for o2 in R.players:
+				if o2.banq == R.day: fed.append(o2.dn)
+			o.append({"text": ("Tonight’s banquet is for the posses of %s." % ", ".join(fed)) if fed.size() else "Nobody has paid for a banquet tonight. Each posse’s share is paid for by its own leader, afresh each day."})
+			if mill:
+				return {"title": "The windmill", "intro": "The miller says the windmill has never done anything useful in its life, and that he would like that to change. For %s he will lay on a banquet for your posse, all through the night." % D.cost_text(c), "o": o}
+			return {"title": "The offering plate", "intro": "A plate on a post, by the east gate. Leave %s on it and one of your posse will take it out to the windmill for you. It costs more than going yourself, which is the convenience." % D.cost_text(c), "o": o}
+		"herder":
+			if p.herd:
+				var sh := R.sheep_of(p)
+				o.append({"label": "Tame a sheep of your own (%d food)" % D.SHEEP.food, "sub": ("You have one: %s. It is %s." % [D.qname(sh) if sh else "under the stairs", "fed today" if p.sheepFed == R.day else "hungry, and wants one food"]) if p.sheep else "He picks you one out. Its first meal is on you.", "ok": not p.sheep and p.food >= D.SHEEP.food, "a": "tame"})
+				o.append({"text": "Your sheep is on the action bar: press it to get on, and again to get off. It is a quarter quicker than walking, and boots do nothing for it. You cannot fight, gather or use any place from its back. It goes under the stairs at dusk, and wants one food a day."})
+				return {"title": "The Herder", "intro": "“Mind how you lean,” the Herder says.", "o": o}
+			if p.herdQ >= 0:                           # his questions
+				var qi := (p.herdQ + p.id) % D.HERD_Q.size()
+				var Q: Dictionary = D.HERD_Q[qi]
+				var rot: int = (p.id + qi) % Q.a.size()
+				o.append({"head": "Question %d of 2" % (p.herdQ + 1)})
+				for k in Q.a.size():
+					var ai: int = (k + rot) % Q.a.size()
+					o.append({"label": Q.a[ai], "sub": "", "ok": true, "a": "hans", "arg": ai})
+				return {"title": "The Herder asks", "intro": ("“%s” Try again. %s" % [D.HERD_Q[(p.herdW + p.id) % D.HERD_Q.size()].no, Q.q]) if p.herdW >= 0 else Q.q, "o": o}
+			var said := mini(D.HERD_TALK.size(), floori(p.herdT / D.HERD_TIME * D.HERD_TALK.size()) + (1 if p.herdL else 0))
+			for k in said: o.append({"text": D.HERD_TALK[k]})
+			o.append({"label": ("Listening: %d of %d seconds" % [floori(p.herdT), D.HERD_TIME]) if p.herdL else "Listen to his lesson in sheep herding" if p.herdT <= 0 else "Listen to the rest of his lesson", "sub": "Stay beside him. Press again to walk off; he will remember where he got to." if p.herdL else "About %d seconds, and then a question or two. Nobody fails; some take longer." % D.HERD_TIME, "ok": true, "a": "hlisten"})
+			return {"title": "The Herder", "intro": "A man in a smock, leaning on a crook, watching seven sheep. He says there are seven. He says he would know.", "o": o}
 		"board":
 			if page == "letters" or page.begins_with("l"):
 				return letters_page(R, page, "The Lord’s letters", "Somebody has been copying the Lord of Ashhollow’s letters out and pinning them up here, with the spelling corrected.", "Back to the notices")

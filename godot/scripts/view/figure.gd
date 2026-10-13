@@ -171,12 +171,29 @@ func player(p: E.Player, is_me: bool) -> void:
 	else:
 		_bar.visible = false
 	_model.scale = Vector3.ONE * 1.2
+	_lift = 0.6 if p.ride else 0.0                  # on a sheep: up on its back, and the sheep under
+	if p.ride and _mount == null: _mount = _sheep_node(self, (p.slot * 5 + p.id) % D.SHEEP_NAMES.size())
+	if _mount:
+		_mount.visible = p.ride
+		_mount.position = Vector3(0, -0.6, -0.05)
+		_sheep_walk(_mount)
+	_leg_l.rotation.z = -0.5 if p.ride else 0.0
+	_leg_r.rotation.z = 0.5 if p.ride else 0.0
 
 
 ## Show a villager, one of a posse, or a body. own is their leader, or null.
 func peasant(q: E.Peasant, own: E.Player) -> void:
 	if q.kind == 3:                                   # a dog
 		_dog_show(q, own)
+		return
+	if q.kind == 4:                                   # a sheep (when it is being ridden, the rider shows it)
+		visible = q.state != "ride"
+		_model.visible = false
+		_bar.visible = false
+		if _sheep == null: _sheep = _sheep_node(self, q.ni)
+		_place(q.x, q.z, q.r, false)
+		_sheep.rotation.y = 0.0
+		_sheep_walk(_sheep)
 		return
 	visible = q.state != "gone" and q.state != "inn"
 	_place(q.x, q.z, q.r, false)
@@ -209,7 +226,7 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 		if fx and q.state != "body": fx.puff(q.x, 1, q.z, 3, fx.C_BLOOD, 2)
 	_down = q.state == "body"
 	_dim = 0.6 if _down else 1.0
-	_tunic_mat.albedo_color = CORPSE if _down else Color(0.22, 0.4, 0.28) if q.kind == 1 else Color(D.PCOL[own.col % 8]) if own else Color(0.72, 0.62, 0.46)
+	_tunic_mat.albedo_color = CORPSE if _down else Color(0.22, 0.4, 0.28) if q.kind == 1 else Color(D.PCOL[own.col % 8]).lerp(Color(0.5, 0.45, 0.38), 0.45 if q.stray else 0.0) if own else Color(0.55, 0.5, 0.42) if q.stray else Color(0.72, 0.62, 0.46)
 	_wobble = false
 	_set_work(kind)
 	var kg := Rules.kit_gear(q.kit, q.ni) if q.kind == 0 and q.kit > 0 else [-1, -1, -1]
@@ -222,7 +239,8 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 		_bar.visible = false
 	if fx and q.nv < 45 and not _down and q.state != "hide" and randf() < get_process_delta_time() * 5:
 		fx.puff(q.x, 2, q.z, 1, fx.C_SPLASH, 0.8)            # sweating
-	_model.scale = Vector3.ONE
+	_model.scale = Vector3(0.9, 0.93, 0.9) if q.stray else Vector3.ONE   # a stray is a bit of a scrap of a thing
+	_stray_patch(q.stray and not _down)
 
 
 var _down := false
@@ -454,6 +472,37 @@ var _dog: Node3D
 var _dog_legs: Array = []
 var _dog_tail: Node3D
 var _dog_seen := [-1, -1]
+
+var _sheep: Node3D                   # a sheep, trotting after its player
+var _mount: Node3D                   # the sheep a player is riding
+var _patch: Node3D                   # a stray's patches
+
+## A sheep: fleece, a dark face and four dark legs (the legs are kept in its "legs" meta, to walk).
+func _sheep_node(parent: Node3D, ni: int) -> Node3D:
+	var n := Node3D.new(); parent.add_child(n)
+	var wool := _mat(Color(0.95, 0.93, 0.86) if ni % 4 != 3 else Color(0.36, 0.32, 0.3))   # one in four is a black sheep
+	var face := _mat(Color(0.18, 0.16, 0.15))
+	_mi(n, "sheep", wool)
+	_mi(n, "sheep_face", face)
+	var legs := []
+	for lp in [Vector3(-0.17, 0.36, 0.3), Vector3(0.17, 0.36, 0.3), Vector3(-0.17, 0.36, -0.3), Vector3(0.17, 0.36, -0.3)]:
+		var l := Node3D.new(); l.position = lp; n.add_child(l)
+		_mi(l, "sheep_leg", face)
+		legs.append(l)
+	n.set_meta("legs", legs)
+	return n
+
+func _sheep_walk(n: Node3D) -> void:
+	var legs: Array = n.get_meta("legs")
+	for i in legs.size():
+		legs[i].rotation.x = sin(_walk + (PI if i % 3 == 0 else 0.0)) * 0.55 * _mv
+
+func _stray_patch(on: bool) -> void:
+	if on and _patch == null:
+		_patch = Node3D.new(); _model.add_child(_patch)
+		var m := _mat(Color(0.42, 0.33, 0.24))
+		_mi(_patch, "patches", m)
+	if _patch: _patch.visible = on
 
 func _dog_show(q: E.Peasant, own: E.Player) -> void:
 	visible = true

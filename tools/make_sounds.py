@@ -331,6 +331,12 @@ def sfx():
     t = np.arange(n) / SR
     gr = (osc(95 + 20 * t, "sawtooth") * 0.4 + lowpass(rng.standard_normal(n), 500) * 0.5) * np.minimum(1, t / 0.05) * np.clip((0.6 - t) / 0.2, 0, 1)
     S["growl"] = lowpass(gr, 900) * V * 0.8
+    # a sheep: a bleat, a nasal note that wobbles and falls away
+    n = int(SR * 0.75)
+    t = np.arange(n) / SR
+    f = 330 * (1.0 + 0.06 * np.sin(2 * np.pi * 9 * t)) * (1.0 - 0.12 * t)
+    bl = (osc(f, "sawtooth") * 0.7 + osc(f * 2, "sine") * 0.3) * np.minimum(1, t / 0.04) * np.clip((0.75 - t) / 0.35, 0, 1)
+    S["baa"] = reverb(bandpass(bl, 400, 2600) * V * 0.75, 0.4, 0.12)
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)

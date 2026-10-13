@@ -903,6 +903,14 @@ func _downs() -> void:
 		for lx in [-0.25, 0.25]:
 			for lz in [-0.16, 0.16]:
 				Build.box(sh, Vector3(0.08, 0.36, 0.08), Vector3(lx, 0, lz), Color("2f2a26"))
+	# the Herder, at the corner of his fold, with his crook (version 7.10)
+	var hd := _npc(self, Vector3(D.HERDER.x, 0, D.HERDER.z), -PI / 2, Color("7c8450"), "cap", false)
+	Build.box(hd, Vector3(0.07, 1.9, 0.07), Vector3(0.5, 0, 0.25), C.timber)
+	Build.box(hd, Vector3(0.07, 0.07, 0.3), Vector3(0.5, 1.9, 0.38), C.timber)
+	# and the offering plate by the east gate: a plate on a post
+	var pl := Vector3(D.station("plate").x, 0, D.station("plate").z)
+	Build.box(self, Vector3(0.14, 1.0, 0.14), pl, C.timber)
+	Build.cyl(self, 0.36, 0.3, 0.06, pl + Vector3(0, 1.0, 0), Color("b9a27a"), 10)
 	# a track from the east gate out to the mill, worn by the miller and nobody else
 	for i in 26:
 		Build.box(self, Vector3(rr(0.4, 0.9), 0.08, rr(0.4, 0.9)), Vector3(lerpf(48.0, D.MILL.x - 4, i / 25.0) + rr(-0.6, 0.6), 0, lerpf(D.GATE_Z, D.MILL.z, i / 25.0) + rr(-1, 1)), C.path2, rr(0, 3))

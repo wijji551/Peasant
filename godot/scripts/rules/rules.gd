@@ -271,7 +271,7 @@ func bark(q: E.Peasant, lines: Array) -> void:   # a peasant says something
 	if q: ev.append(["bark", q.id, pick(lines)])
 
 static func q_max(q: E.Peasant) -> float:   # a village guard and a mercenary are sturdier than a villager
-	return (200.0 if q.kind == 1 else 160.0 if q.kind == 2 else D.PEASANT_HP) + (20.0 if q.fed else 0.0)
+	return (200.0 if q.kind == 1 else 160.0 if q.kind == 2 else D.STRAY.hp if q.stray else D.PEASANT_HP) + (20.0 if q.fed else 0.0)
 
 ## Honing: each page honed into a book adds two in the hundred to what it does (five pages at most).
 static func hn(p: E.Player, b: int) -> float:
@@ -339,7 +339,18 @@ static func cap(p: E.Player) -> int:
 
 func posse_max(p: E.Player) -> int:
 	var r := rk(p, 6)
-	return maxi(1, pm + (4 if r >= 8 else 3 if r >= 6 else 2 if r >= 4 else 1 if r >= 2 else 0) - (1 if p.coward else 0))
+	return maxi(1, pm + (4 if r >= 8 else 3 if r >= 6 else 2 if r >= 4 else 1 if r >= 2 else 0) - (1 if p.coward else 0)) + strays_of(p)
+
+## How many strays are in this player's posse (version 7.10): each is over and above its usual size.
+func strays_of(p: E.Player) -> int:
+	var n := 0
+	for q in peasants:
+		if q.stray and q.owner == p.id and q.state != "body": n += 1
+	return n
+
+## Which week of the game it is, counting from nothing (for "one stray a week").
+func week_i() -> int:
+	return (day - 1) / 7
 
 ## The more of you there are, the more of the dead come at the same seven foundations and the one keep. So what the
 ## village builds is stouter with company: a blow from the dead does this many times less to a defence or to the keep
@@ -766,6 +777,116 @@ func dog_step(q: E.Peasant, dt: float) -> void:
 	elif dd > 0.4: step_to(q, tx, tz, D.DOG.spd * (1.4 if dd > 8 else 1.0) if dd > 3 else 5.0, dt, 0.2)
 	collide_friend(q, 0.3)
 
+# ---------------------------------------------------------------- village life (version 7.10)
+## A tamed sheep is a peasant of its own kind (4). By day it trots after its player, or carries them; at dusk it is put
+## away in their cottage, under the stairs, and in the morning it is let out again. It is not saved.
+
+func sheep_of(p: E.Player) -> E.Peasant:
+	for q in peasants:
+		if q.kind == 4 and q.owner == p.id: return q
+	return null
+
+## On to the sheep, or off it. By day only, and not hungry: it wants one food a day, and takes it from what you carry.
+## Returns true if it happened; the reason it did not goes to the player.
+func ride(p: E.Player, on: bool) -> bool:
+	if not on:
+		if not p.ride: return false
+		p.ride = false
+		var s := sheep_of(p)
+		if s:
+			s.state = "graze"; s.x = p.x + cos(p.r) * 1.2; s.z = p.z - sin(p.r) * 1.2
+		return true
+	var why := ""
+	if not p.sheep: why = "You have no sheep. The Herder, out by the windmill, can teach you to tame one."
+	elif phase != "day": why = "Your sheep is under the stairs for the night, and will not come out until morning."
+	elif p.state != "ok" or p.room != "" or p.ride: why = "Not from here."
+	elif p.sheepFed != day and p.food < D.SHEEP.food: why = "Your sheep is hungry, and will not be ridden hungry. It wants one food."
+	if why != "":
+		ev.append(["no", p.id, why, "Your sheep"])
+		return false
+	if p.sheepFed != day:
+		p.food -= D.SHEEP.food; p.sheepFed = day
+		say("%s has fed their sheep, which has eaten it and is now prepared to listen." % p.dn)
+	var s := sheep_of(p)
+	if s == null: s = _new_sheep(p)
+	s.state = "ride"; s.x = p.x; s.z = p.z
+	p.ride = true; p.gk = 0; p.prog = 0; p.study = false; p.herdL = false; p.job = false
+	ev.append(["baa", r1(p.x), r1(p.z)])
+	return true
+
+func _new_sheep(p: E.Player) -> E.Peasant:
+	var c := D.cottage(p.slot)
+	var s := mk_peasant((p.slot * 5 + p.id) % D.SHEEP_NAMES.size(), c.sx + 1.0, c.sz, c.sx, c.sz, p.id)
+	s.kind = 4; s.state = "graze"; s.hp = 50.0
+	peasants.append(s)
+	return s
+
+## Every moment: the sheep (out by day, following or carried), and the banquet mending the posses that have one.
+func village_step(dt: float) -> void:
+	for p in players:
+		var s := sheep_of(p)
+		if phase != "day" or not p.sheep:
+			if p.ride: p.ride = false
+			if s: peasants.erase(s)
+			continue
+		if p.ride and (p.state != "ok" or p.room != ""): ride(p, false)
+		if s == null: s = _new_sheep(p)
+		if p.ride:
+			s.state = "ride"; s.x = p.x; s.z = p.z; s.r = p.r
+			continue
+		s.state = "graze"
+		if p.room != "" or p.state != "ok": continue          # it waits where it is
+		var tx: float = p.x - sin(p.r) * 1.8 + cos(p.r) * 0.9
+		var tz: float = p.z - cos(p.r) * 1.8 - sin(p.r) * 0.9
+		var dd := Vector2(tx - s.x, tz - s.z).length()
+		if dd > 40: s.x = tx; s.z = tz
+		elif dd > 0.6: step_to(s, tx, tz, D.PLAYER_SPEED * (1.4 if dd > 6 else 0.9), dt, 0.3)
+		collide_friend(s, 0.35)
+	if phase == "day": return
+	for q in peasants:                                       # the banquet: a posse paid for today mends all night
+		if q.kind != 0 or q.owner == 0 or q.state == "body" or q.state == "gone": continue
+		var own := player_by_id(q.owner)
+		if own and own.banq == day and q.hp < q_max(q):
+			q.hp = minf(q_max(q), q.hp + D.BANQUET.heal * dt)
+
+## Dusk: the sheep go under the stairs, a stray may take to his heels, and strays nobody found go off to hide properly.
+func village_dusk() -> void:
+	for p in players:
+		if p.ride or sheep_of(p):
+			p.ride = false
+			if sheep_of(p): peasants.erase(sheep_of(p))
+			say("%s has put their sheep away for the night, in the cupboard under the stairs." % p.dn)
+	for q in peasants.duplicate():
+		if q.stray and q.owner == 0 and q.state == "idle": peasants.erase(q)
+	var chance := D.STRAY.run * players.size()               # one in the hundred for every player in the game
+	for q in peasants.duplicate():
+		if not q.stray or q.owner == 0 or q.state == "body" or randf() >= chance: continue
+		var own := player_by_id(q.owner)
+		var took := mini(D.STRAY.fee, own.coin) if own else 0
+		if own: own.coin -= took
+		peasants.erase(q)
+		say("%s has run off into the dusk%s%s. He did not, he says, sign up for this." % [D.qname(q), " with his kit" if q.kit > 0 else "", (" and %s of %s’s coin" % [D.coins(took), own.dn]) if took > 0 else ""])
+		ev.append(["deserted", q.owner, D.qname(q)])
+
+## Morning: for each player who has not had one this week, there may be a stray out there, hiding. Fewer as the weeks go on,
+## and further into the forest. True if one turned up.
+func strays_morning() -> bool:
+	var wk := week_i()
+	var p_: float = D.STRAY_FIND[mini(wk, D.STRAY_FIND.size() - 1)]
+	var any := false
+	for p in players:
+		if p.strayW == wk: continue
+		var living := peasants.filter(func(q): return q.state != "body" and (q.kind == 0)).size()
+		var hiding := peasants.filter(func(q): return q.stray and q.owner == 0).size()
+		if living >= pop_cap() or hiding >= players.size() or randf() >= p_: continue
+		var lo := mini(wk * 2, D.STRAY_SPOTS.size() - 4)
+		var at: Array = D.STRAY_SPOTS[lo + randi() % mini(5, D.STRAY_SPOTS.size() - lo)]
+		var q := mk_peasant(randi() % D.PNAMES.size(), at[0] + rnd2(-1.5, 1.5), at[1] + rnd2(-1.5, 1.5), at[0], at[1], 0)
+		q.stray = true; q.hp = D.STRAY.hp; q.r = randf() * TAU
+		peasants.append(q)
+		any = true
+	return any
+
 ## Is there a burning pot within reach of (x, z)?
 func near_pot(x: float, z: float) -> bool:
 	for s in structs:
@@ -1116,7 +1237,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
+const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "herd", "sheep", "sheepFed", "strayW", "banq"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -1131,12 +1252,12 @@ func save_data() -> Dictionary:
 		ps.append(player_record(p))
 	var qs := []
 	for q in peasants:
-		if q.kind == 3: continue                       # dogs are not saved: they turn up again
+		if q.kind == 3 or q.kind == 4: continue        # dogs and sheep are not saved: they turn up again
 		var own := player_by_id(q.owner)
 		var pl := -1                                   # the watch platform they are posted on, as its place in the list of structures
 		for si in structs.size():
 			if q.plat != 0 and structs[si].id == q.plat: pl = si
-		qs.append({"ni": q.ni, "x": q.x, "z": q.z, "hx": q.hx, "hz": q.hz, "hp": q.hp, "armed": q.armed, "body": q.state == "body", "os": own.slot if own else -1, "kind": q.kind, "pl": pl, "kit": q.kit, "kw": q.kw})
+		qs.append({"ni": q.ni, "x": q.x, "z": q.z, "hx": q.hx, "hz": q.hz, "hp": q.hp, "armed": q.armed, "body": q.state == "body", "os": own.slot if own else -1, "kind": q.kind, "pl": pl, "kit": q.kit, "kw": q.kw, "stray": q.stray})
 	var ds := []
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z, "day": d.day})
@@ -1302,7 +1423,7 @@ func load_game(d: Dictionary, infos: Array) -> void:
 				own = p
 		var at_home: bool = own == null and not q.body
 		var e := mk_peasant(int(q.ni), q.hx if at_home else q.x, q.hz if at_home else q.z, q.hx, q.hz, own.id if own else 0)
-		e.hp = q.hp; e.armed = int(q.armed); e.kind = int(q.get("kind", 0)); e.kit = int(q.get("kit", 0)); e.kw = int(q.get("kw", 0))
+		e.hp = q.hp; e.armed = int(q.armed); e.kind = int(q.get("kind", 0)); e.kit = int(q.get("kit", 0)); e.kw = int(q.get("kw", 0)); e.stray = bool(q.get("stray", false))
 		var pli := int(q.get("pl", -1))
 		if pli >= 0 and pli < structs.size() and own: e.plat = structs[pli].id
 		if q.body:
@@ -1432,6 +1553,8 @@ func find_interact(p: E.Player):
 	if p.state == "hide":
 		return {"type": "unhide", "key": "unhide", "ok": true, "dur": 0.6, "x": p.x, "z": p.z, "rad": 1.0, "label": "Hold {interact} to come out of your cottage"}
 	if p.room != "": return room_interact(p) if p.state == "ok" else null
+	if p.ride and p.state == "ok":                   # on a sheep: nothing can be done from up there but get off
+		return {"type": "dismount", "key": "dismount", "ok": true, "dur": 0.3, "x": p.x, "z": p.z, "rad": 1.0, "label": "Hold {interact} to get off your sheep. Nothing can be done from up there."}
 	if p.state == "ok":
 		for k in D.ROOMS:
 			var M: Dictionary = D.ROOMS[k]
@@ -1469,6 +1592,11 @@ func find_interact(p: E.Player):
 			var d := D.d2(p.x, p.z, q.x, q.z)
 			if d < bd:
 				bd = d; best = q
+	if best and best.stray:                            # a stray, hiding: talked round, over and above the posse
+		var why := "You have taken a stray in already this week. He looks at you, and decides to wait for someone else." if p.strayW == week_i() else \
+			"Your posse has %d strays already. He says he would get lost in the crowd." % D.STRAY.max if strays_of(p) >= D.STRAY.max else ""
+		return {"type": "rally", "target": best, "key": "q%d" % best.id, "ok": why == "", "dur": D.STRAY.talk, "x": best.x, "z": best.z, "rad": 0.8,
+			"label": why if why != "" else "Hold {interact} to talk the stray round. He would be over and above your posse."}
 	if best:
 		var full := p.posse >= posse_max(p)
 		return {"type": "rally", "target": best, "key": "q%d" % best.id, "ok": not full, "dur": 0.35, "x": best.x, "z": best.z, "rad": 0.8,
@@ -2067,7 +2195,7 @@ func shoot(p: E.Player, I: Dictionary, mul: float, o: Dictionary = {}) -> E.Unde
 	return t
 
 func do_attack(p: E.Player) -> void:
-	if p.state != "ok" or p.atkCd > 0 or p.frozen > 0:
+	if p.state != "ok" or p.atkCd > 0 or p.frozen > 0 or p.ride:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	if phase == "night": p.fought = true
@@ -2138,7 +2266,7 @@ func stun_u(u: E.Undead, t: float) -> void:
 	u.stun = maxf(u.stun, t * 0.4 if big(u) else t)
 
 func do_ability(p: E.Player) -> void:   # the weapon's own trick
-	if p.state != "ok" or p.abCd > 0 or not live() or p.frozen > 0:
+	if p.state != "ok" or p.abCd > 0 or not live() or p.frozen > 0 or p.ride:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	var k: String = I.ab
@@ -2241,7 +2369,7 @@ func scare(u: E.Undead, x: float, z: float, t: float) -> void:
 
 ## A calling's power: i is 0 or 1. For the Holy Book, Smite and Pray.
 func do_power(p: E.Player, i: int) -> void:
-	if p.state != "ok" or not live() or p.frozen > 0:
+	if p.state != "ok" or not live() or p.frozen > 0 or p.ride:
 		return
 	var c := class_of(p)
 	if c < 0 or i < 0 or i > 2:
@@ -2288,7 +2416,7 @@ static func sticks(p: E.Player) -> int:
 ## Burning oil (the fire-raiser's second power, rank 6): poured from a wall, a gate or a tower over the ground in front
 ## of it, which burns for eight seconds. Twice the ground at rank 10.
 func oil_power(p: E.Player) -> void:
-	if p.state != "ok" or not live() or p.frozen > 0 or rk(p, D.B_FIRE) < 6 or p.oilCd > 0: return
+	if p.state != "ok" or not live() or p.frozen > 0 or p.ride or rk(p, D.B_FIRE) < 6 or p.oilCd > 0: return
 	var at := Vector2.INF
 	for s in structs:
 		if not s.built: continue
@@ -2306,7 +2434,7 @@ func oil_power(p: E.Player) -> void:
 	say("%s has poured the burning oil. The dead below have opinions." % p.dn)
 
 func book_power(p: E.Player, b: int) -> void:
-	if p.state != "ok" or not live() or p.frozen > 0 or not can_book_power(p, b): return
+	if p.state != "ok" or not live() or p.frozen > 0 or p.ride or not can_book_power(p, b): return
 	while p.pwCd.size() < D.BOOKS.size(): p.pwCd.append(0.0)
 	var P: Dictionary = D.POWERS[b]
 	var long: float = P.t * hn(p, b)
@@ -2487,7 +2615,7 @@ func priest_power(p: E.Player, i: int, r: int) -> void:
 		add_xp(p, D.B_HOLY, 1 + n * 0.5)
 
 func do_toilet(p: E.Player) -> void:   # emergency toilet break: the posse makes its own ammunition
-	if p.state != "ok" or p.tbCd > 0 or not live():
+	if p.state != "ok" or p.tbCd > 0 or not live() or p.ride:
 		return
 	var posse := peasants.filter(func(q): return q.owner == p.id and (q.state == "follow" or q.state == "fight" or q.state == "chop") and D.d2(q.x, q.z, p.x, p.z) < 200)
 	if posse.is_empty():
@@ -2504,7 +2632,7 @@ func do_toilet(p: E.Player) -> void:   # emergency toilet break: the posse makes
 	say("%s’s posse has taken an emergency toilet break. The dead did not care for it." % p.dn)
 
 func do_use(p: E.Player) -> void:   # whatever you carry
-	if p.state != "ok" or not live():
+	if p.state != "ok" or not live() or p.ride:
 		return
 	if p.trk == 28:                  # the slop bucket, lobbed once
 		var l := targets(p, 9, 0.0, true)
@@ -2894,7 +3022,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 		"recruit":
 			if near_station(p, "slum"):
 				var c := {"food": slum_food(p)}
-				var pop := peasants.filter(func(q): return q.state != "body" and q.kind != 3).size()
+				var pop := peasants.filter(func(q): return q.state != "body" and q.kind != 3 and q.kind != 4).size()
 				if has(p, c) and p.posse < posse_max(p) and pop < pop_cap():
 					pay(p, c)
 					var used := {}
@@ -3075,6 +3203,38 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 		"study":
 			if near_station(p, "priest") and p.holy < 2:
 				p.study = not p.study
+		"banq":                                         # the windmill's banquet: at the mill, or from the offering plate by the east gate
+			if phase != "day" or p.banq == day or p.banqP: return
+			if sa == "mill" and near_station(p, "mill") and has(p, D.BANQUET.mill):
+				pay(p, D.BANQUET.mill); p.banq = day; spark.call("eat")
+				say("%s has paid for a banquet at the windmill. The miller has rolled up his sleeves, and then rolled them down again." % p.dn)
+			elif sa == "plate" and near_station(p, "plate") and has(p, D.BANQUET.plate):
+				var by: E.Peasant = null
+				var bd := 1e9
+				for q in peasants:
+					if q.owner == p.id and q.kind == 0 and q.plat == 0 and active(q) and not q.errand and D.d2(q.x, q.z, p.x, p.z) < bd:
+						bd = D.d2(q.x, q.z, p.x, p.z); by = q
+				if by == null: return
+				pay(p, D.BANQUET.plate); by.errand = true; by.state = "follow"; by.tree = null; p.banqP = true; spark.call("coin")
+				say("%s has left food and money on the offering plate, and %s has picked it up and set off for the windmill with it." % [p.dn, D.qname(by)])
+		"hlisten":                                      # the Herder's lesson in sheep herding
+			if near_station(p, "herder") and not p.herd and p.herdQ < 0 and not p.ride:
+				p.herdL = not p.herdL
+		"hans":                                         # an answer to one of his questions (arg: which answer, as he wrote them)
+			if not near_station(p, "herder") or p.herd or p.herdQ < 0 or ia < 0: return
+			if ia == 0:
+				p.herdQ += 1; p.herdW = -1
+				if p.herdQ >= mini(2, D.HERD_Q.size()):
+					p.herdQ = -1; p.herd = true; spark.call("holy")
+					say("%s has learned sheep herding from the Herder, and may now tame a sheep of their own." % p.dn)
+			else:
+				p.herdW = p.herdQ
+		"tame":
+			if near_station(p, "herder") and p.herd and not p.sheep and p.food >= D.SHEEP.food:
+				p.food -= D.SHEEP.food; p.sheep = true; p.sheepFed = day; spark.call("baa")
+				var s := _new_sheep(p)
+				s.x = D.HERDER.x + 1.5; s.z = D.HERDER.z
+				say("%s has tamed a sheep. It is called %s, it says here." % [p.dn, D.SHEEP_NAMES[s.ni]])
 		"bless":
 			var free := p.holy >= 2 if sa == "b" else p.holy >= 1
 			var okW: bool = sa == "w" and not (p.bless & 1) and not D.IT[p.wpn].holy
@@ -3134,6 +3294,7 @@ func step(dt: float) -> void:
 		player_step(p, dt)
 	for q in peasants:
 		peasant_step(q, dt)
+	village_step(dt)
 	undead_step(dt); spikes_step(dt); contraptions_step(dt)
 	if undead.any(func(u): return u.dead):
 		var keep := []
@@ -3152,6 +3313,7 @@ func dusk_falls() -> void:
 	for p in players:                              # someone in every posse has something to say about it
 		var mine := peasants.filter(func(q): return q.owner == p.id and active(q))
 		if mine.size(): bark(mine[randi() % mine.size()], D.BARK_DUSK)
+	village_dusk()
 	for q in peasants:
 		if q.state == "idle": q.state = "hide"
 	for p in players:
@@ -3504,7 +3666,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 	for q in peasants:                              # the living come home, and line up outside their leader's door
 		if q.state == "body": continue
 		var own := player_by_id(q.owner)
-		q.fed = false; q.hp = D.PEASANT_HP; q.tree = null; q.nv = 100; q.saved = false; q.saved2 = false
+		q.fed = false; q.hp = D.STRAY.hp if q.stray else D.PEASANT_HP; q.tree = null; q.errand = false; q.nv = 100; q.saved = false; q.saved2 = false
 		if own:
 			row[own.id] = row.get(own.id, 0) + 1
 			var h := home_spot(own.slot, row[own.id], 7)
@@ -3527,6 +3689,8 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 		return
 	crowd = 1.0; crowd_d = 1.0
 	day += 1; grow_trees(); roll_day(false); lines.append(site_line())
+	for p in players: p.banqP = false
+	if strays_morning(): lines.append("Somebody has seen a stray about, hiding round the farms or in the forest. He might be talked round.")
 	tough = tough_of(mday()); tough_hp = hp_of(mday())
 	if bells(): lines.append(D.BELLS_LINE)
 	if D.MOON_LINE.has(moon()): lines.append(D.MOON_LINE[moon()])
@@ -3581,7 +3745,7 @@ func player_step(p: E.Player, dt: float) -> void:
 		return
 	var n := 0
 	for q in peasants:
-		if q.owner == p.id and q.state != "body" and q.kind != 3: n += 1   # (a dog is not posse)
+		if q.owner == p.id and q.state != "body" and q.kind != 3 and q.kind != 4: n += 1   # (a dog is not posse, nor a sheep)
 	p.posse = n
 	if not p.game.is_empty():                      # a game with the gambler: the cups take their time, and walking off forfeits the stake
 		if p.room != "inn" or p.state != "ok" or not near_station(p, "gambler"): p.game = {}
@@ -3613,6 +3777,13 @@ func player_step(p: E.Player, dt: float) -> void:
 			if p.holyT >= D.HOLY_TIME:
 				p.holyT = 0; p.holy += 1; p.study = false; ev.append(["holy", r1(p.x), r1(p.z)])
 				say(("%s has sat through a class in holy studies, and can now bless a weapon or a bucket." if p.holy == 1 else "%s has finished holy studies, and can now bless the departed.") % p.dn)
+	if p.herdL:                                    # the Herder's lesson: stand beside him until he has said it all
+		if p.state != "ok" or p.herd or D.d2(p.x, p.z, D.HERDER.x, D.HERDER.z) > pow(D.station("herder").r + 1.5, 2):
+			p.herdL = false
+		else:
+			p.herdT += dt
+			if p.herdT >= D.HERD_TIME:
+				p.herdT = D.HERD_TIME; p.herdL = false; p.herdQ = 0; p.herdW = -1
 	if p.job:                                      # working on the merchant's job: stay where the job is
 		if merchant < 0 or job.done or phase != "day":
 			p.job = false
@@ -3670,7 +3841,12 @@ func player_step(p: E.Player, dt: float) -> void:
 						drops.erase(d); gain(p, d.it); ev.append(["coin", r1(p.x), r1(p.z)])
 				"rally":
 					it.target.owner = p.id; it.target.state = "follow"; add_xp(p, 6, 2)
-					if randf() < 0.6: bark(it.target, D.BARK_RALLY)
+					if it.target.stray:
+						p.strayW = week_i()
+						say("%s has talked a stray round: %s. %s" % [p.dn, D.qname(it.target), pick(D.STRAY_LINES)])
+					elif randf() < 0.6: bark(it.target, D.BARK_RALLY)
+				"dismount":
+					ride(p, false); p.eLock = true
 				"body":
 					peasants.erase(it.target); p.bodies += 1
 				"found":
@@ -3802,7 +3978,17 @@ func way_to(x: float, z: float, tx: float, tz: float) -> Vector2:
 
 func peasant_step(q: E.Peasant, dt: float) -> void:
 	q.cd = maxf(0, q.cd - dt); q.hurtT += dt; q.prot = maxf(0, q.prot - dt)
-	if q.kind == 3: return                            # a dog: dogs_step sees to it
+	if q.kind == 3 or q.kind == 4: return             # a dog, or a sheep: dogs_step and sheep_step see to them
+	if q.errand:                                      # food from the offering plate, out to the windmill
+		var own := player_by_id(q.owner)
+		if own == null or q.state == "body": q.errand = false; return
+		var w := way_to(q.x, q.z, D.MILL_DOOR[0] - 1.2, D.MILL_DOOR[1])
+		step_to(q, w.x, w.y, 5.0, dt, 0.0)
+		if D.d2(q.x, q.z, D.MILL_DOOR[0] - 1.2, D.MILL_DOOR[1]) < 2.0:
+			q.errand = false; own.banqP = false; own.banq = day
+			ev.append(["eat", r1(q.x), r1(q.z)])
+			say("%s has carried %s’s food out to the windmill. The miller says there will be a banquet tonight, and that he does not know why it has to be at his mill." % [D.qname(q), own.dn])
+		return
 	if q.state == "body" or q.state == "idle" or q.state == "gone" or q.state == "inn":
 		return
 	if q.kind == 1:
@@ -3944,7 +4130,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		var idx := 0
 		for o in peasants:
 			if o == q: break
-			if o.owner == q.owner and o.state != "body" and o.kind != 3: idx += 1
+			if o.owner == q.owner and o.state != "body" and o.kind != 3 and o.kind != 4: idx += 1
 		var f: Array = FOLLOW[idx % FOLLOW.size()]
 		var cs := cos(Ld.r)
 		var sn := sin(Ld.r)
@@ -4764,6 +4950,7 @@ func move_player(p: E.Player, mx: float, mz: float, dt: float, t: float = 0.0) -
 	if l <= 0:
 		return ""
 	var sp: float = D.PLAYER_SPEED * (1 - D.IT[p.body].slow if p.body >= 0 else 1.0) * (1 - 0.05 * p.bodies) * (1.35 if p.charge > 0 else 0.6 if p.hang > 0 else 1.0) * (0.85 if weather == "snow" else D.MUD if weather == "rain" and p.room == "" else 1.0) * stride(p)
+	if p.ride: sp = D.PLAYER_SPEED * D.SHEEP.spd * (D.MUD if weather == "rain" else 1.0)   # a sheep: boots and armour make no odds to it
 	mx /= l; mz /= l
 	if p.hang > 0:                                 # the hangover wobble
 		var w := sin(t / 0.26) * 0.6

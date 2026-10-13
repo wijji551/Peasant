@@ -97,6 +97,31 @@ const FIRE := {"stick": 4.0, "reach": 14.0, "burst": 2.6, "oil_r": 3.0, "oil_t":
 ## Hiding Behind Things: Brace.
 ## Dogs, and Other Bad Ideas: the dog's health, bite, wait between bites, speed; how far it fetches; a gate's watchers.
 const DOG_NAMES := ["Biscuit", "Nuisance", "Old Tom", "Gristle", "Sir Woofington", "Mud", "Trouble", "Duchess", "Pickle", "Wolf (he is not)", "Ratbag", "Dennis"]
+# --- village life (version 7.10): the windmill's banquet, the Herder and his sheep, and strays
+const BANQUET := {"mill": {"food": 10}, "plate": {"food": 13, "coin": 5}, "heal": 1.2}   # each posse's share; how fast it mends them, all night
+const MILL_DOOR := [101.0, 30.0]                 # where the food is handed in (the door faces the village)
+const HERDER := {"x": 98.6, "z": 39.6}           # by the sheepfold, on the downs
+const HERD_TIME := 36.0                          # his lesson: this long stood beside him, and then his questions
+const HERD_TALK := [
+	"A sheep, the Herder says, is not stupid. It has looked at the world, and decided against it.",
+	"You do not steer a sheep. You lean the way you want to go, think about grass, and in time it comes round to the idea.",
+	"Never let it see you are in a hurry. A sheep that knows you are in a hurry sits down to discuss it.",
+	"And feed it. One good meal a day, and it will carry you anywhere it was going anyway.",
+]
+const HERD_Q := [   # the first answer is the right one (they are shuffled on the notice); then what he says to a wrong one
+	{"q": "How do you steer a sheep?", "a": ["Lean the way you want to go, and think about grass.", "Pull its ears.", "Shout directions at it."], "no": "That is how you end up in the duck pond. Ask anybody."},
+	{"q": "Your sheep has sat down in the road. What do you do?", "a": ["Wait, and look as though it was your idea.", "Push it.", "Sit on it harder."], "no": "And that is why I am the Herder, and you are on foot."},
+	{"q": "What does a sheep want, once a day?", "a": ["One food, and no hurry.", "A good talking-to.", "Nothing. It is a sheep."], "no": "No wonder the last lot all walked off."},
+]
+const SHEEP := {"spd": 1.25, "food": 1}           # a quarter quicker than walking (boots do nothing for a sheep); a meal a day
+const SHEEP_NAMES := ["Mutton", "Lady Margaret", "Clive", "Dumpling", "The Reverend", "Woolly Pete", "Agnes", "Chops", "Lord Fluff", "Marjorie", "Kevin", "Brenda"]
+const STRAY := {"hp": 60.0, "max": 2, "talk": 2.0, "run": 0.01, "fee": 12}   # a stray: weaker, two at most in a posse, talked round; the nightly chance per player; what he takes
+const STRAY_FIND := [0.55, 0.4, 0.28, 0.18, 0.12]    # each morning, the chance a stray is out there for a player who has not had one this week, by week
+const STRAY_SPOTS := [   # where they hide: round the farms first, deeper in the forest as the weeks go on
+	[-72.0, 26.0], [-44.0, 38.0], [-60.0, 17.5], [-50.0, 9.0], [-66.0, -6.0],
+	[-82.0, 14.0], [-90.0, -18.0], [-104.0, 4.0], [-78.0, -38.0], [-112.0, -26.0],
+]
+const STRAY_LINES := ["He says he was only resting.", "He says he has been looking for a posse for some time, mostly from behind this bush.", "He asks whether there is food. There is. He will come.", "He says he is very brave, and has the scars to prove it, all of them on his back."]
 const DOG := {"hp": 60.0, "bite": 6.0, "per": 1.5, "cd": 0.8, "spd": 7.5, "fetch": 14.0, "up": 60.0, "watch": 12.0, "bark": 20.0}
 ## The watch platform: one of your posse stands on it from dusk and throws stones over the wall at whatever comes
 ## within reach. Up there the dead cannot get at them, except archers; a roof (ten more wood) stops the arrows.
@@ -736,6 +761,9 @@ const STATIONS := [
 	{"id": "local2", "x": 53.6, "z": 235.9, "r": 1.6, "room": "inn", "name": "the stranger in the corner", "verb": "talk to the stranger in the corner"},
 	{"id": "gambler", "x": 65.6, "z": 237.9, "r": 1.7, "room": "inn", "name": "the gambler", "verb": "sit down with the gambler"},
 	{"id": "shelf", "x": 53.1, "z": 239.3, "r": 1.4, "room": "inn", "name": "the inn’s bookshelf", "verb": "look at the inn’s bookshelf"},
+	{"id": "mill", "x": 101.0, "z": 30.0, "r": 2.6, "name": "the windmill", "verb": "see the miller about a banquet"},
+	{"id": "plate", "x": 24.6, "z": 5.4, "r": 1.9, "name": "the offering plate", "verb": "look at the offering plate"},
+	{"id": "herder", "x": 98.6, "z": 39.6, "r": 2.4, "name": "the Herder", "verb": "talk to the Herder"},
 ]
 # --- The Lord of Ashhollow's letters of complaint. A headless rider nails one to the gatepost at first light.
 # why: what must have happened first (a count in Rules.seen, or "kills"); the rest are sent when there is nothing new to complain of.
@@ -967,6 +995,8 @@ static func inside_village(x: float, z: float) -> bool:
 static func qname(q) -> String:
 	if q.kind == 1: return GUARD_NAMES[q.ni % GUARD_NAMES.size()]
 	if q.kind == 2: return MERC_NAMES[q.ni % MERC_NAMES.size()]
+	if q.kind == 3: return DOG_NAMES[q.ni % DOG_NAMES.size()]
+	if q.kind == 4: return SHEEP_NAMES[q.ni % SHEEP_NAMES.size()]
 	return PNAMES[q.ni % PNAMES.size()]
 
 

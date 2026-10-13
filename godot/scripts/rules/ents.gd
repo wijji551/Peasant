@@ -98,6 +98,17 @@ class Player:
 	var dark := 0.0         # the dark lantern: unseen by the dead, this long
 	var braced := 0.0       # Brace (Hiding Behind Things): this long
 	var hallowT := 0.0      # the Sandals of the Extremely Devout: until the next hallowed footprint
+	var banq := 0           # the day this player's posse's banquet was paid for at the windmill (0: never)
+	var banqP := false      # one of the posse is on his way to the windmill with the food from the offering plate
+	var herd := false       # the Herder's lesson learned: a sheep can be tamed
+	var herdT := 0.0        # how far into his lesson
+	var herdL := false      # listening to it now
+	var herdQ := -1         # which of his questions is being asked, or -1
+	var herdW := -1         # the question last answered wrongly (for his remark), or -1
+	var sheep := false      # a sheep of their own
+	var sheepFed := 0       # the day it was last fed
+	var ride := false       # on its back
+	var strayW := -1        # the week a stray was last talked round
 	var flask := false      # a hip flask of ale, carried out of the inn (rank 9 of the Landlord's Ledger)
 	var sure := false       # the day's certain find has been used (rank 10 of Relics and Where They Were Left)
 	var shots := 0          # shots loosed, for the free volley every tenth (rank 10 of Slings, Bows and Thrown Turnips)
@@ -188,7 +199,7 @@ class Peasant:
 	var px := 0.0           # where they were told to hold (a guard: his post)
 	var pz := 0.0
 	var prot := 0.0         # prayed over: a third less harm
-	var kind := 0           # 0 a villager, 1 a village guard (hired for the night), 2 a mercenary (in a posse until dawn)
+	var kind := 0           # 0 a villager, 1 a village guard (hired for the night), 2 a mercenary (in a posse until dawn), 3 a dog, 4 a sheep
 	var plat := 0           # the watch platform they are posted on (a structure's id), or 0
 	var kit := 0            # the posse kit they were given (an item id), or 0
 	var dt := 0             # a dog: the one of the dead it has been told to pull down (an id), or 0
@@ -196,6 +207,8 @@ class Peasant:
 	var carry := -1         # a dog: what it has in its mouth (an item id), or -1
 	var downT := 0.0        # a dog, knocked down: until it is back on its feet
 	var drag := 0           # a dog: the fallen player it is dragging out of the fight (an id), or 0
+	var stray := false      # a stray (version 7.10): weaker, over the posse's usual size, and apt to run off in the night
+	var errand := false     # carrying food from the offering plate out to the windmill
 	var kw := 0             # nights a crude kit has been through: it falls to bits after two
 	var fed := false        # fed by a leader at rank 10 of Field, Hook and Pot: twenty more health until dawn
 	var saved2 := false     # a second fatal blow survived tonight (rank 9 of Granny's Remedies)

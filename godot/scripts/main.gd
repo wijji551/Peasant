@@ -513,6 +513,7 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 			hud.banner(D.it_cap(p.inv[i]), "", 0.8); cmd({"t": "act", "a": "eq", "arg": i})
 	elif Keys.is_act(e, "carry"): bar_do("carry")
 	elif Keys.is_act(e, "toilet"): bar_do("toilet")
+	elif Keys.is_act(e, "ride"): bar_do("sheep")
 	elif Keys.is_act(e, "power1"): bar_do("c0")
 	elif Keys.is_act(e, "power2"): bar_do("c1")
 	elif Keys.is_act(e, "orders"): bar_do("orders")
@@ -548,6 +549,7 @@ func bar_all() -> Array:
 	if p.trk == 26 or p.trk == 28: out.append("carry")
 	if Rules.rk(p, 6) >= 1: out.append("orders")
 	if p.posse > 0: out.append("toilet")
+	if p.sheep: out.append("sheep")
 	return out
 
 
@@ -573,6 +575,8 @@ func bar_info(id: String) -> Array:
 			return ["posse", ["Follow", "Hold", "Charge"][p.order], 0.0, "Posse orders: follow you, hold where they stand%s." % (", or charge" if Rules.rk(p, 6) >= 3 else "")]
 		"toilet":
 			return ["toilet", "Toilet", p.tbCd, "Emergency toilet break: the dead nearby run from your posse."]
+		"sheep":
+			return ["sheep", "Get off" if p.ride else "Ride", 0.0, "Your sheep: a quarter quicker than walking, by day. From its back you cannot fight, gather or use any place. It wants one food a day."]
 	if id.begins_with("b"):
 		var b := int(id.substr(1))
 		var P: Dictionary = D.POWERS[b]
@@ -604,6 +608,9 @@ func bar_do(id: String) -> void:
 			if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
 			elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
 			else: cmd({"t": "tb"})
+		"sheep":
+			if not p.ride and R.phase != "day": Sound.play("no"); hud.banner("Not tonight", "Your sheep is under the stairs, and will not come out until morning.", 1.8)
+			else: cmd({"t": "ride", "on": not p.ride})
 		"orders":
 			if Rules.rk(p, 6) < 1: Sound.play("no"); hud.banner("No orders yet", "Orders come with %s, from the library." % D.book_title(6), 2.2)
 			else:
@@ -873,7 +880,7 @@ func _tick() -> void:
 		if e != "":
 			_edge = e; _edge_t = 0.5
 		var atk: bool = Keys.held("attack") or (Input.is_action_pressed("dtv_attack_mouse") and _build_sel == "" and not win.visible) or (_bot and R.phase == "night")
-		if atk and _atk_cd <= 0 and p.gk != 5:
+		if atk and _atk_cd <= 0 and p.gk != 5 and not p.ride:
 			var I: Dictionary = D.IT[p.wpn]
 			_atk_cd = I.cd * (0.8 if I.rng and Rules.rk(p, 5) >= 5 else 1.0)
 			R.aim_assist(p); cmd({"t": "atk", "r": p.r})
@@ -1057,7 +1064,9 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"hold": F.puff(ev[1], 0.4, ev[2], 8, F.C_DUST, 2.5); Sound.play("growl", 0.8, Vector2(ev[1], ev[2]))
 		"dogdown": F.puff(ev[1], 0.6, ev[2], 6, F.C_DUST, 2.0)
 		"fetched": if ev[1] == me.id: hud.banner("Fetched", "The dog has brought you %s." % ev[2], 1.8)
-		"no": if ev[1] == me.id: Sound.play("no"); hud.banner("Not here", ev[2], 1.6)
+		"no": if ev[1] == me.id: Sound.play("no"); hud.banner(ev[3] if ev.size() > 3 else "Not here", ev[2], 1.6 if ev.size() < 4 else 2.4)
+		"baa": Sound.play("baa", 0.8, Vector2(ev[1], ev[2]))
+		"deserted": if ev[1] == me.id: Sound.play("no"); hud.banner("A stray has run off", "%s has gone into the dusk, and has helped himself to your coin on the way." % ev[2], 3.0)
 		"mark": _marked = [int(ev[1]), float(ev[2])]        # The Marked Man: a red mark over it, while it lasts
 		"hone":
 			F.pillar(ev[2], ev[3], ev[4])
@@ -1637,6 +1646,12 @@ func _test_hook() -> void:
 		if OS.get_environment("DTV_FEET") != "": me.feet = int(OS.get_environment("DTV_FEET"))
 		if Rules.rk(me, D.B_FIRE) >= 5:
 			me.iron = 5; R.try_place(me, "firepot", me.x + 2.2, me.z - 1.5, 0.0)
+	if _frame == at - 40 and OS.get_environment("DTV_SHEEP") != "" and me:   # for pictures: on a sheep by the Herder, with a stray in the posse
+		me.herd = true; me.sheep = true; me.sheepFed = R.day; me.food = 5
+		me.x = D.HERDER.x - 4.0; me.z = D.HERDER.z - 1.0; me.r = PI / 2
+		var st_ := R.mk_peasant(3, me.x - 2.0, me.z + 1.5, me.x, me.z, me.id); st_.stray = true; st_.hp = D.STRAY.hp; st_.state = "follow"
+		R.peasants.append(st_)
+		R.ride(me, true)
 	if _frame == at + 20 and OS.get_environment("DTV_WHEEL") != "" and me:   # for pictures: the building wheel, open
 		hud.open_wheel(_builds_now(), me, "")
 	if _frame == at - 2 and OS.get_environment("DTV_RICH") != "" and me:   # for pictures: a master smith with plenty to work with

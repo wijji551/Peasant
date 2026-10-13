@@ -104,6 +104,14 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.34, 0.28, 0.72, 0, 0.36, 0, 0xffffff).box(0.3, 0.28, 0.3, 0, 0.56, 0.44, 0xffffff).box(0.16, 0.12, 0.2, 0, 0.53, 0.66, 0xeeeeee)
 			b.box(0.07, 0.14, 0.06, -0.11, 0.76, 0.4, 0xdddddd).box(0.07, 0.14, 0.06, 0.11, 0.76, 0.4, 0xdddddd).box(0.06, 0.05, 0.04, 0, 0.56, 0.77, 0x1a1414)
 			b.box(0.05, 0.05, 0.03, -0.08, 0.63, 0.59, 0x1a1414).box(0.05, 0.05, 0.03, 0.08, 0.63, 0.59, 0x1a1414)
+		"sheep":                                             # a sheep's fleece: a fat body, and a woolly top to its head
+			b.box(0.62, 0.5, 0.92, 0, 0.42, 0, 0xffffff).box(0.68, 0.18, 0.8, 0, 0.78, 0, 0xf4f4f4).box(0.3, 0.16, 0.24, 0, 0.92, 0.52, 0xffffff)
+		"sheep_face":
+			b.box(0.24, 0.3, 0.3, 0, 0.62, 0.58, 0xffffff).box(0.14, 0.06, 0.08, -0.17, 0.82, 0.52, 0xffffff, 0, 0, 0.4).box(0.14, 0.06, 0.08, 0.17, 0.82, 0.52, 0xffffff, 0, 0, -0.4)
+		"sheep_leg":
+			b.box(0.1, 0.36, 0.1, 0, -0.36, 0, 0xffffff)
+		"patches":                                           # a stray's tunic: patched, and the patches have patches
+			b.box(0.2, 0.18, 0.04, -0.14, 0.86, 0.23, 0xffffff).box(0.16, 0.14, 0.04, 0.16, 0.62, -0.23, 0xffffff).box(0.12, 0.12, 0.04, 0.12, 1.0, 0.23, 0xdddddd)
 		"dog_leg":
 			b.box(0.09, 0.32, 0.09, 0, -0.32, 0, 0xffffff)
 		"dog_tail":
