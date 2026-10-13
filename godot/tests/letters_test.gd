@@ -65,8 +65,8 @@ func _init() -> void:
 	var ids := R.letters.map(func(l): return l[0])
 	var uniq := {}
 	for i in ids: uniq[i] = true
-	ok("a month of letters, none twice", R.day == 30 and ids.size() == 16 and uniq.size() == ids.size(), ids)
-	ok("after the Coachman and the Captain too", ids.has(Rules.letter_ix("coach")) and ids.has(Rules.letter_ix("captain")))
+	ok("a month of letters, none twice", R.day == 30 and ids.size() == 18 and uniq.size() == ids.size(), ids)
+	ok("after the Coachman and the Captain too, and the Chaplain, the Cook and the Gamekeeper", ids.has(Rules.letter_ix("coach")) and ids.has(Rules.letter_ix("captain")) and ids.has(Rules.letter_ix("chaplain")) and ids.has(Rules.letter_ix("cook")) and ids.has(Rules.letter_ix("wolf")))
 	ok("and on the last morning he says he is coming", id_of(R.letters.size() - 1) == "final" and R.letters[-1][1] == 30)
 	# the notice board
 	d = Notices.data(R, "board", m, "")
@@ -76,7 +76,7 @@ func _init() -> void:
 	var opts: Array = d.o.filter(func(o): return o.has("label"))
 	ok("and the Lord's letters", opts.size() == 1 and opts[0].page == "letters" and opts[0].ok)
 	d = Notices.data(R, "board", m, "letters")
-	ok("all sixteen, newest first", d.o.filter(func(o): return o.has("label") and str(o.get("page", "")).begins_with("l")).size() == 16 and d.o[1].label.begins_with("Day 30"), d.o[1])
+	ok("all eighteen, newest first", d.o.filter(func(o): return o.has("label") and str(o.get("page", "")).begins_with("l")).size() == 18 and d.o[1].label.begins_with("Day 30"), d.o[1])
 	d = Notices.data(R, "board", m, "l0")
 	ok("each can be read again", d.o.any(func(o): return o.has("text") and o.text == D.LETTERS[0].t))
 	# the short game: a letter every morning

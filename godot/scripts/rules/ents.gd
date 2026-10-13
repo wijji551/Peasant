@@ -124,6 +124,7 @@ class Player:
 	var eatCd := 0.0
 	var hurtT := 99.0
 	var eHold := false
+	var frozen := 0.0       # frozen with fright by a werewolf's howl: cannot move or strike
 	var stuckT := 0.0       # how long before "I'm a stuck little peasant" can be used again
 	var eLock := false
 	var itT := 0.0
@@ -190,6 +191,12 @@ class Undead:
 	var ac := 0
 	var hc := 0
 	var slow := 0.0
+	var sp1 := 5.0          # a boss: seconds until his next trick
+	var sp2 := 0.0          # and how long he has been winding it up, or doing it
+	var sk := ""            # which trick is under way ("sermon", "swing", "charge")
+	var ax := 0.0           # its direction, or its target
+	var az := 0.0
+	var sd := 0.0           # what is left of it: a charge's distance, the sermon's next tug, the cauldron's wait
 	var smoke := 0.0        # in the smoke of a censer: it strikes slower as well as walking slower
 	var rt := 5.0
 	var stun := 0.0

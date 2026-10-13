@@ -295,6 +295,28 @@ def sfx():
         v = (osc(f, "sawtooth") * 0.7 + osc(f * 2.01, "square") * 0.3 + osc(f * 3.0, "sine") * 0.25) * env * g
         add(ck, bandpass(v, 520, 3900), at)
     S["cockerel"] = reverb(ck * V, 0.7, 0.2)
+    # the Gamekeeper's howl: one long rising and falling note with a growl under it, carried a long way
+    n = int(SR * 2.4)
+    t = np.arange(n) / SR
+    f = 260 + 320 * np.sin(np.pi * np.minimum(1.0, t / 2.1)) ** 1.4 + 6 * np.sin(2 * np.pi * 5.5 * t)
+    env = np.minimum(1.0, t / 0.25) * np.clip((2.4 - t) / 0.6, 0, 1)
+    hw = (osc(f, "sawtooth") * 0.5 + osc(f * 2, "sine") * 0.35 + osc(f * 0.5, "triangle") * 0.3) * env
+    hw = bandpass(hw, 180, 2600) + lowpass(rng.standard_normal(n), 300) * 0.25 * env
+    S["howl"] = reverb(hw / (np.abs(hw).max() + 1e-9) * 0.7 * V, 1.4, 0.35)
+    # the Coachman's whip: a crack
+    wp = buf(0.4)
+    add(wp, highpass(rng.standard_normal(int(SR * 0.03)), 1800) * np.linspace(1, 0, int(SR * 0.03)) * 0.9, 0.0)
+    add(wp, noise(0.12, 0.25, 4000), 0.02)
+    S["whip"] = reverb(wp * V, 0.4, 0.15)
+    # the Chaplain clearing his throat and beginning: a low droning intonation, three phrases
+    sm = buf(2.6)
+    for at, f0, dur in ((0.0, 118, 0.7), (0.8, 124, 0.6), (1.5, 112, 0.95)):
+        k = int(SR * dur)
+        tt = np.arange(k) / SR
+        ff = np.full(k, f0) * (1 + 0.01 * np.sin(2 * np.pi * 4 * tt))
+        v = (osc(ff, "sawtooth") * 0.5 + osc(ff * 2, "triangle") * 0.2) * np.minimum(1, tt / 0.05) * np.clip((dur - tt) / 0.15, 0, 1) * 0.4
+        add(sm, bandpass(v, 200, 1400), at)
+    S["sermon"] = reverb(sm * V, 1.6, 0.4)
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)

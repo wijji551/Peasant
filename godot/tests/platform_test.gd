@@ -120,7 +120,7 @@ func _init() -> void:
 	ok("five moons a month: harvest, full, frost, blood, full", [9, 15, 19, 23, 28].map(func(d): return Rules.moon_of(d, D.MONTH)) == ["harvest", "full", "frost", "blood", "full"])
 	ok("none in the short game, and none on other nights", Rules.moon_of(15, D.WEEK) == "" and Rules.moon_of(16, D.MONTH) == "")
 	ok("both full moons are full-moon weather; the frost moon is snow", Rules.weather_of(5, 15, D.MONTH) == "moon" and Rules.weather_of(5, 28, D.MONTH) == "moon" and Rules.weather_of(5, 19, D.MONTH) == "snow" and Rules.weather_of(99, 19, D.MONTH) == "snow")
-	ok("no moon falls on a boss's night", D.MOONS.keys().all(func(d): return not D.BOSS_NIGHTS.has(d)))
+	ok("no moon falls on a boss's night, but the werewolf's full moon", D.MOONS.keys().all(func(d): return not D.BOSS_NIGHTS.has(d) or (d == 28 and D.BOSS_NIGHTS[d] == D.U_WOLF)))
 	ok("and the bells never ring under a moon", range(1, 300).all(func(sd): return D.MOONS.keys().all(func(d): return not Rules.bells_night(sd, d, D.MONTH))))
 	var weeks_ok := true
 	for sd in range(1, 60):

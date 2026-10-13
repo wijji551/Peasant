@@ -3,9 +3,9 @@ extends Node3D
 ## MultiMesh: every one of them is a transform and a colour, as in the web version. A flash when hit, a lean
 ## back when stunned or pinned, greener when frightened, redder when cracked open by a Shatter.
 
-const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord", "tenant", "bloat", "pall", "hound"]
-const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55, 1.25, 1.15, 1.1, 1.0]
-const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4, 120, 120, 160]
+const KINDS := ["shamb", "skel", "archer", "steward", "ghoul", "digger", "bats", "guard", "wraith", "ram", "hearse", "captain", "lord", "tenant", "bloat", "pall", "hound", "chaplain", "cook", "wolf"]
+const SCALE := [1.1, 1.05, 1.05, 1.65, 1.15, 1.1, 1.1, 1.2, 1.25, 1.1, 1.15, 1.6, 1.55, 1.25, 1.15, 1.1, 1.0, 1.45, 1.55, 1.6]
+const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4, 120, 120, 160, 2, 2, 2]
 
 var fx: Node3D                       # for the puffs when they are hit and when they go
 var _body := []                      # MultiMesh per kind
@@ -137,11 +137,11 @@ func sync(R: Rules, delta: float) -> void:
 		elif k == D.U_BLOAT:                                       # waddling, and wobbling as it goes
 			var wob := sin(walk * 1.4) * 0.05 * mv
 			xf = _xf(v[0], y, v[1], v[2], dz * 0.6 + sin(atk * PI) * 0.25, sin(walk * 0.7) * 0.14, Vector3(s * (1 + wob), s * (1 - wob), s * (1 + wob)))
-		elif k == D.U_HOUND:                                       # loping, low to the ground
+		elif k == D.U_HOUND or k == D.U_WOLF:                     # loping, low to the ground (or, for the Gamekeeper, as low as he can manage)
 			xf = _xf(v[0], y + absf(sin(walk * 1.6)) * 0.12 * mv, v[1], v[2], sin(walk * 1.6) * 0.08 * mv + sin(atk * PI) * 0.35, 0.0, Vector3(s, s, s))
 		elif k == 0 or k == D.U_DIGGER:
 			xf = _xf(v[0], y, v[1], v[2], 0.08 + dz + sin(atk * PI) * 0.5, sin(walk * 0.8) * 0.11, Vector3(s, s, s))
-		elif k == 3 or k == D.U_CAPTAIN or k == D.U_LORD:
+		elif k == 3 or k == D.U_CAPTAIN or k == D.U_LORD or k == D.U_CHAPLAIN:
 			var cast := sin(now / 0.26) * 0.06 if u.state == "atk" and mv < 0.1 else 0.0
 			if did_atk and fx: fx.puff(u.x, 2.6, u.z, 8, fx.C_GHOST, 2.5)
 			xf = _xf(v[0], y * 1.6 + absf(sin(walk * 0.7)) * 0.08 * mv, v[1], v[2], dz * 0.5 + sin(atk * PI) * 0.3, cast, Vector3(s, s + cast, s))

@@ -398,24 +398,28 @@ const _UN := [
 	{"name": "shambler", "hp": 50.0, "spd": 1.5, "dmg": 9.0, "sdmg": 7.0, "kdmg": 3.0, "cd": 1.3, "r": 0.5, "first": 1},
 	{"name": "skeleton", "hp": 16.0, "spd": 2.9, "dmg": 6.0, "sdmg": 3.0, "kdmg": 2.0, "cd": 0.9, "r": 0.4, "bony": true, "first": 2, "cost": 0.6},
 	{"name": "skeleton archer", "hp": 14.0, "spd": 2.4, "dmg": 6.0, "sdmg": 2.0, "kdmg": 2.0, "cd": 2.4, "r": 0.4, "rng": 11.0, "bony": true, "first": 4, "cost": 0.8},
-	{"name": "the Steward", "hp": 800.0, "spd": 1.3, "dmg": 10.0, "sdmg": 8.0, "kdmg": 5.0, "cd": 1.2, "r": 0.75, "boss": true, "first": 7},
+	{"name": "the Steward", "hp": 3000.0, "spd": 1.3, "dmg": 10.0, "sdmg": 8.0, "kdmg": 5.0, "cd": 1.2, "r": 0.75, "boss": true, "first": 7},
 	{"name": "ghoul", "hp": 34.0, "spd": 4.2, "dmg": 8.0, "sdmg": 5.0, "kdmg": 2.0, "cd": 0.8, "r": 0.45, "climb": true, "first": 8, "cost": 1.2},
 	{"name": "gravedigger", "hp": 44.0, "spd": 1.8, "dmg": 9.0, "sdmg": 6.0, "kdmg": 3.0, "cd": 1.1, "r": 0.5, "dig": true, "first": 10, "cost": 1.5},
 	{"name": "bat swarm", "hp": 18.0, "spd": 4.8, "dmg": 3.0, "sdmg": 0.0, "kdmg": 4.0, "cd": 0.7, "r": 0.6, "fly": true, "first": 12, "cost": 0.8},
 	{"name": "the Lord’s guard", "hp": 130.0, "spd": 1.35, "dmg": 13.0, "sdmg": 24.0, "kdmg": 6.0, "cd": 1.4, "r": 0.55, "armour": true, "first": 15, "cost": 4.0},
 	{"name": "wraith", "hp": 55.0, "spd": 2.0, "dmg": 10.0, "sdmg": 0.0, "kdmg": 5.0, "cd": 1.2, "r": 0.5, "ghost": true, "first": 18, "cost": 3.0},
 	{"name": "coffin ram", "hp": 320.0, "spd": 1.25, "dmg": 12.0, "sdmg": 70.0, "kdmg": 30.0, "cd": 2.6, "r": 1.2, "ram": true, "first": 20, "cost": 10.0},
-	{"name": "the Coachman", "hp": 1100.0, "spd": 6.0, "dmg": 22.0, "sdmg": 999.0, "kdmg": 40.0, "cd": 1.5, "r": 1.3, "boss": true, "hearse": true, "first": 14},
-	{"name": "the Captain of the Guard", "hp": 1500.0, "spd": 1.45, "dmg": 24.0, "sdmg": 45.0, "kdmg": 10.0, "cd": 1.3, "r": 0.8, "boss": true, "armour": true, "first": 21},
+	{"name": "the Coachman", "hp": 4500.0, "spd": 6.0, "dmg": 22.0, "sdmg": 999.0, "kdmg": 40.0, "cd": 1.5, "r": 1.3, "boss": true, "hearse": true, "first": 14},
+	{"name": "the Captain of the Guard", "hp": 6000.0, "spd": 1.45, "dmg": 24.0, "sdmg": 45.0, "kdmg": 10.0, "cd": 1.3, "r": 0.8, "boss": true, "armour": true, "first": 21},
 	{"name": "the Lord", "hp": 2600.0, "spd": 1.6, "dmg": 30.0, "sdmg": 60.0, "kdmg": 25.0, "cd": 1.2, "r": 0.8, "boss": true, "lord": true, "first": 30},
 	{"name": "the Previous Tenant", "hp": 260.0, "spd": 2.7, "dmg": 16.0, "sdmg": 14.0, "kdmg": 6.0, "cd": 1.15, "r": 0.6, "tenant": true, "first": 99, "cost": 6.0},
 	# version 7.2: three more, from the first night
 	{"name": "bloated dead", "hp": 80.0, "spd": 1.0, "dmg": 8.0, "sdmg": 8.0, "kdmg": 3.0, "cd": 1.5, "r": 0.62, "burst": true, "first": 1, "cost": 1.8},
 	{"name": "pallbearer", "hp": 60.0, "spd": 1.45, "dmg": 10.0, "sdmg": 9.0, "kdmg": 4.0, "cd": 1.3, "r": 0.55, "lid": true, "first": 1, "cost": 1.6},
 	{"name": "grave hound", "hp": 20.0, "spd": 4.4, "dmg": 6.0, "sdmg": 2.0, "kdmg": 1.0, "cd": 0.75, "r": 0.4, "hound": true, "first": 1, "cost": 0.6},
+	# version 7.3: three more bosses (17, 18, 19)
+	{"name": "the Lord’s Chaplain", "hp": 3800.0, "spd": 1.25, "dmg": 14.0, "sdmg": 10.0, "kdmg": 6.0, "cd": 1.4, "r": 0.7, "boss": true, "chaplain": true, "first": 11},
+	{"name": "the Castle Cook", "hp": 5200.0, "spd": 1.3, "dmg": 20.0, "sdmg": 20.0, "kdmg": 8.0, "cd": 1.4, "r": 0.85, "boss": true, "cook": true, "first": 18},
+	{"name": "the Gamekeeper", "hp": 6700.0, "spd": 3.3, "dmg": 26.0, "sdmg": 40.0, "kdmg": 12.0, "cd": 1.1, "r": 0.8, "boss": true, "wolf": true, "first": 28},
 ]
 const _UN_DEF := {"rng": 0.0, "bony": false, "boss": false, "climb": false, "dig": false, "fly": false, "armour": false, "ghost": false,
-	"ram": false, "hearse": false, "lord": false, "tenant": false, "burst": false, "lid": false, "hound": false, "first": 1, "cost": 1.0}
+	"ram": false, "hearse": false, "lord": false, "tenant": false, "burst": false, "lid": false, "hound": false, "chaplain": false, "cook": false, "wolf": false, "first": 1, "cost": 1.0}
 static var UN: Array = _fill(_UN, _UN_DEF)
 const U_TENANT := 13                 # the Previous Tenant: what sometimes comes up when the outer ruins are searched by day
 const TENANT_CHANCE := 0.05          # a search: one in twenty, and a little more each week
@@ -438,7 +442,19 @@ const U_RAM := 9
 const U_COACH := 10
 const U_CAPTAIN := 11
 const U_LORD := 12
-const BOSS_NIGHTS := {7: 3, 14: 10, 21: 11, 30: 12}   # the night of the month: which boss comes down
+const U_CHAPLAIN := 17               # preaches: draws the players in, and mends the dead near him
+const U_COOK := 18                   # ladles boiling stew about, and swings his cauldron
+const U_WOLF := 19                   # the Gamekeeper, on a full moon: barricades go in one blow, and his howl freezes you
+const BOSS_NIGHTS := {7: 3, 11: 17, 14: 10, 18: 18, 21: 11, 28: 19, 30: 12}   # the night of the month: which boss comes down
+## What the bosses do to the players (version 7.3). every: seconds between; wind: the warning before it lands.
+const SLAM := {"every": 8.0, "wind": 0.9, "reach": 4.5, "throw": 5.0, "dmg": 10.0}           # the Steward serves notice
+const SERMON := {"every": 7.0, "long": 8.0, "reach": 14.0, "tug": 0.45, "mend": 0.015, "mend_reach": 8.0, "stop": 40.0}
+const STAMPEDE := {"every": 12.0, "long": 3.0, "speed": 2.2, "throw": 6.0, "side": 3.0}     # the Coachman's horses
+const STEW := {"every": 7.0, "wind": 1.0, "r": 1.8, "last": 6.0, "dmg": 8.0, "far": 14.0}
+const SWING := {"every": 11.0, "wind": 0.8, "reach": 3.5, "throw": 6.0, "dmg": 14.0}         # the Cook's cauldron
+const SHIELD := {"every": 10.0, "wind": 1.0, "speed": 9.0, "far": 12.0, "width": 1.3, "throw": 4.0, "dmg": 18.0}   # the Captain's charge
+const HOWL := {"every": 14.0, "reach": 18.0, "freeze": 2.5, "wall": 0.25}
+const WOLF_NIGHT := 0.25             # the werewolf's night: a quarter of the usual horde comes with him
 const MONTH := 30
 const WEEK := 7
 const SHORT_NIGHTS := [1, 4, 8, 12, 18, 20, 30]     # the short game: which night of the month each of its 7 nights is like
@@ -483,6 +499,9 @@ const LETTERS := [
 	{"id": "intro", "sub": "An introduction", "t": "Sirs, I write as your neighbour at the Castle. Several of my household walked down last night to introduce themselves and were, I am told, struck repeatedly with a pitchfork. I am sure this was a misunderstanding. They will call again this evening, and every evening, until it is cleared up."},
 	{"id": "steward", "sub": "My Steward", "t": "Sirs, You have broken my Steward. He had been with the family four hundred years, three hundred of them after his death, and never missed a day. I shall now have to do my own accounts, and I warn you that I round up."},
 	{"id": "coach", "sub": "The hearse", "t": "Sirs, The hearse was an antique. It had carried eleven generations of my family to the vault, and nine of them back again. The Coachman is inconsolable, though with him it is hard to tell. I am informed that you used a wall."},
+	{"id": "chaplain", "sub": "My Chaplain", "t": "Sirs, My Chaplain has come back to the castle with no congregation and a bruise in the shape of a hammer. He tells me he was in the middle of a point. He has been in the middle of it since 1407, and I had rather hoped you would let him finish."},
+	{"id": "cook", "sub": "My Cook", "t": "Sirs, You have upset the Cook. He has gone to bed and taken the kitchen with him. Dinner at the castle tonight will be whatever the bats bring in, and I hold you personally responsible for every moth."},
+	{"id": "wolf", "sub": "My Gamekeeper", "t": "Sirs, My Gamekeeper came home this morning on two legs, which is the right number, and with a fondness for knocking down walls that I do not think was there before. He would like his hat back. Kindly leave it on the road."},
 	{"id": "captain", "sub": "My Captain of the Guard", "t": "Sirs, My Captain of the Guard has returned without his guard, his standard, or the lower half of himself. He asks me to say that it was a fair fight. I have told him that is exactly what was wrong with it."},
 	{"id": "final", "sub": "A visit", "t": "Sirs, I have enjoyed our correspondence, though I notice that I have done all of it. I shall call in person this evening, at about dusk, with everybody. Please do not go to any trouble."},
 	{"id": "tar", "why": "b_tar", "n": 1, "sub": "The smell", "t": "Sirs, About the tar pit. The wind has been in the south for three days and the Castle smells like a shipyard. Two of my footmen are still in it. I should like them back when you have finished with them, and I should like the smell back never."},

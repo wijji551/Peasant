@@ -20,6 +20,7 @@ var ev: Array = []            # things that happened this moment, for the view: 
 var store := {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "rune": 0}
 var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
+var pools: Array = []         # the Cook's stew on the ground: [x, z, seconds left, seconds before it is hot, tick]
 var spots: Array = [0, 0, 0, 0, 0, 0, 0, 0]   # searches left in each heap of rubble
 var ruins_seen: Array = [true, false, false]   # has anyone found the outer ruins today? Until then the map and the signs keep quiet
 var sites: Array = [0, 0, 0]
@@ -145,6 +146,9 @@ func next_letter() -> int:
 	elif b == D.U_STEWARD: want = "steward"
 	elif b == D.U_COACH: want = "coach"
 	elif b == D.U_CAPTAIN: want = "captain"
+	elif b == D.U_CHAPLAIN: want = "chaplain"
+	elif b == D.U_COOK: want = "cook"
+	elif b == D.U_WOLF: want = "wolf"
 	if want != "":
 		var w := letter_ix(want)
 		return -1 if had.has(w) else w
@@ -152,7 +156,7 @@ func next_letter() -> int:
 	var spare := []
 	for i in D.LETTERS.size():
 		var L: Dictionary = D.LETTERS[i]
-		if had.has(i) or ["intro", "steward", "coach", "captain", "final"].has(L.id): continue
+		if had.has(i) or ["intro", "steward", "coach", "captain", "chaplain", "cook", "wolf", "final"].has(L.id): continue
 		if not L.has("why"): spare.append(i)
 		elif (stats.kills if L.why == "kills" else int(seen.get(L.why, 0))) >= L.n: return i
 	if spare.is_empty(): return -1
@@ -537,7 +541,7 @@ func add_villagers(slot: int, n: int) -> void:
 		peasants.append(q)
 
 func clear_world() -> void:
-	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []
+	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []
 	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "rune": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
 	letters = []; letter_new = false; seen = {}; chest = {}; tenant_day = 0
@@ -1383,7 +1387,9 @@ func kill_undead(u: E.Undead) -> void:
 	if u == boss:
 		boss = null
 		say({D.U_STEWARD: "The Steward has been dismissed.", D.U_COACH: "The hearse has lost a wheel, and the Coachman his head (again). He will not be driving tonight.",
-			D.U_CAPTAIN: "The Captain of the Guard is down, and his guard has lost its enthusiasm.", D.U_LORD: "The Lord of Ashhollow has been put back in his box. He has not been asked to stay."}.get(u.k, "%s has fallen." % U.name.capitalize()))
+			D.U_CAPTAIN: "The Captain of the Guard is down, and his guard has lost its enthusiasm.", D.U_LORD: "The Lord of Ashhollow has been put back in his box. He has not been asked to stay.",
+			D.U_CHAPLAIN: "The Chaplain has lost his place, for good.", D.U_COOK: "The Castle Cook is down. The stew, regrettably, is not.",
+			D.U_WOLF: "The Gamekeeper is down, and looks a good deal more like himself."}.get(u.k, "%s has fallen." % U.name.capitalize()))
 
 # s: where the blow came from and whose it was: {x, z, p (a player), q (a peasant), blunt, holy (a multiplier), kb (extra knock-back), ranged}
 func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
@@ -1410,6 +1416,9 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if U.fly and not s.get("ranged", false) and not s.get("ring", false): d *= 0.35   # bats are hard to hit with anything you swing
 	if U.ram and s.get("heavy", false): d *= 2
 	if U.lord and not holy: d *= 0.6
+	if U.chaplain and u.sk == "sermon" and d >= D.SERMON.stop and not s.get("dot", false):   # hit hard enough, he loses his place
+		u.sk = ""; u.sp1 = D.SERMON.every
+		ev.append(["lostplace", r1(u.x), r1(u.z)])
 	if U.lid and not s.get("heavy", false) and not s.get("dot", false):   # a pallbearer: the coffin lid takes what comes from the front
 		var who = s.get("p", s.get("q"))
 		var ax: float = s.x if s.has("x") else who.x if who else u.x
@@ -1572,7 +1581,7 @@ func shoot(p: E.Player, I: Dictionary, mul: float, o: Dictionary = {}) -> E.Unde
 	return t
 
 func do_attack(p: E.Player) -> void:
-	if p.state != "ok" or p.atkCd > 0:
+	if p.state != "ok" or p.atkCd > 0 or p.frozen > 0:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	if phase == "night": p.fought = true
@@ -1634,7 +1643,7 @@ func stun_u(u: E.Undead, t: float) -> void:
 	u.stun = maxf(u.stun, t * 0.4 if big(u) else t)
 
 func do_ability(p: E.Player) -> void:   # the weapon's own trick
-	if p.state != "ok" or p.abCd > 0 or not live():
+	if p.state != "ok" or p.abCd > 0 or not live() or p.frozen > 0:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	var k: String = I.ab
@@ -1737,7 +1746,7 @@ func scare(u: E.Undead, x: float, z: float, t: float) -> void:
 
 ## A calling's power: i is 0 or 1. For the Holy Book, Smite and Pray.
 func do_power(p: E.Player, i: int) -> void:
-	if p.state != "ok" or not live():
+	if p.state != "ok" or not live() or p.frozen > 0:
 		return
 	var c := class_of(p)
 	if c < 0 or i < 0 or i > 1:
@@ -2446,6 +2455,7 @@ static func night_plan(d: int, n: int, last: int = D.MONTH) -> Dictionary:
 	var md := month_day(d, last)
 	var g := growth(d) if last >= D.MONTH else pow(D.NIGHT_GROWTH, d - 1)
 	var budget := D.NIGHT_BASE * (1 + D.NIGHT_PER_PLAYER * (n - 1)) * g
+	if boss_of(d, last) == D.U_WOLF: budget *= D.WOLF_NIGHT          # the werewolf's night: him, and not many others
 	var newk := new_kinds(d, last)
 	var w := mix(md, newk)
 	var sum := 0.0
@@ -2534,9 +2544,15 @@ func spawn_boss(k: int) -> void:
 			say("The Captain of the Guard has come down with the Lord’s guard behind him. They are making for %s." % gate)
 		D.U_LORD:
 			say("The Lord of Ashhollow has come down from his castle in person. He has brought his bats.")
+		D.U_CHAPLAIN:
+			say("The Lord’s Chaplain has come down to give a sermon. Attendance is compulsory.")
+		D.U_COOK:
+			say("The Castle Cook has come down with a cauldron and a ladle. He is not taking orders.")
+		D.U_WOLF:
+			say("Something is howling on the castle road. The Lord’s Gamekeeper has not been himself since the full moon, and tonight he is very much somebody else.")
 
 func start_night() -> void:
-	phase = "night"; nf = 1; timeLeft = 0; graves = []; fallen = []
+	phase = "night"; nf = 1; timeLeft = 0; graves = []; fallen = []; pools = []
 	tough = tough_of(mday()); tough_hp = hp_of(mday())
 	if bells():
 		tough *= D.BELLS.dmg; tough_hp *= D.BELLS.hp
@@ -2589,7 +2605,10 @@ func tonight_lines() -> Array:
 	var b := boss_of(day, last_day)
 	if b >= 0:
 		out.append({D.U_STEWARD: "Tonight the Steward himself will come down to supervise.", D.U_COACH: "Tonight the Coachman drives the hearse down the castle road. Wood will not stop him; stone and iron might.",
-			D.U_CAPTAIN: "Tonight the Captain of the Guard leads the Lord’s guard against one of the gates.", D.U_LORD: "Tonight is the last night. The Lord of Ashhollow is coming down in person."}[b])
+			D.U_CAPTAIN: "Tonight the Captain of the Guard leads the Lord’s guard against one of the gates.", D.U_CHAPLAIN: "Tonight the Lord’s Chaplain comes down to preach. Whoever hears him is drawn in, and the dead near him mend. Hit him hard enough and he loses his place.",
+			D.U_COOK: "Tonight the Castle Cook comes down. Stay out of whatever he ladles, and out of reach of the cauldron.",
+			D.U_WOLF: "Tonight is the full moon, and the Lord’s Gamekeeper comes down on four legs. He breaks barricades at a blow, and his howl freezes whoever hears it, unless they are being prayed over or are thoroughly unbothered.",
+			D.U_LORD: "Tonight is the last night. The Lord of Ashhollow is coming down in person."}[b])
 	return out
 
 func grow_trees() -> void:   # dawn in the forest: saplings that are old enough become trees, and yesterday's stumps rot into saplings
@@ -2602,6 +2621,8 @@ func grow_trees() -> void:   # dawn in the forest: saplings that are old enough 
 
 func end_night() -> void:   # dawn: count the cost, bring people home, start the next day
 	var N: Dictionary = night
+	pools = []
+	for p in players: p.frozen = 0
 	var lines := ["Night %d is over. %d of the dead were put back down." % [day, N.kills]]
 	if fallen.size():
 		lines.append("Fallen: %s. What is left lies where it fell, and could still be useful." % ", ".join(fallen))
@@ -2723,7 +2744,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 
 
 func player_step(p: E.Player, dt: float) -> void:
-	p.stuckT = maxf(0, p.stuckT - dt)
+	p.stuckT = maxf(0, p.stuckT - dt); p.frozen = maxf(0, p.frozen - dt)
 	p.atkCd = maxf(0, p.atkCd - dt); p.eatCd = maxf(0, p.eatCd - dt); p.hurtT += dt; p.workT = maxf(0, p.workT - dt)
 	p.p1Cd = maxf(0, p.p1Cd - dt); p.p2Cd = maxf(0, p.p2Cd - dt); p.prot = maxf(0, p.prot - dt); p.hb = maxf(0, p.hb - dt)
 	p.abCd = maxf(0, p.abCd - dt); p.useCd = maxf(0, p.useCd - dt); p.tbCd = maxf(0, p.tbCd - dt); p.parry = maxf(0, p.parry - dt); p.guard = maxf(0, p.guard - dt); p.hang = maxf(0, p.hang - dt)
@@ -3172,12 +3193,166 @@ func undead_goal(u: E.Undead) -> Vector2:
 func hit_struct(u: E.Undead, U: Dictionary, blk: E.Struct, dmul: float = 1.0) -> void:
 	u.state = "atk"
 	if u.cd <= 0:
-		u.cd = U.cd; u.ac += 1; blk.hp -= U.sdmg * rage * dmul / stout(); blk.hc += 1; sv += 1
+		u.cd = U.cd; u.ac += 1; blk.hc += 1; sv += 1
+		if U.get("wolf", false): blk.hp -= blk.mhp if blk.slot < 0 else blk.mhp * D.HOWL.wall   # a barricade at a blow; a wall or a gate in four
+		else: blk.hp -= U.sdmg * rage * dmul / stout()
 		if blk.bl: hit_u(u, 5, {"holy": 1.5})
 		if blk.hp <= 0: destroy_struct(blk)
 
 ## The Coachman drives the hearse down the road at the keep, turns, goes back up for another run, and comes again.
 ## Anything made of wood in the way goes under the wheels; stone and iron stop him, and he batters at them.
+## Thrown: a player sent flying, a step at a time so that nobody goes through a wall. (dx, dz): which way.
+func shove(p: E.Player, dx: float, dz: float, dist: float, quiet: bool = false) -> void:
+	if p.state != "ok" or p.room != "": return
+	var l := sqrt(dx * dx + dz * dz)
+	if l < 0.001:
+		var a := randf() * TAU
+		dx = cos(a); dz = sin(a); l = 1.0
+	dx /= l; dz /= l
+	var n := maxi(1, ceili(dist / 0.4))
+	for i in n:
+		p.x += dx * dist / n; collide_friend(p, 0.45, 0)
+		p.z += dz * dist / n; collide_friend(p, 0.45, 1)
+	p.x = clampf(p.x, D.X0 + 0.5, D.X1 - 0.5); p.z = clampf(p.z, D.Z0 + 0.5, D.Z1 - 0.5)
+	p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1
+	if not quiet: ev.append(["thrown", p.id, r1(p.x), r1(p.z)])
+
+
+func _near_players(u: E.Undead, reach: float) -> Array:
+	return players.filter(func(p): return p.state == "ok" and p.room == "" and D.d2(u.x, u.z, p.x, p.z) < reach * reach)
+
+
+## What each boss does besides hitting people (version 7.3). True: that was his whole step.
+func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
+	if u.k == D.U_STEWARD:                            # he serves notice: the ledger slammed shut, and everyone near is thrown back
+		if u.sk == "slam":
+			u.state = "atk"; u.sp2 -= dt
+			if u.sp2 <= 0:
+				u.sk = ""; u.ac += 1
+				ev.append(["slam", r1(u.x), r1(u.z), D.SLAM.reach])
+				for p in _near_players(u, D.SLAM.reach):
+					hurt_friend(p, D.SLAM.dmg * tough, true, u, false); shove(p, p.x - u.x, p.z - u.z, D.SLAM.throw)
+			return true
+		u.sp1 -= dt
+		if u.sp1 <= 0 and _near_players(u, D.SLAM.reach).size():
+			u.sk = "slam"; u.sp2 = D.SLAM.wind; u.sp1 = D.SLAM.every
+			ev.append(["warn", r1(u.x), r1(u.z), D.SLAM.reach, D.SLAM.wind])
+			return true
+		return false
+	if U.chaplain:                                    # a sermon nobody can walk away from
+		if u.sk == "sermon":
+			u.state = "atk"; u.sp2 -= dt; u.sd -= dt
+			if u.sd <= 0:
+				u.sd = 0.5
+				ev.append(["sermon", r1(u.x), r1(u.z), D.SERMON.reach])
+				for p in _near_players(u, D.SERMON.reach):
+					if D.d2(u.x, u.z, p.x, p.z) > 4.0: shove(p, u.x - p.x, u.z - p.z, D.SERMON.tug, true)
+			var mr: float = D.SERMON.mend_reach * D.SERMON.mend_reach
+			for o in undead:
+				if o != u and not o.dead and not D.UN[o.k].boss and o.hp < o.mhp and D.d2(u.x, u.z, o.x, o.z) < mr:
+					o.hp = minf(o.mhp, o.hp + o.mhp * D.SERMON.mend * dt)
+			if u.sp2 <= 0:
+				u.sk = ""; u.sp1 = D.SERMON.every
+			return true
+		u.sp1 -= dt
+		if u.sp1 <= 0 and _near_players(u, D.SERMON.reach).size():
+			u.sk = "sermon"; u.sp2 = D.SERMON.long; u.sd = 0.0
+			ev.append(["sermonstart", r1(u.x), r1(u.z)])
+			return true
+		return false
+	if U.cook:
+		u.sp1 -= dt                                   # the ladle: a pool of boiling stew where somebody is standing
+		if u.sp1 <= 0:
+			var near := _near_players(u, D.STEW.far)
+			if near.size():
+				var t: E.Player = near[randi() % near.size()]
+				u.sp1 = D.STEW.every; u.ac += 1
+				pools.append([r1(t.x), r1(t.z), D.STEW.last + D.STEW.wind, D.STEW.wind, 0.0])
+				ev.append(["ladle", r1(u.x), r1(u.z), r1(t.x), r1(t.z), D.STEW.wind])
+		if u.sk == "swing":                            # the cauldron, swung round
+			u.state = "atk"; u.sp2 -= dt
+			if u.sp2 <= 0:
+				u.sk = ""; u.ac += 1
+				ev.append(["slam", r1(u.x), r1(u.z), D.SWING.reach])
+				for p in _near_players(u, D.SWING.reach):
+					hurt_friend(p, D.SWING.dmg * tough, true, u, false); shove(p, p.x - u.x, p.z - u.z, D.SWING.throw)
+			return true
+		u.sd -= dt
+		if u.sd <= 0 and _near_players(u, D.SWING.reach).size():
+			u.sk = "swing"; u.sp2 = D.SWING.wind; u.sd = D.SWING.every
+			ev.append(["warn", r1(u.x), r1(u.z), D.SWING.reach, D.SWING.wind])
+			return true
+		return false
+	if u.k == D.U_CAPTAIN:                            # the shield charge: seen coming, and to be stepped out of
+		if u.sk == "charge":
+			if u.sp2 > 0:
+				u.state = "atk"; u.sp2 -= dt; u.r = atan2(u.ax, u.az)
+				return true
+			var stepd: float = D.SHIELD.speed * dt
+			var nx := u.x + u.ax * stepd
+			var nz := u.z + u.az * stepd
+			u.sd -= stepd
+			if u.sd <= 0 or blocking_struct(nx, nz, U.r) != null or nx < D.X0 + 1 or nx > D.X1 - 1 or nz < D.Z0 + 1 or nz > D.Z1 - 1:
+				u.sk = ""
+				return true
+			u.x = nx; u.z = nz; u.state = "walk"
+			for p in _near_players(u, D.SHIELD.width + U.r):
+				if p.hurtT > 0.8:
+					hurt_friend(p, D.SHIELD.dmg * tough, true, u, false)
+					var side := signf((p.x - u.x) * u.az - (p.z - u.z) * u.ax + 0.01)
+					shove(p, u.az * side, -u.ax * side, D.SHIELD.throw)
+			return true
+		u.sp1 -= dt
+		if u.sp1 <= 0:
+			var best: E.Player = null
+			var bd := D.SHIELD.far * D.SHIELD.far
+			for p in players:
+				if p.state == "ok" and p.room == "":
+					var d := D.d2(u.x, u.z, p.x, p.z)
+					if d > 9.0 and d < bd and not wall_between(u.x, u.z, p.x, p.z):
+						bd = d; best = p
+			if best:
+				var l := sqrt(bd)
+				u.ax = (best.x - u.x) / l; u.az = (best.z - u.z) / l
+				u.sk = "charge"; u.sp2 = D.SHIELD.wind; u.sd = D.SHIELD.far; u.sp1 = D.SHIELD.every
+				ev.append(["line", r1(u.x), r1(u.z), snappedf(u.ax, 0.01), snappedf(u.az, 0.01), D.SHIELD.far, D.SHIELD.wind])
+				return true
+		return false
+	if U.wolf:                                        # the howl: frozen with fright, unless prayed over or unbothered
+		u.sp1 -= dt
+		if u.sp1 <= 0:
+			u.sp1 = D.HOWL.every; u.ac += 1
+			ev.append(["howl", r1(u.x), r1(u.z)])
+			for p in _near_players(u, D.HOWL.reach):
+				if p.prot > 0 or p.head == 20:
+					ev.append(["unbothered", p.id, r1(p.x), r1(p.z)])
+				else:
+					p.frozen = D.HOWL.freeze
+			for q in peasants:
+				if active(q) and D.d2(u.x, u.z, q.x, q.z) < D.HOWL.reach * D.HOWL.reach: nerve_hit(q, 20)
+		return false
+	return false
+
+
+## The Cook's stew, on the ground: hot after its warning, and for a few seconds after that.
+func pool_step(dt: float) -> void:
+	var i := pools.size() - 1
+	while i >= 0:
+		var pl: Array = pools[i]
+		pl[2] -= dt; pl[3] -= dt
+		if pl[2] <= 0:
+			pools.remove_at(i); i -= 1
+			continue
+		if pl[3] <= 0:
+			pl[4] -= dt
+			if pl[4] <= 0:
+				pl[4] = 0.5
+				for p in players:
+					if p.state == "ok" and p.room == "" and D.d2(p.x, p.z, pl[0], pl[1]) < D.STEW.r * D.STEW.r:
+						hurt_friend(p, D.STEW.dmg * 0.5 * tough, true, null, false)
+		i -= 1
+
+
 func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void:
 	var gx := u.lane
 	var gz := -D.KEEP_H + 0.5 if u.march else -46.0
@@ -3196,6 +3371,11 @@ func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void
 			u.march = true; u.lane = rnd2(-1.5, 1.5)
 		return
 	var sp: float = U.spd * wspeed() * (0.5 if u.slow > 0 else 1.0) * (1.0 if u.march else 0.7)
+	u.sp1 -= dt; u.sp2 = maxf(0, u.sp2 - dt)
+	if u.sp1 <= 0 and u.march:                         # he whips the horses up, and they stampede
+		u.sp1 = D.STAMPEDE.every; u.sp2 = D.STAMPEDE.long
+		ev.append(["whip", r1(u.x), r1(u.z)])
+	if u.sp2 > 0: sp *= D.STAMPEDE.speed
 	var nx: float = u.x + dx / d * sp * dt
 	var nz: float = u.z + dz / d * sp * dt
 	for s in structs.duplicate():
@@ -3208,12 +3388,15 @@ func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void
 	for c in colliders: push_out(u, U.r, c)
 	for p in players:                                  # and anyone in the road is run over
 		if p.state == "ok" and D.d2(p.x, p.z, u.x, u.z) < pow(U.r + 0.6, 2) and p.hurtT > 0.8:
-			hurt_friend(p, U.dmg * tough * crowd_d, true, u, false); p.x += signf(p.x - u.x + 0.01) * 1.5; p.tp = tpc; tpc += 1
+			hurt_friend(p, U.dmg * tough * crowd_d, true, u, false)
+			var side := signf((p.x - u.x) * cos(u.r) - (p.z - u.z) * sin(u.r) + 0.01)   # knocked out of the road, to whichever side they were on
+			shove(p, cos(u.r) * side, -sin(u.r) * side, D.STAMPEDE.throw if u.sp2 > 0 else D.STAMPEDE.side)
 	for q in peasants:
 		if active(q) and D.d2(q.x, q.z, u.x, u.z) < pow(U.r + 0.5, 2) and q.hurtT > 0.8:
 			hurt_friend(q, U.dmg * tough * crowd_d, false, u, false); q.x += signf(q.x - u.x + 0.01) * 1.5
 
 func undead_step(dt: float) -> void:
+	pool_step(dt)
 	var keep_box := E.Box.new(D.KEEP_X, D.KEEP_Z, D.KEEP_H, D.KEEP_H)
 	var decoys := structs.filter(func(s): return s.k == "decoy")
 	var chickens := structs.filter(func(s): return s.k == "chicken" and s.built)
@@ -3251,11 +3434,14 @@ func undead_step(dt: float) -> void:
 			continue
 		if u.stun > 0:
 			u.state = "stun"
+			if u.sk != "": u.sk = ""; u.sp1 = maxf(u.sp1, 3.0)   # stunned: whatever he was in the middle of is off
 			continue
 		if u.state == "stun": u.state = "walk"
 		var dmul := tough * crowd_d * (1.3 if captain and u.k == D.U_GUARD and D.d2(u.x, u.z, captain.x, captain.z) < 100 else 1.0)
 		if U.hearse:
 			hearse_step(u, U, dt, keep_box)
+			continue
+		if U.boss and boss_trick(u, U, dt):
 			continue
 		for p in censers:
 			if D.d2(u.x, u.z, p.x, p.z) < D.CENSER.reach * D.CENSER.reach:
@@ -3534,7 +3720,7 @@ func spikes_step(dt: float) -> void:
 # --- moving a local player (the web version did this in the page; here it is a rule so tests and bots can use it)
 # mx, mz: the direction held, each -1..1. t: seconds since the start, for the hangover wobble.
 func move_player(p: E.Player, mx: float, mz: float, dt: float, t: float = 0.0) -> String:
-	if p.state != "ok" or not live():
+	if p.state != "ok" or not live() or p.frozen > 0:
 		return ""
 	var l := sqrt(mx * mx + mz * mz)
 	if l <= 0:

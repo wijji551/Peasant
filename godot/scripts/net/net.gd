@@ -30,7 +30,7 @@ const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
 const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
 	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "room", "rune", "game", "gwon", "treated", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
-	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT"]
+	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen"]
 
 static var me: Net
 
@@ -576,7 +576,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind, q.plat])
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
-		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]),
+		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]), "po": R.pools,
 		"pl": pl, "pe": pe, "ev": ev_out}
 	if with_undead:
 		var un := PackedFloat32Array()
@@ -674,7 +674,7 @@ func _client_msg(m: Dictionary) -> void:
 func _snapshot(R: Rules, m: Dictionary) -> void:
 	R.phase = str(m.ph); R.day = int(m.d); R.timeLeft = m.tl; R.nf = m.nf; R.keepHp = m.k; R.keepHc = int(m.kc)
 	R.wave = int(m.w[0]); R.waves = int(m.w[1]); R.left = int(m.w[2])
-	R.stats = m.stt; R.store = m.so; R.spots = m.sp; R.ruins_seen = m.rs; R.ale = int(m.al); R.innHp = m.ih; R.items = m.it; R.weather = str(m.get("wx", "clear"))
+	R.stats = m.stt; R.store = m.so; R.spots = m.sp; R.ruins_seen = m.rs; R.ale = int(m.al); R.innHp = m.ih; R.items = m.it; R.pools = m.get("po", []); R.weather = str(m.get("wx", "clear"))
 	R.merchant = int(m.get("mc", -1)); R.wares = m.get("wa", []); R.job = m.get("jb", {"work": 0.0, "done": false}); R.reserve = bool(m.get("rv", false)); R.guards = int(m.get("gd", 0))
 	var bl: Array = m.get("bl", ["", 0.0, 0, 0.0])
 	R.bail_line = str(bl[0]); R.bail_t = float(bl[1]); R.bail_mood = int(bl[2]); R.bell_t = float(bl[3])

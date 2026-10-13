@@ -771,6 +771,40 @@ func _bot_move() -> Vector2:
 
 ## A blow has landed on one of the dead: the number, the noise, the chips, and (if it was mine) a knock to the camera.
 ## ev: ["hit", x, z, how much, how it told, whose (a player's id, or 0), what kind of dead, did it finish them]
+var _was_frozen := false
+var _pool_nodes: Array[MeshInstance3D] = []
+static var _pool_mat: StandardMaterial3D
+static var _pool_warm: StandardMaterial3D
+
+## The Cook's stew on the ground: a faint ring while it is coming, then a steaming orange puddle.
+func _pools_view(delta: float) -> void:
+	if _pool_mat == null:
+		_pool_mat = StandardMaterial3D.new()
+		_pool_mat.albedo_color = Color(0.72, 0.36, 0.14)
+		_pool_mat.emission_enabled = true; _pool_mat.emission = Color(0.6, 0.22, 0.05); _pool_mat.emission_energy_multiplier = 0.6
+		_pool_warm = StandardMaterial3D.new()
+		_pool_warm.albedo_color = Color(0.95, 0.5, 0.2, 0.25); _pool_warm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_pool_warm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	while _pool_nodes.size() < R.pools.size():
+		var n := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = D.STEW.r; cm.bottom_radius = D.STEW.r; cm.height = 0.04; cm.radial_segments = 20
+		n.mesh = cm
+		n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(n)
+		_pool_nodes.append(n)
+	for i in _pool_nodes.size():
+		var n := _pool_nodes[i]
+		n.visible = i < R.pools.size()
+		if not n.visible: continue
+		var pl: Array = R.pools[i]
+		var hot: bool = float(pl[3]) <= 0
+		n.position = Vector3(float(pl[0]), 0.05, float(pl[1]))
+		n.material_override = _pool_mat if hot else _pool_warm
+		var F = _fx
+		if hot and F and randf() < delta * 6: F.puff(float(pl[0]) + randf_range(-1.2, 1.2), 0.2, float(pl[1]) + randf_range(-1.2, 1.2), 1, F.C_SMOKE, 0.6)
+
+
 func _blow(ev: Array) -> void:
 	var x: float = ev[1]
 	var z: float = ev[2]
@@ -828,6 +862,29 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"gamble":
 			if ev[1] == me.id: Sound.play("coin" if ev[2] else "no", 0.9)
 		"burn": F.puff(ev[1], 1.2, ev[2], 3, F.C_FIRE, 2.2)
+		"warn": F.shock(ev[1], ev[2], ev[3], Color(1.0, 0.36, 0.2), ev[4])              # a boss winding up: what is inside the ring is in trouble
+		"slam":
+			F.shock(ev[1], ev[2], ev[3], Color(1.0, 0.86, 0.6)); F.puff(ev[1], 0.3, ev[2], 18, F.C_DUST, 6.0)
+			Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
+		"thrown":
+			F.puff(ev[2], 0.4, ev[3], 8, F.C_DUST, 3.0); Sound.play("whoosh", 0.9, Vector2(ev[2], ev[3]))
+		"sermonstart":
+			Sound.play("sermon", 1.0, Vector2(ev[1], ev[2])); F.puff(ev[1], 2.0, ev[2], 10, F.C_GHOST, 2.0)
+			if me and D.d2(me.x, me.z, ev[1], ev[2]) < D.SERMON.reach * D.SERMON.reach: hud.banner("The sermon", "You are being drawn in. Hit him hard to make him lose his place.", 2.6)
+		"sermon": F.shock(ev[1], ev[2], 2.6, Color(0.72, 0.56, 1.0), 0.6)
+		"lostplace":
+			F.puff(ev[1], 2.2, ev[2], 14, F.C_HOLY, 2.5); Sound.play("clang", 1.0, Vector2(ev[1], ev[2]))
+		"whip":
+			Sound.play("whip", 1.0, Vector2(ev[1], ev[2])); Sound.play("hooves", 1.0, Vector2(ev[1], ev[2])); F.puff(ev[1], 0.3, ev[2], 14, F.C_DUST, 5.0)
+		"ladle":
+			F.fly(ev[1], ev[2], ev[3], ev[4], 3); F.shock(ev[3], ev[4], D.STEW.r, Color(0.95, 0.5, 0.2), ev[5])
+			Sound.play("splash", 0.9, Vector2(ev[3], ev[4]))
+		"line":                                           # the Captain lining up his charge: a trail of warnings along the road he means to take
+			for i in range(1, int(ev[5]) + 1, 2): F.shock(ev[1] + ev[3] * i, ev[2] + ev[4] * i, 0.7, Color(1.0, 0.36, 0.2), ev[6])
+			Sound.play("clang", 0.8, Vector2(ev[1], ev[2]))
+		"howl":
+			Sound.play("howl", 1.0); F.shock(ev[1], ev[2], D.HOWL.reach, Color(0.72, 0.8, 1.0), 1.2)
+		"unbothered": F.puff(ev[2], 1.8, ev[3], 8, F.C_HOLY, 1.5)
 		"burst":                                          # one of the bloated dead, going off
 			F.puff(ev[1], 0.8, ev[2], 34, F.C_BURST, 6.5); F.shock(ev[1], ev[2], D.BURST.reach, Color(0.62, 0.72, 0.3))
 			Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
@@ -942,6 +999,9 @@ func _draw(delta: float) -> void:
 			_figs[key].queue_free()
 			_figs.erase(key)
 	dead_view.sync(R, delta)
+	_pools_view(delta)
+	if me and me.frozen > 0 and not _was_frozen: hud.banner("Frozen with fright", "The howl has you rooted to the spot. It will pass. Probably.", 2.4)
+	_was_frozen = me != null and me.frozen > 0
 	# things lying on the ground, which glint
 	var seen_d := {}
 	for d: E.Drop in R.drops:

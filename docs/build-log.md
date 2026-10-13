@@ -505,3 +505,18 @@ Still nothing built. The designer went through the open questions one by one; th
 - **The glow**: every one of the dead but the bosses (and the wraith, which has its own) is drawn with a shader that gives a faint green-white rim (`dead.gd` `_evil()`).
 - Picture hook `DTV_KINDS=14,15,16` lines up the named kinds in front of the player.
 - Tests: new `dead_test` (18); the old tests that had the health numbers written into them now read `D.DEAD_HP`; month 50, rules 117, relics 45, platform 37; co-op host 15, friend 12, latecomer 9.
+
+## Version 7.3: the bosses (build counter 10)
+
+- **Health:** the Steward 3,000 (was 800), the Coachman 4,500 (1,100), the Captain 6,000 (1,500); still multiplied by 1 + half a boss for every player after the first. The Lord is left at 2,600 for version 7.4, which rebuilds his fight.
+- **Three new bosses** (`D.UN` 17, 18, 19; `D.BOSS_NIGHTS` now 7, 11, 14, 18, 21, 28, 30): the Lord's Chaplain (night 11), the Castle Cook (18), the Gamekeeper, a werewolf (28, the second full moon; `D.WOLF_NIGHT`: a quarter of the usual horde comes with him). Each has a shape, a line when he comes down and when he falls, a dawn warning, and a letter from the Lord the morning after (kept out of the ordinary letters so it is there on its morning).
+- **What they do** (`boss_trick`, numbers in `D.SLAM`, `SERMON`, `STAMPEDE`, `STEW`, `SWING`, `SHIELD`, `HOWL`). Every trick that lands is shown first: a red ring that grows over the wind-up (`warn`), or a trail of rings along the Captain's line (`line`).
+  - The Steward: a player within 4.5 → 0.9 s → thrown 5 and hurt.
+  - The Chaplain: the sermon, 8 s in every 15: players within 14 are tugged 0.45 towards him every half second; the dead within 8 mend 1.5% a second. A single blow of 40 or more, or a stun, stops it (`lostplace`).
+  - The Coachman: every 12 s on a run, a 3 s stampede at 2.2 times the speed; whoever he hits is thrown 6 to the side (3 otherwise).
+  - The Cook: a pool of stew where a player stands every 7 s (`R.pools`, sent to joined games as `po`), hot after 1 s for 6 s, 8 a second; and the cauldron, within 3.5, every 11 s: thrown 6.
+  - The Captain: every 10 s, at a player between 3 and 12 paces with no wall between: 1 s to aim, then 9 paces a second along the line; whoever is near the line is thrown 4 aside. He charges at where you were.
+  - The Gamekeeper: every 14 s a howl: players within 18 are frozen 2.5 s (`p.frozen`, sent as a player field; `move_player`, attacks, tricks and powers all refuse), unless prayed over (`p.prot`) or wearing the Helm of the Unbothered; peasants lose nerve. In `hit_struct` a barricade or anything else off the wall goes at a blow; a wall or gate loses a quarter.
+- **Thrown** (`shove`): moved in small steps through the usual collisions and stamped (`p.tp`) so that a joined player's game takes the host's word for where they landed.
+- Sounds made in `tools/make_sounds.py`: howl, whip, sermon.
+- Tests: new `boss_test` (27). Letters 22 (a month now brings 18 letters); platform 37 (the one moon on a boss's night is the werewolf's).

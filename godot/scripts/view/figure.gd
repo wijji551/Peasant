@@ -116,7 +116,8 @@ func _place(x: float, z: float, r: float, snap: bool) -> void:
 func player(p: E.Player, is_me: bool) -> void:
 	visible = p.state != "hide"                                                # (drinking at the bar of the Rose, you can be seen: it is a room now)
 	_place(p.x, p.z, p.r, false)
-	_censer(p.trk == 27 and p.state == "ok" and p.room == "")      # the Smoking Censer: smoke, out as far as it works
+	_censer(p.trk == 27 and p.state == "ok" and p.room == "")
+	_frozen = p.frozen > 0                                          # frozen with fright: rooted, and trembling      # the Smoking Censer: smoke, out as far as it works
 	var kind: String = D.GK[p.gk] if p.gk < D.GK.size() else ""
 	var c := _counts(p.ac, p.hc, p.cc)
 	if c[2] and p.state != "inn": _work_fx(kind if kind != "" else "tree")
@@ -279,6 +280,7 @@ func _set_held(id: int, holy: bool) -> void:
 var _held_swing := false
 var _glow_col := Color(0, 0, 0, 0)       # the glow of a relic or a rune weapon in the hand (clear: none)
 var _glow_id := -1
+var _frozen := false
 var _smoke: Node3D          # the Smoking Censer's smoke, made the first time it is carried
 
 
@@ -453,6 +455,7 @@ func _process(delta: float) -> void:
 	_leg_l.rotation.x = swing_
 	_leg_r.rotation.x = -swing_
 	rotation.y = lerp_angle(rotation.y, _r, minf(1.0, delta * 16.0))
+	if _frozen: rotation.y += sin(now * 47.0) * 0.06
 	_model.rotation = Vector3(-1.45 * _fall + stoop, 0, sin(_walk) * 0.07 * _mv + wob)
 	_model.position.y = absf(sin(_walk)) * 0.14 * _mv + _fall * 0.2
 	_model.position.z = sin(_atk * PI) * 0.22 if _tool == "" and not _down else 0.0     # into the blow, and back
