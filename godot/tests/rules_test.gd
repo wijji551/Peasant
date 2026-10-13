@@ -296,7 +296,7 @@ func run() -> void:
 	hold(30, func(): return not felled.alive); ok("a felled tree leaves a stump", felled.st == 1 and not felled.alive)
 	var tx0 := felled.x
 	var tz0 := felled.z
-	m.inv = [15, 6]; m.wpn = 17; m.trk = -1; R.relics = [15, 17]; m.state = "dead"
+	m.inv = [15, 6]; m.wpn = 17; m.trk = -1; m.feet = -1; m.head = -1; m.body = -1; m.off = -1; R.relics = [15, 17]; m.state = "dead"   # (nothing else on: the rubble can turn up relic boots)
 	var sites0: Array = R.sites.duplicate()
 	var key0 := str(Map.ruin_layout(R.gseed, R.day).spots.slice(2))
 	R.night.q = []; clear_u(); fast(1)
