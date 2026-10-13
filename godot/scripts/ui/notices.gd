@@ -114,45 +114,32 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				return {"title": "The arms rack", "intro": "Spare arms, shared by the whole village: %d on the rack. Your backpack holds %d of %d." % [R.items.size(), p.inv.size(), D.PACK_MAX], "o": o}
 			# (The storehouse has a window of its own, menus.store(), with buttons: there is nothing here for the number keys.)
 			return {"title": "The storehouse", "intro": "Shared by the whole village. Anyone can put in or take out.", "o": o}
-		"smithy":
+		"smithy":                                     # (the window itself is pictures, menus.smithy(); this is the same, as a list, by tier)
 			var forge := func(i: int) -> void:
+				if i < 0: return
 				var I: Dictionary = D.IT[i]
 				var c := Rules.forge_cost(p, I.cost)
 				var why := Rules.forge_why(p, i)
-				var locked := why != ""
-				var sub := why if locked else D.cost_text(c) + ". " + \
-					(("%s. %d damage. {trick}: %s." % [I.note, I.dmg, D.AB[I.ab].n]) + ("" if Rules.can_use(p, i) else " You cannot use it yet: it needs %s." % book_need(I.need)) if I.s == "w" else item_sub(p, i))
+				var locked := why != "" or not Rules.can_forge(p, i)
+				var sub: String = why if why != "" else D.cost_text(c) + ". " + \
+					((("%s. %d damage. {trick}: %s." % [I.note, I.dmg, D.AB[I.ab].n]) + ("" if Rules.can_use(p, i) else " You cannot use it yet: it needs %s." % book_need(I.need))) if I.s == "w" else I.note + "." if I.s == "k" else item_sub(p, i))
 				o.append({"label": ("Make " if I.tier == "made" else "Forge ") + D.it_a(i), "sub": sub, "ok": not locked and Rules.has(p, c), "a": "forge", "arg": i})
-			var h3 := Rules.rk(p, 3)
-			if page == "armour":
-				o.append({"head": "Armour"})
-				for i in D.FORGE_A: forge.call(i)
-				if h3 >= 4:
-					o.append({"head": "Steel armour"})
-					for b in D.STEEL_A: forge.call(D.steel_of(b))
-				var c := Rules.forge_cost(p, D.PEASANT_ARM)
-				var un := R.peasants.filter(func(q): return q.owner == p.id and not q.armed and q.state != "body").size()
-				o.append({"head": "Your posse"})
-				o.append({"label": "Arm your whole posse with spears" if Rules.rk(p, 3) >= 3 else "Arm one of your posse with a spear", "sub": "%s each. %d of yours still %s a pitchfork." % [D.cost_text(c), un, "carries" if un == 1 else "carry"], "ok": un > 0 and Rules.has(p, c), "a": "armp"})
-				o.append({"label": "Back to the weapons", "sub": "", "ok": true, "page": ""})
-			else:
-				o.append({"head": "Crude weapons: anyone can make these. They wear out"})
-				for b in D.CRUDE_W: forge.call(D.crude_of(b))
-				o.append({"head": "Refined weapons: Hammer and Tongs" + ("" if h3 >= 1 else " (you have not read it)")})
-				for i in D.FORGE_W: forge.call(i)
-				if h3 >= 4:
-					o.append({"head": "Steel weapons: from the old steel mine. You carry %d steel" % p.steel})
-					for b in D.STEEL_W: forge.call(D.steel_of(b))
-				o.append({"head": "Rune weapons: the best there are. You carry %d rune%s and %d steel" % [p.rune, "" if p.rune == 1 else "s", p.steel]})
-				if h3 >= D.RUNE_RANK:
-					for b in D.STEEL_W: forge.call(D.rune_of(b))
-				else:
-					o.append({"label": "Not yet", "sub": "Rune weapons need rank %d of Hammer and Tongs, the last: you are at rank %d. They are steel with runes worked in, hit harder than anything else a smith can make, and bite wraiths. Runes come from the old workings, under the steel mine: take a torch." % [D.RUNE_RANK, h3], "ok": false})
-				o.append({"head": "Fire"})
-				forge.call(D.I_TORCH)
-				o.append({"head": "More"})
-				o.append({"label": "Armour, and spears for your posse", "sub": "Iron cap, chain shirt, shield.", "ok": true, "page": "armour"})
-			return {"title": "The smithy", "intro": "You carry %d iron and %d wood. What you forge goes on; what it replaces goes in your backpack." % [p.iron, p.wood] + ("" if p.books[3] else " Anyone can make crude weapons. Hammer and Tongs, in the library, makes refined ones, then steel, and at its last rank rune weapons."), "o": o}
+			var t := page if page != "" else "crude"
+			o.append({"head": D.TIER_NAME.get(t, "Posse kits") if t != "kits" else "Posse kits"})
+			match t:
+				"crude":
+					for b in D.CRUDE_W: forge.call(D.crude_of(b))
+					for b in D.BOWS + D.ARMOUR: forge.call(D.tier_item(b, "crude"))
+					forge.call(D.I_TORCH)
+				"forged":
+					for i in D.FORGE_W + D.BOWS + D.ARMOUR: forge.call(i)
+				"steel", "mithril", "rune":
+					for b in D.STEEL_W + D.BOWS + D.ARMOUR: forge.call(D.tier_item(b, t) if t != "steel" or b in D.BOWS else D.steel_of(b))
+				"kits":
+					for i in D.kits(): forge.call(i)
+			for tt in D.TIERS + ["kits"]:
+				if tt != t: o.append({"label": D.TIER_NAME.get(tt, "Posse kits") if tt != "kits" else "Posse kits", "sub": "", "ok": true, "page": tt})
+			return {"title": "The smithy", "intro": "You carry %d iron, %d steel, %d mithril and %d wood." % [p.iron, p.steel, p.mith, p.wood], "o": o}
 		"library":
 			if page == "card":
 				o.append({"head": "Give up which book?"})
@@ -305,6 +292,10 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			if here:
 				o.append({"head": "Blessings"})
 				bless.call()
+				var runes := ["head", "body", "off"].filter(func(k): return p.get(k) >= 0 and D.IT[p.get(k)].tier == "rune" and not D.IT[p.get(k)].blessed)
+				for k in runes:                         # rune armour, blessed for good
+					o.append({"label": "Bless your %s for good" % D.IT[p.get(k)].n, "sub": ("%s. For good: whatever strikes you is scorched, and wraiths do half their harm. The priest is not doing this for free." % D.coins(D.RUNE_BLESS)) if p.holy >= 2 else "He will only bless rune armour for somebody who has sat both his classes in holy studies.",
+						"ok": p.holy >= 2 and p.coin >= D.RUNE_BLESS, "a": "rbless", "arg": k})
 				o.append({"head": "Holy studies"})
 				var lab := "Holy studies: finished" if p.holy >= 2 else ("In class: %d of %d seconds" % [floori(p.holyT), D.HOLY_TIME]) if p.study else "Sit a class in holy studies (%d of 2 done)" % p.holy
 				var sub := "You can bless anything yourself, anywhere, from your backpack ({pack})." if p.holy >= 2 else "Stay beside the priest. Press again to walk out; he will remember where you got to." if p.study else "About %d seconds beside the priest. After one class you can bless your own weapon and bucket for nothing; after two, the departed as well. It does not count as one of your three books." % D.HOLY_TIME

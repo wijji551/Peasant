@@ -209,8 +209,9 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 	_tunic_mat.albedo_color = CORPSE if _down else Color(0.22, 0.4, 0.28) if q.kind == 1 else Color(D.PCOL[own.col % 8]) if own else Color(0.72, 0.62, 0.46)
 	_wobble = false
 	_set_work(kind)
-	_set_held(2 if q.kind == 1 else 3 if q.kind == 2 else 2 if q.armed else 0, false)   # a guard's spear, a mercenary's mace
-	_set_gear([19, 22] if q.kind == 1 else [22, 25] if q.kind == 2 else [])
+	var kg := Rules.kit_gear(q.kit, q.ni) if q.kind == 0 and q.kit > 0 else [-1, -1, -1]
+	_set_held(kg[0] if kg[0] >= 0 else 2 if q.kind == 1 else 3 if q.kind == 2 else 2 if q.armed else 0, false)   # a kit's weapon, a guard's spear, a mercenary's mace
+	_set_gear([kg[1], kg[2]] if kg[0] >= 0 else [19, 22] if q.kind == 1 else [22, 25] if q.kind == 2 else [])
 	if fx and q.prot > 0 and randf() < get_process_delta_time() * 8: fx.puff(q.x + randf_range(-0.4, 0.4), 0.4, q.z + randf_range(-0.4, 0.4), 1, fx.C_GLAD, 0.5)
 	if q.hp < Rules.q_max(q) and not _down:
 		_show_bar(2.1, 0.9, q.hp / Rules.q_max(q), Color(0.56, 0.78, 0.36))
@@ -358,6 +359,7 @@ var _glow_light: OmniLight3D
 ## The colour a relic or a rune weapon glows: gold for most relics, silver for the silvered ones, violet for runes.
 static func glow_of(id: int) -> Color:
 	var I: Dictionary = D.IT[id]
+	if I.tier == "rune": return Color(0.4, 0.66, 1.0, 0.55)      # rune glows blue; mithril purple
 	if I.runed: return Color(0.62, 0.42, 1.0, 0.55)
 	var t: Array = I.tint
 	if t[2] > t[0]: return Color(0.7, 0.85, 1.0, 0.5)             # the Silvered Sword, the Censer: a cold light
@@ -407,7 +409,7 @@ func _set_gear(ids: Array) -> void:
 		if id < 0: continue
 		var t: Array = D.IT[id].tint
 		var gm := _mat(Color(t[0], t[1], t[2]))
-		if D.IT[id].tier == "relic":                     # a worn relic glows, steadily
+		if D.IT[id].tier == "relic" or D.IT[id].runed:     # a worn relic glows, steadily; so does mithril and rune armour
 			var gc := glow_of(id)
 			gm.emission_enabled = true
 			gm.emission = Color(gc.r, gc.g, gc.b)

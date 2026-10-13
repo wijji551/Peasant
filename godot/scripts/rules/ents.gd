@@ -88,7 +88,8 @@ class Player:
 	var gwon := 0           # what the gambler has lost to this player today
 	var gstreak := 0        # how many times running this player has found the pea: the cups get quicker
 	var treated := 0        # which locals have been stood a drink today (bits)
-	var rune := 0           # runes carried, from the old workings
+	var mith := 0           # mithril carried, from the old workings (what were called runes until version 7.6)
+	var rune := 0           # runes carried, from the Rune Cave across the river (from version 7.7: nobody can get across yet)
 	var card_rank := 0      # a library card has been handed in: the next book taken up starts at this rank
 	var job := false        # working on today's merchant's job
 	var jobT := 0.0         # how much of it they have done
@@ -170,6 +171,8 @@ class Peasant:
 	var prot := 0.0         # prayed over: a third less harm
 	var kind := 0           # 0 a villager, 1 a village guard (hired for the night), 2 a mercenary (in a posse until dawn)
 	var plat := 0           # the watch platform they are posted on (a structure's id), or 0
+	var kit := 0            # the posse kit they were given (an item id), or 0
+	var kw := 0             # nights a crude kit has been through: it falls to bits after two
 	var roof := false       # ...and whether it has a roof over it
 	var hurtT := 99.0
 

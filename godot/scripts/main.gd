@@ -188,7 +188,7 @@ static var _go_save = null
 func read_save():
 	if not FileAccess.file_exists(SAVE_PATH): return null
 	var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
-	return d if d is Dictionary and d.get("v") == 3 and d.get("players", []).size() else null
+	return d if d is Dictionary and int(d.get("v", 0)) in [3, 4] and d.get("players", []).size() else null
 
 
 func _save(d: Dictionary) -> void:
@@ -645,7 +645,7 @@ func _window_closed(what: String) -> void:
 
 ## A numbered option in a place's notice.
 func option(i: int) -> void:
-	if _panel == "" or _panel == "pack" or me == null:
+	if _panel == "" or _panel == "pack" or _panel == "smithy" or me == null:     # (the smithy is clicked, not numbered)
 		return
 	var d := Notices.data(R, _panel, me, _page)
 	if d.is_empty():
@@ -663,10 +663,18 @@ func option(i: int) -> void:
 		cmd({"t": "act", "a": o.a, "arg": o.get("arg")})
 
 
+func m_has_free_posse() -> bool:
+	return R.peasants.any(func(q): return R.kit_free(me, q))
+
+
 ## Something done in the backpack: put on, put away, drop, bless.
 func inv_do(a: String, arg) -> void:
 	var p := me
 	if a == "eq" and (arg >= p.inv.size()):
+		return
+	if a == "eq" and D.IT[p.inv[arg]].s == "k":                                # a kit: handed to one of your posse
+		if not m_has_free_posse(): hud.banner("Nobody to give it to", "Everyone in your posse has a kit already, or you have no posse.", 2.0)
+		else: cmd({"t": "act", "a": "kit", "arg": arg})
 		return
 	if a == "eq" and not D.SLOTK.has(D.IT[p.inv[arg]].s):                  # a paper: nothing to put on
 		hud.banner(D.it_cap(p.inv[arg]), D.IT[p.inv[arg]].note + ".", 3.5)
@@ -1461,6 +1469,15 @@ func _test_hook() -> void:
 	if _frame == at and OS.get_environment("DTV_AT") != "" and me:
 		var xz := OS.get_environment("DTV_AT").split(",")
 		me.x = float(xz[0]); me.z = float(xz[1])
+	if _frame == at - 2 and OS.get_environment("DTV_KITS") != "" and me:   # for pictures: a posse in every kit, round the player
+		var ks := D.kits()
+		var n := 0
+		for q in R.peasants:
+			if q.kind == 0 and q.state != "body" and n < ks.size():
+				q.owner = me.id; q.state = "follow"; q.kit = ks[n]; q.x = me.x - 3.0 + n * 1.2; q.z = me.z + 1.6; q.r = 0.0; n += 1
+		me.head = D.tier_item(19, "rune"); me.body = D.blessed_of(D.tier_item(22, "rune")); me.off = D.tier_item(25, "mithril"); me.wpn = D.tier_item(2, "rune")
+	if _frame == at - 2 and OS.get_environment("DTV_RICH") != "" and me:   # for pictures: a master smith with plenty to work with
+		me.books[3] = 7; me.wood = 30; me.iron = 30; me.steel = 30; me.mith = 12
 	if _frame == at and OS.get_environment("DTV_OPEN") != "":   # open a window for the picture
 		var o := OS.get_environment("DTV_OPEN")
 		if o == "pack": _open_pack()

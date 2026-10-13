@@ -17,7 +17,7 @@ var peasants: Array = []      # E.Peasant
 var undead: Array = []        # E.Undead
 var structs: Array = []       # E.Struct
 var ev: Array = []            # things that happened this moment, for the view: [kind, ...]
-var store := {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "rune": 0}
+var store := {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0, "rune": 0}
 var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
 var lobs: Array = []          # the dead in the air, thrown: [the undead, where it lands x, z, seconds left]
@@ -387,17 +387,22 @@ static func forge_cost(p: E.Player, c: Dictionary) -> Dictionary:
 static func can_forge(p: E.Player, id: int) -> bool:
 	var I: Dictionary = D.IT[id]
 	if I.cost.is_empty() or I.wear == 2: return false
+	if I.s == "k": return rk(p, 3) >= D.KIT_RANK[I.tier]          # posse kits: crude from rank 1, iron from 3, steel from 6
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return false
 	match I.tier:
 		"crude", "made": return true
 		"steel": return rk(p, 3) >= 4
+		"mithril": return rk(p, 3) >= D.MITHRIL_RANK
 		"rune": return rk(p, 3) >= D.RUNE_RANK
-		"forged": return I.s != "w" or rk(p, 3) >= 1           # anyone can make armour; refined weapons need the book
+		"forged": return I.s != "w" or rk(p, 3) >= 1           # anyone can make armour; iron weapons need the book
 	return false
 
 static func forge_why(p: E.Player, id: int) -> String:   # why not, for the smithy's notice
 	var I: Dictionary = D.IT[id]
-	if I.tier == "rune" and rk(p, 3) < D.RUNE_RANK: return "Rune weapons need rank %d of Hammer and Tongs, the last." % D.RUNE_RANK
+	if I.s == "k" and rk(p, 3) < D.KIT_RANK[I.tier]: return "%s kits need rank %d of Hammer and Tongs." % [D.TIER_NAME[I.tier], D.KIT_RANK[I.tier]]
+	if I.s == "k": return ""
+	if I.tier == "rune" and rk(p, 3) < D.RUNE_RANK: return "Rune needs the tenth rank of Hammer and Tongs, which has not been written yet, and runes, from a cave across the river, which nobody can get across yet."
+	if I.tier == "mithril" and rk(p, 3) < D.MITHRIL_RANK: return "Mithril needs rank %d of Hammer and Tongs." % D.MITHRIL_RANK
 	if I.tier == "steel" and rk(p, 3) < 4: return "Steel needs rank 4 of Hammer and Tongs."
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return "Heavy arms need rank 2 of Hammer and Tongs."
 	if I.tier == "forged" and I.s == "w" and rk(p, 3) < 1: return "Refined weapons need Hammer and Tongs, from the library."
@@ -543,7 +548,7 @@ func add_villagers(slot: int, n: int) -> void:
 
 func clear_world() -> void:
 	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []; lobs = []
-	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "rune": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
+	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0, "rune": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
 	letters = []; letter_new = false; seen = {}; chest = {}; tenant_day = 0
 	for t in trees:
@@ -568,6 +573,39 @@ func add_sites() -> void:
 		var s := mk_struct(k, at[0], at[1], 0.0 if tw else PI / 2, false, 0, D.SHP[k], -1)
 		s.site = i
 		structs.append(s)
+
+## How many pieces of blessed rune armour this player has on.
+static func blessed_worn(p: E.Player) -> int:
+	var n := 0
+	for id in [p.head, p.body, p.off]:
+		if id >= 0 and D.IT[id].blessed: n += 1
+	return n
+
+## One of your posse, who could be given a kit.
+func kit_free(p: E.Player, q: E.Peasant) -> bool:
+	return q.owner == p.id and q.kind == 0 and q.kit <= 0 and q.state != "body"
+
+## Hand a kit to the nearest of your posse who has none. False if there is nobody to give it to.
+func give_kit(p: E.Player, id: int) -> bool:
+	var best: E.Peasant = null
+	var bd := 1e9
+	for q in peasants:
+		if kit_free(p, q) and D.d2(q.x, q.z, p.x, p.z) < bd:
+			bd = D.d2(q.x, q.z, p.x, p.z); best = q
+	if best == null: return false
+	best.kit = id; best.kw = 0
+	say("%s has been given %s, and %s" % [D.qname(best), D.it_a(id), pick(D.KIT_LINES[D.IT[id].kit])])
+	return true
+
+## What a kit gives the peasant wearing it: [weapon, helm, shield] (an item id each, or -1). The watchman's weapon
+## varies from one peasant to the next, by name.
+static func kit_gear(id: int, ni: int) -> Array:
+	if id <= 0 or id >= D.IT.size() or D.IT[id].s != "k": return [-1, -1, -1]
+	var I: Dictionary = D.IT[id]
+	var t: String = I.tier
+	var of := func(base: int) -> int: return base if t == "forged" else D.tier_item(base, t)
+	if I.kit == "ranger": return [of.call(13), of.call(19), -1]
+	return [of.call(D.STEEL_W[ni % D.STEEL_W.size()]), of.call(19), of.call(25)]
 
 ## The watch tower on site i, if it is built.
 func tower(i) -> E.Struct:
@@ -791,7 +829,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
+const P_SAVE := ["card_rank", "rune", "mith", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -810,11 +848,11 @@ func save_data() -> Dictionary:
 		var pl := -1                                   # the watch platform they are posted on, as its place in the list of structures
 		for si in structs.size():
 			if q.plat != 0 and structs[si].id == q.plat: pl = si
-		qs.append({"ni": q.ni, "x": q.x, "z": q.z, "hx": q.hx, "hz": q.hz, "hp": q.hp, "armed": q.armed, "body": q.state == "body", "os": own.slot if own else -1, "kind": q.kind, "pl": pl})
+		qs.append({"ni": q.ni, "x": q.x, "z": q.z, "hx": q.hx, "hz": q.hz, "hp": q.hp, "armed": q.armed, "body": q.state == "body", "os": own.slot if own else -1, "kind": q.kind, "pl": pl, "kit": q.kit, "kw": q.kw})
 	var ds := []
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z, "day": d.day})
-	return {"v": 3, "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
+	return {"v": 4, "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
 		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "chest": chest.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "away": away.duplicate(true), "peasants": qs}
 
 ## A player as the save keeps them: what they carry, wear and know.
@@ -832,6 +870,8 @@ func restore_player(p: E.Player, sp: Dictionary) -> void:
 			var v = sp[f]
 			if typeof(p.get(f)) == TYPE_INT: v = int(v)
 			p.set(f, v)
+	if not sp.has("mith"):                              # a save from before version 7.6: what were runes are mithril now
+		p.mith = int(sp.get("rune", 0)); p.rune = 0
 	p.inv = []
 	for v in sp.inv: p.inv.append(int(v))
 	p.books = []
@@ -902,6 +942,8 @@ func load_game(d: Dictionary, infos: Array) -> void:
 	clear_world(); day = int(d.day); pm = int(d.pm); gseed = int(d.get("seed", 1)); keepHp = float(d.keepHp); last_day = int(d.get("last", D.MONTH))
 	for k in store:
 		store[k] = int(d.store.get(k, 0))
+	if int(d.get("v", 3)) < 4:                          # before version 7.6, the storehouse's runes were what is now mithril
+		store.mith = int(d.store.get("rune", 0)); store.rune = 0
 	for k in stats:
 		stats[k] = int(d.stats.get(k, 0))
 	for l in d.get("letters", []): letters.append([int(l[0]), int(l[1])])
@@ -972,7 +1014,7 @@ func load_game(d: Dictionary, infos: Array) -> void:
 				own = p
 		var at_home: bool = own == null and not q.body
 		var e := mk_peasant(int(q.ni), q.hx if at_home else q.x, q.hz if at_home else q.z, q.hx, q.hz, own.id if own else 0)
-		e.hp = q.hp; e.armed = int(q.armed); e.kind = int(q.get("kind", 0))
+		e.hp = q.hp; e.armed = int(q.armed); e.kind = int(q.get("kind", 0)); e.kit = int(q.get("kit", 0)); e.kw = int(q.get("kw", 0))
 		var pli := int(q.get("pl", -1))
 		if pli >= 0 and pli < structs.size() and own: e.plat = structs[pli].id
 		if q.body:
@@ -1044,9 +1086,9 @@ func room_interact(p: E.Player):
 			if D.d2(p.x, p.z, v[0], v[1]) < 5.3:
 				var lit := p.wpn == D.I_TORCH
 				var left: int = rune_left[i]
-				var full := p.rune >= cap(p)
+				var full := p.mith >= cap(p)
 				return {"type": "rune", "i": i, "key": "rune%d" % i, "ok": lit and left > 0 and not full, "dur": D.RUNE_TIME * (0.8 if rk(p, 0) >= 3 else 1.0), "x": v[0], "z": v[1], "rad": 1.0,
-					"label": "It is too dark to work. You need a burning torch in your hand" if not lit else "This vein is worked out until tomorrow" if left <= 0 else "You can carry no more runes" if full else "Hold {interact} to prise out a rune"}
+					"label": "It is too dark to work. You need a burning torch in your hand" if not lit else "This vein is worked out until tomorrow" if left <= 0 else "You can carry no more mithril" if full else "Hold {interact} to prise out a lump of mithril"}
 	for st in D.STATIONS:
 		if st.get("room", "") == p.room and D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "station", "st": st, "key": "st" + st.id, "ok": true, "dur": 0.12, "x": st.x, "z": st.z, "rad": 1.1, "label": "Hold {interact} to " + st.verb}
@@ -1542,11 +1584,19 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 			ev.append(["miss", r1(e.x), r1(e.z)])
 			return
 		d *= gear_cut(e) * (0.5 if e.charge > 0 else 1.0) * (0.67 if e.prot > 0 else 1.0)
+		var bl := blessed_worn(e)                      # rune armour blessed for good: wraiths do half, and whatever strikes it is scorched
+		if bl > 0:
+			if u and D.UN[u.k].ghost: d *= 0.5
+			if u and not ranged: hit_u(u, 3.0 * bl, {"holy": 1.5})
 		if u and not ranged and e.body == 23:
 			hit_u(u, 6, {"holy": 1.5})
 			if lore(e, 23): e.hp = minf(max_hp(e), e.hp + 2)
 	else:
-		d *= (0.6 if e.kind == 1 else 0.7 if e.kind == 2 else 0.8 if e.armed else 1.0) * (0.67 if e.prot > 0 else 1.0)
+		var cut := 1.0
+		if e.kit > 0:                                   # a kit's cap and shield
+			for g in kit_gear(e.kit, e.ni).slice(1):
+				if g >= 0: cut *= 1 - D.IT[g].cut
+		d *= (0.6 if e.kind == 1 else 0.7 if e.kind == 2 else cut if e.kit > 0 else 0.8 if e.armed else 1.0) * (0.67 if e.prot > 0 else 1.0)
 	e.hp -= d; e.hc += 1; e.hurtT = 0
 	if not is_player:
 		nerve_hit(e, 3)
@@ -1566,6 +1616,8 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 			e.saved = true; e.hp = 18
 			return
 		e.state = "body"; e.owner = 0; e.tree = null; fallen.append(D.qname(e)); stats.lost += 1; say("%s has fallen." % D.qname(e))
+		if e.kit > 0:                                   # the kit outlives them: it lies where they fell, for anybody
+			drop_item(e.kit, e.x, e.z); e.kit = 0
 		for q in peasants:
 			if q != e and D.d2(q.x, q.z, e.x, e.z) < 144: nerve_hit(q, 22)
 
@@ -1573,10 +1625,10 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 # --- fighting
 static func dmg_of(p: E.Player, I: Dictionary, mul: float = 1.0) -> float:
 	var d: float = I.dmg * mul * (1 + (0.08 * rk(p, 5) if I.rng else 0.06 * rk(p, 4)))
-	if (I.tier == "forged" or I.tier == "steel" or I.tier == "rune") and rk(p, 3) >= 4: d *= 1.1
+	if (I.tier == "forged" or I.tier == "steel" or I.tier == "mithril" or I.tier == "rune") and rk(p, 3) >= 4: d *= 1.1
 	if p.charge > 0: d *= 2.0 if rk(p, 7) >= 7 else 1.6
 	if p.wpn == 17 and I.n == D.IT[17].n and lore(p, 17): d *= 1.25
-	if (I.tier == "forged" or I.tier == "steel" or I.tier == "rune") and lore(p, D.I_TONGS): d *= 1.1
+	if (I.tier == "forged" or I.tier == "steel" or I.tier == "mithril" or I.tier == "rune") and lore(p, D.I_TONGS): d *= 1.1
 	return d
 
 static func src_of(p: E.Player, I: Dictionary, kb: float = 0.0) -> Dictionary:
@@ -1937,9 +1989,9 @@ func do_fish(p: E.Player) -> void:
 			var it: int = (D.FOUND_W + D.FOUND_A)[randi() % (D.FOUND_W.size() + D.FOUND_A.size())]
 			gain_or_drop(p, it)
 			ev.append(["found", p.id, D.it_a(it) + ", on the end of your line", r1(p.x), r1(p.z), 0, 1])
-		elif roll < D.FISH_FINDS[1] and p.rune < cap(p):
-			p.rune += 1
-			ev.append(["found", p.id, "a rune, in the belly of a fish. It is cold, and the fish looks relieved", r1(p.x), r1(p.z), 0, 0])
+		elif roll < D.FISH_FINDS[1] and p.mith < cap(p):
+			p.mith += 1
+			ev.append(["found", p.id, "a lump of mithril, in the belly of a fish. It is faintly purple, and so is the fish", r1(p.x), r1(p.z), 0, 0])
 		elif roll < D.FISH_FINDS[2]:
 			var c := 2 + randi() % 5
 			p.coin += c
@@ -2212,10 +2264,25 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				var c := forge_cost(p, I.cost)
 				if can_forge(p, ia) and has(p, c):
 					pay(p, c)
-					if can_use(p, ia): wear(p, ia)
+					if I.s == "k":                         # a kit goes straight to one of your posse who has none, if there is one
+						if not give_kit(p, ia): stow(p, ia)
+					elif can_use(p, ia): wear(p, ia)
 					else: stow(p, ia)
 					add_xp(p, 3, 1); spark.call("forge")
 					if I.s == "w": say("%s has forged %s." % [p.dn, D.it_a(ia)])
+		"kitall":                                       # rank 3 of Hammer and Tongs: kit out the whole posse in one go
+			if near_station(p, "smithy") and ia >= 0 and ia < D.IT.size() and D.IT[ia].s == "k" and rk(p, 3) >= 3 and can_forge(p, ia):
+				var c := forge_cost(p, D.IT[ia].cost)
+				var n := 0
+				while has(p, c) and peasants.any(func(q): return kit_free(p, q)):
+					pay(p, c); give_kit(p, ia); add_xp(p, 3, 1); n += 1
+				if n:
+					spark.call("forge")
+					say("%s has kitted out %d of %s posse." % [p.dn, n, "their"])
+		"kit":                                          # a kit from the backpack, handed to one of your posse
+			if ia >= 0 and ia < p.inv.size() and D.IT[p.inv[ia]].s == "k":
+				var kid: int = p.inv[ia]
+				if give_kit(p, kid): p.inv.remove_at(ia)
 		"armp":
 			if near_station(p, "smithy"):
 				var c := forge_cost(p, D.PEASANT_ARM)
@@ -2359,6 +2426,13 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					for k in c: p.set(k, mini(cap(p), p.get(k) + floori(c[k] * D.TOWER.back)))
 					say("%s has taken the watch tower %s down again, and kept what wood could be saved." % [p.dn, D.TOWER_NAMES[s.site]])
 					destroy_struct(s)
+		"rbless":                                   # the priest blesses a piece of rune armour, for good, for a gold piece
+			var sl := str(arg)
+			if near_station(p, "priest") and sl in ["head", "body", "off"] and p.get(sl) >= 0 and p.holy >= 2 and p.coin >= D.RUNE_BLESS:
+				var b := D.blessed_of(p.get(sl))
+				if b >= 0:
+					p.coin -= D.RUNE_BLESS; p.set(sl, b); spark.call("coin"); ev.append(["holy", r1(p.x), r1(p.z)])
+					say("The priest has blessed %s’s %s for good, and taken a gold piece for it. He is not doing this for free." % [p.dn, D.IT[b].n.replace("blessed ", "")])
 		"btalk", "bknock", "bjeer":                # Robert Bailiff, at his upstairs window
 			if near_station(p, "window"):
 				var w := week_of(mday())
@@ -2819,6 +2893,11 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 	if guards > 0: lines.append("The village guards have gone back inside Robert Bailiff’s house for their breakfast.")
 	guards = 0
 	var row := {}
+	for q in peasants:                              # a crude kit wears, as crude arms do: it is gone after its second night
+		if q.state != "body" and q.kit > 0 and D.IT[q.kit].wear == 1:
+			q.kw += 1
+			if q.kw >= 2:
+				lines.append("%s’s %s has come apart after two nights. They seem relieved." % [D.qname(q), D.IT[q.kit].n]); q.kit = 0; q.kw = 0
 	for q in peasants:                              # the living come home, and line up outside their leader's door
 		if q.state == "body": continue
 		var own := player_by_id(q.owner)
@@ -3018,9 +3097,9 @@ func player_step(p: E.Player, dt: float) -> void:
 				"leave":
 					leave_room(p)
 				"rune":
-					if rune_left[it.i] > 0 and p.rune < cap(p):
-						rune_left[it.i] -= 1; p.rune += 1; p.cc += 1; add_xp(p, 0, 3)
-						ev.append(["found", p.id, "a rune, cold to the touch" if p.rune > 1 else "a rune: a small cold stone with a mark cut in it that hurts to look at. A master smith can work four into a steel weapon", r1(p.x), r1(p.z), 0, 0])
+					if rune_left[it.i] > 0 and p.mith < cap(p):
+						rune_left[it.i] -= 1; p.mith += 1; p.cc += 1; add_xp(p, 0, 3)
+						ev.append(["found", p.id, "a lump of mithril, faintly purple" if p.mith > 1 else "mithril: a lump of pale metal that glows faintly purple and is lighter than it has any right to be. A master smith can work four into a steel weapon", r1(p.x), r1(p.z), 0, 0])
 				"search":
 					p.cc += 1; do_search(p, it.i); note("search")
 				"gather":
@@ -3165,24 +3244,39 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		return
 	var order := Ld.order                              # 0 follow, 1 hold here, 2 charge
 	var tgt: E.Undead = null
-	var bd := 900.0 if order == 2 else 81.0
+	var kg := kit_gear(q.kit, q.ni) if q.kind == 0 else [-1, -1, -1]
+	var KW: Dictionary = D.IT[kg[0]] if kg[0] >= 0 else {}
+	var shoot: float = KW.rng * 0.8 if KW.size() and KW.rng > 0 else 0.0   # a ranger shoots from this far
+	var bd := 900.0 if order == 2 else maxf(81.0, shoot * shoot)
+	var lead := maxf(64.0, (shoot + 3) * (shoot + 3))
 	var near := false
 	for u in undead:
 		if u.state == "pile" or u.state == "rise": continue
 		var d := D.d2(q.x, q.z, u.x, u.z)
 		if d < 144: near = true
-		if d < bd and (order == 2 or (D.d2(q.px, q.pz, u.x, u.z) < 36 if order == 1 else D.d2(q.x if Ld.room != "" else Ld.x, q.z if Ld.room != "" else Ld.z, u.x, u.z) < 64)) and not wall_between(q.x, q.z, u.x, u.z):
+		if d < bd and (order == 2 or (D.d2(q.px, q.pz, u.x, u.z) < 36 + (lead - 64) if order == 1 else D.d2(q.x if Ld.room != "" else Ld.x, q.z if Ld.room != "" else Ld.z, u.x, u.z) < lead)) and (shoot > 0 or not wall_between(q.x, q.z, u.x, u.z)):
 			bd = d; tgt = u
 	if not near and q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
 	if tgt:
 		q.state = "fight"; q.tree = null
-		var reach: float = (2.2 if q.armed else 1.7) + D.UN[tgt.k].r
-		var d := step_to(q, tgt.x, tgt.z, 6.0 if order == 2 else 5.2, dt, reach - 0.45)
-		if d < reach and q.cd <= 0:
-			q.cd = 0.9; q.ac += 1
-			var qs := {"x": q.x, "z": q.z, "q": q, "farm": q.kind == 0}
-			if lore(Ld, 16): qs.holy = 1.5
-			hit_u(tgt, ((20.0 if q.kind == 2 else 10.0 if q.armed else 6.0) + (3.0 if q.armed and rk(Ld, 3) >= 6 else 0.0)) * (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0), qs)
+		var bonus: float = (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0)
+		if shoot > 0:                                  # a ranger: keeps back, and shoots
+			var d := sqrt(D.d2(q.x, q.z, tgt.x, tgt.z))
+			if d > shoot: step_to(q, tgt.x, tgt.z, 5.2, dt, shoot - 1.0)
+			else: q.r = D.ang_lerp(q.r, atan2(tgt.x - q.x, tgt.z - q.z), minf(1.0, dt * 10))
+			if d <= shoot and q.cd <= 0:
+				q.cd = KW.cd * 1.7; q.ac += 1
+				ev.append(["shot", r1(q.x), r1(q.z), r1(tgt.x), r1(tgt.z), 1])
+				hit_u(tgt, KW.dmg * 0.55 * bonus, {"q": q, "ranged": true, "farm": false, "rune": KW.runed})
+		else:
+			var reach: float = (KW.reach * 0.9 if KW.size() else 2.2 if q.armed else 1.7) + D.UN[tgt.k].r
+			var d := step_to(q, tgt.x, tgt.z, 6.0 if order == 2 else 5.2, dt, reach - 0.45)
+			if d < reach and q.cd <= 0:
+				q.cd = maxf(0.6, KW.cd * 1.5) if KW.size() else 0.9; q.ac += 1
+				var qs := {"x": q.x, "z": q.z, "q": q, "farm": q.kind == 0 and KW.is_empty(), "heavy": KW.get("heavy", false), "blunt": KW.get("blunt", false), "rune": KW.get("runed", false)}
+				if lore(Ld, 16): qs.holy = 1.5
+				var base: float = KW.dmg * 0.5 if KW.size() else (20.0 if q.kind == 2 else 10.0 if q.armed else 6.0) + (3.0 if q.armed and rk(Ld, 3) >= 6 else 0.0)
+				hit_u(tgt, base * bonus, qs)
 	elif order == 1:
 		q.state = "follow"; q.tree = null; q.ct = 0
 		if Vector2(q.px - q.x, q.pz - q.z).length() > 0.5: step_to(q, q.px, q.pz, 5.4, dt, 0.3)

@@ -1,5 +1,5 @@
 extends SceneTree
-## The burning torch, the old workings (a room you walk into, dark without the torch), runes, and rune-cut weapons.
+## The burning torch, the old workings (a room you walk into, dark without the torch), mithril, and mithril weapons.
 ## Run:  godot --headless --path godot -s res://tests/torch_test.gd
 
 var R: Rules
@@ -41,7 +41,7 @@ func _init() -> void:
 	ok("anyone can make a torch", Rules.can_forge(m, D.I_TORCH) and Rules.forge_why(m, D.I_TORCH) == "")
 	R.do_act(m, "forge", D.I_TORCH)
 	ok("three wood, and it is in your hand", m.wpn == D.I_TORCH and m.wood == 0, [m.wpn, m.wood])
-	ok("the smithy lists it, and says what runes are for", Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("arg") == D.I_TORCH) and Notices.data(R, "smithy", m, "").o.any(func(o): return str(o.get("head", "")).begins_with("Rune weapons")))
+	ok("the smithy lists it with the crude things", Notices.data(R, "smithy", m, "crude").o.any(func(o): return o.get("arg") == D.I_TORCH))
 	# ---------- fire
 	night()
 	m.x = 0; m.z = -30; m.r = 0
@@ -103,7 +103,7 @@ func _init() -> void:
 	m.eHold = true
 	fast(D.RUNE_TIME * 2 + 2.0)
 	m.eHold = false
-	ok("two runes to a vein, each day", m.rune == 2 and R.rune_left[0] == 0, [m.rune, R.rune_left])
+	ok("two lumps of mithril to a vein, each day", m.mith == 2 and R.rune_left[0] == 0, [m.mith, R.rune_left])
 	it = R.find_interact(m)
 	ok("then it is worked out", it != null and not it.ok and "tomorrow" in it.label)
 	m.x = M.at[0]; m.z = M.at[1] - 0.8
@@ -119,31 +119,31 @@ func _init() -> void:
 	night()
 	fast(5.0, func(): return R.phase != "day")
 	ok("at dawn nobody is left down there", m.room == "" and R.day == day0 + 1 and R.rune_left[0] == D.RUNE_PER_VEIN, [m.room, R.day, R.rune_left])
-	# ---------- rune weapons: the top of the smithy
+	# ---------- mithril weapons (the rune weapons until 7.6)
 	var rs := D.rune_of(2)
 	var RS: Dictionary = D.IT[rs]
-	ok("a rune spear is a spear, and the best of them", RS.n == "rune spear" and RS.tier == "rune" and RS.dmg > D.IT[D.steel_of(2)].dmg and D.IT[D.steel_of(2)].dmg > D.IT[2].dmg, [RS.n, RS.dmg, D.IT[D.steel_of(2)].dmg])
-	ok("there is one for each refined weapon, and nothing earlier has changed its number", D.STEEL_W.all(func(b): return D.IT[D.rune_of(b)].n == "rune " + D.IT[b].n) and D.IT[D.I_TORCH].n == "burning torch" and D.IT[D.I_CARD].n == "library card")
-	ok("it costs runes and steel", RS.cost.get("rune", 0) == D.RUNE_COST and RS.cost.get("steel", 0) == D.IT[D.steel_of(2)].cost.steel, RS.cost)
-	m.rune = 10; m.steel = 20; m.wood = 20; m.wpn = 0
+	ok("a mithril spear is a spear, and better than steel", RS.n == "mithril spear" and RS.tier == "mithril" and RS.dmg > D.IT[D.steel_of(2)].dmg and D.IT[D.steel_of(2)].dmg > D.IT[2].dmg, [RS.n, RS.dmg, D.IT[D.steel_of(2)].dmg])
+	ok("there is one for each refined weapon, and nothing earlier has changed its number", D.STEEL_W.all(func(b): return D.IT[D.rune_of(b)].n == "mithril " + D.IT[b].n) and D.IT[D.I_TORCH].n == "burning torch" and D.IT[D.I_CARD].n == "library card")
+	ok("it costs mithril and steel", RS.cost.get("mith", 0) == D.TIER_ORE and RS.cost.get("steel", 0) == D.IT[D.steel_of(2)].cost.steel, RS.cost)
+	m.mith = 10; m.steel = 20; m.wood = 20; m.wpn = 0
 	m.x = sm.x; m.z = sm.z
 	m.books[3] = 6
 	ok("rank 6 of Hammer and Tongs cannot make one", not Rules.can_forge(m, rs) and Rules.forge_why(m, rs).contains("rank 7"), Rules.forge_why(m, rs))
 	R.do_act(m, "forge", rs)
-	ok("and the smithy will not be talked into it", m.wpn == 0 and m.rune == 10)
-	ok("the smithy's notice says why, in place of the list", Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("label", "") == "Not yet") and not Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("arg", -1) == rs))
+	ok("and the smithy will not be talked into it", m.wpn == 0 and m.mith == 10)
+	ok("the smithy's notice says why", Notices.data(R, "smithy", m, "mithril").o.any(func(o): return o.get("arg", -1) == rs and not o.ok and o.sub.contains("rank 7")))
 	m.books[3] = 7
 	ok("rank 7 can", Rules.can_forge(m, rs) and Rules.forge_why(m, rs) == "")
-	ok("and the notice lists all five", D.STEEL_W.all(func(b): return Notices.data(R, "smithy", m, "").o.any(func(o): return o.get("arg", -1) == D.rune_of(b))))
+	ok("and the notice lists all five", D.STEEL_W.all(func(b): return Notices.data(R, "smithy", m, "mithril").o.any(func(o): return o.get("arg", -1) == D.rune_of(b))))
 	m.x = 60; m.z = 30
 	R.do_act(m, "forge", rs)
-	ok("at the smithy, nowhere else", m.wpn == 0 and m.rune == 10)
-	m.x = sm.x; m.z = sm.z; m.rune = D.RUNE_COST - 1
+	ok("at the smithy, nowhere else", m.wpn == 0 and m.mith == 10)
+	m.x = sm.x; m.z = sm.z; m.mith = D.TIER_ORE - 1
 	R.do_act(m, "forge", rs)
-	ok("not with too few runes", m.wpn == 0)
-	m.rune = D.RUNE_COST
+	ok("not with too little mithril", m.wpn == 0)
+	m.mith = D.TIER_ORE
 	R.do_act(m, "forge", rs)
-	ok("four runes and the steel, and it is in your hand", m.wpn == rs and m.rune == 0 and m.steel < 20, [m.wpn, m.rune, m.steel])
+	ok("four mithril and the steel, and it is in your hand", m.wpn == rs and m.mith == 0 and m.steel < 20, [m.wpn, m.mith, m.steel])
 	night()
 	m.x = 0; m.z = -30; m.r = 0
 	var w2 := one(D.U_WRAITH, 0, -28.4)
@@ -156,7 +156,7 @@ func _init() -> void:
 	ok("which a steel spear does not", w3.hp == w3.mhp)
 	m.wpn = rs
 	var sv := R.save_data()
-	ok("runes and the rune weapon are saved", sv.players[0].has("rune") and int(sv.players[0].wpn) == rs and not sv.players[0].has("etch"))
+	ok("mithril and the mithril weapon are saved", sv.players[0].has("mith") and int(sv.players[0].wpn) == rs and not sv.players[0].has("etch"))
 	var fails := 0
 	for l in lines:
 		if l.begins_with("FAIL"): fails += 1

@@ -8,16 +8,17 @@ const GUIDE := [
 	["Defences", ["The north wall has seven foundations: six walls and a gate. Stand on one and hold {interact}. Barricades and spike rows go anywhere: press {build} or 1 to 4 (or click one, bottom right), then {interact} or click.", "Hold {interact} at a damaged defence to repair it with wood. Carrying stone or iron, hold {interact} again to face a wall with stone, band the gate or brace a barricade. An unbraced barricade rots by half every evening after its first night.", "Nobody can be hit through a standing wall or gate, in either direction. Go out through the gate, or shoot over."]],
 	["Your posse", ["Hold {interact} beside a neighbour to rally them. They gather when you gather and fight when you fight. The slum has more, for food. The smithy gives them spears.", "They can die, and they have nerve: when friends fall they may run for the keep until dawn. {toilet} is the emergency toilet break, which sends the dead nearby running. With How to Win Peasants and Lead Them, {orders} tells them to follow or to hold where they stand; rank 3 adds charge. That book is learned by leading: your first ten orders of a day, rallying and recruiting, the work and the blows of your posse, and every one of them still standing at dawn."]],
 	["Fighting", ["A left click attacks. {jump} jumps: a quick leap whichever way you are pressing, forwards, sideways or back, and you keep facing the way you were, which is how you get out of the way of a sweep or a charge without turning your back on whoever is doing it. With nothing pressed you jump on the spot, which achieves very little, cheerfully. {trick} or a right-click is your weapon’s own trick: every weapon has a different one, with a short wait between uses. {eat} eats one food.", "Every blow that lands shows what it did. A plain number is an ordinary blow. A big gold one means you have the right tool for the job (a mace on bones, holy things on anything, a hammer on the ram). A small grey one, with a tink, means you have the wrong one: farm tools on armour, anything swung at bats. A big orange one with a mark after it is a lucky double. Small orange ones are things burning. The numbers, and the knock your own blows give the view, can be turned off in Options.", "Knocked down, you have 15 seconds for a team-mate to hold {interact} over you. After that a relative takes over your cottage at dawn, with your books but not your gear. Relics lie where you fell.", "From dusk you can hide in your own cottage. It is safe, and the village will call you a coward until the next dusk."]],
-	["Fishing, and the farms", ["The farms feed a posse: everyone you lead forages with you. The jetty feeds one: a catch is five fish (seven at rank 3 of Field, Hook and Pot), more than a lone forager gets, and your posse cannot help. But the river keeps what falls in it. Now and then a catch brings up a purse, once in a long while a rune, and very rarely something somebody dropped."]],
+	["Fishing, and the farms", ["The farms feed a posse: everyone you lead forages with you. The jetty feeds one: a catch is five fish (seven at rank 3 of Field, Hook and Pot), more than a lone forager gets, and your posse cannot help. But the river keeps what falls in it. Now and then a catch brings up a purse, once in a long while a lump of mithril, and very rarely something somebody dropped."]],
 	["Relics and their books", ["There are eleven relics, and each goes with one book: carrying it with that book read does something more. The Smoking Censer smokes: the dead inside its smoke walk at half speed and strike half as often, and with Relics and Where They Were Left they smoulder as well. The four found most recently: the Thunderer’s Crossbow (heavy and slow to load; its bolts are lightning, and jump to two more of the dead; with Slings, Bows and Thrown Turnips, to three), Saint Walstan’s Scythe (with the Woodcutter’s Almanac, you gather a fifth faster), the Mason’s Blessed Trowel (defences near you mend themselves; with Barricades for Beginners, twice as fast, and your repairs are free), and Saint Dunstan’s Tongs (forging costs a quarter less; with Hammer and Tongs, forged weapons hit a tenth harder)."]],
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
-	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: weapons, armour, spears for the posse. The storehouse: the village’s shared materials on one tab (take out 1, 5 or 20; put in 1, 5 or all) and its spare arms and armour on the other (click a thing to take it, click one of yours to put it in; things that are the same share a place, with a number on it). Runes can be left there for whoever is the smith. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
+	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: pick a tier (crude, iron, steel, mithril, rune), then click a picture to forge it; and kits for your posse. The storehouse: the village’s shared materials on one tab (take out 1, 5 or 20; put in 1, 5 or all) and its spare arms and armour on the other (click a thing to take it, click one of yours to put it in; things that are the same share a place, with a number on it). Mithril and runes can be left there for whoever is the smith. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
 	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "Nobody has to be there from the start, or every time. Join a village after its week has begun and you move into an empty cottage. Drop out, or lose your connection, and your peasant is kept exactly as it was: join again under the same name and you have it back, the same day or another. When the host carries on from the save with some of you missing, the missing ones wait in the same way. Relics do not wait with you: they stay with the village.", "With a village server set (Options), villages go through it: a five-letter code that works from anywhere, and nobody's router matters. Without one, the host's computer asks its router to let friends in; if the router says no, that code only works on the same home network, unless the host opens port 24565 (UDP). The game does not pause for the handbook when others are playing."]],
 	["The lie of the land", ["Thornhallow sits in the middle, with the castle up the road to the north and the river to the south. The thorn hedges, far to the west and east, are the edge of the world. West is Hallowshire Forest, with the old steel mine at its top end; east are the downs and the old mill. The stone, the iron and the fish move every morning (the dawn notice says where), and the far places are a long walk, so go early."]],
 	["The smithy", ["Anyone can knock out a crude weapon at the smithy. It wears out: chipped after a night's fighting, in bits after a second. Hammer and Tongs makes refined weapons, which last; from rank 4, steel ones, which hit harder still. Steel comes from the old steel mine, at the top of the forest to the north-west, and the market pays well for it but sells none. Anyone can forge armour; steel armour needs rank 4."]],
 	["The village", ["Robert Bailiff will talk to you from his upstairs window: stand at his front door. You can knock (it will not open) or jeer at him, which is satisfying, but he remembers, and his guards cost a shilling more for every jeer that day.", "Anyone can ring the village bell in the square. It does nothing at all.", "The training yard's straw dummies: practise on them by day for a little of The Art of Hitting Things (or, with a sling or a bow, Slings, Bows and Thrown Turnips). There is only so much a dummy can teach you in a day."]],
 	["The Thorny Rose", ["Hold {interact} at the inn’s door on the square to go in. It is open day and night, until the dead break the door down; your posse waits outside (and comes in with you if you sit down to drink). The door back out is at the bottom of the room.", "The bar: give the innkeeper food and he turns it into ale for the night; hire a mercenary; and after dark, sit down to drink. Each tankard is Dutch courage, and at 100 you burst out and charge.", "Old Marge, Tam the Carter and the stranger in the corner will each talk about three things, and each does one good turn a day for the price of a drink (6d).", "The gambler plays twenty-one, higher or lower, and the pea and the cups, for stakes of sixpence to four shillings. Twenty-one and higher or lower are luck, with the odds a little his way. The cups are not luck: watch the pea go under, follow that cup, and click it when he stops. Walking away from the table loses the stake."]],
-	["The torch, the old workings and runes", ["Anyone can make a burning torch at the smithy (three wood). What it hits burns for four seconds after, and Flare ({trick}) sets fire to everything round you and drives it back a step. Bones burn badly, wraiths not at all, and rain halves it. It also lights your way.", "Beside the old steel mine, far to the north-west, a timber frame stands over a hole: hold {interact} to climb down into the old workings. Down there it is dark, the dead cannot reach you, and your posse waits at the top. Three veins of runes glow in the walls. With a burning torch in your hand, hold {interact} at a vein to prise one out: two to a vein each day. The ladder takes you back up, and dawn fetches you out whatever you are doing.", "Runes make the best weapons there are. A smith at rank 7 of Hammer and Tongs, the last, can forge the rune sword, spear, mace, billhook and warhammer: four runes, and the steel a steel one takes. They hit a good deal harder than steel, and they hurt wraiths."]],
+	["The torch, the old workings and mithril", ["Anyone can make a burning torch at the smithy (three wood). What it hits burns for four seconds after, and Flare ({trick}) sets fire to everything round you and drives it back a step. Bones burn badly, wraiths not at all, and rain halves it. It also lights your way.", "Beside the old steel mine, far to the north-west, a timber frame stands over a hole: hold {interact} to climb down into the old workings. Down there it is dark, the dead cannot reach you, and your posse waits at the top. Three veins of mithril glow purple in the walls. With a burning torch in your hand, hold {interact} at a vein to prise out a lump: two to a vein each day. The ladder takes you back up, and dawn fetches you out whatever you are doing.", "Mithril is what the village used to call runes, until somebody found the real ones. A smith at rank 7 of Hammer and Tongs can forge all of it in mithril: the five weapons, a bow, a crossbow, a cap, a chain shirt and a shield. It is half as good again as iron, glows purple, and the weapons bite wraiths."]],
+	["The smithy's five tiers, and kits", ["Every tier makes the same things: the short sword, spear, mace, billhook and warhammer, a bow and a crossbow, a cap, a chain shirt and a shield. Crude: anyone, from a little iron; the weapons are chipped after a night’s fighting and gone after a second, and crude bows need no book. Iron: the measure of everything else; anyone can make the armour, the weapons need Hammer and Tongs. Steel: a third better, from rank 4. Mithril: half as good again, glowing purple, from rank 7. Rune: a tenth better than mithril, glowing blue, the best there is outside the relics; it needs runes, from a cave across the river, and nobody can get across the river yet.", "The priest will bless rune armour for good, a gold piece a piece, for anyone who has sat both his classes: whatever strikes you is scorched, and wraiths do half their harm. Nothing else can be blessed for good.", "Kits, from Hammer and Tongs (crude at rank 1, iron at 3, steel at 6): ten of the metal and five wood, and the kit goes straight to one of your posse. The Wildly Inexperienced Ranger has a bow and a cap and shoots from behind the others; the Wannabe Ill-Equipped Watchman has a weapon (it varies), a cap and a shield and stands in front. From rank 3 you can kit out the whole posse at once. When a kitted peasant falls, the kit lies where they fell, for anybody to pick up and hand on from the backpack. Crude kits come apart after two nights."]],
 	["Ruins, chests and cards", ["The outer ruins are not empty. Rummaging is noisy, and brings shamblers; from the second day it can also wake the Previous Tenant, who is several times the size and has a great deal of health. By day he will not follow you far from his ruin. After dark he goes down to the village with the rest. Whoever puts him down gets his back rent.", "Once a week a chest sent to help the village goes astray. The dawn notice says who sent it and which way the messenger set off. It lies outside the wall, off the map until somebody walks near it. The finder gets the coin; anything else inside can be dropped for a friend.", "A library card (from a chest) is handed in at the library to swap one of your books for another. The new one starts a rank behind the old."]],
 	["Letters and notices", ["The Lord of Ashhollow writes. From the second morning, and every other morning after, a headless rider gallops down the castle road at first light and nails a letter to the gatepost just inside the north gate. They are complaints: about the noise, the breakages, and whatever the village has most lately done to his household. Read them at the gatepost.", "The notice board in the square, opposite the bell, has the day's news (the weather, what is expected tonight, when the next boss is due), three notices from the village, and a copy of every letter so far.", "With eight players, more of the dead would rise than the night can hold. Past about 420 in a night there are fewer of them instead, and each is harder to put down and hits harder: the same horde, in fewer pieces."]],
 	["Contraptions", ["Barricades for Beginners teaches the village's inventions, one every rank or so, and a box of cogs from the tinker builds any one without the book. Press 5 (or click the fifth card, bottom right) to step through the ones you can build.", "The chicken decoy (rank 1): nothing dead can ignore it, briefly. The pitfall (3): swallows four for good; good inside the wall, for gravediggers. The tar pit (4): everything wades. The holy water trough (5, and a class of holy studies or the Holy Book): burns whatever crosses it, wraiths too. The log roller (6), up the road north of the wall: once a night it flattens a crowd, or a coffin ram. The Thresher (7): a spinning flail, as long as someone stands by to turn the handle."]],
@@ -32,6 +33,16 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.6: the smithy", [
+		"The smithy has a new menu. Pick a tier along the top, and it shows you a picture of everything that tier can make. Click one to forge it. Point at one to read about it first, if you are the careful sort.",
+		"Five tiers, and every one makes everything: the five weapons, a bow, a crossbow, a cap, a chain shirt and a shield. Crude, iron, steel, mithril and rune. Before this, steel had no bows and the top tier had no armour at all, which nobody had noticed except the people being shot.",
+		"What the village has been calling runes are mithril. They glow purple, they come from the same veins in the old workings, and anything you made from them is now called mithril and hits a little less hard than it did. Whatever you were carrying has been relabelled. Nobody had the heart to tell you sooner.",
+		"Real runes glow blue, and make the rune tier, a tenth better than mithril and the best there is outside the relics. They come from a cave across the river. Nobody can get across the river yet. The smith has hung the pictures up anyway, to be going on with.",
+		"The priest will now bless rune armour for good, for anyone who has sat both his classes, at a gold piece a piece. He is not doing this for free. The dead that strike you are scorched, and wraiths do half their harm.",
+		"Kits for your posse, from Hammer and Tongs: crude at rank 1, iron at 3, steel at 6. The Wildly Inexperienced Ranger gets a bow and a cap and shoots from behind the others. The Wannabe Ill-Equipped Watchman gets a weapon, a cap and a shield and stands in front. You can see what they have on. From rank 3 you can kit out the whole posse in one go.",
+		"A kit outlives the peasant wearing it. It lies where they fell, for anyone to pick up and hand to somebody else from the backpack. Crude kits come apart after two nights, as crude things do.",
+		"The old ruins by the chapel have been tidied a little smaller, to give the new watch tower some elbow room. Nothing of value was lost. Nothing of value was there.",
+	]],
 	["Version 7.5: walls, towers and the other two gates", [
 		"The north wall has been moved three paces further out. Nobody asked the wall.",
 		"Behind it are four sites for watch towers: one in each corner, and one either side of the gate. A tower is 25 wood and 8 stone. Hold {interact} beside it and it has a notice, with two choices: send one of your posse up, or coax one down from the safety of the tower.",
@@ -503,6 +514,9 @@ func notice(id: String, page: String, force: bool = false) -> void:
 	if id == "store":                                   # and the storehouse a counter
 		store(force)
 		return
+	if id == "smithy":                                  # and the smithy a wall of pictures
+		smithy(force)
+		return
 	var d := Notices.data(m.R, id, m.me, page)
 	if d.is_empty():
 		return
@@ -626,6 +640,103 @@ func store(force: bool = false) -> void:
 		_info = w.para("Point at a thing to read about it.", 14, Look.INK_SOFT)
 		_info.custom_minimum_size.y = 48
 		w.hint("Click a thing to move it. Walk away or press Esc to close.")
+
+
+# ---------------------------------------------------------------- the smithy
+var smithy_tab := "crude" if OS.get_environment("DTV_SMITHY_TAB") == "" else OS.get_environment("DTV_SMITHY_TAB")
+var _smithy_sig := ""
+var _slot_w := 88.0              # how wide an item's card is (the smithy's are wider, to fit the price)
+var _slot_strip := ""            # and a word left off the front of its name (the smithy's tier, which the tab says already)
+const SMITHY_TABS := [["crude", "Crude"], ["forged", "Iron"], ["steel", "Steel"], ["mithril", "Mithril"], ["rune", "Rune"], ["kits", "Posse"]]
+
+## The smithy: pick a tier, and a page of pictures opens, one for each thing that tier can make. Click one to forge it.
+func smithy(force: bool = false) -> void:
+	var p: E.Player = m.me
+	var R: Rules = m.R
+	var h3 := Rules.rk(p, 3)
+	var sig := str([smithy_tab, p.wood, p.iron, p.steel, p.mith, p.rune, p.wpn, p.head, p.body, p.off, p.inv, h3, R.peasants.filter(func(q): return q.owner == p.id).map(func(q): return [q.kit, q.armed]), Settings.binds])
+	if sig == _smithy_sig and w.is_open("notice") and not force:
+		return
+	_smithy_sig = sig
+	var act := func(a: String, arg) -> void: m.cmd({"t": "act", "a": a, "arg": arg})
+	w.open("notice", "The smithy", "", 720, 600, true, false)
+	w.tabs(SMITHY_TABS, smithy_tab, func(t): smithy_tab = t; smithy(true))
+	w.para("You carry %d wood, %d iron, %d steel, %d mithril and %d rune%s. What you forge goes on; what it replaces goes in your backpack." % [p.wood, p.iron, p.steel, p.mith, p.rune, "" if p.rune == 1 else "s"], 14, Look.INK_SOFT)
+	var tier := smithy_tab
+	var ids := []
+	var blurb := ""
+	match tier:
+		"crude":
+			blurb = "Anyone can make these. Crude weapons are chipped after a night’s fighting and gone after a second; crude armour lasts, being mostly hope."
+			ids = D.CRUDE_W.map(func(b): return D.crude_of(b)) + D.BOWS.map(func(b): return D.tier_item(b, "crude")) + D.ARMOUR.map(func(b): return D.tier_item(b, "crude")) + [D.I_TORCH]
+		"forged":
+			blurb = "Iron: the measure of everything else. Anyone can make the armour; the weapons need Hammer and Tongs%s." % ("" if h3 >= 1 else ", which you have not read")
+			ids = D.FORGE_W + D.BOWS + D.ARMOUR
+		"steel":
+			blurb = "A third better than iron, from the old steel mine. Rank 4 of Hammer and Tongs%s." % ("" if h3 >= 4 else " (you are at rank %d)" % h3)
+			ids = D.STEEL_W.map(func(b): return D.steel_of(b)) + D.BOWS.map(func(b): return D.tier_item(b, "steel")) + D.STEEL_A.map(func(b): return D.steel_of(b))
+		"mithril":
+			blurb = "Half as good again as iron, and it glows purple. Mithril comes from the old workings under the steel mine: take a torch. Rank %d of Hammer and Tongs%s." % [D.MITHRIL_RANK, "" if h3 >= D.MITHRIL_RANK else " (you are at rank %d)" % h3]
+			ids = D.STEEL_W.map(func(b): return D.tier_item(b, "mithril")) + D.BOWS.map(func(b): return D.tier_item(b, "mithril")) + D.ARMOUR.map(func(b): return D.tier_item(b, "mithril"))
+		"rune":
+			blurb = "The best there is outside the relics, and it glows blue. It needs runes, from a cave across the river, which nobody can get across yet, and the tenth rank of Hammer and Tongs, which has not been written yet. The smith has hung the pictures up anyway, to be going on with."
+			ids = D.STEEL_W.map(func(b): return D.tier_item(b, "rune")) + D.BOWS.map(func(b): return D.tier_item(b, "rune")) + D.ARMOUR.map(func(b): return D.tier_item(b, "rune"))
+		"kits":
+			blurb = "A kit goes straight to one of your posse who has none, and they fight with what it gives them. When one of them falls, the kit outlives them: it lies where they fell, for anybody. Crude kits from rank 1 of Hammer and Tongs, iron from 3, steel from 6; crude ones come apart after two nights."
+			ids = D.kits()
+	w.para(blurb, 15)
+	var bank := HFlowContainer.new()
+	bank.add_theme_constant_override("h_separation", 6)
+	bank.add_theme_constant_override("v_separation", 6)
+	w.body.add_child(bank)
+	for id in ids:
+		if id < 0: continue
+		var I: Dictionary = D.IT[id]
+		var c := Rules.forge_cost(p, I.cost)
+		var why := Rules.forge_why(p, id)
+		var locked := why != "" or not Rules.can_forge(p, id)
+		var ok := not locked and Rules.has(p, c)
+		var tip := "%s. %s." % [D.it_cap(id), D.cost_text(c)]
+		if I.s == "w": tip += " %s. %d damage. {trick}: %s." % [I.note, I.dmg, D.AB[I.ab].n] + ("" if Rules.can_use(p, id) else " You cannot use it yet: it needs %s." % Notices.book_need(I.need))
+		elif I.s == "k": tip += " " + I.note + "."
+		else: tip += " " + Notices.item_sub(p, id)
+		if why != "": tip += " " + why
+		elif not ok: tip += " You have not got enough."
+		else: tip += " Click to forge it."
+		var forge_id: int = id
+		_slot_w = 104.0; _slot_strip = {"crude": "crude ", "steel": "steel ", "mithril": "mithril ", "rune": "rune "}.get(tier, "")
+		_slot(bank, id, D.cost_text(c).replace(" and ", ", "), "", tip, false, (func(): act.call("forge", forge_id)) if ok else Callable(), Callable(), locked or not ok)
+		_slot_w = 88.0; _slot_strip = ""
+	if tier == "kits":
+		var row := HFlowContainer.new()
+		row.add_theme_constant_override("h_separation", 8)
+		row.add_theme_constant_override("v_separation", 6)
+		w.body.add_child(row)
+		var free := R.peasants.filter(func(q): return R.kit_free(p, q)).size()
+		if h3 >= 3:
+			for id in D.kits():
+				if not Rules.can_forge(p, id): continue
+				var b := Button.new()
+				b.focus_mode = Control.FOCUS_NONE
+				b.text = "All: %s" % D.IT[id].n.replace("’s kit", "s")
+				b.tooltip_text = "Kit out every one of your posse who has none, while what you carry lasts."
+				b.disabled = free == 0 or not Rules.has(p, Rules.forge_cost(p, D.IT[id].cost))
+				var kid: int = id
+				b.pressed.connect(func(): act.call("kitall", kid))
+				row.add_child(b)
+		var sc := Rules.forge_cost(p, D.PEASANT_ARM)
+		var un := R.peasants.filter(func(q): return q.owner == p.id and not q.armed and q.kit <= 0 and q.state != "body").size()
+		var sp := Button.new()
+		sp.focus_mode = Control.FOCUS_NONE
+		sp.text = ("Spears all round" if h3 >= 3 else "A spear for one") + " (%s)" % D.cost_text(sc)
+		sp.disabled = un == 0 or not Rules.has(p, sc)
+		sp.tooltip_text = "The old way: a spear, for anyone. %d of yours still carry a pitchfork. A kit is better." % un
+		sp.pressed.connect(func(): act.call("armp", null))
+		row.add_child(sp)
+		w.para("%d of your posse %s no kit." % [free, "has" if free == 1 else "have"], 14, Look.INK_SOFT)
+	_info = w.para("Point at a thing to read about it.", 14, Look.INK_SOFT)
+	_info.custom_minimum_size.y = 64
+	w.hint("Pick a tier, then click a thing to forge it. Walk away or press Esc to close.")
 
 
 # ---------------------------------------------------------------- the gambler's table
@@ -1025,7 +1136,7 @@ func skills(force: bool = false) -> void:
 
 func _slot(parent: Control, id: int, label: String, num: String, tip: String, blessed: bool, cb: Callable, drop: Callable, locked: bool = false, destroy: Callable = Callable(), armed: bool = false) -> void:
 	var box := Control.new()
-	box.custom_minimum_size = Vector2(88, 96)
+	box.custom_minimum_size = Vector2(_slot_w, 96 if _slot_w <= 88 else 112)
 	parent.add_child(box)
 	var b := Button.new()
 	b.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1060,13 +1171,18 @@ func _slot(parent: Control, id: int, label: String, num: String, tip: String, bl
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if locked: ic.modulate = Color(1, 1, 1, 0.4)
 		v.add_child(ic)
-		var nm := Look.label(v, D.IT[id].n + (" ✝" if blessed else ""), 11, Look.INK if not locked else Color(Look.INK, 0.5))
+		var nmt: String = D.IT[id].n
+		if _slot_strip != "" and nmt.begins_with(_slot_strip): nmt = nmt.substr(_slot_strip.length())
+		var nm := Look.label(v, nmt + (" ✝" if blessed else ""), 11, Look.INK if not locked else Color(Look.INK, 0.5))
 		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		nm.custom_minimum_size.x = 80
+		nm.custom_minimum_size.x = _slot_w - 8
 	if label != "":
-		var ll := Look.label(v, label, 11, Look.INK_SOFT)
+		var ll := Look.label(v, label, 10 if _slot_w > 88 else 11, Look.INK_SOFT)
 		ll.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		if _slot_w > 88:
+			ll.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ll.custom_minimum_size.x = _slot_w - 8
 	for c in v.get_children(): c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if drop.is_valid():
 		var x := Button.new()

@@ -41,7 +41,7 @@ func _init() -> void:
 	ok("every book has a relic that goes with it", books.size() == D.BOOKS.size(), books.keys())
 	ok("and every relic can turn up", D.RELICS.size() == D.RELIC_LORE.size() and D.RELICS.all(func(id): return D.IT[id].tier == "relic"), D.RELICS)
 	ok("the four new ones are where the rules think they are", D.IT[D.I_BOW].n == "the Thunderer’s Crossbow" and D.IT[D.I_SCYTHE].n == "Saint Walstan’s Scythe" and D.IT[D.I_TROWEL].n == "the Mason’s Blessed Trowel" and D.IT[D.I_TONGS].n == "Saint Dunstan’s Tongs")
-	ok("and nothing before them has moved", D.IT[D.I_TORCH].n == "burning torch" and D.IT[D.rune_of(1)].n == "rune short sword" and D.IT[17].n == "the Silvered Sword")
+	ok("and nothing before them has moved", D.IT[D.I_TORCH].n == "burning torch" and D.IT[D.rune_of(1)].n == "mithril short sword" and D.IT[17].n == "the Silvered Sword")
 	# ---------- the Thunderer's Crossbow (a bow until version 7.1)
 	night()
 	m.x = 0; m.z = -30; m.r = 0; m.wpn = D.I_BOW; m.books[5] = 0
@@ -162,16 +162,16 @@ func _init() -> void:
 	for i in 2000:
 		m.food = 0; m.gk = 5; m.bite = 1.0; m.inv = []
 		var c0 := m.coin
-		var r0 := m.rune
-		m.rune = 0
+		var r0 := m.mith
+		m.mith = 0
 		R.do_fish(m)
 		if m.coin > c0: coins += 1
-		if m.rune > 0: runes += 1
+		if m.mith > 0: runes += 1
 		if m.inv.size() > 0: things += 1
-		m.rune = r0
+		m.mith = r0
 		R.drops.clear()
 	ok("the river gives back coin now and then", coins > 2000 * 0.10 and coins < 2000 * 0.20, coins)
-	ok("a rune once in a long while", runes > 2000 * 0.015 and runes < 2000 * 0.06, runes)
+	ok("a lump of mithril once in a long while", runes > 2000 * 0.015 and runes < 2000 * 0.06, runes)
 	ok("and very rarely something somebody dropped", things > 5 and things < 70, things)
 	# ---------- the dead last longer as the month goes on
 	ok("week by week the dead take more putting down", Rules.hp_of(3) == D.DEAD_HP[0] and Rules.hp_of(10) == D.DEAD_HP[1] and Rules.hp_of(17) == D.DEAD_HP[2] and Rules.hp_of(25) == D.DEAD_HP[3] and D.DEAD_HP == [2.0, 4.5, 6.3, 8.4])

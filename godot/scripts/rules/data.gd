@@ -47,8 +47,8 @@ const PLAYER_SPEED := 7.0
 const PEASANT_WORK_TIME := 4.0
 const TREE_WOOD := 6
 const RES := ["wood", "stone", "iron", "food", "steel"]
-const STORE_RES := ["wood", "stone", "iron", "food", "steel", "rune"]      # what the storehouse keeps (runes too, for whoever is the smith)
-const RES_NAME := {"wood": "Wood", "stone": "Stone", "iron": "Iron", "food": "Food", "steel": "Steel", "rune": "Runes"}
+const STORE_RES := ["wood", "stone", "iron", "food", "steel", "mith", "rune"]      # what the storehouse keeps (mithril and runes too, for whoever is the smith)
+const RES_NAME := {"wood": "Wood", "stone": "Stone", "iron": "Iron", "food": "Food", "steel": "Steel", "mith": "Mithril", "rune": "Runes"}
 const GATHER := {
 	"tree": {"res": "wood", "time": 1.5, "verb": "chop", "book": 0},
 	"stone": {"res": "stone", "time": 1.9, "verb": "quarry stone", "book": 0},
@@ -145,7 +145,7 @@ const _IT := [
 	{"n": "slop bucket", "s": "t", "tier": "found", "pool": "bucket", "tint": [0.6, 0.48, 0.3], "note": "{carry} lobs it, once: every undead it splashes runs from the smell"},
 ]
 const _IT_DEF := {"dmg": 0.0, "cd": 0.0, "reach": 0.0, "arc": 0.0, "ab": "", "note": "", "swing": 0, "cost": {}, "blunt": false, "heavy": false,
-	"fire": false, "runed": false, "chain": 0, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
+	"fire": false, "runed": false, "blessed": false, "kit": "", "chain": 0, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
 ## The smithy makes three grades. Anyone can knock out a crude weapon, which wears out: after a night's fighting it is
 ## chipped, and after a second it falls apart. Hammer and Tongs (rank 1) makes the refined ones (the first list above);
 ## from rank 4, steel, from the old steel mine. Crude, chipped and steel things are made here from the refined ones,
@@ -187,11 +187,11 @@ static func _runes() -> Array:
 	for base in STEEL_W:
 		var r: Dictionary = _IT[base]
 		var o := r.duplicate(true)
-		o.n = "rune " + r.n
-		o.tier = "rune"; o.base = base; o.runed = true
-		o.dmg = roundf(r.dmg * RUNE_DMG)
-		o.cost = {"rune": RUNE_COST, "steel": maxi(2, ceili(r.cost.get("iron", 0) * 0.75)), "wood": r.cost.get("wood", 0)}
-		o.note = "Rune-cut steel: " + (r.note.to_lower() if r.has("note") else "the best there is") + ". It bites wraiths"
+		o.n = "mithril " + r.n                    # (these were the rune weapons until version 7.6)
+		o.tier = "mithril"; o.base = base; o.runed = true
+		o.dmg = roundf(r.dmg * TIER_DMG.mithril)
+		o.cost = {"mith": TIER_ORE, "steel": maxi(2, ceili(r.cost.get("iron", 0) * 0.75)), "wood": r.cost.get("wood", 0)}
+		o.note = "Mithril: " + (r.note.to_lower() if r.has("note") else "very good") + ". It bites wraiths"
 		o.tint = [0.95, 0.78, 1.45]
 		out.append(o)
 	return out
@@ -213,7 +213,82 @@ const _RELICS2 := [
 	{"n": "Saint Dunstan’s Tongs", "s": "t", "tier": "relic", "pool": "bucket", "tint": [0.5, 0.45, 0.45],
 		"note": "Whatever you forge costs a quarter less"},
 ]
-static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2, _IT_DEF)
+## Version 7.6: every tier makes everything. Crude, iron (what the game called refined, or forged), steel, mithril and
+## rune each make the five weapons, a bow, a crossbow, a helm, a body and a shield; and posse kits in the first three.
+## All of it goes on the end, after the relics, so that every earlier thing keeps its number.
+const TIERS := ["crude", "forged", "steel", "mithril", "rune"]
+const TIER_NAME := {"crude": "Crude", "forged": "Iron", "steel": "Steel", "mithril": "Mithril", "rune": "Rune", "found": "Found", "relic": "Relic", "made": "Made", "paper": "Paper"}
+const TIER_DMG := {"crude": 0.8, "forged": 1.0, "steel": 1.35, "mithril": 1.5, "rune": 1.65}   # against iron
+const TIER_CUT := {"crude": -0.03, "forged": 0.0, "steel": 0.06, "mithril": 0.09, "rune": 0.12}   # what armour stops, added (shields a little less)
+const TIER_ARROW := {"crude": -0.1, "forged": 0.0, "steel": 0.15, "mithril": 0.2, "rune": 0.25}
+const TIER_TINT := {"crude": [0.75, 0.62, 0.5], "steel": [1.12, 1.18, 1.3], "mithril": [0.95, 0.78, 1.45], "rune": [0.62, 0.9, 1.65]}
+const TIER_ORE := 4                  # mithril or runes in one weapon (three in a piece of armour, a bow or a crossbow)
+const MITHRIL_RANK := 7              # the rank of Hammer and Tongs that forges mithril (it was rune, at the same rank, until 7.6)
+const BOWS := [13, 14]
+const ARMOUR := [19, 22, 25]
+const KIT_RANK := {"crude": 1, "forged": 3, "steel": 6}   # the rank of Hammer and Tongs for each kit
+const KIT_LINES := {"ranger": ["has been told which end of the bow is which.", "is to shoot from behind the others, which suits them.", "has asked whether the dead shoot back. Some do."],
+	"watch": ["has been put at the front, where the shield is.", "is now a watchman, more or less, mostly less.", "has been told to stand in front, and has not yet worked out why."]}
+const RUNE_BLESS := 240              # a gold piece: what the priest takes to bless a piece of rune armour for good
+
+static func _tier_of(r: Dictionary, base: int, tier: String) -> Dictionary:
+	var o := r.duplicate(true)
+	o.tier = tier; o.base = base
+	var nm: String = r.n
+	o.n = {"crude": "crude ", "steel": "steel ", "mithril": "mithril ", "rune": "rune "}[tier] + nm.replace("iron cap", "cap").replace("iron-rimmed shield", "shield")
+	if r.s == "w":
+		o.dmg = roundf(r.dmg * TIER_DMG[tier])
+	else:
+		o.cut = maxf(0.04, r.cut + TIER_CUT[tier] * (0.85 if r.s == "o" else 1.0))
+		if r.has("arrow"): o.arrow = clampf(r.get("arrow", 0.0) + TIER_ARROW[tier], 0.2, 0.8)
+		if r.s == "b": o.slow = {"crude": 0.07, "steel": 0.06, "mithril": 0.03, "rune": 0.02}[tier]
+	var iron: int = r.cost.get("iron", 0)
+	var wood: int = r.cost.get("wood", 0)
+	match tier:
+		"crude":
+			o.cost = {"iron": maxi(1, ceili(iron / 2.0)), "wood": wood}
+			o.need = []                          # a crude bow or crossbow wants no book: you point it and hope
+		"steel": o.cost = {"steel": maxi(2, ceili(iron * 0.75)), "wood": wood}
+		"mithril": o.cost = {"mith": TIER_ORE - (0 if r.s == "w" and r.has("reach") else 1), "steel": maxi(2, ceili(iron * 0.75)), "wood": wood}
+		"rune": o.cost = {"rune": TIER_ORE - (0 if r.s == "w" and r.has("reach") else 1), "steel": maxi(2, ceili(iron * 0.75)), "wood": wood}
+	if wood == 0: o.cost.erase("wood")
+	o.tint = TIER_TINT[tier]
+	o.runed = tier == "mithril" or tier == "rune"
+	var what: String = (r.note.to_lower() if r.has("note") else "")
+	o.note = {"crude": "Crude: rough, and cheap", "steel": "Steel: better than iron", "mithril": "Mithril: half as good again as iron, and it glows purple", "rune": "Rune: the best there is outside the relics, and it glows blue"}[tier] + ((". " + what[0].to_upper() + what.substr(1)) if what != "" else "")
+	if tier == "mithril" or tier == "rune": o.note += ". It bites wraiths" if r.s == "w" else ""
+	return o
+
+static func _more_tiers() -> Array:
+	var out := []
+	for b in ARMOUR: out.append(_tier_of(_IT[b], b, "crude"))                    # 58-60: crude armour
+	for b in BOWS:                                                               # 61-64: crude bow and crossbow, and chipped
+		for w in [1, 2]:
+			var o := _tier_of(_IT[b], b, "crude")
+			o.wear = w; o.dmg = roundf(_IT[b].dmg * (0.8 if w == 1 else 0.68))
+			if w == 2:
+				o.n = "chipped " + o.n; o.tint = [0.62, 0.52, 0.44]
+			o.note = "Crude: " + ("it will be chipped after a night’s fighting, and fall apart after a second" if w == 1 else "chipped, and will fall apart after another night’s fighting") + ". It needs no book: you point it and hope"
+			out.append(o)
+	for b in BOWS: out.append(_tier_of(_IT[b], b, "steel"))                      # 65-66: steel bow and crossbow
+	for b in ARMOUR + BOWS: out.append(_tier_of(_IT[b], b, "mithril"))           # 67-71: mithril armour, bow, crossbow
+	for b in STEEL_W + BOWS + ARMOUR: out.append(_tier_of(_IT[b], b, "rune"))    # 72-81: everything in rune
+	for b in ARMOUR:                                                             # 82-84: rune armour, blessed for good
+		var o := _tier_of(_IT[b], b, "rune")
+		o.n = "blessed " + o.n; o.blessed = true; o.cost = {}
+		o.tint = [0.85, 1.05, 1.7]
+		o.note = "Rune, blessed for good by the priest. The dead that strike you are scorched, and wraiths do half their harm"
+		out.append(o)
+	for t in ["crude", "forged", "steel"]:                                       # 85-90: posse kits, a ranger and a watchman in each
+		var metal := "steel" if t == "steel" else "iron"
+		var tn: String = TIER_NAME[t].to_lower()
+		out.append({"n": "%s ranger’s kit" % tn, "s": "k", "tier": t, "kit": "ranger", "pool": "kit", "cost": {metal: 10, "wood": 5}, "wear": 1 if t == "crude" else 0, "tint": TIER_TINT.get(t, [1, 1, 1]),
+			"note": "The Wildly Inexperienced Ranger: a %s bow and a cap, for one of your posse, who will shoot from behind the others" % tn})
+		out.append({"n": "%s watchman’s kit" % tn, "s": "k", "tier": t, "kit": "watch", "pool": "kit", "cost": {metal: 10, "wood": 5}, "wear": 1 if t == "crude" else 0, "tint": TIER_TINT.get(t, [1, 1, 1]),
+			"note": "The Wannabe Ill-Equipped Watchman: a %s weapon (it varies), a helm and a shield, for one of your posse, who will stand in front" % tn})
+	return out
+
+static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers(), _IT_DEF)
 const I_CARD := 47
 const I_TORCH := 48
 const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
@@ -247,10 +322,8 @@ const ORDER_XP := 3.0                # what giving an order teaches of the leadi
 const ORDERS_DAY := 10               # and how many orders a day teach anything
 const STUCK_WAIT := 20.0              # seconds between uses of "I'm a stuck little peasant"
 const MUD := 0.92                    # how fast the living walk in the rain (the dead wade at 0.85)
-const RUNE_COST := 4                 # runes in a rune weapon (with the steel a steel one takes)
-const RUNE_DMG := 1.7                # a rune weapon's damage, against the refined one's (steel is 1.35)
-const RUNE_RANK := 7                 # the rank of Hammer and Tongs that can make one
-const RUNE_PER_VEIN := 2             # runes in each vein of the old workings, each morning
+const RUNE_RANK := 10                # the rank of Hammer and Tongs that forges rune (a rank not yet written: version 7.7 writes it)
+const RUNE_PER_VEIN := 2             # mithril in each vein of the old workings, each morning (they were "runes" until version 7.6)
 const RUNE_TIME := 4.0
 const RUNE_VEINS := [[-6.0, 233.0], [6.0, 238.0], [-2.0, 229.9]]
 ## --- Inside the Thorny Rose: three locals, and what each will say. Each has three things to be asked about, and a set of
@@ -306,6 +379,30 @@ const CHEST_FROM := [
 ]
 const CHEST_ROADS := ["out to the west", "out to the east", "south, towards the river"]
 ## crude id -> chipped id, base -> crude id, base -> steel id
+## The thing made from base in a tier (crude, steel, mithril, rune; iron is the base itself), or -1. Not chipped, not blessed.
+static var _tier_cache := {}
+static func tier_item(base: int, tier: String) -> int:
+	if tier == "forged": return base
+	var k := "%d|%s" % [base, tier]
+	if not _tier_cache.has(k):
+		_tier_cache[k] = -1
+		for i in IT.size():
+			var I: Dictionary = IT[i]
+			if I.base == base and I.tier == tier and I.wear <= 1 and not I.blessed and I.s != "k":
+				_tier_cache[k] = i
+				break
+	return _tier_cache[k]
+
+## The blessed piece of rune armour that this one becomes, or -1.
+static func blessed_of(id: int) -> int:
+	for i in IT.size():
+		if IT[i].blessed and IT[i].base == IT[id].base and IT[id].tier == "rune" and not IT[id].blessed: return i
+	return -1
+
+## Every posse kit.
+static func kits() -> Array:
+	return range(IT.size()).filter(func(i): return IT[i].s == "k")
+
 static func crude_of(base: int) -> int:
 	return 29 + CRUDE_W.find(base) * 2
 static func steel_of(base: int) -> int:
@@ -350,7 +447,7 @@ const PEASANT_ARM := {"iron": 3, "wood": 2}
 const STEEL_SELL := 3                # the market pays this much a piece for steel, and sells none
 const SLUM_FOOD := 5
 const FISH_FOOD := 5                  # fish in a catch (it was 3: no better than foraging, and a posse cannot help you fish)
-const FISH_FINDS := [0.015, 0.05, 0.2]   # the chance a catch brings up: something somebody dropped; a rune; a few coins
+const FISH_FINDS := [0.015, 0.05, 0.2]   # the chance a catch brings up: something somebody dropped; a lump of mithril; a few coins
 const BLESS_FEE := 24
 const HOLY_TIME := 45.0
 const TANKARD := 25.0
@@ -366,7 +463,7 @@ const BOOKS := [
 	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material"]},
 	{"name": "Field, Hook and Pot", "what": "Food", "base": 40, "by": "fishing and foraging", "ranks": ["Fish and forage faster (and faster again with every rank)", "Meals heal 35", "A catch is 7 fish", "Eating heals your whole posse too", "Meals heal 50", "Slum recruits cost 3 food", "Meals heal 65 and settle your posse’s nerves"]},
 	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank). Contraption: the chicken decoy", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger. Contraption: the pitfall", "Your barricades do not rot at dusk. Contraption: the tar pit", "Your spike rows last twice as long. Contraption: the holy water trough", "Your barricades and body walls are half as strong again. Contraption: the log roller", "Contraption: the Thresher, a spinning flail"]},
-	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge refined arms, not just crude ones, with a third less iron (and a little less with every rank)", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm your whole posse with spears in one go", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears", "You can forge rune weapons, the best there are, from steel and the runes of the old workings. Facing, banding and bracing a defence costs half"]},
+	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge iron arms, not just crude ones, with a third less iron (and a little less with every rank), and crude kits for your posse", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm or kit out your whole posse in one go, and forge iron kits", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears, and you can forge steel kits", "You can forge mithril arms and armour, from steel and the mithril of the old workings. Facing, banding and bracing a defence costs half"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["You hit harder up close (and harder again with every rank)", "One blow in eight against you misses", "Your weapon’s trick is ready a fifth sooner", "Your swings sweep wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow you land is twice as hard"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "Your shots never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also hits a second of the dead nearby", "Aimed stones, volleys and piercing bolts are ready in half the time"]},
 	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 40, "by": "giving orders, recruiting, your posse’s work and blows, and bringing them through the night", "ranks": ["Orders: {orders} tells your posse to follow you or hold where they stand. Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "A third order: charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away"]},
@@ -405,7 +502,7 @@ const RELIC_LORE := {
 	54: [5, "The lightning jumps half as far again, and to a third"],
 	55: [0, "You and your posse gather a quarter faster while you carry it"],
 	56: [2, "It mends twice as fast, and your own repairs cost nothing"],
-	57: [3, "Forged, steel and rune weapons hit a tenth harder in your hand"],
+	57: [3, "Iron, steel, mithril and rune weapons hit a tenth harder in your hand"],
 }
 # --- the dead. first: the night of the month they first come down. cost: how much of a night's horde one of them is
 # worth (a shambler is 1). Flags: bony (reassembles once), boss, climb (over barricades), dig (under the north wall),
@@ -732,7 +829,7 @@ static func coins(d: float) -> String:
 static func cost_text(c: Dictionary) -> String:
 	var a := []
 	for k in c:
-		a.append(str(c[k]) + " " + (("body" if c[k] == 1 else "bodies") if k == "bodies" else ("rune" if c[k] == 1 else "runes") if k == "rune" else k))
+		a.append(str(c[k]) + " " + (("body" if c[k] == 1 else "bodies") if k == "bodies" else ("rune" if c[k] == 1 else "runes") if k == "rune" else "mithril" if k == "mith" else k))
 	return " and ".join(a)
 
 

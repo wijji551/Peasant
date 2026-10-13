@@ -310,7 +310,7 @@ func run() -> void:
 	ok("the posse lines up outside the door, not in the keep", not R.peasants.any(func(q): return q.state != "body" and in_keep(q)))
 	at(R.drops[0].x, R.drops[0].z + 0.5); hold(1, func(): return R.drops.size() < 2); ok("a relic can be picked up again", R.drops.size() == 1 and (m.wpn >= 15 or m.inv.size() == 1))
 	var sv = saved
-	ok("the save holds the new things", sv != null and sv.v == 3 and sv.sites == R.sites and sv.trees.size() >= 1 and sv.drops.size() == 2 and sv.players[0].books.size() == 11)
+	ok("the save holds the new things", sv != null and sv.v == 4 and sv.sites == R.sites and sv.trees.size() >= 1 and sv.drops.size() == 2 and sv.players[0].books.size() == 11)
 	# a save survives the trip to text and back
 	var back = JSON.parse_string(JSON.stringify(sv))
 	var R2 := Rules.new()

@@ -44,12 +44,14 @@ const ICON := {
 	"spikes": "M3 20l3-10l3 10l3-10l3 10l3-10l3 10", "bodywall": "M3 18h18M4 18c0-2 2-4 4-4s4 2 4 4M12 18c0-2 2-4 4-4s4 2 4 4M8 10a2 2 0 1 0 0.01 0zM16 10a2 2 0 1 0 0.01 0z",
 	"decoy": "M12 3v18M7 8h10M12 6a2 2 0 1 0 0.01 0zM9 12h6v5H9z",
 	"platform": "M5 21V8M19 21V8M3 12h18M5 8h14M9 8V5M15 8V5M10 21l1-9M14 21l-1-9M10.4 18h3.2M10.7 15h2.6",
+	"kit": "M4 10h16v10H4zM9 10V7h6v3M4 14h16M8 4l8 6M16 4l-8 6", "tower": "M6 21V9M18 21V9M4 9h16M5 5h14v4H5zM8 5V3M12 5V3M16 5V3M9 21l1-12M15 21l-1-12",
 	"contr": "M12 8a4 4 0 1 0 .01 0zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2",
 }
 
 # the readouts' pictures in colour, so each looks like what it is (24 by 24)
 const ICON_COL := {
-	"rune": '<g stroke="#1d1a2a" stroke-width="1.1" stroke-linejoin="round"><path d="M12 3l7 5v8l-7 5l-7-5V8z" fill="#7d6bd0"/><path d="M12 3l7 5l-7 4l-7-4z" fill="#a99af0"/><path d="M10 10v7M10 10l4 3l-4 3" stroke="#f3efff" fill="none" stroke-width="1.3"/></g>',
+	"mith": '<g stroke="#1d1a2a" stroke-width="1.1" stroke-linejoin="round"><path d="M6 15l3-8h6l3 8l-6 4z" fill="#8c63c9"/><path d="M9 7h6l-3 5z" fill="#c4a6f2"/><path d="M6 15l6-3l6 3" fill="none" stroke="#efe4ff" stroke-width="1"/></g>',
+	"rune": '<g stroke="#141c2a" stroke-width="1.1" stroke-linejoin="round"><path d="M12 3l7 5v8l-7 5l-7-5V8z" fill="#3f7ed8"/><path d="M12 3l7 5l-7 4l-7-4z" fill="#8fbaf5"/><path d="M10 10v7M10 10l4 3l-4 3" stroke="#eef6ff" fill="none" stroke-width="1.3"/></g>',
 	# two logs, cut ends showing their rings
 	"wood": '<g stroke="#3a2614" stroke-width="1.1" stroke-linejoin="round"><rect x="2.5" y="12.5" width="15" height="7" rx="3.5" fill="#8a5a2b"/><path d="M5 14.5h8M6 17.5h9" stroke="#5e3b1a" fill="none"/><ellipse cx="17.5" cy="16" rx="3.4" ry="3.5" fill="#e6be82"/><ellipse cx="17.5" cy="16" rx="1.6" ry="1.7" fill="none" stroke="#a8743a"/><rect x="5.5" y="5" width="14" height="7" rx="3.5" fill="#9a6532"/><path d="M8 7h7M8.5 10h8" stroke="#5e3b1a" fill="none"/><ellipse cx="19.5" cy="8.5" rx="3.2" ry="3.5" fill="#efc98d"/><ellipse cx="19.5" cy="8.5" rx="1.5" ry="1.7" fill="none" stroke="#a8743a"/></g>',
 	# a heap of grey stones
@@ -241,18 +243,22 @@ static func theme() -> Theme:
 
 
 ## A small picture of a thing (an item number) or of a readout (a name from ICON), in ink, or gold for a relic.
+const TIER_INK := {"crude": "#7a4b24", "steel": "#3c5878", "mithril": "#7a3fc0", "rune": "#2a6ad8"}
 static func icon(key, px: int = 40) -> Texture2D:
 	var name := ""
 	var gold := false
+	var col := "#3a2614"
 	if key is int:
 		name = "bell" if key == 26 else "censer" if key == 27 else D.IT[key].pool
 		gold = D.IT[key].tier == "relic"
+		col = TIER_INK.get(D.IT[key].tier, col)       # each tier in its own colour: crude brown, steel grey-blue, mithril purple, rune blue
+		if D.IT[key].blessed: col = "#2c63c8"
 	else:
 		name = key
-	var k := "%s|%d|%s" % [name, px, gold]
+	if gold: col = "#a8761c"
+	var k := "%s|%d|%s|%s" % [name, px, gold, col]
 	if _icons.has(k):
 		return _icons[k]
-	var col := "#a8761c" if gold else "#3a2614"
 	var inner: String = ICON_COL[name] if ICON_COL.has(name) and not gold and not (key is int) else '<path d="%s" fill="none" stroke="%s" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' % [ICON.get(name, ""), col]
 	var svg := '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">%s</svg>' % inner
 	var img := Image.new()
