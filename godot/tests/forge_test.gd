@@ -161,6 +161,12 @@ func _init() -> void:
 	var R3 := Rules.new()
 	R3.load_game(old, [{"id": 1, "name": "Matt", "col": 0}])
 	ok("an old save's runes become mithril, the player's and the storehouse's", R3.players[0].mith == 5 and R3.players[0].rune == 0 and R3.store.mith == 7 and R3.store.rune == 0, [R3.players[0].mith, R3.store])
+	var twice := []
+	for tier_ in D.TIERS + ["kits"]:
+		var args: Array = Notices.data(R, "smithy", m, tier_).o.filter(func(o): return o.get("a", "") == "forge").map(func(o): return o.arg)
+		for x in args:
+			if args.count(x) > 1 and not twice.has([tier_, x]): twice.append([tier_, x])
+	ok("no page of the smithy lists the same thing twice (the iron bow and crossbow did)", twice.is_empty(), twice)
 	for l in lines: print(l)
 	var bad := lines.filter(func(l): return l.begins_with("FAIL")).size()
 	print("%d passed, %d failed" % [lines.size() - bad, bad])

@@ -317,6 +317,20 @@ def sfx():
         v = (osc(ff, "sawtooth") * 0.5 + osc(ff * 2, "triangle") * 0.2) * np.minimum(1, tt / 0.05) * np.clip((dur - tt) / 0.15, 0, 1) * 0.4
         add(sm, bandpass(v, 200, 1400), at)
     S["sermon"] = reverb(sm * V, 1.6, 0.4)
+    # a dog: two short barks, a falling note each with a rough edge to it
+    bk = buf(0.7)
+    for at, f0 in ((0.0, 560), (0.28, 520)):
+        k = int(SR * 0.16)
+        tt = np.arange(k) / SR
+        ff = f0 * (1.0 - 0.45 * tt / 0.16)
+        v = (osc(ff, "sawtooth") * 0.6 + lowpass(rng.standard_normal(k), 1800) * 0.4) * np.minimum(1, tt / 0.01) * np.clip((0.16 - tt) / 0.08, 0, 1)
+        add(bk, bandpass(v, 250, 3200), at)
+    S["bark"] = reverb(bk * V * 0.9, 0.5, 0.15)
+    # and a growl: a low rumble that rises a little
+    n = int(SR * 0.6)
+    t = np.arange(n) / SR
+    gr = (osc(95 + 20 * t, "sawtooth") * 0.4 + lowpass(rng.standard_normal(n), 500) * 0.5) * np.minimum(1, t / 0.05) * np.clip((0.6 - t) / 0.2, 0, 1)
+    S["growl"] = lowpass(gr, 900) * V * 0.8
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)

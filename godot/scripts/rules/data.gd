@@ -61,7 +61,7 @@ const GK := ["", "tree", "stone", "iron", "food", "fish", "search", "steel"]
 const STEEL_MINE := {"x": -108.0, "z": -44.0}      # the old steel mine, at the top of the forest. It does not move.
 const MILL := {"x": 104.0, "z": 30.0}              # the old mill, on the eastern downs: a landmark, and something to walk round
 const COST := {"barricade": {"wood": 5}, "spikes": {"wood": 8}, "wall": {"wood": 15}, "gate": {"wood": 20}, "bodywall": {"bodies": 3}, "decoy": {"bodies": 1},
-	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}, "platform": {"wood": 20}, "tower": {"wood": 25, "stone": 8}}
+	"chicken": {"wood": 3, "food": 2}, "pitfall": {"wood": 6, "stone": 4}, "tar": {"wood": 6, "stone": 3}, "trough": {"wood": 8, "iron": 2}, "logs": {"wood": 25, "iron": 4}, "thresher": {"wood": 15, "iron": 6}, "platform": {"wood": 20}, "tower": {"wood": 25, "stone": 8}, "firepot": {"wood": 6, "stone": 4, "iron": 1}}
 const REINF := {
 	"platform": {"cost": {"wood": 10}, "mul": 1.0, "name": "roof it", "smith": 0},
 	"tower": {"cost": {"wood": 10}, "mul": 1.0, "name": "roof it", "smith": 0},
@@ -71,12 +71,12 @@ const REINF := {
 	"spikes": {"cost": {"iron": 4}, "mul": 1.0, "name": "tip them with iron", "smith": 2},
 }
 const SHP := {"barricade": 90.0, "spikes": 40.0, "wall": 260.0, "gate": 220.0, "bodywall": 110.0, "decoy": 70.0,
-	"chicken": 40.0, "pitfall": 4.0, "tar": 100.0, "trough": 60.0, "logs": 1.0, "thresher": 160.0, "platform": 200.0, "tower": 320.0}   # a pitfall: how many it swallows; tar and the trough wear out with use
+	"chicken": 40.0, "pitfall": 4.0, "tar": 100.0, "trough": 60.0, "logs": 1.0, "thresher": 160.0, "platform": 200.0, "tower": 320.0, "firepot": 80.0}   # a pitfall: how many it swallows; tar and the trough wear out with use
 const SDIM := {"barricade": Vector2(1.7, 0.45), "spikes": Vector2(1.7, 0.8), "wall": Vector2(3, 0.45), "gate": Vector2(3, 0.45), "bodywall": Vector2(1.7, 0.5), "decoy": Vector2(0.45, 0.45),
-	"chicken": Vector2(0.5, 0.5), "pitfall": Vector2(1.2, 1.2), "tar": Vector2(1.8, 1.2), "trough": Vector2(1.7, 0.5), "logs": Vector2(1.6, 1.0), "thresher": Vector2(0.9, 0.9), "platform": Vector2(1.1, 1.1), "tower": Vector2(1.25, 1.25)}
+	"chicken": Vector2(0.5, 0.5), "pitfall": Vector2(1.2, 1.2), "tar": Vector2(1.8, 1.2), "trough": Vector2(1.7, 0.5), "logs": Vector2(1.6, 1.0), "thresher": Vector2(0.9, 0.9), "platform": Vector2(1.1, 1.1), "tower": Vector2(1.25, 1.25), "firepot": Vector2(0.6, 0.6)}
 const SNAME := {"barricade": "barricade", "spikes": "spike row", "wall": "palisade wall", "gate": "gate", "bodywall": "body wall", "decoy": "decoy",
-	"chicken": "chicken decoy", "pitfall": "pitfall", "tar": "tar pit", "trough": "holy water trough", "logs": "log roller", "thresher": "Thresher", "platform": "watch platform", "tower": "watch tower"}
-const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy", "chicken", "pitfall", "tar", "trough", "logs", "thresher", "platform", "tower"]
+	"chicken": "chicken decoy", "pitfall": "pitfall", "tar": "tar pit", "trough": "holy water trough", "logs": "log roller", "thresher": "Thresher", "platform": "watch platform", "tower": "watch tower", "firepot": "burning pot"}
+const SKINDS := ["wall", "gate", "barricade", "spikes", "bodywall", "decoy", "chicken", "pitfall", "tar", "trough", "logs", "thresher", "platform", "tower", "firepot"]
 const BLOCKERS := ["wall", "gate", "barricade", "bodywall", "decoy", "chicken", "tower"]   # what the dead have to break, or go round
 ## Contraptions: the peasant community's inventions, learned from Barricades for Beginners (or built with a box of cogs).
 const CONTRAPTIONS := ["chicken", "pitfall", "tar", "trough", "logs", "thresher"]
@@ -89,6 +89,15 @@ const CONTR := {
 	"thresher": {"rank": 7, "d": "A spinning flail. Hits everything round it, as long as someone is near enough to turn the handle"},
 }
 const BUILDS := ["barricade", "spikes", "bodywall", "decoy"]   # the watch platform went in version 7.5: it became the watch tower, and moved
+## Fire and How to Start It (version 7.9). stick: how long a fire stick sets one of the dead alight; burst: how far rank 4's
+## burst reaches; oil: burning oil's patch (radius, seconds); tar: a lit tar pit burns this long, four at most; pot: a bow
+## within this of a burning pot shoots burning arrows.
+const FIRE := {"stick": 4.0, "reach": 14.0, "burst": 2.6, "oil_r": 3.0, "oil_t": 8.0, "tar": 30.0, "tars": 4, "pot": 4.5, "fear": 2.5}
+## The Night Watchman's Companion: dark lantern; unnoticed blows; notice range.
+## Hiding Behind Things: Brace.
+## Dogs, and Other Bad Ideas: the dog's health, bite, wait between bites, speed; how far it fetches; a gate's watchers.
+const DOG_NAMES := ["Biscuit", "Nuisance", "Old Tom", "Gristle", "Sir Woofington", "Mud", "Trouble", "Duchess", "Pickle", "Wolf (he is not)", "Ratbag", "Dennis"]
+const DOG := {"hp": 60.0, "bite": 6.0, "per": 1.5, "cd": 0.8, "spd": 7.5, "fetch": 14.0, "up": 60.0, "watch": 12.0, "bark": 20.0}
 ## The watch platform: one of your posse stands on it from dusk and throws stones over the wall at whatever comes
 ## within reach. Up there the dead cannot get at them, except archers; a roof (ten more wood) stops the arrows.
 const PLAT := {"reach": 13.0, "wait": 1.5, "dmg": 5.0}
@@ -145,7 +154,7 @@ const _IT := [
 	{"n": "slop bucket", "s": "t", "tier": "found", "pool": "bucket", "tint": [0.6, 0.48, 0.3], "note": "{carry} lobs it, once: every undead it splashes runs from the smell"},
 ]
 const _IT_DEF := {"dmg": 0.0, "cd": 0.0, "reach": 0.0, "arc": 0.0, "ab": "", "note": "", "swing": 0, "cost": {}, "blunt": false, "heavy": false,
-	"fire": false, "runed": false, "blessed": false, "kit": "", "chain": 0, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
+	"fire": false, "runed": false, "blessed": false, "kit": "", "spd": 0.0, "chain": 0, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
 ## The smithy makes three grades. Anyone can knock out a crude weapon, which wears out: after a night's fighting it is
 ## chipped, and after a second it falls apart. Hammer and Tongs (rank 1) makes the refined ones (the first list above);
 ## from rank 4, steel, from the old steel mine. Crude, chipped and steel things are made here from the refined ones,
@@ -288,7 +297,32 @@ static func _more_tiers() -> Array:
 			"note": "The Wannabe Ill-Equipped Watchman: a %s weapon (it varies), a helm and a shield, for one of your posse, who will stand in front" % tn})
 	return out
 
-static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers(), _IT_DEF)
+## Version 7.9: a relic for each of the four new books, and boots: three ordinary pairs and three relics (s "f", the feet).
+## spd: how much faster you walk in them.
+const _V79 := [
+	{"n": "the Everlasting Match", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.4, 0.75, 0.3], "note": "It will not go out. Fire sticks come round twice as fast"},
+	{"n": "the Unblinking Lantern", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.35, 1.15, 0.55], "note": "You see through fog and the dark as if it were day, and so does everyone near you"},
+	{"n": "Saint Wilbur’s Pot Lid", "s": "o", "tier": "relic", "cut": 0.2, "arrow": 0.6, "pool": "shield", "tint": [1.25, 1.1, 0.6], "note": "Arrows that hit it go back the way they came"},
+	{"n": "Saint Wilbur’s Dog Lead", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.2, 0.95, 0.55], "note": "It brings your dog’s budding friend: a second dog. One holds while the other bites"},
+	{"n": "Somebody Else’s Turnshoes", "s": "f", "tier": "found", "pool": "boots", "spd": 0.05, "tint": [0.72, 0.55, 0.38], "note": "Low, soft and not yours. You walk a little faster"},
+	{"n": "hobnailed boots", "s": "f", "tier": "forged", "pool": "boots", "spd": 0.1, "cost": {"iron": 3, "wood": 1}, "tint": [0.55, 0.42, 0.3], "note": "You walk a tenth faster, and everyone hears you coming"},
+	{"n": "sabatons (two left feet)", "s": "f", "tier": "steel", "pool": "boots", "spd": 0.1, "cut": 0.05, "cost": {"steel": 4}, "tint": [1.12, 1.18, 1.3], "note": "Steel boots: a tenth faster, and a twentieth off every blow. Both of them are left feet"},
+	{"n": "Brother Fleet’s Swiftly Departing Boots", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.25, "tint": [0.6, 1.4, 0.6], "note": "They glow green. You walk a quarter faster, mostly away"},
+	{"n": "the Sandals of the Extremely Devout", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.0, "tint": [1.3, 1.2, 0.75], "note": "Leathery, and a size too small. Where you walk is hallowed for a moment: the dead that tread there are scorched"},
+	{"n": "Brother Cinder’s Hot-Foot Boots", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.0, "tint": [1.4, 0.55, 0.3], "fire": true, "note": "They smoulder. The dead that touch you catch light"},
+]
+const I_MATCH := 91
+const I_LANTERN := 92
+const I_POTLID := 93
+const I_LEAD := 94
+const I_TURNSHOES := 95
+const I_HOBNAILS := 96
+const I_SABATONS := 97
+const I_FLEET := 98
+const I_SANDALS := 99
+const I_HOTFOOT := 100
+const BOOT_RELICS := [98, 99, 100]   # the relic boots: every player may find one of each, whatever they have read
+static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers() + _V79, _IT_DEF)
 const I_CARD := 47
 const I_TORCH := 48
 const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
@@ -409,18 +443,18 @@ static func steel_of(base: int) -> int:
 	return 29 + CRUDE_W.size() * 2 + (STEEL_W + STEEL_A).find(base)
 static func rune_of(base: int) -> int:
 	return 29 + CRUDE_W.size() * 2 + (STEEL_W + STEEL_A).size() + _MORE.size() + STEEL_W.find(base)
-const SLOTK := {"w": "wpn", "h": "head", "b": "body", "o": "off", "t": "trk"}
-const SLOTS := ["wpn", "head", "body", "off", "trk"]
+const SLOTK := {"w": "wpn", "h": "head", "b": "body", "o": "off", "t": "trk", "f": "feet"}
+const SLOTS := ["wpn", "head", "body", "off", "trk", "feet"]
 const I_BOW := 54                    # the Thunderer's Crossbow (a bow until version 7.1: quick, and rather too good)
 const I_SCYTHE := 55                 # Saint Walstan's Scythe
 const I_TROWEL := 56                 # the Mason's Blessed Trowel
 const I_TONGS := 57                  # Saint Dunstan's Tongs
-const RELICS := [15, 16, 17, 20, 23, 26, 27, 54, 55, 56, 57]     # one for every book
+const RELICS := [15, 16, 17, 20, 23, 26, 27, 54, 55, 56, 57, 91, 92, 93, 94]     # one for every book (and from version 7.9, one copy for every player who holds that book)
 const CHAIN_REACH := 4.5             # how far the Thunderer's lightning jumps (half as far again with its book)
 const TROWEL_REACH := 9.0
 const TROWEL_MEND := 3.0             # health a second it puts back into each defence near you (twice that with its book)
 const FOUND_W := [6, 7, 8, 9, 10, 11, 12]
-const FOUND_A := [18, 21, 24]
+const FOUND_A := [18, 21, 24, 95]
 const FORGE_W := [1, 2, 3, 4, 5, 13, 14]
 const FORGE_A := [19, 22, 25]
 
@@ -474,8 +508,8 @@ const BOOKS := [
 	{"name": "Relics and Where They Were Left", "what": "Relic lore", "base": 4, "by": "searching the ruins", "ranks": ["You search rubble faster (and faster again with every rank)", "Your map marks the rubble that still hides something", "Relics turn up half as often again", "You find twice the materials and coin in rubble", "Holy weapons, blessings and holy slop hit harder in your hands", "Relics turn up far more often", "Nothing lurking in the ruins notices you searching", "The relics you carry work a tenth better", "You search twice as fast at night", "Once a day, one heap you search is certain to hold something good"]},
 	{"name": "Granny’s Remedies", "what": "Healing", "base": 4, "by": "bandaging and reviving", "ranks": ["Bandage a hurt ally: hold {interact} beside them (it heals more with every rank)", "Revive twice as fast, and to better health", "Each of your posse survives one fatal blow a night", "You heal slowly all the time, even in a fight", "Knocked down, you last twice as long before you die", "A bandage heals completely", "Once a night you get back up by yourself", "A bandage also cures a fright (and burning, should anyone take it up)", "Each of your posse survives two fatal blows a night", "Your bandage reaches across the road"]},
 	{"name": "The Holy Book (Abridged)", "what": "Divine powers: the apprentice priest", "base": 30, "by": "smiting and praying", "class": 0, "ranks": [
-		"Minor Smiting: {power1} calls down a bolt of holy light on the nearest of the dead (it hits harder with every rank)",
-		"A Word of Protection: {power2} prays over you and everyone near you, your posse included: a third less harm for ten seconds",
+		"Minor Smiting: Smite, on the action bar, calls down a bolt of holy light on the nearest of the dead (it hits harder with every rank)",
+		"A Word of Protection: Pray, on the action bar, prays over you and everyone near you, your posse included: a third less harm for ten seconds",
 		"The Blessing of Mild Improvement: the prayer also makes everyone’s weapons holy while it lasts",
 		"Smiting, With Feeling: a smite bursts, and scorches everything near what it hits",
 		"Smites and prayers come round a third sooner",
@@ -484,7 +518,56 @@ const BOOKS := [
 		"So Help Me Lord, Please?: when a boss would throw, pull or freeze you, you pray in haste, by yourself, and two times in three it works (a small cross shows above you). And the lasting blessing on rune armour costs you half",
 		"The prayer lasts fifteen seconds",
 		"Consecrate: a third power, a patch of ground round you that the dead will not cross for eight seconds"]},
+	# --- four more books (version 7.9), after the Holy Book so that every earlier book keeps its number
+	{"name": "Fire and How to Start It", "what": "Fire-raising", "base": 12, "by": "setting the dead alight", "ranks": [
+		"The fire stick, on the action bar: throw a burning stick at one of the dead, in the hope that it catches. What you set alight burns longer with every rank",
+		"Rain no longer halves your fires",
+		"You can set a tar pit alight, with a torch or a fire stick. A burning tar pit harms what it slows. Four at once at most, in the whole village",
+		"The fire stick bursts where it lands, and sets fire to every one of the dead round it",
+		"A new thing to build: the burning pot. Anyone with a bow beside it shoots burning arrows",
+		"Burning oil, on the action bar: pour it over the dead at the wall, from a wall, a gate or a tower, and that patch of ground burns for eight seconds",
+		"Whatever you set alight is afraid, and runs",
+		"You carry two fire sticks",
+		"The burning take a quarter more harm from everything",
+		"The oil covers twice the ground"]},
+	{"name": "The Night Watchman’s Companion", "what": "Scouting", "base": 8, "by": "finding things, and fighting outside the wall", "ranks": [
+		"You walk faster outside the village wall (and faster again with every rank)",
+		"You see further through fog and the dark",
+		"The dark lantern, on the action bar: close the shutter and the dead lose sight of you for six seconds, or until you hit one",
+		"The lost chest and the outer ruins are on your map from the morning they appear",
+		"Your first blow on one of the dead that has not noticed you is three times as hard",
+		"The dead outside the wall notice you from half as far",
+		"Your whole posse walks as fast as you do, and is noticed as little",
+		"Boots you wear are half as good again",
+		"The lantern lasts ten seconds, and hides your posse too",
+		"A blow from the dark is five times as hard"]},
+	{"name": "Hiding Behind Things", "what": "Shield-work", "base": 30, "by": "taking blows on a shield", "ranks": [
+		"Your shield stops more (and more again with every rank)",
+		"With a shield up, you are knocked back half as far",
+		"Brace, on the action bar: plant your feet for four seconds. Nothing from the front harms you, the dead who hit you are shoved back, and the werewolf’s howl does not freeze you",
+		"Your posse standing behind you take a quarter less harm",
+		"Brace comes round a third sooner",
+		"A blow you block staggers whoever dealt it",
+		"Brace covers everyone standing behind you",
+		"A shield stops arrows outright",
+		"Brace lasts six seconds",
+		"Braced, no boss can move you"]},
+	{"name": "Dogs, and Other Bad Ideas", "what": "Dog-handling", "base": 40, "by": "your dog’s bites and holds", "ranks": [
+		"A dog. It follows you, and bites whatever you are fighting (it bites harder with every rank)",
+		"It barks when the dead come to a gate that nobody is watching",
+		"That One, on the action bar: point at one of the dead, and the dog pulls it down and holds it there for four seconds",
+		"It fetches: fallen kits, finds and dropped things are brought back to you",
+		"Knocked down, it is back on its feet in a minute, not at dawn",
+		"Whatever it is holding takes a quarter more harm from everybody",
+		"It drags a fallen player or peasant out of the fight",
+		"It sniffs out rubble that still hides something",
+		"It holds for six seconds, and will hold a boss for two",
+		"The dog cannot be killed, only discouraged"]},
 ]
+const B_FIRE := 11
+const B_WATCH := 12
+const B_SHIELD := 13
+const B_DOG := 14
 ## Callings: a book that makes you something more than a peasant, with two powers on their own keys. One calling at a
 ## time. The Holy Book is the first; more can follow (each needs its book, and its two powers in rules.gd).
 const CLASSES := [
@@ -508,11 +591,17 @@ const POWERS := [
 	{"n": "Hone", "icon": "hone", "cd": 120.0, "t": 60.0, "d": "it points you towards a heap of rubble that still hides a relic, and the relic glows"},
 	{"n": "Smelling Salts", "icon": "salts", "cd": 90.0, "t": 0.0, "d": "everyone near you who is down gets up"},
 	{},
+	{"n": "Fire Stick", "icon": "burn", "cd": 14.0, "t": 0.0, "d": "a burning stick, thrown at one of the dead, in the hope that it catches"},
+	{"n": "Dark Lantern", "icon": "lantern", "cd": 40.0, "t": 6.0, "rank": 3, "d": "close the shutter: the dead lose sight of you for six seconds, or until you hit one"},
+	{"n": "Brace", "icon": "shield", "cd": 30.0, "t": 4.0, "rank": 3, "d": "plant your feet: nothing from the front harms you, and whatever hits you is shoved back"},
+	{"n": "That One", "icon": "dog", "cd": 25.0, "t": 4.0, "rank": 3, "d": "point at one of the dead, and the dog pulls it down and holds it there"},
 ]
+## A second power for a book (the fire-raiser's burning oil), at its rank.
+const POWERS2 := {11: {"n": "Burning Oil", "icon": "oil", "cd": 50.0, "t": 8.0, "rank": 6, "d": "poured over the dead at the wall, from a wall, a gate or a tower: that patch of ground burns"}}
 const POWER_NEAR := 8.0              # what "near you" is, for the powers that reach the people round you
 ## A title from the books you have read: the one you know best, and the next best.
-const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest"]
-const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy"]
+const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest", "Fire-Raiser", "Night Watchman", "Shield-Wall", "Dog-Walker"]
+const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy", "Singed", "Shifty", "Dented", "Muddy-Pawed"]
 ## Each relic has a book it goes with. Carrying the relic with that book read does something more.
 const RELIC_LORE := {
 	15: [1, "Every Bury feeds you: 10 health"],
@@ -526,6 +615,10 @@ const RELIC_LORE := {
 	55: [0, "You and your posse gather a quarter faster while you carry it"],
 	56: [2, "It mends twice as fast, and your own repairs cost nothing"],
 	57: [3, "Iron, steel, mithril and rune weapons hit a tenth harder in your hand"],
+	91: [11, "What you set alight burns half as long again"],
+	92: [12, "The dead do not notice you at all until you are close"],
+	93: [13, "Arrows it sends back hit twice as hard"],
+	94: [14, "The two dogs bite a quarter harder"],
 }
 # --- the dead. first: the night of the month they first come down. cost: how much of a night's horde one of them is
 # worth (a shambler is 1). Flags: bony (reassembles once), boss, climb (over barricades), dig (under the north wall),

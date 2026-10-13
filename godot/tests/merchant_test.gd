@@ -96,7 +96,7 @@ func _init() -> void:
 	R.do_act(m, "mbuy", str(fake_i))
 	ok("a fake is rubbish", m.inv.size() == inv0 and m.coin == 500 - 36)
 	R.do_act(m, "mbuy", str(real_i))
-	ok("the real one is a relic", R.relics.size() == 1 and (m.inv.size() > inv0 or D.IT[m.wpn].tier == "relic" or m.head == 20 or m.body == 23 or m.trk >= 26))
+	ok("the real one is a relic", R.relics.size() == 1 and (m.inv.size() > inv0 or D.IT[m.wpn].tier == "relic" or m.head == 20 or m.body == 23 or m.trk >= 26 or m.feet >= 0 or m.off == D.I_POTLID))
 	day_with("brewer")
 	at_station(m, "cart"); m.coin = 100; var ale0 := R.ale
 	R.do_act(m, "mbuy", "1")

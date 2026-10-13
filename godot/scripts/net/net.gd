@@ -25,12 +25,12 @@ const SEND_RATE := 1.0 / 12.0
 const INPUT_RATE := 1.0 / 15.0
 const ALPHA := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # no I, O, 0 or 1: they are too easy to mix up
 const PSTATE := ["ok", "down", "dead", "hide", "inn"]
-const QSTATE := ["idle", "follow", "chop", "fight", "hide", "body", "gone", "inn", "post"]
+const QSTATE := ["idle", "follow", "chop", "fight", "hide", "body", "gone", "inn", "post", "down"]
 const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
-const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk",
+const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk", "feet",
 	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "room", "rune", "mith", "game", "gwon", "treated", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
-	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t"]
+	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t", "fs", "fsT", "oilCd", "dark", "braced"]
 
 static var me: Net
 
@@ -508,6 +508,7 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 		"tb": R.do_toilet(p)
 		"pw": p.r = float(m.get("r", p.r)); p.goal_r = p.r; R.do_power(p, int(m.i))
 		"bp": p.r = float(m.get("r", p.r)); p.goal_r = p.r; R.book_power(p, int(m.b))     # a book's own power, from the action bar
+		"oil": R.oil_power(p)
 		"ord": R.do_order(p)
 		"bld": R.try_place(p, str(m.k), float(m.x), float(m.z), float(m.rot))
 		"rdy": if R.phase == "day": p.ready = bool(m.v)
@@ -548,7 +549,7 @@ func _host_tick(delta: float) -> void:
 		_send({"t": "dawn", "d": R.dawn})
 	if R.sv != _sent_sv:
 		_sent_sv = R.sv
-		_send({"t": "st", "a": R.structs.map(func(s): return [s.id, s.k, s.x, s.z, s.rot, s.built, s.hp, s.mhp, s.slot, s.hc, s.re, s.bl, s.nr, s.site, s.kept])})
+		_send({"t": "st", "a": R.structs.map(func(s): return [s.id, s.k, s.x, s.z, s.rot, s.built, s.hp, s.mhp, s.slot, s.hc, s.re, s.bl, s.nr, s.site, s.kept, s.fire])})
 	if R.tv != _sent_tv:
 		_sent_tv = R.tv
 		var codes := []
@@ -658,7 +659,7 @@ func _client_msg(m: Dictionary) -> void:
 					s.id = int(a[0])
 				s.k = str(a[1]); s.x = a[2]; s.z = a[3]; s.rot = a[4]; s.built = a[5]; s.hp = a[6]; s.mhp = a[7]
 				s.slot = int(a[8]); s.hc = int(a[9]); s.re = a[10]; s.bl = a[11]; s.nr = a[12]
-				s.site = int(a[13]) if a.size() > 13 else -1; s.kept = a[14] if a.size() > 14 else true
+				s.site = int(a[13]) if a.size() > 13 else -1; s.kept = a[14] if a.size() > 14 else true; s.fire = float(a[15]) if a.size() > 15 else 0.0
 				s.hw = D.SDIM[s.k].x; s.hd = D.SDIM[s.k].y
 				out.append(s)
 			R.structs = out

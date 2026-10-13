@@ -144,7 +144,7 @@ func _ready() -> void:
 	# --- bottom middle (version 7.8): your health, and under it the action bar, with your posse, backpack and skills beside it
 	_feed = VBoxContainer.new()
 	root.add_child(_feed)
-	_pin(_feed, Control.PRESET_BOTTOM_LEFT, 16, -20, 300, -20)
+	_pin(_feed, Control.PRESET_BOTTOM_LEFT, 16, -150, 300, -150)   # above the action bar
 	_feed.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_feed.add_theme_constant_override("separation", 2)

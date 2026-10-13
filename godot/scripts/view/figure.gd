@@ -154,7 +154,7 @@ func player(p: E.Player, is_me: bool) -> void:
 		_torch.visible = lit
 		_torch.light_energy = (4.2 if p.room == "mine" else 0.5 + 2.1 * dark) * (0.9 + 0.1 * sin(Time.get_ticks_msec() / 70.0 + p.id))
 		if lit and fx and randf() < get_process_delta_time() * 9: fx.puff(p.x + sin(p.r) * 0.5, 2.3, p.z + cos(p.r) * 0.5, 1, fx.C_FIRE, 0.8)
-	_set_gear([p.head, p.body, p.off, p.trk])
+	_set_gear([p.head, p.body, p.off, p.trk, p.feet])
 	_set_carry(p.bodies, p.bbod)
 	if fx:
 		var dt := get_process_delta_time()
@@ -175,6 +175,9 @@ func player(p: E.Player, is_me: bool) -> void:
 
 ## Show a villager, one of a posse, or a body. own is their leader, or null.
 func peasant(q: E.Peasant, own: E.Player) -> void:
+	if q.kind == 3:                                   # a dog
+		_dog_show(q, own)
+		return
 	visible = q.state != "gone" and q.state != "inn"
 	_place(q.x, q.z, q.r, false)
 	var kind := ""
@@ -444,6 +447,41 @@ func _work_fx(kind: String) -> void:   # a blow landed on a tree, a rock, the or
 		"stone": fx.puff(x, 0.6, z, 3, fx.C_STONE, 2)
 		"iron", "steel": fx.puff(x, 0.6, z, 3, fx.C_IRON, 2)
 		_: fx.puff(x, 0.6, z, 3, fx.C_FOOD, 2)
+
+
+# ---------------------------------------------------------------- a dog (Dogs, and Other Bad Ideas)
+var _dog: Node3D
+var _dog_legs: Array = []
+var _dog_tail: Node3D
+var _dog_seen := [-1, -1]
+
+func _dog_show(q: E.Peasant, own: E.Player) -> void:
+	visible = true
+	_model.visible = false
+	_bar.visible = false
+	if _dog == null:
+		_dog = Node3D.new(); add_child(_dog)
+		var coat := _mat(Color(0.55, 0.38, 0.22) if q.ni % 3 == 0 else Color(0.82, 0.74, 0.6) if q.ni % 3 == 1 else Color(0.25, 0.22, 0.2))
+		_mi(_dog, "dog", coat)
+		for lp in [Vector3(-0.13, 0.32, 0.26), Vector3(0.13, 0.32, 0.26), Vector3(-0.13, 0.32, -0.26), Vector3(0.13, 0.32, -0.26)]:
+			var l := Node3D.new(); l.position = lp; _dog.add_child(l)
+			_mi(l, "dog_leg", coat)
+			_dog_legs.append(l)
+		_dog_tail = Node3D.new(); _dog_tail.position = Vector3(0, 0.55, -0.38); _dog.add_child(_dog_tail)
+		_mi(_dog_tail, "dog_tail", coat)
+	_place(q.x, q.z, q.r, false)
+	_dog.rotation.y = _r
+	var down := q.state == "down"
+	_dog.rotation.z = lerpf(_dog.rotation.z, 1.4 if down else 0.0, 0.2)
+	for i in _dog_legs.size():
+		_dog_legs[i].rotation.x = sin(_walk + (PI if i % 3 == 0 else 0.0)) * 0.6 * _mv
+	_dog_tail.rotation.z = sin(Time.get_ticks_msec() / 90.0) * (0.6 if q.state != "down" else 0.0)
+	if q.ac != _dog_seen[0]:
+		if _dog_seen[0] >= 0: Sound.play("growl" if randf() < 0.5 else "swing", 0.5, Vector2(q.x, q.z))
+		_dog_seen[0] = q.ac
+	if q.hc != _dog_seen[1]:
+		if _dog_seen[1] >= 0: Sound.play("hit", 0.4, Vector2(q.x, q.z))
+		_dog_seen[1] = q.hc
 
 
 func _process(delta: float) -> void:

@@ -540,6 +540,7 @@ func bar_all() -> Array:
 	var out := ["trick"]
 	for b in D.BOOKS.size():
 		if R.can_book_power(p, b): out.append("b%d" % b)
+		if D.POWERS2.has(b) and Rules.rk(p, b) >= int(D.POWERS2[b].rank): out.append("o%d" % b)
 	var c := Rules.class_of(p)
 	if c >= 0:
 		for i in D.CLASSES[c].powers.size():
@@ -575,7 +576,11 @@ func bar_info(id: String) -> Array:
 	if id.begins_with("b"):
 		var b := int(id.substr(1))
 		var P: Dictionary = D.POWERS[b]
-		return [P.icon, P.n, float(p.pwCd[b]) if b < p.pwCd.size() else 0.0, "%s (%s): %s." % [P.n, D.book_title(b), P.d]]
+		var nm: String = P.n + (" ×%d" % p.fs if b == D.B_FIRE and Rules.sticks(p) > 1 else "")
+		return [P.icon, nm, Rules.power_wait_b(p, b), "%s (%s): %s." % [P.n, D.book_title(b), P.d]]
+	if id.begins_with("o"):
+		var P2: Dictionary = D.POWERS2[int(id.substr(1))]
+		return [P2.icon, P2.n, p.oilCd, "%s: %s." % [P2.n, P2.d]]
 	if id.begins_with("c"):
 		var i := int(id.substr(1))
 		var pw: Dictionary = D.CLASSES[Rules.class_of(p)].powers[i]
@@ -608,11 +613,14 @@ func bar_do(id: String) -> void:
 			if id.begins_with("b"):
 				var b := int(id.substr(1))
 				if not R.can_book_power(p, b): return
-				var wait: float = float(p.pwCd[b]) if b < p.pwCd.size() else 0.0
+				var wait: float = Rules.power_wait_b(p, b)
 				if wait > 0: Sound.play("no"); hud.banner("Not yet", "%s is ready again in %d seconds." % [D.POWERS[b].n, ceili(wait)], 1.2); return
 				if b == 1 and p.food < 1: Sound.play("no"); hud.banner("No food", "Pot Luck needs one food to put in the pot.", 1.5); return
-				if b == 5: R.aim_assist(p)
+				if b == 5 or b == D.B_FIRE or b == D.B_DOG: R.aim_assist(p)
 				cmd({"t": "bp", "b": b, "r": p.r})
+			elif id.begins_with("o"):
+				if p.oilCd > 0: Sound.play("no"); hud.banner("Not yet", "The oil is heating. %d seconds." % ceili(p.oilCd), 1.2); return
+				cmd({"t": "oil"})
 			elif id.begins_with("c"):
 				var i := int(id.substr(1))
 				var c := Rules.class_of(p)
@@ -670,7 +678,7 @@ func _mark_step(delta: float) -> void:
 
 
 func _builds_now() -> Array:
-	return D.BUILDS.filter(func(k): return not D.COST[k].has("bodies") or me.bodies >= D.COST[k].bodies) + _contraptions_now()
+	return D.BUILDS.filter(func(k): return not D.COST[k].has("bodies") or me.bodies >= D.COST[k].bodies) + _contraptions_now() + (["firepot"] if Rules.rk(me, D.B_FIRE) >= 5 else [])
 
 
 func _contraptions_now() -> Array:
@@ -1036,6 +1044,20 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			F.shock(ev[3], ev[4], D.POWER_NEAR if ev[2] in [1, 3, 7, 9] else 3.0, Color(1.0, 0.86, 0.5, 0.8))
 			Sound.play(["chop", "eat", "build", "forge", "swing", "pop", "rally", "cheer", "pick", "pop"][int(ev[2])] if int(ev[2]) < 10 else "holy", 0.9, Vector2(ev[3], ev[4]))
 			if ev[1] == me.id: hud.banner(D.POWERS[int(ev[2])].n, "", 1.0)
+		"stick":                                          # a fire stick, thrown
+			F.fly(ev[1], ev[2], ev[3], ev[4], 1); F.puff(ev[3], 0.8, ev[4], 12, F.C_FIRE, 3.0); Sound.play("whoosh", 0.6, Vector2(ev[1], ev[2]))
+		"oil":                                            # burning oil, poured over the wall
+			F.fan(ev[1], ev[2], 0.0, ev[3], PI, Color(1.0, 0.5, 0.15), ev[4]); F.puff(ev[1], 0.4, ev[2], 40, F.C_FIRE, 4.0)
+			Sound.play("splat", 0.9, Vector2(ev[1], ev[2]))
+		"tarlit": F.puff(ev[1], 0.4, ev[2], 24, F.C_FIRE, 3.0); Sound.play("whoosh", 0.8, Vector2(ev[1], ev[2]))
+		"fireshot": F.puff(ev[1], 1.0, ev[2], 5, F.C_FIRE, 2.0)
+		"block": F.puff(ev[1], 1.0, ev[2], 4, F.C_DUST, 2.0); Sound.play("tink", 0.7, Vector2(ev[1], ev[2]))
+		"bark": Sound.play("bark", 1.0, Vector2(ev[1], ev[2]))
+		"thatone": Sound.play("bark", 0.8)
+		"hold": F.puff(ev[1], 0.4, ev[2], 8, F.C_DUST, 2.5); Sound.play("growl", 0.8, Vector2(ev[1], ev[2]))
+		"dogdown": F.puff(ev[1], 0.6, ev[2], 6, F.C_DUST, 2.0)
+		"fetched": if ev[1] == me.id: hud.banner("Fetched", "The dog has brought you %s." % ev[2], 1.8)
+		"no": if ev[1] == me.id: Sound.play("no"); hud.banner("Not here", ev[2], 1.6)
 		"mark": _marked = [int(ev[1]), float(ev[2])]        # The Marked Man: a red mark over it, while it lasts
 		"hone":
 			F.pillar(ev[2], ev[3], ev[4])
@@ -1238,8 +1260,10 @@ func _draw(delta: float) -> void:
 		var ok := Rules.has(me, Rules.cost_of(me, _build_sel)) and R.valid_place(_build_sel, g.x, g.z, g.rot)
 		(_ghost.material_override as StandardMaterial3D).albedo_color = Color(0.6, 0.95, 0.5, 0.45) if ok else Color(0.95, 0.4, 0.35, 0.45)
 	_camera(delta)
-	_apply_light(R.nf)
 	if not _weather_forced: atmos.weather = R.weather
+	var lan := me != null and R.players.any(func(o): return o.trk == D.I_LANTERN and o.state == "ok" and D.d2(o.x, o.z, me.x, me.z) < 81)
+	atmos.see = 0.15 if lan else 0.55 if me != null and Rules.rk(me, D.B_WATCH) >= 2 else 1.0   # the Unblinking Lantern, and the watchman's eyes
+	_apply_light(minf(R.nf, 0.35) if lan else R.nf)
 	atmos.update(delta, R.nf, _focus)
 	var near := 0
 	for u: E.Undead in R.undead:
@@ -1610,6 +1634,9 @@ func _test_hook() -> void:
 			var bb := br.split(":")
 			me.books[int(bb[0])] = int(bb[1])
 		me.trk = 28; me.wood = 20; me.stone = 10
+		if OS.get_environment("DTV_FEET") != "": me.feet = int(OS.get_environment("DTV_FEET"))
+		if Rules.rk(me, D.B_FIRE) >= 5:
+			me.iron = 5; R.try_place(me, "firepot", me.x + 2.2, me.z - 1.5, 0.0)
 	if _frame == at + 20 and OS.get_environment("DTV_WHEEL") != "" and me:   # for pictures: the building wheel, open
 		hud.open_wheel(_builds_now(), me, "")
 	if _frame == at - 2 and OS.get_environment("DTV_RICH") != "" and me:   # for pictures: a master smith with plenty to work with

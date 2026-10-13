@@ -96,6 +96,20 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.06, 0.8, 0.06, 0, -0.1, 0.16, P.wood2).box(0.06, 0.5, 0.06, 0, 0.66, 0.16, P.wood2, 0, -0.5, 0).box(0.06, 0.5, 0.06, 0, -0.56, -0.08, P.wood2, 0, 0.5, 0).box(0.02, 1.56, 0.02, 0, -0.5, -0.1, 0xe9e4cf)
 		"xbow":
 			b.box(0.09, 0.1, 0.85, 0, 0.2, 0.3, P.wood2).box(0.85, 0.06, 0.07, 0, 0.23, 0.68, P.iron).box(0.03, 0.03, 0.5, 0, 0.3, 0.4, 0xcfd4dc)
+		"firepot":                                           # the burning pot: a pot of fire on three iron legs
+			for i in 3: b.box(0.07, 0.8, 0.07, cos(i * TAU / 3) * 0.3, 0, sin(i * TAU / 3) * 0.3, P.iron, 0, 0, 0)
+			b.cyl(0.42, 0.3, 0.36, 8, 0, 0.72, 0, 0x3a2e28).cyl(0.36, 0.36, 0.05, 8, 0, 1.06, 0, 0xff8a2a)
+			b.cone(0.26, 0.38, 5, 0, 1.08, 0, 0xffb347).cone(0.14, 0.3, 4, 0.05, 1.12, 0.03, 0xffe27a)
+		"dog":                                               # a dog: body, head and ears, a snout (legs and tail are their own, to move)
+			b.box(0.34, 0.28, 0.72, 0, 0.36, 0, 0xffffff).box(0.3, 0.28, 0.3, 0, 0.56, 0.44, 0xffffff).box(0.16, 0.12, 0.2, 0, 0.53, 0.66, 0xeeeeee)
+			b.box(0.07, 0.14, 0.06, -0.11, 0.76, 0.4, 0xdddddd).box(0.07, 0.14, 0.06, 0.11, 0.76, 0.4, 0xdddddd).box(0.06, 0.05, 0.04, 0, 0.56, 0.77, 0x1a1414)
+			b.box(0.05, 0.05, 0.03, -0.08, 0.63, 0.59, 0x1a1414).box(0.05, 0.05, 0.03, 0.08, 0.63, 0.59, 0x1a1414)
+		"dog_leg":
+			b.box(0.09, 0.32, 0.09, 0, -0.32, 0, 0xffffff)
+		"dog_tail":
+			b.box(0.06, 0.06, 0.3, 0, 0, -0.12, 0xffffff, 0, 0.6, 0)
+		"boots":                                             # a pair of boots, pale and tinted per pair
+			for s in [-1, 1]: b.box(0.26, 0.2, 0.36, s * 0.17, 0, 0.04, 0xffffff).box(0.27, 0.06, 0.38, s * 0.17, 0.0, 0.05, 0xcccccc)
 		"bucket":
 			b.cyl(0.2, 0.16, 0.3, 7, -0.48, 0.44, -0.16, 0xffffff).box(0.03, 0.16, 0.34, -0.48, 0.72, -0.16, 0xdddddd)
 		# --- the dead

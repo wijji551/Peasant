@@ -81,18 +81,19 @@ func _draw() -> void:
 	draw_rect(fr, Color(0.86, 0.72, 0.3, 0.55))
 	draw_rect(fr, Color("7a5a22"), false, 1.0)
 	mark.call((D.FARM.x0 + D.FARM.x1) / 2, (D.FARM.z0 + D.FARM.z1) / 2, Color("e8c040"))
-	if not R.chest.is_empty() and R.chest.seen and not R.chest.open:      # the chest that never arrived, once somebody has seen it
+	var scout := me != null and Rules.rk(me, D.B_WATCH) >= 4             # the night watchman, rank 4: the chest and the outer ruins from the morning
+	if not R.chest.is_empty() and (R.chest.seen or scout) and not R.chest.open:      # the chest that never arrived, once somebody has seen it
 		draw_rect(Rect2(mx(R.chest.x) - 3.5, mz(R.chest.z) - 3, 7, 6), Color("2f2318"))
 		draw_rect(Rect2(mx(R.chest.x) - 2.5, mz(R.chest.z) - 2, 5, 4), Color("f0c040"))
 	var L := Map.ruin_layout(R.gseed, R.day)
-	var lore := me != null and Rules.rk(me, 8) >= 2
+	var lore := me != null and (Rules.rk(me, 8) >= 2 or Rules.rk(me, D.B_DOG) >= 8)   # (the relic book, or the dog's nose)
 	for k in [1, 2]:
-		if R.ruins_seen[k]:
+		if R.ruins_seen[k] or scout:
 			var cc: Dictionary = L.centres[k]
 			draw_rect(Rect2(mx(cc.x - 7), mz(cc.z - 4.4), mx(cc.x + 7) - mx(cc.x - 7), mz(cc.z + 4.4) - mz(cc.z - 4.4)), Color(0.45, 0.42, 0.38, 0.45))
 	for i in L.spots.size():
 		var sp: Dictionary = L.spots[i]
-		if not R.ruins_seen[sp.ruin]: continue                 # the outer ruins are not on the map until someone finds them
+		if not R.ruins_seen[sp.ruin] and not scout: continue    # the outer ruins are not on the map until someone finds them
 		if lore and R.spots[i] > 0: draw_rect(Rect2(mx(sp.x) - 1.5, mz(sp.z) - 1.5, 3, 3), Color("f3d36a"))
 		else: draw_rect(Rect2(mx(sp.x) - 1, mz(sp.z) - 1, 2, 2), Color("8a8478"))
 	for d: E.Drop in R.drops:

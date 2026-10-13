@@ -5,7 +5,7 @@ extends RefCounted
 ## Each option is {label, sub, ok, a (the action), arg} or {head} for a heading, or {page} to turn to another page.
 
 const WEARV := {"w": "Take in hand", "h": "Put on", "b": "Put on", "o": "Take up", "t": "Carry", "c": "Read", "k": "Hand to one of your posse"}
-const SLOTN := {"wpn": "In hand", "head": "Head", "body": "Body", "off": "Off hand", "trk": "Carried"}
+const SLOTN := {"wpn": "In hand", "head": "Head", "body": "Body", "off": "Off hand", "trk": "Carried", "feet": "Feet"}
 
 
 static func lower(t: String) -> String:
@@ -132,9 +132,10 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 					for b in D.BOWS + D.ARMOUR: forge.call(D.tier_item(b, "crude"))
 					forge.call(D.I_TORCH)
 				"forged":
-					for i in D.FORGE_W + D.BOWS + D.ARMOUR: forge.call(i)
+					for i in D.FORGE_W.filter(func(x): return not D.BOWS.has(x)) + D.BOWS + D.ARMOUR + [D.I_HOBNAILS]: forge.call(i)
 				"steel", "mithril", "rune":
 					for b in D.STEEL_W + D.BOWS + D.ARMOUR: forge.call(D.tier_item(b, t) if t != "steel" or b in D.BOWS else D.steel_of(b))
+					if t == "steel": forge.call(D.I_SABATONS)
 				"kits":
 					for i in D.kits(): forge.call(i)
 			for tt in D.TIERS + ["kits"]:
@@ -159,12 +160,12 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				var sub := "One calling at a time." if other_call else ("%s." % Keys.fill(B.ranks[0])) if not r else ("Latest: %s." % lower(B.ranks[r - 1])) + ((" Next: %s (%d of %d, by %s)." % [lower(B.ranks[r]), floori(p.xp[b]), Rules.need_xp(b, r), B.by]) if r < D.MAX_RANK else " You have finished it.")
 				o.append({"label": D.book_title(b) + (" · rank %d of %d" % [r, D.MAX_RANK] if r else ""), "sub": sub, "ok": not r and slots > 0 and not other_call, "a": "book", "arg": b})
 			var most := 5 if p.xslot else 4
-			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of eleven books, with ten ranks in each. Choose your first. The Holy Book, at the end, makes you an apprentice priest.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four", "five"][most] if owned >= most else "Reach rank 2 in a book to take up a second, rank 3 in two books to take up a third, and rank 4 in three to take up a fourth." + (" Your Index of Further Reading allows a fifth." if p.xslot else " A fifth needs An Index of Further Reading, which turns up in the ruins."))
+			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of fifteen books, with ten ranks in each. Choose your first. The Holy Book makes you an apprentice priest; the four at the end of the shelf are new, and one of them comes with a dog.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four", "five"][most] if owned >= most else "Reach rank 2 in a book to take up a second, rank 3 in two books to take up a third, and rank 4 in three to take up a fourth." + (" Your Index of Further Reading allows a fifth." if p.xslot else " A fifth needs An Index of Further Reading, which turns up in the ruins."))
 			if p.card_rank > 1: intro += " Your card has been stamped: the next book you take up starts at rank %d." % p.card_rank
 			return {"title": "The library", "intro": intro + (" Cowards learn at half speed today." if p.coward else ""), "o": o}
 		"slum":
 			var c := {"food": Rules.slum_food(p)}
-			var pop := R.peasants.filter(func(q): return q.state != "body").size()
+			var pop := R.peasants.filter(func(q): return q.state != "body" and q.kind != 3).size()
 			var full := pop >= R.pop_cap()
 			var pfull := p.posse >= R.posse_max(p)
 			var sub := "The village has no room for more." if full else ("Your posse is full (%d of %d)." % [p.posse, R.posse_max(p)]) if pfull else "%s%s. You carry %d." % [D.cost_text(c), ", double for a coward" if p.coward else "", p.food]

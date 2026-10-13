@@ -123,10 +123,12 @@ func gloom() -> float:
 	return {"clear": 0.0, "overcast": 0.35, "rain": 0.55, "fog": 0.3, "snow": 0.3, "moon": 0.0}.get(weather, 0.0)
 
 
+var see := 1.0                      # how much of the haze there is for the one watching: less for a night watchman, none with the Unblinking Lantern
+
 func update(delta: float, nf: float, focus: Vector3) -> void:
 	_t += delta
 	var night := smoothstep(0.35, 0.9, nf)
-	var amount := 0.06 + night * 0.36 + ((0.38 + night * 0.2) if weather == "fog" else 0.0) + (0.1 if weather == "rain" else 0.0)
+	var amount := (0.06 + night * 0.36 + ((0.38 + night * 0.2) if weather == "fog" else 0.0) + (0.1 if weather == "rain" else 0.0)) * see
 	for m in _mists:
 		m.set_shader_parameter("amount", amount)
 		m.set_shader_parameter("haunt", 0.3 + night * 0.4)
