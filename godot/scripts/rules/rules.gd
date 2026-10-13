@@ -266,7 +266,11 @@ func bark(q: E.Peasant, lines: Array) -> void:   # a peasant says something
 	if q: ev.append(["bark", q.id, pick(lines)])
 
 static func q_max(q: E.Peasant) -> float:   # a village guard and a mercenary are sturdier than a villager
-	return 200.0 if q.kind == 1 else 160.0 if q.kind == 2 else D.PEASANT_HP
+	return (200.0 if q.kind == 1 else 160.0 if q.kind == 2 else D.PEASANT_HP) + (20.0 if q.fed else 0.0)
+
+## Honing: each page honed into a book adds two in the hundred to what it does (five pages at most).
+static func hn(p: E.Player, b: int) -> float:
+	return 1.0 + 0.02 * (int(p.pages[b]) if b < p.pages.size() else 0)
 
 static func active(q: E.Peasant) -> bool:   # up and about: following, fighting, working, or (a guard) at his post
 	return q.state == "follow" or q.state == "fight" or q.state == "chop" or q.state == "post"
@@ -310,7 +314,7 @@ static func title_of(p: E.Player) -> String:
 		if b != noun_b:
 			adj_b = b
 			break
-	return "the " + (D.TITLE_ADJ[adj_b] + " " if adj_b >= 0 else "") + ("Master " if p.books[noun_b] >= 7 else "") + D.TITLE_NOUN[noun_b]
+	return "the " + (D.TITLE_ADJ[adj_b] + " " if adj_b >= 0 else "") + ("Grand Master " if p.books[noun_b] >= D.MAX_RANK else "Master " if p.books[noun_b] >= 7 else "") + D.TITLE_NOUN[noun_b]
 
 ## Does a relic in hand, worn or carried go with a book this player has read?
 static func lore(p: E.Player, id: int) -> bool:
@@ -322,11 +326,11 @@ static func power_wait(p: E.Player, i: int) -> float:
 
 static func cap(p: E.Player) -> int:
 	var r := rk(p, 0)
-	return 50 if r >= 7 else 40 if r >= 5 else 30 if r >= 2 else D.CARRY
+	return 60 if r >= 8 else 50 if r >= 7 else 40 if r >= 5 else 30 if r >= 2 else D.CARRY
 
 func posse_max(p: E.Player) -> int:
 	var r := rk(p, 6)
-	return maxi(1, pm + (3 if r >= 6 else 2 if r >= 4 else 1 if r >= 2 else 0) - (1 if p.coward else 0))
+	return maxi(1, pm + (4 if r >= 8 else 3 if r >= 6 else 2 if r >= 4 else 1 if r >= 2 else 0) - (1 if p.coward else 0))
 
 ## The more of you there are, the more of the dead come at the same seven foundations and the one keep. So what the
 ## village builds is stouter with company: a blow from the dead does this many times less to a defence or to the keep
@@ -338,11 +342,11 @@ func pop_cap() -> int:
 	return D.POP_PER_PLAYER * players.size() + (2 if players.size() == 1 else 0)
 
 static func max_hp(p: E.Player) -> float:
-	return D.PLAYER_HP + (20.0 if rk(p, 4) >= 6 else 0.0)
+	return D.PLAYER_HP + (40.0 if rk(p, 4) >= 8 else 20.0 if rk(p, 4) >= 6 else 0.0)
 
 static func meal_hp(p: E.Player) -> float:
 	var r := rk(p, 1)
-	return 65.0 if r >= 7 else 50.0 if r >= 5 else 35.0 if r >= 2 else 20.0
+	return (80.0 if r >= 10 else 65.0 if r >= 7 else 50.0 if r >= 5 else 35.0 if r >= 2 else 20.0) * hn(p, 1)
 
 static func slum_food(p: E.Player) -> int:
 	return (3 if rk(p, 1) >= 6 else D.SLUM_FOOD) * (2 if p.coward else 1)
@@ -374,11 +378,11 @@ static func can_contr(p: E.Player, k: String) -> bool:
 static func cost_of(p: E.Player, k: String) -> Dictionary:
 	var c: Dictionary = D.COST[k]
 	var r := rk(p, 2)
-	return c if c.has("bodies") or r < 1 else scale(c, 0.8 - 0.03 * (r - 1))
+	return c if c.has("bodies") or r < 1 else scale(c, (0.8 - 0.03 * (mini(r, 7) - 1)) / hn(p, 2))
 
 static func forge_cost(p: E.Player, c: Dictionary) -> Dictionary:
 	var r := rk(p, 3)
-	var out := c if r < 1 else scale(c, 0.67 - 0.04 * (r - 1), "iron")
+	var out := c if r < 1 else scale(c, (0.67 - 0.04 * (mini(r, 7) - 1)) / hn(p, 3), "iron")
 	return scale(out, 0.75) if p.trk == D.I_TONGS else out          # Saint Dunstan's Tongs: a quarter off everything
 
 ## What the smithy will let this player make: crude weapons, anyone; refined, Hammer and Tongs; steel, rank 4 of it;
@@ -401,7 +405,7 @@ static func forge_why(p: E.Player, id: int) -> String:   # why not, for the smit
 	var I: Dictionary = D.IT[id]
 	if I.s == "k" and rk(p, 3) < D.KIT_RANK[I.tier]: return "%s kits need rank %d of Hammer and Tongs." % [D.TIER_NAME[I.tier], D.KIT_RANK[I.tier]]
 	if I.s == "k": return ""
-	if I.tier == "rune" and rk(p, 3) < D.RUNE_RANK: return "Rune needs the tenth rank of Hammer and Tongs, which has not been written yet, and runes, from a cave across the river, which nobody can get across yet."
+	if I.tier == "rune" and rk(p, 3) < D.RUNE_RANK: return "Rune needs rank 10 of Hammer and Tongs, and runes, from a cave across the river, which nobody can get across yet."
 	if I.tier == "mithril" and rk(p, 3) < D.MITHRIL_RANK: return "Mithril needs rank %d of Hammer and Tongs." % D.MITHRIL_RANK
 	if I.tier == "steel" and rk(p, 3) < 4: return "Steel needs rank 4 of Hammer and Tongs."
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return "Heavy arms need rank 2 of Hammer and Tongs."
@@ -414,13 +418,13 @@ static func reinf_cost(p: E.Player, k: String) -> Dictionary:
 static func gather_time(p: E.Player, kind: String) -> float:
 	var g: Dictionary = D.GATHER[kind]
 	var r := rk(p, g.book)
-	return g.time * (1.0 if r < 1 else (0.7 if g.book else 0.78) - 0.04 * (r - 1)) * (0.8 if lore(p, D.I_SCYTHE) else 1.0)
+	return g.time * (1.0 if r < 1 else (0.7 if g.book else 0.78) - 0.04 * (mini(r, 7) - 1) - 0.02 * maxi(0, r - 7)) * (0.8 if lore(p, D.I_SCYTHE) else 1.0) / hn(p, g.book)
 
 func fish_wait(p: E.Player) -> float:
 	return rnd2(2.2, 4.8) * (1.0 if rk(p, 1) < 1 else 0.7 - 0.04 * (rk(p, 1) - 1))
 
-static func search_time(p: E.Player) -> float:
-	return D.SEARCH_TIME * (1 - 0.1 * rk(p, 8))
+static func search_time(p: E.Player, dark: bool = false) -> float:   # rank 9: twice as fast at night
+	return D.SEARCH_TIME * (1 - 0.1 * mini(rk(p, 8), 7)) / hn(p, 8) * (0.5 if dark and rk(p, 8) >= 9 else 1.0)
 
 static func need_xp(b: int, r: int) -> int:   # what rank r needs to become rank r + 1
 	return roundi(D.BOOKS[b].base * D.XPM[r - 1])
@@ -429,19 +433,21 @@ static func book_slots(p: E.Player) -> int:
 	var owned := 0
 	var any2 := false
 	var n3 := 0
+	var n4 := 0
 	for r in p.books:
 		if r > 0: owned += 1
 		if r >= 2: any2 = true
 		if r >= 3: n3 += 1
-	var allow := 1 + (1 if any2 else 0) + (1 if n3 >= 2 else 0) + (1 if p.xslot else 0)
+		if r >= 4: n4 += 1
+	var allow := 1 + (1 if any2 else 0) + (1 if n3 >= 2 else 0) + (1 if n4 >= 3 else 0) + (1 if p.xslot else 0)   # four books, and a fifth with the Index
 	return maxi(0, allow - owned)
 
 static func gear_cut(p: E.Player) -> float:
 	var m := 1.0
 	var any := false
 	for id in [p.head, p.body, p.off]:
-		if id >= 0:
-			m *= 1 - D.IT[id].cut
+		if id >= 0:                                    # rank 8 of Hammer and Tongs: armour stops a tenth more; so do relics, at rank 8 of the relic book
+			m *= 1 - D.IT[id].cut * (1.1 if rk(p, 3) >= 8 else 1.0) * (1.1 if D.IT[id].tier == "relic" and rk(p, 8) >= 8 else 1.0)
 			any = true
 	return m * 0.95 if any and rk(p, 3) >= 5 else m
 
@@ -458,7 +464,16 @@ static func ab_wait(p: E.Player) -> float:
 
 static func charge_len(p: E.Player) -> float:
 	var r := rk(p, 7)
-	return (32.0 if r >= 6 else 26.0 if r >= 2 else 20.0) * (1.5 if lore(p, 20) else 1.0)
+	return (38.0 if r >= 8 else 32.0 if r >= 6 else 26.0 if r >= 2 else 20.0) * (1.5 if lore(p, 20) else 1.0)
+
+## A watch tower's upkeep, for whoever sees to it (half, at rank 8 of Barricades for Beginners).
+static func upkeep(p: E.Player) -> Dictionary:
+	return scale(D.TOWER.upkeep, 0.5) if rk(p, 2) >= 8 else D.TOWER.upkeep
+
+## Rank 9 of Barricades for Beginners: what you repair is a quarter stronger until dawn.
+func shore(p: E.Player, s: E.Struct) -> void:
+	if rk(p, 2) >= 9 and not s.bo:
+		s.bo = true; s.mhp = float(roundi(s.mhp * 1.25)); s.hp = s.mhp
 
 static func repair_cost(p: E.Player, s: E.Struct) -> Dictionary:
 	var base: float = D.COST[s.k].get("wood", 2) / 2.0
@@ -470,7 +485,7 @@ func add_xp(p: E.Player, b: int, n: float) -> void:
 	if not rk(p, b) or p.jobT > 0:          # a day spent on a merchant's job teaches you nothing
 		return
 	n = n * 0.5 if p.coward else n
-	if p.books[b] >= 7:                           # the book is mastered: what is learned now is spare, to be sold
+	if p.books[b] >= D.MAX_RANK:                  # the book is mastered: what is learned now is spare, to be sold or honed
 		var before := floori(p.spare)
 		p.spare += n / float(D.BOOKS[b].base)
 		if floori(p.spare) > before and before == 0:
@@ -478,7 +493,7 @@ func add_xp(p: E.Player, b: int, n: float) -> void:
 		return
 	p.xp[b] += n
 	var t0 := title_of(p)
-	while p.books[b] < 7 and p.xp[b] >= need_xp(b, p.books[b]):
+	while p.books[b] < D.MAX_RANK and p.xp[b] >= need_xp(b, p.books[b]):
 		p.books[b] += 1
 		say("%s has reached rank %d of %s." % [p.dn, p.books[b], D.book_title(b)])
 	retitle(p, t0)
@@ -507,6 +522,15 @@ func remove_player(id: int) -> void:
 			q.state = "idle" if phase == "day" else "hide"
 	say("%s has left the village." % p.dn)
 
+
+## Hone a page into a book at rank X: ten spare points, from any book, for two in the hundred on all it does. Five pages at most.
+func hone(p: E.Player, b: int) -> bool:
+	if b < 0 or b >= D.BOOKS.size() or rk(p, b) < D.MAX_RANK or p.spare < D.HONE_COST: return false
+	while p.pages.size() < D.BOOKS.size(): p.pages.append(0)
+	if int(p.pages[b]) >= D.HONE_MAX: return false
+	p.spare -= D.HONE_COST; p.pages[b] = int(p.pages[b]) + 1
+	say("%s has honed another page into %s (%d of %d)." % [p.dn, D.book_title(b), p.pages[b], D.HONE_MAX])
+	return true
 
 ## Sell whole spare points of learning for coin. Returns the pence paid.
 func sell_spare(p: E.Player) -> int:
@@ -574,6 +598,17 @@ func add_sites() -> void:
 		s.site = i
 		structs.append(s)
 
+## "So Help Me Lord, Please?" (rank 8 of the Holy Book): a boss is about to throw, pull or freeze you, and your peasant
+## prays in haste, by himself. Two times in three it works, and a small holy cross shows above you. True if it did.
+func help_me(p: E.Player, quiet: bool) -> bool:
+	if rk(p, D.B_HOLY) < 8 or randf() >= 2.0 / 3.0: return false
+	if not quiet: ev.append(["helpme", p.id, r1(p.x), r1(p.z)])
+	return true
+
+## What the priest takes to bless a piece of rune armour for good (half, for a reader of the Holy Book at rank 8).
+static func rune_bless(p: E.Player) -> int:
+	return D.RUNE_BLESS / 2 if rk(p, D.B_HOLY) >= 8 else D.RUNE_BLESS
+
 ## How many pieces of blessed rune armour this player has on.
 static func blessed_worn(p: E.Player) -> int:
 	var n := 0
@@ -593,7 +628,7 @@ func give_kit(p: E.Player, id: int) -> bool:
 		if kit_free(p, q) and D.d2(q.x, q.z, p.x, p.z) < bd:
 			bd = D.d2(q.x, q.z, p.x, p.z); best = q
 	if best == null: return false
-	best.kit = id; best.kw = 0
+	best.kit = id; best.kw = -1000 if rk(p, 3) >= 9 else 0   # rank 9 of Hammer and Tongs: kits you hand out do not wear out
 	say("%s has been given %s, and %s" % [D.qname(best), D.it_a(id), pick(D.KIT_LINES[D.IT[id].kit])])
 	return true
 
@@ -800,11 +835,11 @@ func finish_job() -> void:
 				p.coin += 60; got = "five shillings (he had no real relic left, and was quite upset about it)"
 		"bookseller":
 			if not p.xslot:
-				p.xslot = true; got = "An Index of Further Reading: a fourth book"
+				p.xslot = true; got = "An Index of Further Reading: a fifth book"
 			else:
 				var best := -1
 				for b in p.books.size():
-					if p.books[b] > 0 and p.books[b] < 7 and (best < 0 or p.books[b] < p.books[best]): best = b
+					if p.books[b] > 0 and p.books[b] < D.MAX_RANK and (best < 0 or p.books[b] < p.books[best]): best = b
 				if best >= 0:
 					var t0 := title_of(p)
 					p.books[best] += 1; p.xp[best] = maxf(p.xp[best], need_xp(best, p.books[best] - 1)); got = "a whole chapter of " + D.BOOKS[best].name
@@ -829,7 +864,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "mith", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
+const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -1267,7 +1302,7 @@ func find_interact(p: E.Player):
 		var sp: Dictionary = sps[i]
 		if D.d2(p.x, p.z, sp.x, sp.z) < 4.6:
 			var n: int = spots[i]
-			return {"type": "search", "i": i, "key": "x%d" % i, "ok": n > 0, "dur": search_time(p), "x": sp.x, "z": sp.z, "rad": 1.1,
+			return {"type": "search", "i": i, "key": "x%d" % i, "ok": n > 0, "dur": search_time(p, phase != "day"), "x": sp.x, "z": sp.z, "rad": 1.1,
 				"label": ("Hold {interact} to search the rubble" + (". It is noisy work." if sp.ruin else "")) if n > 0 else "Nothing more under here until tomorrow"}
 	for st in D.STATIONS:
 		if st.id == "cart" and (merchant < 0 or phase != "day"): continue     # the cart is only there on a merchant's day
@@ -1278,7 +1313,7 @@ func find_interact(p: E.Player):
 		if D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "station", "st": st, "key": "st" + st.id, "ok": true, "dur": 0.12, "x": st.x, "z": st.z, "rad": 1.3, "label": "Hold {interact} to " + st.verb}
 	if rk(p, 9) >= 1:
-		best = null; bd = 5.0
+		best = null; bd = 49.0 if rk(p, 9) >= 10 else 5.0   # rank 10: the bandage reaches across the road
 		var isP := false
 		for o in players:
 			if o != p and o.state == "ok" and o.hp < max_hp(o) - 5:
@@ -1321,8 +1356,9 @@ func find_interact(p: E.Player):
 	if kind != "":
 		var g: Dictionary = D.GATHER[kind]
 		var full: bool = p.get(g.res) >= cap(p)
-		return {"type": "gather", "kind": kind, "target": tgt, "key": "g" + kind + (str(tgt.i) if tgt else ""), "ok": not full, "dur": gather_time(p, kind), "x": gx, "z": gz, "rad": rad,
-			"label": "You can carry no more " + g.res if full else "A bite! Press {jump}" if kind == "fish" and p.bite > 0 else "Hold {interact} to " + g.verb}
+		var storing: bool = full and rk(p, 0) >= 10 and kind != "fish" and p.posse > 0   # rank 10: carry on, and the posse takes it to the storehouse
+		return {"type": "gather", "kind": kind, "target": tgt, "key": "g" + kind + (str(tgt.i) if tgt else ""), "ok": not full or storing, "dur": gather_time(p, kind), "x": gx, "z": gz, "rad": rad,
+			"label": ("Hold {interact} to keep your posse at it: what they gather goes to the storehouse" if storing else "You can carry no more " + g.res) if full else "A bite! Press {jump}" if kind == "fish" and p.bite > 0 else "Hold {interact} to " + g.verb}
 	return null
 
 func valid_place(k: String, x: float, z: float, rot: float) -> bool:
@@ -1391,16 +1427,22 @@ func take_off(p: E.Player, slot: String) -> void:   # empties a slot (a peasant 
 
 
 # --- actions
-func gather_one(kind: String, t: E.Trunk, p: E.Player) -> bool:
+func gather_one(kind: String, t: E.Trunk, p: E.Player, posse: bool = false) -> bool:
 	var g: Dictionary = D.GATHER[kind]
-	if p.get(g.res) >= cap(p) or p.job:
+	var to_store: bool = posse and rk(p, 0) >= 10 and p.get(g.res) >= cap(p) and store.has(g.res)   # rank 10: the posse carries it to the storehouse
+	if (p.get(g.res) >= cap(p) and not to_store) or p.job:
 		return false
 	if kind == "tree":
 		if t == null or not t.alive:
 			return false
-		t.wood -= 1; stats.wood += 1
+		if not (rk(p, 0) >= 9 and randf() < 0.25):    # rank 9: a tree gives a third more before it is spent
+			t.wood -= 1
+		stats.wood += 1
 		if t.wood <= 0:
 			t.set_state(1, t.par); tv += 1
+	if to_store:
+		store[g.res] = int(store[g.res]) + 1
+		return true
 	p.set(g.res, mini(cap(p), p.get(g.res) + (2 if g.book == 0 and rk(p, 0) >= 6 and randf() < 0.2 else 1)))
 	add_xp(p, g.book, 1)
 	return true
@@ -1430,6 +1472,10 @@ func try_place(p: E.Player, k: String, x: float, z: float, rot: float) -> bool:
 	return true
 
 func destroy_struct(s: E.Struct) -> void:
+	if D.CONTRAPTIONS.has(s.k) and night and not s.rs and players.any(func(o): return rk(o, 2) >= 10):
+		s.rs = true; s.hp = s.mhp; sv += 1                # rank 10 of Barricades for Beginners: once a night, a contraption sets itself up again
+		ev.append(["build", r1(s.x), r1(s.z)])
+		return
 	if s.slot >= 0 or s.site >= 0:
 		s.built = false; s.hp = 0; s.re = false; s.bl = false; s.mhp = D.SHP[s.k]
 		if s.k == "tower":
@@ -1546,15 +1592,26 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 		var own := player_by_id(s.q.owner)
 		if own: add_xp(own, 6, 1.0)
 	if u.hp <= 0:
+		var spare := -u.hp                             # what the blow had left over
 		if bony and not u.revived and not s.get("blunt", false) and not s.get("holy", 0):
 			u.state = "pile"; u.t = 3.6; u.revived = true; u.hp = 0; u.stun = 0; u.pin = 0; u.fear = 0
 		else:
 			kill_undead(u)
+		var pl = s.get("p")
+		if pl and spare > 1 and not s.get("ranged", false) and not s.get("dot", false) and not s.get("carry", false) and rk(pl, 4) >= 10:
+			var nxt: E.Undead = null                   # rank 10 of the Art of Hitting Things: a killing blow carries on into the next
+			var nd := 2.6 * 2.6
+			for o in undead:
+				if o != u and not o.dead and o.state != "rise" and o.state != "pile" and D.d2(o.x, o.z, u.x, u.z) < nd:
+					nd = D.d2(o.x, o.z, u.x, u.z); nxt = o
+			if nxt:
+				var s2 := s.duplicate(); s2.carry = true
+				hit_u(nxt, spare, s2)
 
 ## The bloated dead, put down: they go off, and everything near them, living or dead, gets the worst of it.
 func burst(u: E.Undead) -> void:
 	var r2: float = D.BURST.reach * D.BURST.reach
-	ev.append(["burst", r1(u.x), r1(u.z)])
+	ev.append(["bloat", r1(u.x), r1(u.z)])   # (it was "burst" from 7.2 to 7.6, which a charge out of the inn also used: they looked alike)
 	for p in players:
 		if p.state == "ok" and p.room == "" and D.d2(u.x, u.z, p.x, p.z) < r2: hurt_friend(p, D.BURST.living * tough, true, u, false)
 	for q in peasants:
@@ -1569,7 +1626,7 @@ func nerve_hit(q: E.Peasant, n: float) -> void:   # a fright. At no nerve left, 
 		return
 	if own.head == 20 or rk(own, 6) >= 7 or own.charge > 0:
 		return
-	q.nv -= n * (1 - 0.1 * rk(own, 6))
+	q.nv -= n * (1 - 0.1 * mini(rk(own, 6), 7)) / hn(own, 6)
 	if q.nv <= 0:
 		q.nv = 0; q.state = "hide"; q.tree = null; say("%s has lost their nerve and run for the keep." % D.PNAMES[q.ni]); bark(q, D.BARK_RUN)
 
@@ -1615,6 +1672,9 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 		if own and rk(own, 9) >= 3 and not e.saved:
 			e.saved = true; e.hp = 18
 			return
+		if own and rk(own, 9) >= 9 and not e.saved2:     # rank 9: a second one, the same night
+			e.saved2 = true; e.hp = 18
+			return
 		e.state = "body"; e.owner = 0; e.tree = null; fallen.append(D.qname(e)); stats.lost += 1; say("%s has fallen." % D.qname(e))
 		if e.kit > 0:                                   # the kit outlives them: it lies where they fell, for anybody
 			drop_item(e.kit, e.x, e.z); e.kit = 0
@@ -1624,7 +1684,7 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 
 # --- fighting
 static func dmg_of(p: E.Player, I: Dictionary, mul: float = 1.0) -> float:
-	var d: float = I.dmg * mul * (1 + (0.08 * rk(p, 5) if I.rng else 0.06 * rk(p, 4)))
+	var d: float = I.dmg * mul * (1 + (0.08 * mini(rk(p, 5), 7) if I.rng else 0.06 * mini(rk(p, 4), 7))) * hn(p, 5 if I.rng else 4) * (1.1 if I.tier == "relic" and rk(p, 8) >= 8 else 1.0)
 	if (I.tier == "forged" or I.tier == "steel" or I.tier == "mithril" or I.tier == "rune") and rk(p, 3) >= 4: d *= 1.1
 	if p.charge > 0: d *= 2.0 if rk(p, 7) >= 7 else 1.6
 	if p.wpn == 17 and I.n == D.IT[17].n and lore(p, 17): d *= 1.25
@@ -1687,6 +1747,26 @@ func shoot(p: E.Player, I: Dictionary, mul: float, o: Dictionary = {}) -> E.Unde
 			if u != t and not u.dead and u.state != "rise" and u.state != "pile" and D.d2(u.x, u.z, t.x, t.z) < 9:
 				hit_u(u, dmg_of(p, I, mul * 0.6), src)
 				break
+	if rk(p, 5) >= 9:                                  # rank 9: the shot goes on through, to the one behind
+		var dx := t.x - p.x
+		var dz := t.z - p.z
+		var l := maxf(0.01, sqrt(dx * dx + dz * dz))
+		var behind: E.Undead = null
+		var bd := 9.0
+		for u in undead:
+			if u == t or u.dead or u.state == "rise" or u.state == "pile": continue
+			var ax: float = u.x - t.x
+			var az: float = u.z - t.z
+			var along: float = (ax * dx + az * dz) / l
+			if along > 0 and along < 4.0 and absf(ax * dz - az * dx) / l < 0.9 and along * along < bd:
+				bd = along * along; behind = u
+		if behind: hit_u(behind, dmg_of(p, I, mul), src)
+	if o.is_empty() and rk(p, 5) >= 10:                # rank 10: every tenth shot, a volley for nothing
+		p.shots += 1
+		if p.shots % 10 == 0:
+			var vs := src.duplicate()
+			for u in targets(p, I.rng, 0.0, true).filter(func(v): return v.state != "pile" and v != t).slice(0, 3):
+				ev.append(["shot", r1(p.x), r1(p.z), r1(u.x), r1(u.z), 1]); hit_u(u, dmg_of(p, I, 1.0), vs)
 	return t
 
 func do_attack(p: E.Player) -> void:
@@ -1694,11 +1774,11 @@ func do_attack(p: E.Player) -> void:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	if phase == "night": p.fought = true
-	p.atkCd = I.cd * (0.8 if I.rng and rk(p, 5) >= 4 else 1.0); p.ac += 1
+	p.atkCd = I.cd * ((0.6 if rk(p, 5) >= 8 else 0.8) if I.rng and rk(p, 5) >= 4 else 1.0); p.ac += 1
 	var mul := 1.0
-	if rk(p, 4) >= 7:
+	if rk(p, 4) >= 7:                                  # every fifth blow twice as hard (every fourth from rank 9)
 		p.combo += 1
-		if p.combo % 5 == 0: mul = 2.0
+		if p.combo % (4 if rk(p, 4) >= 9 else 5) == 0: mul = 2.0
 	if I.rng:
 		var shot_at := shoot(p, I, mul)
 		if shot_at == null: drill(p, I.rng, 0.3, 5)
@@ -1879,7 +1959,7 @@ func priest_power(p: E.Player, i: int, r: int) -> void:
 			var near := undead.filter(func(u): return not u.dead and u.state != "rise" and u.state != "pile" and u.state != "dig" and D.d2(u.x, u.z, p.x, p.z) < 100)
 			near.sort_custom(func(a, b): return D.d2(a.x, a.z, p.x, p.z) < D.d2(b.x, b.z, p.x, p.z))
 			tl = near
-		var dmg := 16.0 + 4.0 * r
+		var dmg := (16.0 + 4.0 * r) * hn(p, D.B_HOLY)
 		var src := {"p": p, "holy": 1.5, "ranged": true, "smite": true}
 		var hit := 0
 		note("smite")
@@ -1898,15 +1978,16 @@ func priest_power(p: E.Player, i: int, r: int) -> void:
 			add_xp(p, D.B_HOLY, hit)
 	else:                                            # Pray: protection (and at rank 3, holy weapons; at 6, mending)
 		var n := 0
+		var long := 15.0 if r >= 9 else 10.0              # rank 9: the prayer lasts fifteen seconds
 		for o in players:
 			if o.state == "ok" and D.d2(o.x, o.z, p.x, p.z) < 49:
-				o.prot = 10.0
-				if r >= 3: o.hb = 10.0
+				o.prot = long
+				if r >= 3: o.hb = long
 				if r >= 6: o.hp = minf(max_hp(o), o.hp + 25)
 				n += 1
 		for q in peasants:
 			if active(q) and D.d2(q.x, q.z, p.x, p.z) < 49:
-				q.prot = 10.0
+				q.prot = long
 				if r >= 6:
 					q.hp = minf(q_max(q), q.hp + 25); q.nv = 100
 				n += 1
@@ -1972,9 +2053,15 @@ func do_eat(p: E.Player) -> void:
 	var posse := mine.filter(func(q): return q.hp < q_max(q)) if rk(p, 1) >= 4 else []
 	if p.hp >= max_hp(p) and posse.is_empty():
 		return
-	p.food -= 1; p.eatCd = 0.6; p.hp = minf(max_hp(p), p.hp + heal)
+	p.food -= 1; p.eatCd = 0.6
+	if rk(p, 1) >= 10:                                 # a proper meal: twenty more health for each of the posse, until dawn
+		for q in mine: q.fed = true
+	p.hp = minf(max_hp(p), p.hp + heal)
 	for q in posse: q.hp = minf(q_max(q), q.hp + heal)
 	if rk(p, 1) >= 7:
+		for q in mine: q.nv = 100
+	if rk(p, 1) >= 9:                                  # and it settles a hangover and a fright
+		p.hang = 0; p.frozen = 0
 		for q in mine: q.nv = 100
 	ev.append(["eat", r1(p.x), r1(p.z)])
 
@@ -1982,7 +2069,7 @@ func do_fish(p: E.Player) -> void:
 	if p.state != "ok" or p.gk != 5:
 		return
 	if p.bite > 0:
-		var n := mini(D.FISH_FOOD + (2 if rk(p, 1) >= 3 else 0), cap(p) - p.food)
+		var n := mini(D.FISH_FOOD + (4 if rk(p, 1) >= 8 else 2 if rk(p, 1) >= 3 else 0), cap(p) - p.food)
 		p.food += n; add_xp(p, 1, n); p.cc += 1; ev.append(["fish", r1(JETTY.x), r1(JETTY.z + 2.6)]); note("fish")
 		var roll := randf()                               # the river keeps what falls in it, and now and then gives it back
 		if roll < D.FISH_FINDS[0]:
@@ -2012,12 +2099,15 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 	var pr := (0.06 if is_night else 0.012) * (2.5 if lore >= 6 else 1.5 if lore >= 3 else 1.0) * (1 + 0.1 * (mday() - 1)) * (2.0 if weather == "moon" else 1.0)   # relics glow in moonlight
 	var found := ""
 	var big := 0
-	if left_.size() and randf() < pr:
+	var certain := lore >= 10 and not p.sure           # rank 10: once a day, a heap that is certain to hold something good
+	if certain: p.sure = true
+	if left_.size() and (certain or randf() < pr):
 		var id: int = pick(left_)
 		relics.append(id); gain(p, id); found = D.IT[id].n; big = 1
 		say("%s has found %s in %s!" % [p.dn, D.IT[id].n, D.RUINS[sp.ruin].name])
 	else:
-		var r := randf()
+		var r := 0.4 if certain else randf()
+		if certain: dbl *= 2                           # (no relic left to find: a fat purse instead)
 		if r < 0.34:
 			var res: String = D.RES[randi() % 3]
 			var n := maxi(0, mini((3 + randi() % 4) * dbl, cap(p) - p.get(res)))
@@ -2032,17 +2122,17 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 			var id: int = pick(D.FOUND_A); gain(p, id); found = D.it_a(id)
 		elif r < 0.75:
 			gain(p, 28); found = "a full slop bucket"
-		elif r < 0.81 and p.books.any(func(b): return b > 0 and b < 7):
+		elif r < 0.81 and p.books.any(func(b): return b > 0 and b < D.MAX_RANK):
 			var l := []
 			for j in p.books.size():
-				if p.books[j] > 0 and p.books[j] < 7: l.append(j)
+				if p.books[j] > 0 and p.books[j] < D.MAX_RANK: l.append(j)
 			var b: int = pick(l)
 			var rr: int = p.books[b]
 			add_xp(p, b, ceili((need_xp(b, rr) - (need_xp(b, rr - 1) if rr > 1 else 0)) * 0.25))   # a quarter of the way to the next rank
 			found = "a loose page of " + D.BOOKS[b].name
 		elif r < 0.81 + (0.012 if is_night else 0.006) and not p.xslot:
 			p.xslot = true; big = 1; found = "a slim volume: An Index of Further Reading"
-			say("%s has found An Index of Further Reading, and can now take up a fourth book." % p.dn)
+			say("%s has found An Index of Further Reading, and can now take up a fifth book." % p.dn)
 		elif r < 0.835 and not p.gab:
 			p.gab = true; big = 1; found = "a pamphlet: The Gift of the Gab"; say("%s has found The Gift of the Gab. The market will regret it." % p.dn)
 		elif r < 0.90:
@@ -2172,6 +2262,8 @@ func leave_inn(p: E.Player, charging: bool) -> void:
 	if p.state != "inn":
 		return
 	p.state = "ok"; p.room = ""; p.x = D.INN.dx; p.tx = p.x; p.z = D.INN.dz + rnd2(-0.8, 0.8); p.tz = p.z; p.r = PI / 2; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.drinkT = 0
+	if rk(p, 7) >= 9 and not p.flask and ale > 0 and phase != "day":   # a hip flask: one tankard, carried out of the inn for later
+		ale -= 1; p.flask = true
 	for q in peasants:
 		if q.owner == p.id and q.state == "inn":
 			q.state = "follow"; q.x = p.x + rnd2(0.4, 2); q.z = p.z + rnd2(-2, 2)
@@ -2389,6 +2481,15 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				peasants.append(q)
 				say("%s has hired %s at the Thorny Rose Inn. What could possibly go wrong?" % [p.dn, D.qname(q)]); note("hired")
 				spark.call("coin")
+		"hone":                                         # a page of spare learning, honed into a book at rank X
+			hone(p, ia)
+		"flask":                                        # the hip flask, drunk wherever you are
+			if p.flask and p.state == "ok":
+				p.flask = false
+				p.cg = minf(100, p.cg + (D.TANKARD + 4 * mini(rk(p, 7), 7)) * hn(p, 7)); ev.append(["eat", r1(p.x), r1(p.z)])
+				say("%s has had a swig from the hip flask." % p.dn)
+				if p.cg >= 100:
+					p.cg = 0; p.charge = charge_len(p); ev.append(["burst", r1(p.x), r1(p.z)]); say("%s charges, on the strength of a hip flask." % p.dn)
 		"tup", "tdown", "tkeep", "troof", "trep", "tdis":   # at a watch tower
 			var s := tower(ia)
 			if s == null or not near_station(p, "tower%d" % ia): return
@@ -2411,8 +2512,8 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					if q.state == "post": q.state = "follow"
 					say(pick(D.TOWER_DOWN) % D.qname(q))
 				"tkeep":
-					if s.kept or not has(p, D.TOWER.upkeep): return
-					pay(p, D.TOWER.upkeep); s.kept = true; sv += 1; ev.append(["build", r1(s.x), r1(s.z)])
+					if s.kept or not has(p, upkeep(p)): return
+					pay(p, upkeep(p)); s.kept = true; sv += 1; ev.append(["build", r1(s.x), r1(s.z)])
 					say("%s has seen to the watch tower %s: new rungs, and the stones counted." % [p.dn, D.TOWER_NAMES[s.site]])
 				"troof":
 					if s.re or not has(p, reinf_cost(p, "tower")): return
@@ -2421,6 +2522,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				"trep":
 					if s.hp >= s.mhp - 0.5 or not has(p, repair_cost(p, s)): return
 					pay(p, repair_cost(p, s)); s.hp = s.mhp; s.hc += 1; sv += 1; add_xp(p, 2, 0.5); ev.append(["build", r1(s.x), r1(s.z)])
+					shore(p, s)
 				"tdis":                                # taken down: everybody off it, and half of what it cost back
 					var c := cost_of(p, "tower")
 					for k in c: p.set(k, mini(cap(p), p.get(k) + floori(c[k] * D.TOWER.back)))
@@ -2428,10 +2530,10 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					destroy_struct(s)
 		"rbless":                                   # the priest blesses a piece of rune armour, for good, for a gold piece
 			var sl := str(arg)
-			if near_station(p, "priest") and sl in ["head", "body", "off"] and p.get(sl) >= 0 and p.holy >= 2 and p.coin >= D.RUNE_BLESS:
+			if near_station(p, "priest") and sl in ["head", "body", "off"] and p.get(sl) >= 0 and p.holy >= 2 and p.coin >= rune_bless(p):
 				var b := D.blessed_of(p.get(sl))
 				if b >= 0:
-					p.coin -= D.RUNE_BLESS; p.set(sl, b); spark.call("coin"); ev.append(["holy", r1(p.x), r1(p.z)])
+					p.coin -= rune_bless(p); p.set(sl, b); spark.call("coin"); ev.append(["holy", r1(p.x), r1(p.z)])
 					say("The priest has blessed %s’s %s for good, and taken a gold piece for it. He is not doing this for free." % [p.dn, D.IT[b].n.replace("blessed ", "")])
 		"btalk", "bknock", "bjeer":                # Robert Bailiff, at his upstairs window
 			if near_station(p, "window"):
@@ -2859,7 +2961,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 		var c := D.cottage(p.slot)
 		p.x = c.sx; p.tx = p.x; p.z = c.sz; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.bite = 0; p.room = ""
 		# blessings and Dutch courage both wear off by morning
-		p.bless = 0; p.bbod = 0; p.cg = 0; p.charge = 0; p.hang = 0; p.drinkT = 0; p.parry = 0; p.guard = 0; p.upOnce = false; p.study = false; p.order = 0; p.ordN = 0; p.abCd = 0; p.useCd = 0; p.tbCd = 0; p.p1Cd = 0; p.p2Cd = 0; p.prot = 0; p.hb = 0
+		p.sure = false; p.bless = 0; p.bbod = 0; p.cg = 0; p.charge = 0; p.hang = 0; p.drinkT = 0; p.parry = 0; p.guard = 0; p.upOnce = false; p.study = false; p.order = 0; p.ordN = 0; p.abCd = 0; p.useCd = 0; p.tbCd = 0; p.p1Cd = 0; p.p2Cd = 0; p.prot = 0; p.hb = 0
 	if paid: lines.append("The village passed the hat: %s for everyone who stood and fought." % D.coins(share))
 	if ale > 0: lines.append("The innkeeper finished the last %d tankard%s himself." % [ale, "s" if ale > 1 else ""])
 	var hired := peasants.filter(func(q): return q.kind != 0 and q.state != "body")
@@ -2886,6 +2988,10 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 								break
 					if D.IT[id].tier == "relic": relics.erase(id)
 					lines.append("%s turned on %s at dawn and demanded two more shillings. %s could not pay, was given a good hiding, and lost %s." % [D.qname(q), own.dn, own.dn, D.it_a(id)])
+	for s in structs:                               # what was shored up overnight goes back to its usual strength
+		s.rs = false
+		if s.bo:
+			s.bo = false; s.mhp = float(roundi(s.mhp / 1.25)); s.hp = minf(s.hp, s.mhp)
 	var towers := structs.filter(func(s): return s.k == "tower" and s.built)
 	for s in towers: s.kept = false
 	if towers.size():
@@ -2901,7 +3007,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 	for q in peasants:                              # the living come home, and line up outside their leader's door
 		if q.state == "body": continue
 		var own := player_by_id(q.owner)
-		q.hp = D.PEASANT_HP; q.tree = null; q.nv = 100; q.saved = false
+		q.fed = false; q.hp = D.PEASANT_HP; q.tree = null; q.nv = 100; q.saved = false; q.saved2 = false
 		if own:
 			row[own.id] = row.get(own.id, 0) + 1
 			var h := home_spot(own.slot, row[own.id], 7)
@@ -2981,7 +3087,7 @@ func player_step(p: E.Player, dt: float) -> void:
 		if p.drinkT > 0:
 			p.drinkT -= dt
 			if p.drinkT <= 0:
-				p.drinkT = 0; p.cg = minf(100, p.cg + (D.TANKARD + 4 * rk(p, 7)) * (2.0 if reserve else 1.0)); add_xp(p, 7, 1); p.cc += 1
+				p.drinkT = 0; p.cg = minf(100, p.cg + (D.TANKARD + 4 * mini(rk(p, 7), 7)) * hn(p, 7) * (2.0 if reserve else 1.0)); add_xp(p, 7, 1); p.cc += 1
 				if rk(p, 7) >= 5:
 					for o in players:
 						if o != p and o.state == "inn": o.cg = minf(100, o.cg + 10)
@@ -3047,7 +3153,10 @@ func player_step(p: E.Player, dt: float) -> void:
 				"bandage":
 					var o = it.target
 					var mx: float = max_hp(o) if it.isP else q_max(o)
-					o.hp = mx if rk(p, 9) >= 6 else minf(mx, o.hp + 25 + 5 * rk(p, 9)); add_xp(p, 9, 1); ev.append(["eat", r1(o.x), r1(o.z)])
+					o.hp = mx if rk(p, 9) >= 6 else minf(mx, o.hp + (25 + 5 * mini(rk(p, 9), 7)) * hn(p, 9)); add_xp(p, 9, 1); ev.append(["eat", r1(o.x), r1(o.z)])
+					if rk(p, 9) >= 8:                      # rank 8: a bandage also settles a fright (and would put out a fire, if the living burned)
+						if it.isP: o.frozen = 0.0
+						else: o.nv = 100.0
 				"pick":
 					var d: E.Drop = it.target
 					if drops.has(d):
@@ -3064,6 +3173,7 @@ func player_step(p: E.Player, dt: float) -> void:
 				"repair":
 					var s: E.Struct = it.target
 					pay(p, repair_cost(p, s)); s.hp = s.mhp; s.hc += 1; sv += 1; add_xp(p, 2, 0.5); ev.append(["build", r1(s.x), r1(s.z)])
+					shore(p, s)
 				"reinf":
 					var s: E.Struct = it.target
 					pay(p, reinf_cost(p, s.k)); s.re = true; s.mhp = float(roundi(s.mhp * D.REINF[s.k].mul)); s.hp = s.mhp; s.hc += 1; sv += 1; add_xp(p, 2, 1); ev.append(["build", r1(s.x), r1(s.z)])
@@ -3231,9 +3341,9 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 			if pt:
 				q.r = D.ang_lerp(q.r, atan2(pt.x - q.x, pt.z - q.z), minf(1.0, dt * 10))
 				if q.cd <= 0:
-					q.cd = D.PLAT.wait; q.ac += 1
+					q.cd = D.PLAT.wait * (0.67 if rk(Ld, 6) >= 9 else 1.0); q.ac += 1   # rank 9 of leading: they throw faster up there
 					ev.append(["shot", r1(q.x), r1(q.z), r1(pt.x), r1(pt.z), 0])
-					hit_u(pt, (D.PLAT.dmg + rk(Ld, 5)) * (1.25 if rk(Ld, 6) >= 5 else 1.0), {"q": q, "ranged": true, "farm": false})
+					hit_u(pt, (D.PLAT.dmg + mini(rk(Ld, 5), 7)) * (1.25 if rk(Ld, 6) >= 5 else 1.0), {"q": q, "ranged": true, "farm": false})
 			if q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
 			return
 	if Ld.state == "hide":
@@ -3259,7 +3369,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 	if not near and q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
 	if tgt:
 		q.state = "fight"; q.tree = null
-		var bonus: float = (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0)
+		var bonus: float = (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0) * hn(Ld, 6)
 		if shoot > 0:                                  # a ranger: keeps back, and shoots
 			var d := sqrt(D.d2(q.x, q.z, tgt.x, tgt.z))
 			if d > shoot: step_to(q, tgt.x, tgt.z, 5.2, dt, shoot - 1.0)
@@ -3280,7 +3390,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 	elif order == 1:
 		q.state = "follow"; q.tree = null; q.ct = 0
 		if Vector2(q.px - q.x, q.pz - q.z).length() > 0.5: step_to(q, q.px, q.pz, 5.4, dt, 0.3)
-	elif Ld.workT > 0 and Ld.workK != "fish" and Ld.get(D.GATHER[Ld.workK].res) < cap(Ld) and D.d2(q.x, q.z, Ld.x, Ld.z) < 400:
+	elif Ld.workT > 0 and Ld.workK != "fish" and (Ld.get(D.GATHER[Ld.workK].res) < cap(Ld) or (rk(Ld, 0) >= 10 and store.has(D.GATHER[Ld.workK].res))) and D.d2(q.x, q.z, Ld.x, Ld.z) < 400:
 		q.state = "chop"
 		var wt := D.PEASANT_WORK_TIME * (0.65 if rk(Ld, 0) >= 3 else 1.0)
 		if Ld.workK == "tree":
@@ -3306,7 +3416,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 					q.ct += dt
 					if q.ct >= wt:
 						q.ct = 0; q.ac += 1
-						if gather_one("tree", q.tree, Ld): add_xp(Ld, 6, 0.5)      # your posse's work teaches leading, too
+						if gather_one("tree", q.tree, Ld, true): add_xp(Ld, 6, 0.5)      # your posse's work teaches leading, too
 		else:
 			q.tree = null
 			var a := (q.id % 7) * 0.9
@@ -3317,7 +3427,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 				q.r = D.ang_lerp(q.r, atan2(Ld.workX - q.x, Ld.workZ - q.z), 0.2); q.ct += dt
 				if q.ct >= wt:
 					q.ct = 0; q.ac += 1
-					if gather_one(Ld.workK, null, Ld): add_xp(Ld, 6, 0.5)
+					if gather_one(Ld.workK, null, Ld, true): add_xp(Ld, 6, 0.5)
 	else:
 		q.state = "follow"; q.tree = null; q.ct = 0
 		var idx := 0
@@ -3429,6 +3539,8 @@ func hit_struct(u: E.Undead, U: Dictionary, blk: E.Struct, dmul: float = 1.0) ->
 ## Thrown: a player sent flying, a step at a time so that nobody goes through a wall. (dx, dz): which way.
 func shove(p: E.Player, dx: float, dz: float, dist: float, quiet: bool = false) -> void:
 	if p.state != "ok" or p.room != "": return
+	if p.charge > 0 and rk(p, 7) >= 10: return       # charging, at rank 10 of the Ledger: nothing knocks you back
+	if help_me(p, quiet): return
 	var l := sqrt(dx * dx + dz * dz)
 	if l < 0.001:
 		var a := randf() * TAU
@@ -3583,7 +3695,7 @@ func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 			for p in _near_players(u, D.HOWL.reach):
 				if p.prot > 0 or p.head == 20:
 					ev.append(["unbothered", p.id, r1(p.x), r1(p.z)])
-				else:
+				elif not help_me(p, false):
 					p.frozen = D.HOWL.freeze
 			for q in peasants:
 				if active(q) and D.d2(u.x, u.z, q.x, q.z) < D.HOWL.reach * D.HOWL.reach: nerve_hit(q, 20)

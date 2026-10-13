@@ -11,7 +11,7 @@ const GUIDE := [
 	["Fishing, and the farms", ["The farms feed a posse: everyone you lead forages with you. The jetty feeds one: a catch is five fish (seven at rank 3 of Field, Hook and Pot), more than a lone forager gets, and your posse cannot help. But the river keeps what falls in it. Now and then a catch brings up a purse, once in a long while a lump of mithril, and very rarely something somebody dropped."]],
 	["Relics and their books", ["There are eleven relics, and each goes with one book: carrying it with that book read does something more. The Smoking Censer smokes: the dead inside its smoke walk at half speed and strike half as often, and with Relics and Where They Were Left they smoulder as well. The four found most recently: the Thunderer’s Crossbow (heavy and slow to load; its bolts are lightning, and jump to two more of the dead; with Slings, Bows and Thrown Turnips, to three), Saint Walstan’s Scythe (with the Woodcutter’s Almanac, you gather a fifth faster), the Mason’s Blessed Trowel (defences near you mend themselves; with Barricades for Beginners, twice as fast, and your repairs are free), and Saint Dunstan’s Tongs (forging costs a quarter less; with Hammer and Tongs, forged weapons hit a tenth harder)."]],
 	["Things you carry", ["{pack} opens your backpack: what is on you, and six places for spares. Click a thing to use it or put it away. {swap} swaps to the next weapon in the backpack without opening it. {carry} throws a slop bucket or rings a handbell.", "A bow needs the book Slings, Bows and Thrown Turnips, which comes with a sling. A crossbow needs rank 3 of it. Heavy arms need rank 2 of Hammer and Tongs to forge."]],
-	["Places", ["The library: three books out of ten, seven ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank VII is spare, and sells for coin there. The smithy: pick a tier (crude, iron, steel, mithril, rune), then click a picture to forge it; and kits for your posse. The storehouse: the village’s shared materials on one tab (take out 1, 5 or 20; put in 1, 5 or all) and its spare arms and armour on the other (click a thing to take it, click one of yours to put it in; things that are the same share a place, with a number on it). Mithril and runes can be left there for whoever is the smith. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
+	["Places", ["The library: four books out of eleven (five with the Index of Further Reading), ten ranks each, earned by doing what the book teaches. {skills} shows your books as skill trees: what every rank does and how close the next is. Learning past rank X is spare: it sells for coin there, or ten spare points hone a page into a book at rank X, two in the hundred on all it does, five pages to a book. The smithy: pick a tier (crude, iron, steel, mithril, rune), then click a picture to forge it; and kits for your posse. The storehouse: the village’s shared materials on one tab (take out 1, 5 or 20; put in 1, 5 or all) and its spare arms and armour on the other (click a thing to take it, click one of yours to put it in; things that are the same share a place, with a number on it). Mithril and runes can be left there for whoever is the smith. The market: sells at a penny a piece, buys at two. The slum: recruits.", "The Thorny Rose Inn: bring the innkeeper food by day; from dusk go in, bar the door and drink. At full courage you burst out and charge. The priest, by the chapel: blessings for two shillings, and holy studies.", "The ruins, by the chapel and outside the wall to the south-west and south-east: hold {interact} at a heap of rubble. Relics turn up, more often by moonlight. Searching outside the wall is noisy."]],
 	["Playing together", ["Up to eight can play. One of you presses Host a village on the home screen and reads out the village code; the others type it into Join. Everyone gets their own cottage, posse and books; the storehouse, the arms rack and the keep are shared. The host starts the week when everyone is in, and the host's game keeps the save.", "Nobody has to be there from the start, or every time. Join a village after its week has begun and you move into an empty cottage. Drop out, or lose your connection, and your peasant is kept exactly as it was: join again under the same name and you have it back, the same day or another. When the host carries on from the save with some of you missing, the missing ones wait in the same way. Relics do not wait with you: they stay with the village.", "With a village server set (Options), villages go through it: a five-letter code that works from anywhere, and nobody's router matters. Without one, the host's computer asks its router to let friends in; if the router says no, that code only works on the same home network, unless the host opens port 24565 (UDP). The game does not pause for the handbook when others are playing."]],
 	["The lie of the land", ["Thornhallow sits in the middle, with the castle up the road to the north and the river to the south. The thorn hedges, far to the west and east, are the edge of the world. West is Hallowshire Forest, with the old steel mine at its top end; east are the downs and the old mill. The stone, the iron and the fish move every morning (the dawn notice says where), and the far places are a long walk, so go early."]],
 	["The smithy", ["Anyone can knock out a crude weapon at the smithy. It wears out: chipped after a night's fighting, in bits after a second. Hammer and Tongs makes refined weapons, which last; from rank 4, steel ones, which hit harder still. Steel comes from the old steel mine, at the top of the forest to the north-west, and the market pays well for it but sells none. Anyone can forge armour; steel armour needs rank 4."]],
@@ -23,7 +23,7 @@ const GUIDE := [
 	["Letters and notices", ["The Lord of Ashhollow writes. From the second morning, and every other morning after, a headless rider gallops down the castle road at first light and nails a letter to the gatepost just inside the north gate. They are complaints: about the noise, the breakages, and whatever the village has most lately done to his household. Read them at the gatepost.", "The notice board in the square, opposite the bell, has the day's news (the weather, what is expected tonight, when the next boss is due), three notices from the village, and a copy of every letter so far.", "With eight players, more of the dead would rise than the night can hold. Past about 420 in a night there are fewer of them instead, and each is harder to put down and hits harder: the same horde, in fewer pieces."]],
 	["Contraptions", ["Barricades for Beginners teaches the village's inventions, one every rank or so, and a box of cogs from the tinker builds any one without the book. Press 5 (or click the fifth card, bottom right) to step through the ones you can build.", "The chicken decoy (rank 1): nothing dead can ignore it, briefly. The pitfall (3): swallows four for good; good inside the wall, for gravediggers. The tar pit (4): everything wades. The holy water trough (5, and a class of holy studies or the Holy Book): burns whatever crosses it, wraiths too. The log roller (6), up the road north of the wall: once a night it flattens a crowd, or a coffin ram. The Thresher (7): a spinning flail, as long as someone stands by to turn the handle."]],
 	["Merchants and hired help", ["On about six days of the month a merchant parks a cart by the market: the tinker (iron, tools, boxes of cogs for contraptions), the armourer (forged arms, no smithy needed), the brewer (food, and ale for the inn), the relic pedlar (one real relic among the fakes: rank 2 of relic lore tells which) or the bookseller (loose pages, and An Index of Further Reading). They leave at dusk.", "Each has a job, paid with the best thing on the cart. Take it at the cart, then stay where the job is: most of a day alone, about half a day each with a team-mate. Nobody learns from a book on a day they work for a merchant.", "Robert Bailiff will lend you a village guard for 8 shillings (knock at his back door, north of his house): he holds a gate until dawn. Six guards in all, two to a gate. The Thorny Rose Inn will find you a mercenary for 8 shillings: stronger, in your posse until dawn, and about one in seven turns on you then for two more shillings."]],
-	["The Holy Book", ["The last book on the library shelf makes you an apprentice priest: a peasant's version of a mage, which is to say not much of one. {power1} is Smite, a bolt of holy light on the nearest of the dead; from rank 2, {power2} is Pray, a third less harm for ten seconds for you and everyone near you, posse included. Later ranks make the prayer bless weapons and mend wounds, and the smite burst and strike three at once. Smites are holy, so they hurt wraiths.", "One calling at a time. You learn the book by smiting and praying.", "Your title: the village names you after the two books you know best, the one you know best last (the Sooty Ringleader, the Holy Apprentice Priest). It shows top left.", "A fourth book: An Index of Further Reading turns up, rarely, in the ruins. Read it and the library lets you take up one more.", "Every relic goes with a book. Read the book and the relic does a little more: the Silvered Sword hits harder with The Art of Hitting Things, the Chapel Handbell smites with the Holy Book, and so on. Your backpack says which."]],
+	["The Holy Book", ["The last book on the library shelf makes you an apprentice priest: a peasant's version of a mage, which is to say not much of one. {power1} is Smite, a bolt of holy light on the nearest of the dead; from rank 2, {power2} is Pray, a third less harm for ten seconds for you and everyone near you, posse included. Later ranks make the prayer bless weapons and mend wounds, and the smite burst and strike three at once. Smites are holy, so they hurt wraiths.", "One calling at a time. You learn the book by smiting and praying.", "Your title: the village names you after the two books you know best, the one you know best last (the Sooty Ringleader, the Holy Apprentice Priest). It shows top left.", "A fifth book: An Index of Further Reading turns up, rarely, in the ruins. Read it and the library lets you take up one more.", "Every relic goes with a book. Read the book and the relic does a little more: the Silvered Sword hits harder with The Art of Hitting Things, the Chapel Handbell smites with the Holy Book, and so on. Your backpack says which."]],
 	["The moons", ["There are five in the month, always on the same nights. Night 9, the harvest moon: the dead mend, slowly, unless they are alight. Nights 15 and 28, the full moon: the dead are quick and restless, and relics turn up twice as often in the rubble. Night 19, the frost moon: snow from dusk, and everyone slower in it. Night 23, the blood moon: a very hard night. The horde is its usual size, but every one of the dead takes two and a half times as much putting down and hits nearly twice as hard. The village’s thanks the next morning are two and a half times the usual. The notice board says which is coming."]],
 	["Watch towers and the side gates", ["The north wall stands three paces further out than it did, and behind it are four places for watch towers: one in each corner and one either side of the gate. A tower is 25 wood and 8 stone, built on its site like a wall. Hold {interact} beside one for its notice: send one of your posse up, or coax one of yours down from the safety of it. Six can be up a tower at once, from anybody’s posse. By day they stay with you; from dusk they climb up and throw stones at anything within about fifteen paces, over the wall and all, and only archers can reach them (ten wood roofs it, which stops that). A tower wants seeing to every morning, 4 wood and 1 iron, or nobody will climb it that night. The dead can break one, and you can take one down yourself, for half of what it cost. Either way the site stays.", "The dead also come round to the west and east gates now. In the first two weeks they use one a night, the east one night and the west the next; from the third week, both. The dawn notice says which. A gate can be built on each gateway, as on the north one. There are no towers there; nobody has asked why."]],
 	["The nights of the bells", ["Three nights a month the priest and his congregation ring the chapel bells until dawn, to keep the dead away. It enrages them instead: they come quicker, hit a quarter harder and take a quarter more putting down. There is one such night in each week after the first, never on a boss’s night or the full moon. The notice board says so that morning. The village passes the hat twice the morning after."]],
@@ -33,6 +33,15 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.7: ten ranks, honing, and more books", [
+		"Every book has three more ranks: ten, where it was seven. They take a good deal of practice. Nobody said learning was quick, and if they did, they had not read the Woodcutter’s Almanac to rank X.",
+		"Some of what they do: carry sixty of everything; a posse four larger; meals that heal eighty; watch towers at half the upkeep; repairs a quarter stronger until dawn; contraptions that set themselves up again once a night; kits that never wear out; rune, at last, for anyone who can reach the runes; every fourth blow twice as hard; killing blows that carry on into the next of the dead; shots that go through to the one behind, and a free volley every tenth; a hip flask; a charge that nothing can knock back; and a certain find, once a day. The rest are in the skills window ({skills}).",
+		"The Holy Book’s eighth rank is “So Help Me Lord, Please?”. When a boss would throw, pull or freeze you, you pray in haste, by yourself, and two times in three it works. A small cross shows over your head when it does. It is not clear who is listening, but somebody is.",
+		"Honing. Once a book is at rank X, what you learn past it is spare, as before, and ten spare points can now be honed into a page of any book at rank X. Each page is two in the hundred on everything the book does, up to five pages. Spare points can still be sold for coin, for those who would rather have the money.",
+		"Four books to a peasant, once three of yours are at rank 4, and a fifth with An Index of Further Reading from the ruins. The library has been told. It is not pleased about the extra stamping.",
+		"Charging out of the Thorny Rose no longer looks like one of the bloated dead going off. It never should have. The bloated dead were consulted, and are disappointed.",
+		"The powers for every book, the action bar and the building wheel come next, in 7.8.",
+	]],
 	["Version 7.6: the smithy", [
 		"The smithy has a new menu. Pick a tier along the top, and it shows you a picture of everything that tier can make. Click one to forge it. Point at one to read about it first, if you are the careful sort.",
 		"Five tiers, and every one makes everything: the five weapons, a bow, a crossbow, a cap, a chain shirt and a shield. Crude, iron, steel, mithril and rune. Before this, steel had no bows and the top tier had no armour at all, which nobody had noticed except the people being shot.",
@@ -679,7 +688,7 @@ func smithy(force: bool = false) -> void:
 			blurb = "Half as good again as iron, and it glows purple. Mithril comes from the old workings under the steel mine: take a torch. Rank %d of Hammer and Tongs%s." % [D.MITHRIL_RANK, "" if h3 >= D.MITHRIL_RANK else " (you are at rank %d)" % h3]
 			ids = D.STEEL_W.map(func(b): return D.tier_item(b, "mithril")) + D.BOWS.map(func(b): return D.tier_item(b, "mithril")) + D.ARMOUR.map(func(b): return D.tier_item(b, "mithril"))
 		"rune":
-			blurb = "The best there is outside the relics, and it glows blue. It needs runes, from a cave across the river, which nobody can get across yet, and the tenth rank of Hammer and Tongs, which has not been written yet. The smith has hung the pictures up anyway, to be going on with."
+			blurb = "The best there is outside the relics, and it glows blue. It needs rank 10 of Hammer and Tongs, and runes, from a cave across the river, which nobody can get across yet. The smith has hung the pictures up anyway, to be going on with."
 			ids = D.STEEL_W.map(func(b): return D.tier_item(b, "rune")) + D.BOWS.map(func(b): return D.tier_item(b, "rune")) + D.ARMOUR.map(func(b): return D.tier_item(b, "rune"))
 		"kits":
 			blurb = "A kit goes straight to one of your posse who has none, and they fight with what it gives them. When one of them falls, the kit outlives them: it lies where they fell, for anybody. Crude kits from rank 1 of Hammer and Tongs, iron from 3, steel from 6; crude ones come apart after two nights."
@@ -885,7 +894,7 @@ func pack(force: bool = false) -> void:
 	var p: E.Player = m.me
 	if str(p.inv) != _arm_inv:                          # the backpack has changed: nothing is half-destroyed any more
 		_arm_inv = str(p.inv); _destroy_arm = -1
-	var sig := str([p.inv, p.wpn, p.head, p.body, p.off, p.trk, p.bless, p.holy, p.books, p.bodies, p.bbod, p.coin >= D.BLESS_FEE, Settings.binds, _destroy_arm])
+	var sig := str([p.inv, p.wpn, p.head, p.body, p.off, p.trk, p.bless, p.holy, p.books, p.bodies, p.bbod, p.coin >= D.BLESS_FEE, Settings.binds, _destroy_arm, p.flask])
 	if sig == _pack_sig and w.is_open("pack") and not force:
 		return
 	_pack_sig = sig
@@ -922,6 +931,14 @@ func pack(force: bool = false) -> void:
 			func(): m.inv_do("eq", j), func(): m.inv_do("dropi", j), not can, burn, _destroy_arm == j)
 	_info = w.para("Point at a thing to read about it. Click it to use it or put it away. The little cross drops it on the ground (it lies there two days); the little flame, pressed twice, destroys it for good.", 14, Look.INK_SOFT)
 	_info.custom_minimum_size.y = 58
+	if p.flask:                                         # the hip flask (rank 9 of the Landlord's Ledger)
+		var fb := Button.new()
+		fb.text = "Drink from your hip flask"
+		fb.tooltip_text = "One tankard’s worth of Dutch courage, wherever you are. Enough of it and you charge."
+		fb.focus_mode = Control.FOCUS_NONE
+		fb.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		fb.pressed.connect(func(): m.cmd({"t": "act", "a": "flask"}))
+		w.body.add_child(fb)
 	var bl: Array = Notices.data(m.R, "pack", p, "").o.filter(func(o): return o.get("a") == "bless")
 	if bl.size():
 		w.head("Blessings")
@@ -1012,7 +1029,7 @@ func lobby() -> void:
 # ---------------------------------------------------------------- skills: each book as a ladder of seven ranks
 var skill_book := -1
 var _skills_sig := ""
-const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII"]
+const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 func skills(force: bool = false) -> void:
 	var p: E.Player = m.me
@@ -1021,7 +1038,7 @@ func skills(force: bool = false) -> void:
 		if Rules.rk(p, i) > 0: owned.append(i)
 	if skill_book < 0 or not owned.has(skill_book):
 		skill_book = owned[0] if owned.size() else -1
-	var sig := str(p.books) + str(p.xp.map(func(x): return floori(x))) + str(floori(p.spare)) + str(skill_book) + str(p.coward)
+	var sig := str(p.books) + str(p.xp.map(func(x): return floori(x))) + str(floori(p.spare)) + str(skill_book) + str(p.coward) + str(p.pages)
 	if not force and w.is_open("skills") and sig == _skills_sig:
 		return
 	_skills_sig = sig
@@ -1067,7 +1084,7 @@ func skills(force: bool = false) -> void:
 		Look.label(right, bk.name, 26, Look.INK, true)
 		Look.para(right, "(%s.) You learn it by %s.%s" % [bk.what, bk.by, " Halved while you are a coward." if p.coward else ""], 15, Look.INK_SOFT)
 		var gap := Control.new(); gap.custom_minimum_size.y = 8; right.add_child(gap)
-		for r in range(1, 8):
+		for r in range(1, D.MAX_RANK + 1):
 			var got := rank >= r
 			var next := rank + 1 == r
 			var row := HBoxContainer.new()
@@ -1080,7 +1097,7 @@ func skills(force: bool = false) -> void:
 			ms.set_border_width_all(2)
 			ms.set_corner_radius_all(20)
 			med.add_theme_stylebox_override("panel", ms)
-			med.custom_minimum_size = Vector2(40, 40)
+			med.custom_minimum_size = Vector2(40, 34)
 			med.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			row.add_child(med)
 			var num := Look.label(med, ROMAN[r], 17, Look.INK if got or next else Color(Look.INK, 0.4))
@@ -1090,7 +1107,7 @@ func skills(force: bool = false) -> void:
 			tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			tv.add_theme_constant_override("separation", 1)
 			row.add_child(tv)
-			var t := Look.para(tv, Keys.fill(bk.ranks[r - 1]), 16, Look.INK if got else Look.INK_SOFT if next else Color(Look.INK_SOFT, 0.6))
+			var t := Look.para(tv, Keys.fill(bk.ranks[r - 1]), 15, Look.INK if got else Look.INK_SOFT if next else Color(Look.INK_SOFT, 0.6))
 			if next:
 				var lo := Rules.need_xp(b, rank - 1) if rank > 1 else 0
 				var hi := Rules.need_xp(b, rank)
@@ -1106,24 +1123,33 @@ func skills(force: bool = false) -> void:
 				bar.add_theme_stylebox_override("fill", fg)
 				tv.add_child(bar)
 				Look.label(tv, "Next rank: %d%% of the way" % roundi(f * 100), 13, Look.RUST)
-			if r < 7:                                              # the line joining one rank to the next
+			if r < D.MAX_RANK:                                     # the line joining one rank to the next
 				var link := HBoxContainer.new()
 				right.add_child(link)
 				var stem := ColorRect.new()
 				stem.color = Look.GOLD if rank > r else Color(Look.OUTLINE, 0.3)
-				stem.custom_minimum_size = Vector2(4, 10)
+				stem.custom_minimum_size = Vector2(4, 6)
 				var pad := Control.new(); pad.custom_minimum_size.x = 18
 				link.add_child(pad); link.add_child(stem)
-		if rank >= 7:
-			var done := Look.para(right, "Mastered. What you learn from this book now is spare.", 15, Look.RUST)
+		if rank >= D.MAX_RANK:
+			var pg: int = int(p.pages[b]) if b < p.pages.size() else 0
+			var done := Look.para(right, "Mastered. What you learn from this book now is spare, and can be honed into it: %d of %d pages, %d in the hundred on everything it does." % [pg, D.HONE_MAX, pg * 2], 15, Look.RUST)
 			done.custom_minimum_size.y = 26
+			var hb := Button.new()
+			hb.focus_mode = Control.FOCUS_NONE
+			hb.text = "Hone a page into it (%d spare points)" % D.HONE_COST
+			hb.disabled = pg >= D.HONE_MAX or p.spare < D.HONE_COST
+			hb.tooltip_text = "It takes five pages at most." if pg >= D.HONE_MAX else "Spare learning from any book can hone any book at rank X."
+			var hbk := b
+			hb.pressed.connect(func(): m.cmd({"t": "act", "a": "hone", "arg": hbk}); skills.call_deferred(true))
+			right.add_child(hb)
 	# spare learning, sold for coin
 	w.head("Spare learning")
 	var sp := floori(p.spare)
 	var srow := HBoxContainer.new()
 	srow.add_theme_constant_override("separation", 14)
 	w.body.add_child(srow)
-	var st := Look.para(srow, ("%d spare point%s, worth %s." % [sp, "" if sp == 1 else "s", D.coins(sp * D.SPARE_PAY)]) if sp > 0 else "When a book reaches rank VII, whatever more you learn from it is kept here as spare points, and sold for %s each." % D.coins(D.SPARE_PAY), 15, Look.INK_SOFT)
+	var st := Look.para(srow, ("%d spare point%s, worth %s." % [sp, "" if sp == 1 else "s", D.coins(sp * D.SPARE_PAY)]) if sp > 0 else "When a book reaches rank X, whatever more you learn from it is kept here as spare points, to be sold for %s each or honed into a book at rank X, ten to a page." % D.coins(D.SPARE_PAY), 15, Look.INK_SOFT)
 	st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sell := Button.new()
 	sell.text = "Sell for coin"

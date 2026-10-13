@@ -76,12 +76,16 @@ class Player:
 	var gab := false
 	var books: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	var xp: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-	var xslot := false      # read An Index of Further Reading: a fourth book
+	var xslot := false      # read An Index of Further Reading: a fifth book (a fourth until version 7.7)
 	var p1Cd := 0.0         # a calling's two powers (the Holy Book: Smite and Pray)
 	var p2Cd := 0.0
 	var prot := 0.0         # prayed over: a third less harm
 	var hb := 0.0           # prayed over at rank 3: the weapon is holy
-	var spare := 0.0        # learning past rank VII, in points; sold for coin in the skills window
+	var spare := 0.0        # learning past rank X (rank VII until version 7.7), in points; sold for coin, or honed into a book
+	var pages: Array = []   # pages honed into each book (five at most), each two in the hundred on what it does
+	var flask := false      # a hip flask of ale, carried out of the inn (rank 9 of the Landlord's Ledger)
+	var sure := false       # the day's certain find has been used (rank 10 of Relics and Where They Were Left)
+	var shots := 0          # shots loosed, for the free volley every tenth (rank 10 of Slings, Bows and Thrown Turnips)
 	var cogs := 0           # boxes of cogs, from the tinker: for contraptions
 	var room := ""          # inside somewhere (D.ROOMS), or "" out of doors
 	var game := {}          # a game with the gambler, in progress or just finished: {g, bet, ...}
@@ -173,6 +177,8 @@ class Peasant:
 	var plat := 0           # the watch platform they are posted on (a structure's id), or 0
 	var kit := 0            # the posse kit they were given (an item id), or 0
 	var kw := 0             # nights a crude kit has been through: it falls to bits after two
+	var fed := false        # fed by a leader at rank 10 of Field, Hook and Pot: twenty more health until dawn
+	var saved2 := false     # a second fatal blow survived tonight (rank 9 of Granny's Remedies)
 	var roof := false       # ...and whether it has a roof over it
 	var hurtT := 99.0
 
@@ -246,6 +252,8 @@ class Struct:
 	var slot := -1          # a north wall foundation (0-6), or -1 for something placed
 	var site := -1          # a watch tower site (0-3) or a side gate (4 west, 5 east), or -1
 	var kept := true        # a watch tower: seen to today (its upkeep paid), so somebody will climb it
+	var bo := false         # shored up by a repair (rank 9 of Barricades): a quarter stronger until dawn
+	var rs := false         # a contraption that has set itself up again tonight (rank 10 of Barricades)
 	var hc := 0
 	var re := false         # reinforced
 	var bl := false         # a blessed body built in

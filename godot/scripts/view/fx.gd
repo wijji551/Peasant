@@ -82,7 +82,39 @@ func fan(x: float, z: float, r: float, reach: float, half: float, col: Color, li
 	_fans.append([mi, 0.0, life])
 
 
+## A small holy cross over somebody's head (So Help Me Lord, Please?): it glows, rises a little and fades.
+var _crosses := []                    # [node, age]
+func cross(x: float, z: float) -> void:
+	var n := Node3D.new()
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(1.0, 0.9, 0.5, 1.0)
+	m.no_depth_test = true
+	for bar in [Vector3(0.12, 0.62, 0.12), Vector3(0.42, 0.12, 0.12)]:
+		var mi := MeshInstance3D.new()
+		var bm := BoxMesh.new(); bm.size = bar
+		mi.mesh = bm; mi.material_override = m
+		mi.position.y = 0.1 if bar.x > 0.2 else 0.0
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		n.add_child(mi)
+	n.position = Vector3(x, 2.6, z)
+	add_child(n)
+	_crosses.append([n, 0.0, m])
+
+
 func _fans_step(delta: float) -> void:
+	var j := _crosses.size() - 1
+	while j >= 0:
+		var c: Array = _crosses[j]
+		c[1] += delta
+		if c[1] >= 1.4:
+			c[0].queue_free(); _crosses.remove_at(j)
+		else:
+			c[0].position.y += delta * 0.5
+			c[0].rotation.y += delta * 2.0
+			c[2].albedo_color.a = 1.0 - c[1] / 1.4
+		j -= 1
 	var i := _fans.size() - 1
 	while i >= 0:
 		var f: Array = _fans[i]

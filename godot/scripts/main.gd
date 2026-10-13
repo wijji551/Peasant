@@ -918,7 +918,9 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"howl":
 			Sound.play("howl", 1.0); F.shock(ev[1], ev[2], D.HOWL.reach, Color(0.72, 0.8, 1.0), 1.2)
 		"unbothered": F.puff(ev[2], 1.8, ev[3], 8, F.C_HOLY, 1.5)
-		"burst":                                          # one of the bloated dead, going off
+		"helpme":                                         # So Help Me Lord, Please?: the hasty prayer worked. A small cross over them
+			F.cross(ev[2], ev[3]); F.puff(ev[2], 2.2, ev[3], 6, F.C_HOLY, 1.0); Sound.play("holy", 0.6, Vector2(ev[2], ev[3]))
+		"bloat":                                          # one of the bloated dead, going off
 			F.puff(ev[1], 0.8, ev[2], 34, F.C_BURST, 6.5); F.shock(ev[1], ev[2], D.BURST.reach, Color(0.62, 0.72, 0.3))
 			Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
 		"bshout": Sound.play("shout", 0.75)              # Robert Bailiff, at his window: he carries right across the village

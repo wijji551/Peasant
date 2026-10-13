@@ -93,7 +93,7 @@ func _init() -> void:
 	var nh := nb.hp
 	R.ev.clear()
 	R.hit_u(bl, 99999, {"p": m})
-	ok("put down, a bloated one bursts", bl.dead and R.ev.any(func(e): return e[0] == "burst"))
+	ok("put down, a bloated one bursts", bl.dead and R.ev.any(func(e): return e[0] == "bloat"))
 	ok("and hurts the player beside it", m.hp < 100, m.hp)
 	ok("and the dead beside it", is_equal_approx(nh - nb.hp, D.BURST.dead), nh - nb.hp)
 	ok("but nothing further off", far.hp == 900)

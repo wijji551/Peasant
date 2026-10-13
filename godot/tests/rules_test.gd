@@ -87,7 +87,7 @@ func run() -> void:
 		for j in 8:
 			if in_keep(Rules.home_spot(s, j, 7)): bad += 1
 	ok("no cottage lines its people up inside the keep", bad == 0, bad)
-	ok("pitchfork, empty pack, eleven books", m.wpn == 0 and m.inv.is_empty() and m.books.size() == 11 and D.BOOKS.size() == 11 and D.BOOKS.all(func(b): return b.ranks.size() == 7))
+	ok("pitchfork, empty pack, eleven books of ten ranks", m.wpn == 0 and m.inv.is_empty() and m.books.size() == 11 and D.BOOKS.size() == 11 and D.BOOKS.all(func(b): return b.ranks.size() == D.MAX_RANK) and D.MAX_RANK == 10)
 
 	# ---------- books: ten of them, seven ranks
 	at(13.4, 20.4)
@@ -97,7 +97,7 @@ func run() -> void:
 	X.add_xp(m, 4, Rules.need_xp(4, 2)); ok("two books at rank 3 open the third", m.books[4] == 3 and Rules.book_slots(m) == 1)
 	X.do_act(m, "book", 9); ok("three books, no fourth", m.books[9] == 1 and Rules.book_slots(m) == 0)
 	X.do_act(m, "book", 0); ok("a fourth is refused", m.books[0] == 0)
-	X.add_xp(m, 4, 99999); ok("a book stops at rank 7", m.books[4] == 7)
+	X.add_xp(m, 4, 99999); ok("a book stops at rank 10", m.books[4] == 10)
 	ok("posse grows with leadership", X.posse_max(m) == 6, X.posse_max(m))
 
 	# ---------- gathering at today's sites
@@ -392,10 +392,10 @@ func run() -> void:
 	clear_u()
 	m.inv = [14]; X.do_act(m, "eq", 0); ok("a crossbow needs rank 3", m.wpn == 13)
 	m.books[5] = 3; X.do_act(m, "eq", 0); ok("and works at rank 3", m.wpn == 14)
-	# ---------- spare learning: past rank VII, learning is kept and sold for coin
-	m.books[4] = 7; m.spare = 0.0; m.coward = false
+	# ---------- spare learning: past rank X, learning is kept and sold for coin
+	m.books[4] = 10; m.spare = 0.0; m.coward = false
 	X.add_xp(m, 4, D.BOOKS[4].base * 2.5)
-	ok("learning past rank VII is kept as spare points", absf(m.spare - 2.5) < 0.01 and m.books[4] == 7, m.spare)
+	ok("learning past rank X is kept as spare points", absf(m.spare - 2.5) < 0.01 and m.books[4] == 10, m.spare)
 	var c0 := m.coin
 	var paid := X.sell_spare(m)
 	ok("whole spare points sell for coin, the rest is kept", paid == 2 * D.SPARE_PAY and m.coin == c0 + paid and absf(m.spare - 0.5) < 0.01, [paid, m.spare])
