@@ -393,7 +393,7 @@ const ORDERS_DAY := 10               # and how many orders a day teach anything
 const STUCK_WAIT := 20.0              # seconds between uses of "I'm a stuck little peasant"
 const MUD := 0.92                    # how fast the living walk in the rain (the dead wade at 0.85)
 const RUNE_RANK := 10                # the rank of Hammer and Tongs that forges rune (a rank not yet written: version 7.7 writes it)
-const RUNE_PER_VEIN := 2             # mithril in each vein of the old workings, each morning (they were "runes" until version 7.6)
+const RUNE_PER_VEIN := 2             # mithril in each vein of the Old Mine, each morning (they were "runes" until version 7.6)
 const RUNE_TIME := 4.0
 const RUNE_VEINS := [[-6.0, 233.0], [6.0, 238.0], [-2.0, 229.9]]
 ## --- Inside the Thorny Rose: three locals, and what each will say. Each has three things to be asked about, and a set of
@@ -408,7 +408,7 @@ const LOCALS := [
 	{"name": "Tam the Carter", "what": "a big man with a tankard, and mud to the knee", "ask": ["the roads", "the smithy", "the dead"], "treat": "he tells you what he saw on the road today",
 		"say": [
 			["West road is all forest, right out to the thorn hedge. The old steel mine is at the top of it, and there is a hole beside it I would not go down without a light.", "East is the downs, and the old mill. Count the sheep if you like. I have stopped.", "Messengers come by the roads and the river. When one goes missing, look outside the wall. Look early, before the foxes."],
-			["Anybody can knock out a crude blade, and it will see you through a night or two. For one that lasts you want Hammer and Tongs.", "Steel is the thing. Top of the forest. The smith wants rank four of his book before he will touch it.", "There are stones down the old workings with marks on. A smith who has read his book to the last page can work them into steel, and that blade will bite things a blade should not."],
+			["Anybody can knock out a crude blade, and it will see you through a night or two. For one that lasts you want Hammer and Tongs.", "Steel is the thing. Top of the forest. The smith wants rank four of his book before he will touch it.", "There are stones down the Old Mine with marks on. A smith who has read his book to the last page can work them into steel, and that blade will bite things a blade should not."],
 			["Shamblers are slow. It is the standing still that kills you. Keep moving, and hit the one at the edge.", "Bones get up again unless you break them properly. A mace, or anything blessed.", "Something big sleeps under the outer ruins. Rummage if you must, but have your running legs on."],
 		]},
 	{"name": "the stranger in the corner", "what": "hooded, a long way from the fire, with a drink that has not gone down", "ask": ["what is coming", "the Lord", "himself"], "treat": "he tells you what the next of the Lord’s household cannot abide",
@@ -431,8 +431,8 @@ const GAMBLER_SAYS := ["“Sit, friend. Three games, all honest. I have never be
 ## Rooms: places you walk into. They are built far off beyond the river, out of sight; going in or out moves you there and back.
 ## at: where you arrive inside (and leave from). door: the way in, outside. box: solid things inside, as [x, z, half width, half depth].
 const ROOMS := {
-	"mine": {"name": "the old workings", "x": 0.0, "z": 240.0, "hw": 7.0, "hd": 11.0, "at": [0.0, 249.4], "door": [-104.0, -40.2],
-		"in": "climb down into the old workings", "out": "climb back up into the daylight",
+	"mine": {"name": "the Old Mine", "x": 0.0, "z": 240.0, "hw": 7.0, "hd": 11.0, "at": [0.0, 249.4], "door": [-104.0, -40.2],
+		"in": "climb down into the Old Mine", "out": "climb back up into the daylight",
 		"box": [[-3.4, 243.0, 0.5, 0.5], [3.4, 243.0, 0.5, 0.5], [-3.4, 236.0, 0.5, 0.5], [3.4, 236.0, 0.5, 0.5], [1.6, 232.4, 1.0, 0.7]]},
 	"inn": {"name": "the Thorny Rose Inn", "x": 60.0, "z": 240.0, "hw": 8.0, "hd": 6.0, "at": [60.0, 245.3], "door": [-13.2, -4.7],
 		"in": "go into the Thorny Rose", "out": "go back out into the square",
@@ -449,16 +449,24 @@ const ROOMS := {
 			[-168.0, 303.0, 1.6, 0.6], [-152.0, 303.0, 1.4, 0.8], [-168.6, 316.5, 0.55, 1.5],             # the stall, the cart, the druid's table
 			[-174.0, 316.5, 3.0, 3.0], [-174.5, 300.0, 2.0, 1.8], [-149.0, 322.6, 2.6, 2.2], [-145.5, 299.4, 2.4, 2.0],   # the druid's cottage, three houses
 			[-147.5, 314.0, 4.5, 3.4], [-160.0, 310.0, 1.2, 1.2], [-155.0, 316.0, 0.9, 0.9], [-155.5, 333.0, 1.7, 1.0]]},   # the pen, the bonfire, the well, the broken cart
+	# (version 7.21) the two caves across the river, each a small room you walk into from its hill's mouth, built far off like the
+	# Old Mine. "parent": you come out of them into the Riverside, not the village; "wait": where your posse waits outside.
+	"tcave": {"name": "Garrick’s Cave", "x": -40.0, "z": 240.0, "hw": 5.0, "hd": 4.0, "at": [-40.0, 243.0], "door": [-185.4, 308.0], "wait": [-181.5, 308.0], "parent": "riverside",
+		"in": "go into Garrick’s cave", "out": "go back out into the daylight",
+		"box": [[-40.6, 237.0, 1.3, 0.9], [-36.0, 236.6, 0.5, 0.5]]},                   # the rubble heap, and a boulder in the corner
+	"rcave": {"name": "the Rune Cave", "x": -80.0, "z": 240.0, "hw": 6.0, "hd": 4.5, "at": [-80.0, 243.5], "door": [-134.6, 308.0], "wait": [-138.5, 308.0], "parent": "riverside",
+		"in": "go into the Rune Cave", "out": "go back out into the daylight",
+		"box": [[-75.2, 236.4, 1.2, 1.0], [-85.0, 240.0, 0.6, 0.6], [-77.0, 241.5, 0.4, 0.4]]},   # the rock hiding something, Saint Wilbur, a prop
 }
 ## The Riverside (version 7.12). The raft is built once, for everyone, from 100 wood; it crosses by day. Swimming, once
 ## there is a raft, is how anyone gets across after dusk: twenty seconds, half your health, and forty-five tired seconds after.
 const RAFT := {"wood": 100, "swim": 20.0, "tired": 45.0, "tired_mul": 0.75, "tired_spd": 0.6}
 const RIVER_SPOTS := [[-196.0, 338.0], [-191.0, 341.0], [-186.0, 337.0], [-198.0, 345.0], [-193.0, 348.0], [-187.0, 344.0], [-181.0, 341.0], [-202.0, 340.5], [-182.0, 348.0], [-177.0, 337.5]]   # the far ruin: ten heaps, and nothing in it bites
-const RUNE_SEAMS := [[-134.2, 305.0], [-134.2, 308.0], [-134.2, 311.0]]   # in the mouth of the cave in the east hill   # in the Rune Cave, once it has been made fit to explore
+const RUNE_SEAMS := [[-84.0, 236.6], [-80.5, 236.6], [-77.2, 236.6]]   # along the back wall of the Rune Cave, once it has been made fit to explore (version 7.21: inside it)
 const RUNE_PER_SEAM := 2
 const CAMPFIRE := {"x": -160.0, "z": 310.0, "rock": 0.4}             # the bonfire in the hamlet's market, where fire rocks are raked out (four times in ten)
-const TITHE_RUBBLE := {"x": -185.8, "z": 306.4, "time": 60.0, "day": 1.0 / 20.0, "night": 1.0 / 8.0}   # the coveted relic, under it, somewhere
-const TITHE_ORE := {"x": -185.8, "z": 311.6}                          # one piece of ore a day, for whoever gets to it first
+const TITHE_RUBBLE := {"x": -40.6, "z": 237.0, "time": 60.0, "day": 1.0 / 20.0, "night": 1.0 / 8.0}   # the coveted relic, under it, somewhere
+const TITHE_ORE := {"x": -36.6, "z": 238.4}                          # one piece of ore a day, for whoever gets to it first
 const TITHE_FEE := 12                                                 # what the cave's owner charges a search, a shilling more each week
 const RCAVE_WOOD := 20
 const MOLES := {"main": 7, "river": 3, "r": 1.6, "coin": [3, 12]}      # mole hills each morning, how near you pass to wake one, and what it leaves (pence)
@@ -597,7 +605,7 @@ const BOOKS := [
 		"A meal cures a hangover and a fright, and you can eat a fish again sooner",
 		"Meals heal 80, your posse has 20 more health until dawn, and a fish you eat heals everyone near you as well"]},
 	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank). Contraption: the chicken decoy", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger. Contraption: the pitfall", "Your barricades do not rot at dusk. Contraption: the tar pit", "Your spike rows last twice as long. Contraption: the holy water trough", "Your barricades and body walls are half as strong again. Contraption: the log roller", "Contraption: the Thresher, a spinning flail", "Your watch towers cost half their upkeep", "What you repair is a quarter stronger until dawn", "Your contraptions set themselves up again, once a night, the first time they are spent"]},
-	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge iron arms, not just crude ones, with a third less iron (and a little less with every rank), and crude kits for your posse", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm or kit out your whole posse in one go, and forge iron kits", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears, and you can forge steel kits", "You can forge mithril arms and armour, from steel and the mithril of the old workings. Facing, banding and bracing a defence costs half", "Armour you wear stops a tenth more", "Kits you hand out do not wear out", "You can forge rune arms and armour, given runes, which are across the river"]},
+	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge iron arms, not just crude ones, with a third less iron (and a little less with every rank), and crude kits for your posse", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm or kit out your whole posse in one go, and forge iron kits", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears, and you can forge steel kits", "You can forge mithril arms and armour, from steel and the mithril of the Old Mine. Facing, banding and bracing a defence costs half", "Armour you wear stops a tenth more", "Kits you hand out do not wear out", "You can forge rune arms and armour, given runes, which are across the river"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["You hit harder up close (and harder again with every rank)", "One blow in eight against you misses", "Your weapon’s trick is ready a fifth sooner", "Your swings sweep wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow you land is twice as hard", "20 more health again", "Every fourth blow is twice as hard", "A killing blow carries on into the next of the dead"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "Your shots never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also hits a second of the dead nearby", "Aimed stones, volleys and piercing bolts are ready in half the time", "You shoot a third faster", "Your shots go through to the one behind", "Every tenth shot is a volley, free"]},
 	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 40, "by": "giving orders, recruiting, your posse’s work and blows, and bringing them through the night", "ranks": ["Orders: {orders} tells your posse to follow you or hold where they stand. Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "A third order: charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away", "A posse four larger", "Your peasants in a watch tower throw faster", "The war cry reaches everybody’s posse"]},
@@ -883,8 +891,8 @@ const STATIONS := [
 	{"id": "rmerch", "x": -168.0, "z": 305.6, "r": 2.4, "room": "riverside", "name": "the merchant who never leaves", "verb": "see what the merchant who never leaves has"},
 	{"id": "tmerch", "x": -152.0, "z": 305.8, "r": 2.4, "room": "riverside", "name": "the travelling merchant", "verb": "see what the travelling merchant has"},
 	{"id": "druid", "x": -166.0, "z": 316.5, "r": 2.4, "room": "riverside", "name": "the druid", "verb": "speak to the druid"},
-	{"id": "rcave", "x": -139.0, "z": 308.0, "r": 2.4, "room": "riverside", "name": "the Rune Cave", "verb": "look at the Rune Cave"},
-	{"id": "keeper", "x": -182.0, "z": 302.6, "r": 2.2, "room": "riverside", "name": "Garrick, who owns the cave", "verb": "speak to Garrick, who owns this cave"},
+	{"id": "rcave", "x": -137.0, "z": 303.6, "r": 2.2, "room": "riverside", "name": "a shady fellow by the Rune Cave", "verb": "speak to the shady fellow by the Rune Cave"},
+	{"id": "keeper", "x": -183.0, "z": 303.6, "r": 2.2, "room": "riverside", "name": "Garrick, who owns the cave", "verb": "speak to Garrick, who owns this cave"},
 	{"id": "hv0", "x": -155.0, "z": 318.4, "r": 1.9, "room": "riverside", "name": "Widow Thrupp", "verb": "talk to Widow Thrupp, by the well"},
 	{"id": "hv1", "x": -150.6, "z": 319.2, "r": 1.9, "room": "riverside", "name": "Young Ned", "verb": "talk to Young Ned, who minds the animals"},
 	{"id": "hsign", "x": -163.6, "z": 331.6, "r": 1.8, "room": "riverside", "name": "the signpost", "verb": "read the signpost"},

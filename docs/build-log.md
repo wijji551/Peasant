@@ -696,3 +696,16 @@ From Matt's play.
 - **Long item names** fit their cards: "the " dropped from names over 24 letters, smaller type for long names, a smaller picture for very long ones.
 - **Riding a sheep**: the rider's legs sit forward either side of the fleece and no longer walk; a small jog instead of the walking bob (`figure._riding`).
 - New `loads_test` (20). All suites and co-op pass.
+
+## Version 7.21: the caves across the river, the Old Mine, the Riverside's river (build counter 28)
+
+From Matt's play.
+
+- **Two caves to walk into.** `D.ROOMS` has `tcave` (Garrick's Cave, at -40, 240) and `rcave` (the Rune Cave, at -80, 240): small rooms built far off like the Old Mine, entered from their hill's mouth at the Riverside (`door`), with `parent: "riverside"`: leaving one puts you back at the Riverside by its mouth, not home (`leave_room`), and dawn still brings everyone home. `Rules.far_bank(p)` counts the caves as the far bank (the whistle uses it). The posse waits outside the mouth (`wait`); a swimmer's posse, this side, waits by the raft. The main map's doors skip rooms with a parent.
+- **Garrick's Cave**: the rubble heap (`TITHE_RUBBLE` now inside), the day's ore beside it, a boulder, a broken shovel, two wall torches (`_cave_torch`, always lit). Garrick stands at the mouth (his notice moved there).
+- **The Rune Cave**: the three seams (`RUNE_SEAMS`) along its back wall, three torches, a statue of Saint Wilbur, the Dog Lord, with his dog and a halo, a prop, and a little heap of gold glinting over a rock in the corner where nobody can reach it (`_twinkle`). Its mouth is boarded (`_rcave_boards`) until a shady fellow (the `rcave` station, moved beside the mouth, hooded, leaning on a post) is given the 20 wood. The cave's door says so until then.
+- Cave lighting in `main.gd` (dark, warm ambient, torches); figures carry their own light in them as in the mine. The minimap shows someone in a cave at the raft.
+- **The Old Mine**: "the old workings" renamed everywhere it is not history (the room, its sign, the handbook, the smith's lines, Hammer and Tongs). The hole by the steel mine glows faintly purple and breathes (`_mine_glow`). "The Rune Cave: runes" is now just "The Rune Cave".
+- **The Riverside's river**: the countryside's ground box reached right over the river, so only a thin strip showed. It now stops at the bank; the near bank's sand is raised above the grass.
+- **Banners**: the wave's speed no longer changes with the wind (that jolted it whenever you stopped); only its size does.
+- `river_test` (62) now goes in and out of the caves, checks the boarded door, reaches everything inside each cave, and the posse waiting outside. All suites and co-op pass.

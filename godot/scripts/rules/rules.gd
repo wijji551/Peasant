@@ -1666,6 +1666,12 @@ func enter_room(p: E.Player, k: String) -> void:
 func leave_room(p: E.Player) -> void:
 	if p.room == "": return
 	var M: Dictionary = D.ROOMS[p.room]
+	if M.has("parent"):                                # out of a cave (version 7.21): back into the Riverside, at its mouth
+		var w_: Array = M.wait
+		p.room = M.parent; p.x = (M.door[0] + w_[0]) / 2.0 + rnd2(-0.3, 0.3); p.z = M.door[1] + rnd2(-0.4, 0.4); p.tx = p.x; p.tz = p.z
+		p.r = atan2(w_[0] - M.door[0], 0.0); p.goal_r = p.r; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
+		ev.append(["door", r1(p.x), r1(p.z)])
+		return
 	if p.room == "riverside":
 		ev.append(["raft", r1(M.at[0]), r1(M.at[1])])
 		if p.rafted:                                   # the posse comes back on the raft too
@@ -1687,7 +1693,7 @@ func room_interact(p: E.Player):
 				var full := p.mith >= cap(p)
 				return {"type": "rune", "i": i, "key": "rune%d" % i, "ok": lit and left > 0 and not full, "dur": D.RUNE_TIME * (0.8 if rk(p, 0) >= 3 else 1.0), "x": v[0], "z": v[1], "rad": 1.0,
 					"label": "It is too dark to work. You need a burning torch in your hand" if not lit else "This vein is worked out until tomorrow" if left <= 0 else "You can carry no more mithril" if full else "Hold {interact} to prise out a lump of mithril"}
-	if p.room == "riverside":
+	if p.room == "riverside" or M.get("parent", "") == "riverside":
 		var r_ = riverside_interact(p)
 		if r_ != null: return r_
 	for st in D.STATIONS:
@@ -1704,6 +1710,30 @@ func room_interact(p: E.Player):
 ## At the Riverside, what holding E would do that is not a place's notice: the heaps of the far ruin, the campfire, the
 ## seams of the Rune Cave, the rubble that hides the Tithe Collector and the ore beside it.
 func riverside_interact(p: E.Player):
+	if p.room == "tcave":                               # Garrick's cave: the rubble, and the ore beside it
+		if D.d2(p.x, p.z, D.TITHE_ORE.x, D.TITHE_ORE.z) < 2.6:
+			return {"type": "tore", "key": "tore", "ok": tore_day != day, "dur": 2.0, "x": D.TITHE_ORE.x, "z": D.TITHE_ORE.z, "rad": 0.8,
+				"label": "Hold {interact} to take the piece of ore. Somebody ought to" if tore_day != day else "Somebody has had today’s piece of ore"}
+		if D.d2(p.x, p.z, D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z) < 6.0:
+			var why := "You have yours. There is only one each, and it is in your hand, or near it." if p.tithe else "" if p.tpaid else "Garrick, at the mouth of the cave, wants paying first, a search at a time"
+			return {"type": "tithe", "key": "tithe", "ok": why == "", "dur": D.TITHE_RUBBLE.time, "x": D.TITHE_RUBBLE.x, "z": D.TITHE_RUBBLE.z, "rad": 1.6,
+				"label": why if why != "" else "Hold {interact} to search the rubble for the chest: a whole minute, and it is %s" % ("a better chance after dark" if phase == "day" else "a better chance now it is dark")}
+		return null
+	if p.room == "rcave":                               # the Rune Cave: its three seams
+		for k in D.RUNE_SEAMS.size():
+			var v: Array = D.RUNE_SEAMS[k]
+			if D.d2(p.x, p.z, v[0], v[1]) < 3.0:
+				var left: int = runes2[k] if k < runes2.size() else 0
+				var full := p.rune >= cap(p)
+				return {"type": "rune2", "i": k, "key": "seam%d" % k, "ok": left > 0 and not full, "dur": D.RUNE_TIME, "x": v[0], "z": v[1], "rad": 0.9,
+					"label": "This seam is worked out until tomorrow" if left <= 0 else "You can carry no more runes" if full else "Hold {interact} to prise out a rune"}
+		return null
+	for k in ["tcave", "rcave"]:                        # the mouths of the two caves
+		var C_: Dictionary = D.ROOMS[k]
+		if D.d2(p.x, p.z, C_.door[0], C_.door[1]) < 5.0:
+			var shut: bool = k == "rcave" and not rcave
+			return {"type": "enter", "room": k, "key": "enter" + k, "ok": not shut, "dur": 0.6, "x": C_.door[0], "z": C_.door[1], "rad": 1.4,
+				"label": "Boarded up, and not to be trusted. The shady fellow outside wants %d wood to make it safe" % D.RCAVE_WOOD if shut else "Hold {interact} to " + C_["in"]}
 	for k in D.RIVER_SPOTS.size():
 		var sp: Array = D.RIVER_SPOTS[k]
 		if D.d2(p.x, p.z, sp[0], sp[1]) < 4.0:
@@ -1712,21 +1742,6 @@ func riverside_interact(p: E.Player):
 				"label": "Hold {interact} to search the rubble. Nothing here bites" if n > 0 else "Nothing more under here until tomorrow"}
 	if D.d2(p.x, p.z, D.CAMPFIRE.x, D.CAMPFIRE.z) < 5.0:
 		return {"type": "ember", "key": "ember", "ok": true, "dur": 3.0, "x": D.CAMPFIRE.x, "z": D.CAMPFIRE.z, "rad": 1.3, "label": "Hold {interact} to rake through the campfire for a fire rock"}
-	if rcave:
-		for k in D.RUNE_SEAMS.size():
-			var v: Array = D.RUNE_SEAMS[k]
-			if D.d2(p.x, p.z, v[0], v[1]) < 3.0:
-				var left: int = runes2[k] if k < runes2.size() else 0
-				var full := p.rune >= cap(p)
-				return {"type": "rune2", "i": k, "key": "seam%d" % k, "ok": left > 0 and not full, "dur": D.RUNE_TIME, "x": v[0], "z": v[1], "rad": 0.9,
-					"label": "This seam is worked out until tomorrow" if left <= 0 else "You can carry no more runes" if full else "Hold {interact} to prise out a rune"}
-	if D.d2(p.x, p.z, D.TITHE_ORE.x, D.TITHE_ORE.z) < 2.6:
-		return {"type": "tore", "key": "tore", "ok": tore_day != day, "dur": 2.0, "x": D.TITHE_ORE.x, "z": D.TITHE_ORE.z, "rad": 0.8,
-			"label": "Hold {interact} to take the piece of ore. Somebody ought to" if tore_day != day else "Somebody has had today’s piece of ore"}
-	if D.d2(p.x, p.z, D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z) < 5.0:
-		var why := "You have yours. There is only one each, and it is in your hand, or near it." if p.tithe else "" if p.tpaid else "The man who owns the cave wants paying first, a search at a time"
-		return {"type": "tithe", "key": "tithe", "ok": why == "", "dur": D.TITHE_RUBBLE.time, "x": D.TITHE_RUBBLE.x, "z": D.TITHE_RUBBLE.z, "rad": 1.4,
-			"label": why if why != "" else "Hold {interact} to search the rubble for the chest: a whole minute, and it is %s" % ("a better chance after dark" if phase == "day" else "a better chance now it is dark")}
 	return null
 
 ## Which room a peasant is standing in, if any (only the Riverside has peasants in it).
@@ -1798,6 +1813,7 @@ func find_interact(p: E.Player):
 						return {"type": "enter", "room": k, "key": "enterriverside", "ok": true, "dur": 0.8, "x": dr[0], "z": dr[1], "rad": 2.2, "label": "Hold {interact} to take the raft across to the Riverside. Your posse comes too"}
 					return {"type": "swim", "key": "swim", "ok": true, "dur": 0.8, "x": dr[0], "z": dr[1], "rad": 2.2, "label": "The raft does not cross after dark. Hold {interact} to swim for it: twenty seconds, half your health, and your posse stays here"}
 				continue
+			if M.has("parent"): continue                 # a cave across the river: its mouth is over there
 			if D.d2(p.x, p.z, M.door[0], M.door[1]) < 4.0:
 				var shut: bool = k == "inn" and innHp <= 0
 				return {"type": "enter", "room": k, "key": "enter" + k, "ok": not shut, "dur": 0.6, "x": M.door[0], "z": M.door[1], "rad": 1.1,
@@ -3024,7 +3040,11 @@ func posse_walkers(p: E.Player) -> Array:
 
 ## Whether a peasant is on the same side of the river as their leader.
 func same_side(q: E.Peasant, p: E.Player) -> bool:
-	return (room_at(q.x, q.z) == "riverside") == (p.room == "riverside")
+	return (room_at(q.x, q.z) == "riverside") == far_bank(p)
+
+## Across the river: at the Riverside, or in one of its caves.
+static func far_bank(p: E.Player) -> bool:
+	return p.room == "riverside" or D.ROOMS.get(p.room, {}).get("parent", "") == "riverside"
 
 ## Sent home to the cottage (version 7.20): they walk back to your door and wait there, defending it, until you whistle.
 ## Those across the river with you stay with you: the raft does not run errands.
@@ -4715,14 +4735,18 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		var tx: float = Ld.x + f[0] * cs + f[1] * sn
 		var tz: float = Ld.z - f[0] * sn + f[1] * cs
 		var q_far := room_at(q.x, q.z) != ""
-		if Ld.room == "riverside" and Ld.rafted:        # across the river on the raft, with their leader
+		if Ld.room != "" and D.ROOMS[Ld.room].has("wait") and (q_far or Ld.rafted):   # their leader has gone into a cave: they wait outside its mouth
+			var wt: Array = D.ROOMS[Ld.room].wait
+			tx = wt[0] + f[1] * 0.6 * signf(wt[0] - D.ROOMS[Ld.room].door[0]) * -1.0; tz = wt[1] + f[0]
+		elif Ld.room == "riverside" and Ld.rafted:        # across the river on the raft, with their leader
 			pass
 		elif q_far and Ld.room != "riverside":           # left on the far bank (the leader swam back): they stay, until dawn
 			collide_friend(q, 0.35)
 			return
 		elif Ld.room != "":                              # the leader has gone in somewhere: wait by the door
-			var dr: Array = D.ROOMS[Ld.room].door
-			tx = dr[0] + f[0]; tz = dr[1] + (-2.6 if Ld.room == "riverside" else 2.2) - f[1] * 0.7
+			var rm_: String = D.ROOMS[Ld.room].get("parent", Ld.room)   # (in a cave across the river they swam to: by the raft, this side)
+			var dr: Array = D.ROOMS[rm_].door
+			tx = dr[0] + f[0]; tz = dr[1] + (-2.6 if rm_ == "riverside" else 2.2) - f[1] * 0.7
 		var d := Vector2(tx - q.x, tz - q.z).length()
 		if d > 40:
 			q.x = tx; q.z = tz

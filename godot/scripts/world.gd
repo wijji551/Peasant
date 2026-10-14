@@ -64,6 +64,10 @@ var _chickens: Array = []                 # the Riverside's hens: [node, where i
 var _cow: Node3D
 var _donkey: Node3D
 var _torch_flames: Array = []             # the hamlet's torches, lit at dusk
+var _mine_glow: Array = []                 # the glow up the Old Mine's hole: [material, light]
+var _cave_flames: Array = []              # the torches in the two caves, always lit: [flame, light]
+var _twinkle: Array = []                  # something glinting behind a rock in the Rune Cave: [mesh, material]
+var _rcave_boards: Node3D                 # the Rune Cave's mouth, boarded up until the shady fellow is paid
 var _bonfire_flames: Array = []
 var _bonfire_light: OmniLight3D
 var _beast_t := [6.0, 11.0, 2.0]          # until the next moo, bray and cluck
@@ -98,6 +102,8 @@ func _ready() -> void:
 	_gatepost()
 	_mine_room()
 	_inn_room()
+	_tcave_room()
+	_rcave_room()
 	_farms()
 	_downs()
 	_riverside()
@@ -1154,6 +1160,14 @@ func _mine_room() -> void:
 	# and, up top, the way down: a timber frame over a hole, by the mouth of the steel mine
 	var dp := Vector3(M.door[0], 0, M.door[1])
 	Build.box(self, Vector3(1.9, 0.06, 1.9), dp + Vector3(0, 0.03, 0), Color("15120f"))
+	var hg := StandardMaterial3D.new()                                                        # (version 7.21) and down the hole, the faint purple of the mithril
+	hg.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	hg.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	hg.albedo_color = Color(0.56, 0.45, 1.0, 0.35)
+	Build.glow_box(self, Vector3(1.4, 0.02, 1.4), dp + Vector3(0, 0.07, 0), hg)
+	var hl := OmniLight3D.new(); hl.light_color = Color(0.6, 0.48, 1.0); hl.omni_range = 3.2; hl.light_energy = 0.9
+	hl.position = dp + Vector3(0, 0.5, 0); add_child(hl)
+	_mine_glow = [hg, hl]
 	for sx in [-1.0, 1.0]:
 		for sz in [-1.0, 1.0]:
 			Build.box(self, Vector3(0.22, 2.3, 0.22), dp + Vector3(sx * 1.0, 0, sz * 1.0), C.timber)
@@ -1164,6 +1178,127 @@ func _mine_room() -> void:
 		Build.box(self, Vector3(0.1, 1.6, 0.1), dp + Vector3(sx, 0, 0.5), C.wood, 0, 0.2)
 	for i in 3:
 		Build.box(self, Vector3(0.6, 0.07, 0.1), dp + Vector3(0, 0.35 + i * 0.45, 0.5 - i * 0.09), C.wood3)
+
+
+## A cave across the river, as a room (version 7.21): rock floor, lumpy walls, a low lip at the front so you can see in,
+## and daylight at the way out. Returns the room's node, at its middle.
+func _cave_shell(k: String, seed_: int, rock: Color) -> Node3D:
+	var M: Dictionary = D.ROOMS[k]
+	var n := Node3D.new()
+	n.position = Vector3(M.x, 0, M.z)
+	add_child(n)
+	var rg := RandomNumberGenerator.new(); rg.seed = seed_
+	var rock2 := rock.darkened(0.18)
+	var rock3 := rock.lightened(0.1)
+	Build.box(n, Vector3(60, 0.1, 60), Vector3(0, 0.02, 0), Color("09080b"))                  # nothing beyond the walls
+	Build.box(n, Vector3(M.hw * 2, 0.1, M.hd * 2), Vector3(0, 0.08, 0), rock.darkened(0.45))
+	for i in 18:                                                                              # loose stone and grit
+		Build.box(n, Vector3(rg.randf_range(0.15, 0.35), rg.randf_range(0.08, 0.2), rg.randf_range(0.15, 0.3)), Vector3(rg.randf_range(-M.hw + 0.6, M.hw - 0.6), 0.12, rg.randf_range(-M.hd + 0.6, M.hd - 0.6)), rock2 if i % 2 else rock3, rg.randf() * 3)
+	var nb := int(M.hw * 2 / 1.6) + 1
+	for i in nb:                                                                              # the back wall, in lumps, leaning in
+		Build.box(n, Vector3(1.9, rg.randf_range(3.0, 4.2), rg.randf_range(1.0, 1.6)), Vector3(-M.hw + i * 1.6, 0, -M.hd - 0.5), rock if i % 2 else rock2, rg.randf_range(-0.2, 0.2), 0.12)
+	for sx in [-1.0, 1.0]:                                                                    # the sides
+		for i in int(M.hd * 2 / 1.7) + 1:
+			Build.box(n, Vector3(rg.randf_range(1.0, 1.6), rg.randf_range(2.2, 3.4), 1.9), Vector3(sx * (M.hw + 0.55), 0, -M.hd + i * 1.7), rock2 if i % 2 else rock, rg.randf_range(-0.15, 0.15), 0.0, -sx * 0.1)
+	for i in nb:                                                                              # the low lip at the front
+		var x: float = -M.hw + i * 1.6
+		if absf(x - (M.at[0] - M.x)) < 1.2: continue                                         # (the way out)
+		Build.box(n, Vector3(1.8, rg.randf_range(0.5, 1.0), 0.9), Vector3(x, 0, M.hd + 0.4), rock)
+	var shaft := StandardMaterial3D.new()                                                     # daylight, coming in at the way out
+	shaft.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	shaft.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shaft.albedo_color = Color(1.0, 0.96, 0.85, 0.05)
+	shaft.cull_mode = BaseMaterial3D.CULL_DISABLED
+	Build.glow_box(n, Vector3(1.8, 0.02, 1.6), Vector3(M.at[0] - M.x, 0.14, M.hd + 0.2), shaft)
+	var day := OmniLight3D.new(); day.light_color = Color(1.0, 0.95, 0.85); day.omni_range = 4.0; day.light_energy = 0.8
+	day.position = Vector3(M.at[0] - M.x, 1.8, M.hd); n.add_child(day)
+	return n
+
+
+## A torch in a bracket on a cave wall, always burning.
+func _cave_torch(n: Node3D, at: Vector3, face: float) -> void:
+	Build.box(n, Vector3(0.12, 0.7, 0.12), at, C.timber, 0.0, 0.0, face * 0.35)
+	Build.cyl(n, 0.14, 0.09, 0.16, at + Vector3(face * 0.12, 0.62, 0), C.iron, 6)
+	var f := Build.cone(n, 0.16, 0.5, at + Vector3(face * 0.12, 0.76, 0), Color.WHITE, 5)
+	f.material_override = Build.mat(Color(1.0, 0.68, 0.24), 2.8)
+	var l := OmniLight3D.new(); l.light_color = Color(1.0, 0.66, 0.32); l.omni_range = 7.0; l.light_energy = 1.6
+	l.position = at + Vector3(face * 0.4, 1.2, 0); n.add_child(l)
+	_cave_flames.append([f, l])
+
+
+## Garrick's Cave (version 7.21): a small cave, two torches, and the rubble heap with the chest somewhere under it.
+func _tcave_room() -> void:
+	var M: Dictionary = D.ROOMS.tcave
+	var n := _cave_shell("tcave", 7211, Color("6e6458"))
+	var rg := RandomNumberGenerator.new(); rg.seed = 7212
+	var rb := Vector3(D.TITHE_RUBBLE.x - M.x, 0, D.TITHE_RUBBLE.z - M.z)
+	for j in 26:                                                                              # the heap: rock on rock, the big ones underneath
+		var big := j < 9
+		var s := rg.randf_range(0.8, 1.4) if big else rg.randf_range(0.4, 0.8)
+		var a := rg.randf() * TAU
+		var rr := rg.randf_range(0.0, 1.1 if big else 0.9)
+		Build.box(n, Vector3(s, s * rg.randf_range(0.6, 0.9), s * rg.randf_range(0.7, 1.0)), rb + Vector3(cos(a) * rr * 1.2, (0.0 if big else rg.randf_range(0.5, 1.2) * (1.2 - rr)), sin(a) * rr * 0.7),
+			[Color("7a7064"), Color("675e53"), Color("8a8072")][j % 3], rg.randf() * 3, rg.randf_range(-0.3, 0.3), rg.randf_range(-0.3, 0.3))
+	Build.box(n, Vector3(0.7, 0.18, 0.4), rb + Vector3(0.5, 0.35, 0.7), Color("6b4a2e"), 0.4, 0.3)    # the corner of something wooden, poking out
+	Build.box(n, Vector3(0.08, 0.06, 0.42), rb + Vector3(0.75, 0.52, 0.72), C.iron, 0.4, 0.3)
+	Build.box(n, Vector3(0.9, 0.12, 0.3), rb + Vector3(-1.5, 0.0, 1.0), C.wood3, 0.6)                    # a broken shovel, from a previous optimist
+	Build.box(n, Vector3(0.08, 0.08, 1.1), rb + Vector3(-1.1, 0.06, 1.2), C.timber, 0.2)
+	var bd: Array = M.box[1]                                                                  # the boulder in the corner
+	Build.box(n, Vector3(1.2, 1.0, 1.1), Vector3(bd[0] - M.x, 0, bd[1] - M.z), Color("5e564c"), 0.5, 0.1)
+	var om := Build.mat(Color("7d5fb3"), 0.9)                                                 # the day's piece of ore, glinting
+	var ore := Build.box(n, Vector3(0.4, 0.3, 0.36), Vector3(D.TITHE_ORE.x - M.x, 0.05, D.TITHE_ORE.z - M.z), Color("7d5fb3"), 0.4)
+	ore.material_override = om
+	_cave_torch(n, Vector3(-M.hw + 0.25, 1.2, -1.4), 1.0)
+	_cave_torch(n, Vector3(M.hw - 0.25, 1.2, -1.4), -1.0)
+
+
+## The Rune Cave (version 7.21): three seams glowing blue along the back, torches, a statue of Saint Wilbur the Dog Lord
+## with his dog, and something glinting behind a rock where nobody can reach it.
+func _rcave_room() -> void:
+	var M: Dictionary = D.ROOMS.rcave
+	var n := _cave_shell("rcave", 7213, Color("62606e"))
+	var rg := RandomNumberGenerator.new(); rg.seed = 7214
+	for v in D.RUNE_SEAMS:                                                                    # the seams, in the back wall
+		var m := Build.mat(Color("3f7ed8"), 1.6)
+		var g := Node3D.new(); g.position = Vector3(v[0] - M.x, 0, -M.hd + 0.15); n.add_child(g)
+		for j in 8:
+			var c := Build.cone(g, rg.randf_range(0.18, 0.34), rg.randf_range(0.7, 1.4), Vector3(rg.randf_range(-0.7, 0.7), rg.randf_range(0.1, 1.8), rg.randf_range(0.0, 0.3)), Color.WHITE, 4, rg.randf() * TAU)
+			c.material_override = m
+			c.rotation.x = rg.randf_range(0.2, 0.9); c.rotation.z = rg.randf_range(-0.5, 0.5)
+		var l := OmniLight3D.new(); l.light_color = Color(0.4, 0.62, 1.0); l.omni_range = 3.6; l.light_energy = 0.8
+		l.position = Vector3(0, 1.2, 0.6); g.add_child(l)
+		_seams.append([g, m])
+	var rk: Array = M.box[0]                                                                  # the rock in the corner, and behind it, out of reach, a glint
+	var rp := Vector3(rk[0] - M.x, 0, rk[1] - M.z)
+	Build.box(n, Vector3(2.5, 1.5, 2.1), rp, Color("54525e"), 0.3)
+	Build.box(n, Vector3(1.4, 0.9, 1.2), rp + Vector3(-0.5, 1.45, 0.35), Color("5e5c68"), 0.9, 0.2)
+	for j in 6:                                                                               # (a little heap of gold, just showing over the top of it)
+		var tm := Build.mat(Color("f2c94c"), 1.2)
+		var t := Build.box(n, Vector3(0.24, 0.14, 0.24), rp + Vector3(0.3 + (j % 3) * 0.26, 1.5 + (j / 3) * 0.13, -0.5 - (j % 2) * 0.22), Color("f2c94c"), j * 0.7)
+		t.material_override = tm
+		_twinkle.append([t, tm])
+	var gl_ := OmniLight3D.new(); gl_.light_color = Color(1.0, 0.85, 0.4); gl_.omni_range = 2.2; gl_.light_energy = 0.7
+	gl_.position = rp + Vector3(0.7, 2.4, -0.4); n.add_child(gl_)
+	var sp: Array = M.box[1]                                                                  # Saint Wilbur, the Dog Lord, with his dog
+	var s := Node3D.new(); s.position = Vector3(sp[0] - M.x, 0, sp[1] - M.z); s.rotation.y = PI * 0.5; s.scale = Vector3.ONE * 1.35; n.add_child(s)
+	var stn := Color("9a968c")
+	Build.box(s, Vector3(1.1, 0.5, 1.1), Vector3(0, 0, 0), stn.darkened(0.15))
+	Build.box(s, Vector3(0.6, 1.1, 0.45), Vector3(-0.15, 0.5, 0), stn)                            # robed
+	Build.box(s, Vector3(0.34, 0.34, 0.32), Vector3(-0.15, 1.6, 0), stn.lightened(0.05))
+	Build.box(s, Vector3(0.14, 0.5, 0.14), Vector3(0.18, 1.0, 0.1), stn, 0.0, 0.0, -0.9)          # an arm, down to the dog's head
+	var hm := TorusMesh.new(); hm.inner_radius = 0.16; hm.outer_radius = 0.2; hm.rings = 16; hm.ring_segments = 5
+	var halo := MeshInstance3D.new(); halo.mesh = hm; halo.position = Vector3(-0.15, 2.05, 0)
+	halo.material_override = Build.mat(Color(1.0, 0.86, 0.45), 1.2); s.add_child(halo)
+	Build.box(s, Vector3(0.24, 0.38, 0.34), Vector3(0.32, 0.5, 0.1), stn)                         # the dog, sitting
+	Build.box(s, Vector3(0.2, 0.2, 0.26), Vector3(0.32, 0.88, 0.2), stn.lightened(0.05))
+	Build.box(s, Vector3(0.06, 0.12, 0.06), Vector3(0.26, 1.0, 0.18), stn)
+	Build.box(s, Vector3(0.06, 0.12, 0.06), Vector3(0.38, 1.0, 0.18), stn)
+	for j in 3: Build.box(s, Vector3(0.1, 0.12, 0.1), Vector3(-0.4 + j * 0.3, 0.5, 0.5), Color("e8dcc0"))    # candle stubs, left by somebody
+	var pr: Array = M.box[2]                                                                  # a prop holding the roof up, more or less
+	Build.box(n, Vector3(0.3, 3.2, 0.3), Vector3(pr[0] - M.x, 0, pr[1] - M.z), C.timber, 0.0, 0.05)
+	_cave_torch(n, Vector3(-M.hw + 0.25, 1.2, -2.0), 1.0)
+	_cave_torch(n, Vector3(M.hw - 0.25, 1.2, 0.6), -1.0)
+	_cave_torch(n, Vector3(-M.hw + 0.25, 1.2, 2.2), 1.0)
 
 
 ## Somebody to talk to, made of boxes: coat, head, and something on the head. Seated ones have no legs to speak of.
@@ -1309,7 +1444,8 @@ func _riverside() -> void:
 	rg.seed = 7140
 	var r := func(a: float, b: float) -> float: return rg.randf_range(a, b)
 	# --- the ground: fields and hedgerows round the hamlet, and the grass inside its fence
-	Build.box(self, Vector3(M.hw * 2 + 60, 0.1, M.hd * 2 + 50), c0 + Vector3(0, -0.02, 10), Color("86a85a"))
+	var north: float = M.z - M.hd - 0.6                                                   # (version 7.21: the fields stop at the riverbank, and no longer cover the river)
+	Build.box(self, Vector3(M.hw * 2 + 60, 0.1, M.z + M.hd + 35 - north), Vector3(M.x, -0.02, (north + M.z + M.hd + 35) / 2.0), Color("86a85a"))
 	Build.box(self, Vector3(M.hw * 2, 0.1, M.hd * 2), c0 + Vector3(0, 0.0, 0), Color("8fb062"))
 	for i in 160:                                                                        # the grass is not a carpet: tufts and patches
 		Build.box(self, Vector3(r.call(1.0, 4.0), 0.03, r.call(1.0, 3.0)), Vector3(r.call(M.x - M.hw, M.x + M.hw), 0.03, r.call(M.z - M.hd + 3, M.z + M.hd)), [C.grass2, C.grass3, Color("7f9f52"), Color("98b86a")][i % 4], r.call(0, 3))
@@ -1336,7 +1472,7 @@ func _riverside() -> void:
 	# --- the river along the north, as the village's runs, with its banks, reeds and lily pads
 	var rz: float = M.z - M.hd - 8.5
 	add_child(_water(Vector3(M.x, 0.05, rz), Vector2(M.hw * 2 + 80, 16.0), rz, 8.0))
-	Build.box(self, Vector3(M.hw * 2 + 80, 0.05, 2.6), Vector3(M.x, 0.0, M.z - M.hd + 0.4), C.sand)
+	Build.box(self, Vector3(M.hw * 2 + 80, 0.05, 2.6), Vector3(M.x, 0.07, M.z - M.hd + 0.4), C.sand)   # (raised above the grass, version 7.21)
 	Build.box(self, Vector3(M.hw * 2 + 80, 0.05, 2.4), Vector3(M.x, 0.0, rz - 8.6), C.sand)
 	for i in 50:
 		Build.box(self, Vector3(r.call(2, 5), 0.055, r.call(0.6, 1.6)), Vector3(r.call(M.x - M.hw - 30, M.x + M.hw + 30), 0, M.z - M.hd + r.call(1.0, 2.0)), C.sand if i % 3 else C.grass3, r.call(-0.2, 0.2))
@@ -1437,14 +1573,13 @@ func _riverside() -> void:
 	# --- the two caves, each in a hill of its own, and signed
 	_hill(Vector3(-196, 0, 308), 9.0, true)                                              # Garrick's cave, to the west
 	_hill(Vector3(-124, 0, 308), 9.0, false)                                             # the Rune Cave, to the east
-	for j in 9: Build.box(self, Vector3(r.call(0.6, 1.3), r.call(0.4, 0.9), r.call(0.6, 1.2)), Vector3(D.TITHE_RUBBLE.x + r.call(-1.0, 0.6), 0, D.TITHE_RUBBLE.z + r.call(-1.0, 1.0)), C.stone2 if j % 2 else C.stone3, r.call(0, 3))
-	Build.box(self, Vector3(0.4, 0.3, 0.4), Vector3(D.TITHE_ORE.x, 0, D.TITHE_ORE.z), Color("7d5fb3"), 0.4)
-	_npc(self, Vector3(-182.0, 0, 301.4), PI * 0.6, Color("7a3a2a"), "bald", false)      # Garrick
-	for v in D.RUNE_SEAMS:
-		var m := Build.mat(Color("3f7ed8"), 1.6)
-		var b := Build.box(self, Vector3(0.3, 1.2, 0.9), Vector3(v[0] + 1.0, 0.5, v[1]), Color("3f7ed8"))
-		b.material_override = m
-		_seams.append([b, m])
+	_npc(self, Vector3(-183.0, 0, 302.4), PI * 0.5, Color("7a3a2a"), "bald", false)      # Garrick, at the mouth of his cave (version 7.21)
+	var sf := Vector3(-137.0, 0, 302.4)                                                  # and a shady fellow, leaning on a post by the other one
+	Build.box(self, Vector3(0.16, 1.6, 0.16), sf + Vector3(0.45, 0, -0.35), C.timber)
+	_npc(self, sf, -PI * 0.5, Color("3b3540"), "hood", false, Color("c9a07c")).rotation.z = 0.12
+	_rcave_boards = Node3D.new(); add_child(_rcave_boards)                               # boarded up, until he is paid
+	for k in 4:
+		Build.box(_rcave_boards, Vector3(0.12, 0.34, 4.6), Vector3(-133.6, 0.5 + k * 0.7, 308.0), C.wood2 if k % 2 else C.wood3, 0.0, (0.12 if k % 2 else -0.1))
 	_rcave_props = Node3D.new(); add_child(_rcave_props)
 	for z in [304.0, 308.0, 312.0]:                                                      # props and planks, once it is made fit
 		Build.box(_rcave_props, Vector3(0.22, 3.0, 0.22), Vector3(-135.0, 0, z), C.timber)
@@ -1756,6 +1891,18 @@ func _hamlet_step(delta: float) -> void:
 		var f: MeshInstance3D = _bonfire_flames[i]
 		f.scale = Vector3(1.0 + 0.12 * sin(now * 7.0 + i), 0.85 + 0.25 * absf(sin(now * 5.3 + i * 1.7)), 1.0 + 0.12 * cos(now * 6.1 + i))
 	_bonfire_light.light_energy = (1.0 + 2.2 * night) * (0.85 + 0.15 * sin(now * 11.0) + 0.08 * sin(now * 29.0))
+	for i in _cave_flames.size():                                                         # the caves' torches: always burning
+		var cf: Array = _cave_flames[i]
+		(cf[0] as MeshInstance3D).scale = Vector3.ONE * (0.9 + 0.15 * sin(now * 9.0 + i * 1.3))
+		(cf[1] as OmniLight3D).light_energy = 1.6 * (0.88 + 0.12 * sin(now * 11.0 + i) + 0.06 * sin(now * 27.0 + i * 2.0))
+	if _mine_glow.size():                                                                 # the mine's glow breathes, slowly
+		var mg := 0.5 + 0.5 * sin(now * 1.1)
+		(_mine_glow[0] as StandardMaterial3D).albedo_color.a = 0.25 + 0.15 * mg
+		(_mine_glow[1] as OmniLight3D).light_energy = 0.6 + 0.5 * mg
+	for i in _twinkle.size():                                                             # the glint behind the rock: now and then, catching the light
+		var tw: Array = _twinkle[i]
+		var p_ := maxf(0.0, sin(now * 1.7 + i * 2.1)) ** 8
+		(tw[1] as StandardMaterial3D).emission_energy_multiplier = 1.2 + 6.0 * p_
 	var lit := night > 0.25
 	for i in _torch_flames.size():
 		var f: MeshInstance3D = _torch_flames[i]
@@ -1846,6 +1993,7 @@ func set_riverside(built: bool, wood: int, cave: bool, seams: Array) -> void:
 	if _raft_flag: _raft_flag.rotation.y = sin(Time.get_ticks_msec() / 700.0) * 0.35
 	_raft_pile.scale = Vector3.ONE * clampf(0.4 + wood / float(D.RAFT.wood), 0.4, 1.2)
 	_rcave_props.visible = cave
+	_rcave_boards.visible = not cave
 	for i in mini(seams.size(), _seams.size()):
 		_seams[i][1].emission_energy_multiplier = (1.6 + 0.5 * sin(Time.get_ticks_msec() / 380.0 + i)) if int(seams[i]) > 0 else 0.15
 

@@ -331,10 +331,10 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			return {"title": "Garrick’s Cave", "intro": "Garrick: an unscrupulous villager, who knows perfectly well how desperate Thornhallow is. In a chest, under the rubble in his cave, he says, is the best weapon there is. He charges by the search, and his price goes up every week. It is %s today." % D.coins(fee), "o": o}
 		"rcave":
 			if R.rcave:
-				o.append({"text": "It is fit to explore now, more or less. Three seams of runes glow blue at the back: two to a seam each day. Stand beside one and hold the interact key."})
+				o.append({"text": "“It’s safe,” he says. “Safe enough. Go on in.” Three seams of runes glow blue at the back, two to a seam each day. Stand beside one and hold the interact key. He will not go in himself. He says it is his knees."})
 			else:
-				o.append({"label": "Make it fit to explore (%d wood)" % D.RCAVE_WOOD, "sub": "Once, for everybody: props, planks and a ladder that stays where it is put. You carry %d wood." % p.wood, "ok": p.wood >= D.RCAVE_WOOD, "a": "rcfix"})
-			return {"title": "The Rune Cave", "intro": "Its previous owner did not maintain it, and it was poorly designed to begin with. Something at the back glows blue.", "o": o}
+				o.append({"label": "Give him %d wood to make it safe" % D.RCAVE_WOOD, "sub": "Once, for everybody: props, planks, and a promise. You carry %d wood." % p.wood, "ok": p.wood >= D.RCAVE_WOOD, "a": "rcfix"})
+			return {"title": "A shady fellow", "intro": "He leans on a post by the boarded-up mouth of the Rune Cave, as though the post were his. For twenty wood, he says, he will shore it up so it can be gone into. He does not say who he is. He does not say where the last lot of wood went.", "o": o}
 		"mill", "plate":                              # the windmill's banquet, paid for at the mill or from the plate by the east gate
 			var mill := id == "mill"
 			var c: Dictionary = D.BANQUET.mill if mill else D.BANQUET.plate

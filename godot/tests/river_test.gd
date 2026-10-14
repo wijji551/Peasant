@@ -106,14 +106,23 @@ func _init() -> void:
 	ok("his notice lists his wares", Notices.data(R, "tmerch", m, "").o.size() >= 2)
 	# ---------------------------------------------------------------- the Rune Cave
 	at(m, "rcave"); m.wood = 30
-	put(m, D.RUNE_SEAMS[0][0], D.RUNE_SEAMS[0][1])
-	ok("the seams cannot be worked until the cave is made fit", R.find_interact(m) == null or R.find_interact(m).type != "rune2")
+	var RC: Dictionary = D.ROOMS.rcave
+	put(m, RC.door[0], RC.door[1])
+	var ci = R.find_interact(m)
+	ok("the Rune Cave is boarded up until the shady fellow is paid", ci != null and ci.type == "enter" and ci.room == "rcave" and not ci.ok, ci.label if ci else null)
 	at(m, "rcave")
 	R.do_act(m, "rcfix")
-	ok("20 wood, once, makes it fit to explore", R.rcave and m.wood == 10)
+	ok("20 wood to the shady fellow, once, makes it fit to explore", R.rcave and m.wood == 10)
+	put(m, RC.door[0], RC.door[1])
+	ok("then you can go in", R.find_interact(m).ok)
+	hold(m, 1.0)
+	ok("into the cave: a room of its own", m.room == "rcave" and absf(m.x - RC.x) < RC.hw and Rules.far_bank(m))
 	put(m, D.RUNE_SEAMS[0][0], D.RUNE_SEAMS[0][1]); m.rune = 0
 	var k := hold(m, D.RUNE_TIME + 0.3)
 	ok("then runes, from its seams", k == "rune2" and m.rune == 1 and R.runes2[0] == D.RUNE_PER_SEAM - 1)
+	put(m, RC.at[0], RC.at[1])
+	hold(m, 1.0)
+	ok("and out again, into the Riverside at the cave's mouth, not home", m.room == "riverside" and D.d2(m.x, m.z, RC.door[0], RC.door[1]) < 16.0, [m.room, m.x, m.z])
 	m.books[3] = 10; m.steel = 20; m.rune = 10; m.wood = 10
 	ok("and a master smith can forge rune", Rules.forge_why(m, D.tier_item(2, "rune")) == "")
 	# ---------------------------------------------------------------- the druid and Granny's potions
@@ -206,14 +215,16 @@ func _init() -> void:
 	# ---------------------------------------------------------------- the Tithe Collector
 	at(m, "keeper"); m.coin = 500
 	ok("its owner charges a shilling a search, more each week", R.tithe_fee() == 12 * Rules.week_of(R.mday()))
-	put(m, D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z + 1)
+	ok("Garrick stands by the mouth of his cave", D.d2(D.station("keeper").x, D.station("keeper").z, D.ROOMS.tcave.door[0], D.ROOMS.tcave.door[1]) < 36.0)
+	put(m, D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z + 1.4); m.room = "tcave"
 	it = R.find_interact(m)
-	ok("the rubble wants paying for first", it != null and it.type == "tithe" and not it.ok)
+	ok("the rubble, in the cave, wants paying for first", it != null and it.type == "tithe" and not it.ok, it)
 	at(m, "keeper")
 	R.do_act(m, "tpay")
 	ok("paid", m.tpaid and m.coin == 500 - R.tithe_fee())
-	put(m, D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z + 1)
+	put(m, D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z + 1.4); m.room = "tcave"
 	ok("a search takes a whole minute", R.find_interact(m).dur == 60.0)
+	m.room = "riverside"
 	var found := 0
 	for i in 400:
 		m.tpaid = true; m.tithe = false
@@ -232,10 +243,10 @@ func _init() -> void:
 	m.state = "dead"; R.undead.clear(); R.night.q = []
 	fast(1.0)
 	ok("whoever finds it keeps it, even dead", R.phase == "day" and (m.wpn == D.I_TITHE or m.inv.has(D.I_TITHE)) and not R.drops.any(func(d): return d.it == D.I_TITHE))
-	put(m, D.TITHE_ORE.x, D.TITHE_ORE.z); m.room = "riverside"; m.rune = 0; m.mith = 0
+	put(m, D.TITHE_ORE.x, D.TITHE_ORE.z); m.room = "tcave"; m.rune = 0; m.mith = 0
 	hold(m, 2.3)
 	ok("one piece of ore in the cave, a day, for whoever gets there first", m.rune + m.mith == 1 and R.tore_day == R.day)
-	put(f, D.TITHE_ORE.x, D.TITHE_ORE.z); f.room = "riverside"
+	put(f, D.TITHE_ORE.x, D.TITHE_ORE.z); f.room = "tcave"
 	ok("and only one", not R.find_interact(f).ok)
 	# ---------------------------------------------------------------- the layout (version 7.14): everything can be walked to
 	var free := func(x: float, z: float) -> bool:
@@ -261,10 +272,47 @@ func _init() -> void:
 	for st in D.STATIONS:
 		if st.get("room", "") == "riverside": places.append([st.id, st.x, st.z, st.r * 0.8])
 	for kk in D.RIVER_SPOTS.size(): places.append(["heap %d" % kk, D.RIVER_SPOTS[kk][0], D.RIVER_SPOTS[kk][1], 1.8])
-	for kk in D.RUNE_SEAMS.size(): places.append(["seam %d" % kk, D.RUNE_SEAMS[kk][0], D.RUNE_SEAMS[kk][1], 1.6])
-	places.append(["the rubble", D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z, 2.0]); places.append(["the ore", D.TITHE_ORE.x, D.TITHE_ORE.z, 2.4]); places.append(["the bonfire", D.CAMPFIRE.x, D.CAMPFIRE.z, 2.1])
+	for ck in ["tcave", "rcave"]: places.append([ck + " mouth", D.ROOMS[ck].door[0], D.ROOMS[ck].door[1], 2.0])
+	places.append(["the bonfire", D.CAMPFIRE.x, D.CAMPFIRE.z, 2.1])
 	var lost := places.filter(func(pl): return not reach.call(pl[1], pl[2], pl[3])).map(func(pl): return pl[0])
 	ok("from the landing, through the gates, everything at the Riverside can be walked to", lost.is_empty(), lost)
+	# and inside each cave, from the way in: the seams, the rubble and the ore (version 7.21)
+	var inside := []
+	for ck in ["tcave", "rcave"]:
+		var CM: Dictionary = D.ROOMS[ck]
+		var free2 := func(x: float, z: float) -> bool:
+			if absf(x - CM.x) > CM.hw - 0.4 or absf(z - CM.z) > CM.hd - 0.4: return false
+			for b in CM.box:
+				if absf(x - b[0]) < b[2] + 0.4 and absf(z - b[1]) < b[3] + 0.4: return false
+			return true
+		var seen2 := {}
+		var todo2 := [Vector2i(roundi((CM.at[0] - (CM.x - CM.hw)) * 4), roundi((CM.at[1] - (CM.z - CM.hd)) * 4))]
+		while todo2.size():
+			var c: Vector2i = todo2.pop_back()
+			if seen2.has(c): continue
+			var wx: float = CM.x - CM.hw + c.x * 0.25
+			var wz: float = CM.z - CM.hd + c.y * 0.25
+			if not free2.call(wx, wz): continue
+			seen2[c] = true
+			for dv in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]: todo2.append(c + dv)
+		var goals := [[D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z, 2.2], [D.TITHE_ORE.x, D.TITHE_ORE.z, 1.5]] if ck == "tcave" else D.RUNE_SEAMS.map(func(v): return [v[0], v[1], 1.6])
+		for g in goals:
+			var got := false
+			for c in seen2:
+				if D.d2(CM.x - CM.hw + c.x * 0.25, CM.z - CM.hd + c.y * 0.25, g[0], g[1]) < g[2] * g[2]: got = true; break
+			if not got: inside.append([ck, g])
+	ok("inside the caves, the rubble, the ore and every seam can be reached", inside.is_empty(), inside)
+	# the posse waits outside a cave's mouth
+	var pq: Array = posse(m)
+	if pq.is_empty():
+		for q in R.peasants:
+			if q.kind == 0 and q.state != "body" and pq.size() < 2: q.owner = m.id; q.state = "follow"; pq.append(q)
+	m.state = "ok"; R.enter_room(m, "riverside"); m.rafted = true
+	for q in pq: q.x = m.x + 1.0; q.z = m.z + 1.0
+	R.enter_room(m, "tcave")
+	fast(8.0)
+	var TW: Array = D.ROOMS.tcave.wait
+	ok("the posse waits outside the cave's mouth", pq.all(func(q): return D.d2(q.x, q.z, TW[0], TW[1]) < 25.0), pq.map(func(q): return [snappedf(q.x, 0.1), snappedf(q.z, 0.1)]))
 	# ---------------------------------------------------------------- kept and sent
 	var sv := R.save_data()
 	var R2 := Rules.new()

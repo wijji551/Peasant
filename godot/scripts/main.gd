@@ -1295,7 +1295,7 @@ func _draw(delta: float) -> void:
 		var key := "p%d" % p.id
 		live[key] = true
 		var pf = _fig(key, true)
-		pf.dark = 1.0 if p.room == "mine" else R.nf
+		pf.dark = 1.0 if p.room in ["mine", "tcave", "rcave"] else R.nf
 		pf.player(p, p == me)
 	for q: E.Peasant in R.peasants:
 		var key := "q%d" % q.id
@@ -1449,6 +1449,15 @@ func _apply_light(nf: float) -> void:
 		env.ambient_light_color = Color(0.3, 0.27, 0.42)
 		env.ambient_light_energy = 0.09
 		env.background_color = Color(0.02, 0.02, 0.03)
+		env.fog_light_color = env.background_color
+		env.fog_depth_begin = 400.0
+		env.fog_depth_end = 500.0
+		env.adjustment_saturation = 1.0
+	elif screen == "game" and me and (me.room == "tcave" or me.room == "rcave"):   # a cave across the river: torchlight, and a little day at the mouth
+		sun.light_energy = 0.0
+		env.ambient_light_color = Color(0.62, 0.54, 0.5)
+		env.ambient_light_energy = 0.16
+		env.background_color = Color(0.02, 0.02, 0.025)
 		env.fog_light_color = env.background_color
 		env.fog_depth_begin = 400.0
 		env.fog_depth_end = 500.0

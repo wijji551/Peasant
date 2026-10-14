@@ -10,12 +10,16 @@ const PLACES := [
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
 	["Old mine: steel", -108.0, -44.0, 4.0], ["The old mill", 104.0, 30.0, 9.0], ["Merchant", "cart", 0.0, 3.2], ["Bailiff’s back door", -14.5, -16.4, 2.8],
 	["A chest", "chest", 0.0, 1.9], ["The bar", 60.0, 235.3, 2.6], ["Old Marge", 55.4, 240.9, 2.3], ["Tam the Carter", 64.4, 241.2, 2.4], ["A stranger", 52.6, 235.0, 2.3],
-	["The gambler", 66.8, 236.6, 2.4], ["A bookshelf", 52.4, 239.3, 2.9], ["Out", 60.0, 245.6, 1.4], ["The ladder up", 0.0, 250.0, 2.0], ["The old workings: runes", -104.0, -40.2, 3.2], ["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
+	["The gambler", 66.8, 236.6, 2.4], ["A bookshelf", 52.4, 239.3, 2.9], ["Out", 60.0, 245.6, 1.4], ["The ladder up", 0.0, 250.0, 2.0], ["The Old Mine", -104.0, -40.2, 3.2], ["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
 	["The raft", "raft", 0.0, 4.6],
 	# the Riverside (version 7.14)
 	["The raft: back to Thornhallow", -160.0, 284.6, 2.2], ["Market", -160.0, 304.0, 3.6], ["The druid", -170.4, 316.5, 3.0], ["Bonfire: fire rocks", -160.0, 310.0, 3.4],
-	["The Rune Cave: runes", -133.6, 308.0, 5.2], ["Garrick’s Cave: the Tithe Collector", -186.4, 308.0, 5.2], ["The far ruin: search", -190.0, 342.0, 3.0],
+	["The Rune Cave", -133.6, 308.0, 5.2], ["Garrick’s Cave: the Tithe Collector", -186.4, 308.0, 5.2], ["The far ruin: search", -190.0, 342.0, 3.0],
 	["The road to Hallowshire Town", -160.0, 348.0, 2.0], ["Widow Thrupp", -155.0, 317.4, 2.4], ["Young Ned", -150.6, 318.2, 2.4],
+	["Garrick", -183.0, 303.0, 2.4], ["A shady fellow", -137.0, 303.0, 2.4],
+	# the two caves, inside (version 7.21)
+	["The rubble: the Tithe Collector", -40.6, 237.0, 2.4], ["Out", -40.0, 243.2, 1.4],
+	["Seams: runes", -80.5, 236.0, 3.0], ["Saint Wilbur, the Dog Lord", -85.0, 240.0, 2.6], ["Out", -80.0, 243.7, 1.4],
 ]
 
 var R: Rules

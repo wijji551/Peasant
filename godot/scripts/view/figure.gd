@@ -45,7 +45,7 @@ uniform float phase = 0.0;
 uniform float gust = 1.0;
 void vertex() {
 	float d = max(VERTEX.x + 0.27, 0.0);
-	float t = TIME * (4.2 + gust * 1.6) + phase;
+	float t = TIME * 5.6 + phase;      // (version 7.21: one steady speed. Speeding it up with the wind jolted the whole wave about whenever you stopped)
 	VERTEX.z += sin(t - VERTEX.x * 6.0) * 0.11 * d * gust;
 	VERTEX.y += sin(t * 0.7 - VERTEX.x * 4.0) * 0.035 * d * gust - 0.05 * d * d;
 	VERTEX.x -= 0.04 * d * d * (1.0 - 0.3 * gust);
