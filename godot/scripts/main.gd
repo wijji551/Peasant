@@ -150,6 +150,7 @@ func _ready() -> void:
 	hud.bar_pressed.connect(func(id): if screen == "game": bar_do(id))
 	hud.pack_pressed.connect(func(): if screen == "game" and me.state == "ok": _open_pack())
 	hud.menu_pressed.connect(func(): menus.menu())
+	hud.posse_pressed.connect(_posse_menu)
 	hud.skills_pressed.connect(func(): if screen == "game": _open_skills())
 	menus = Menus.new(self, win)
 	labels = Labels.new()
@@ -746,6 +747,26 @@ func _place_ghost() -> void:
 	cmd({"t": "bld", "k": k, "x": g.x, "z": g.z, "rot": g.rot})
 
 
+## Click the Posse slot: send them home to your cottage, or whistle them to you (version 7.20).
+var _pmenu: PopupMenu
+func _posse_menu() -> void:
+	if screen != "game" or me == null or me.state != "ok": return
+	if _pmenu == null:
+		_pmenu = PopupMenu.new()
+		_pmenu.add_theme_font_size_override("font_size", 17)
+		_pmenu.add_item("Send them home to your cottage", 0)
+		_pmenu.add_item("Whistle them to you", 1)
+		_pmenu.id_pressed.connect(func(i): cmd({"t": "phome" if i == 0 else "pwhis"}))
+		hud.add_child(_pmenu)
+	var away := R.peasants.filter(func(q): return q.owner == me.id and q.sent).size()
+	_pmenu.set_item_disabled(0, me.posse == 0 or away >= me.posse)
+	_pmenu.set_item_text(1, "Whistle them to you" + (" (%d at home)" % away if away > 0 else ""))
+	_pmenu.set_item_disabled(1, me.posse == 0)
+	var r: Rect2 = hud.posse_rect()
+	_pmenu.reset_size()
+	_pmenu.position = Vector2i(int(r.position.x), int(r.position.y - _pmenu.size.y - 6))
+	_pmenu.popup()
+
 func _open_pack() -> void:
 	if win.is_open("pack"):
 		win.close()
@@ -1151,6 +1172,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			get_tree().create_timer(5.6).timeout.connect(func(): Sound.play("hooves", 0.6))
 		"knock": Sound.play("knock", 1.0, Vector2(ev[1], ev[2]))
 		"jeer": Sound.play("jeer", 1.0, Vector2(ev[1], ev[2]))
+		"whistle": Sound.play("whistle", 1.0, Vector2(ev[1], ev[2]))
 		"dummy":
 			world.hit_dummy(int(ev[1])); F.puff(ev[2], 1.0, ev[3], 6, F.C_FOOD, 2.5); Sound.play("thump", 0.6, Vector2(ev[2], ev[3]))
 		"bark": labels.bark(int(ev[1]), str(ev[2]))

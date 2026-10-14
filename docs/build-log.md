@@ -684,3 +684,15 @@ Fixes from Matt's play.
 - **The Tithe Collector** hits for 50 (was 40).
 - **Ground detail** cut by a quarter: grass tufts 1275, pebbles 490, flowers 285, earth patches 105, bushes 112, toadstool groups 82.
 - All suites and co-op pass.
+
+## Version 7.20: halos, building in loads, the posse sent home, and small mends (build counter 27)
+
+From Matt's play.
+
+- **Blessed rune armour** back to the rune blue (tint [0.85, 1.05, 1.7]), steady like other rune armour; no more pulsing golden emission, which washed it out white. Instead, wearing any blessed piece (helm, top or shield) puts a ring over the head (`figure._holy_halo`, a torus like the priest's, at 2.08), whose colour breathes slowly between gold and white, with a small warm light and the odd mote. `glow_of` no longer gives blessed things gold.
+- **Building in loads.** Every foundation, tower site and side gate keeps what has been put into it (`Struct.dep`, saved, and sent to clients as the 17th field of a struct). Holding {interact} there puts in whatever you carry that it still wants (`still_owed`, `can_put`, `found_label`); anybody can add; once nothing is owed it is built, as before. Knocked down, it starts from nothing. The tower's 25 wood was more than a peasant can carry (20).
+- **The posse sent home, or whistled for.** The Posse slot on the bar can be clicked: a small menu, "Send them home to your cottage" (`posse_home`, net "phome") or "Whistle them to you" (`posse_whistle`, "pwhis"). Sent home (`Peasant.sent`), they hold at their leader's cottage door (`D.cottage(slot)`), fighting what comes, walking there round things (`walk_round`: straight on, and if blocked, of the open sidesteps the one ending nearest). A whistle, or any order, brings back those on the same side of the river (`same_side`); one across the river is not heard. Those on the far bank with you are not sent home (the raft does not run errands). They stay your posse throughout. A whistle sound (`sfx_whistle`).
+- **Saint Wilbur's Dog Lead** has an icon (`lead`: a coil and a clip).
+- **Long item names** fit their cards: "the " dropped from names over 24 letters, smaller type for long names, a smaller picture for very long ones.
+- **Riding a sheep**: the rider's legs sit forward either side of the fleece and no longer walk; a small jog instead of the walking bob (`figure._riding`).
+- New `loads_test` (20). All suites and co-op pass.

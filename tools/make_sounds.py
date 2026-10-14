@@ -360,6 +360,15 @@ def sfx():
         v = (osc(880 - 2400 * tt, "sawtooth") * 0.5 + lowpass(rng.standard_normal(k), 3000) * 0.5) * np.minimum(1, tt / 0.004) * np.clip((0.07 - tt) / 0.04, 0, 1)
         add(ck, bandpass(v, 500, 4000), at)
     S["cluck"] = reverb(ck * V * 0.55, 0.3, 0.1)
+    # a whistle through the fingers, for the posse: a short note, then a long one that swoops up
+    wh = buf(0.9)
+    for at, f0, f1, ln in ((0.0, 1500, 2100, 0.16), (0.24, 1700, 2900, 0.5)):
+        k = int(SR * ln)
+        tt = np.arange(k) / SR
+        ff = f0 + (f1 - f0) * (tt / ln) ** 0.6 + 25 * np.sin(2 * np.pi * 7 * tt)
+        v = (osc(ff, "sine") * 0.8 + bandpass(rng.standard_normal(k), 1500, 3500) * 0.08) * np.minimum(1, tt / 0.02) * np.clip((ln - tt) / 0.08, 0, 1)
+        add(wh, v, at)
+    S["whistle"] = reverb(wh * V * 0.5, 0.5, 0.15)
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)

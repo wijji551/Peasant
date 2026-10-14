@@ -228,6 +228,7 @@ class Peasant:
 	var pz := 0.0
 	var prot := 0.0         # prayed over: a third less harm
 	var kind := 0           # 0 a villager, 1 a village guard (hired for the night), 2 a mercenary (in a posse until dawn), 3 a dog, 4 a sheep
+	var sent := false       # sent home to their leader's cottage, to wait there until whistled for (version 7.20)
 	var plat := 0           # the watch platform they are posted on (a structure's id), or 0
 	var kit := 0            # the posse kit they were given (an item id), or 0
 	var dt := 0             # a dog: the one of the dead it has been told to pull down (an id), or 0
@@ -324,6 +325,7 @@ class Struct:
 	var mhp := 0.0
 	var slot := -1          # a north wall foundation (0-6), or -1 for something placed
 	var site := -1          # a watch tower site (0-3) or a side gate (4 west, 5 east), or -1
+	var dep := {}           # a foundation, tower site or side gate: materials already put in towards it (version 7.20)
 	var kept := true        # a watch tower: seen to today (its upkeep paid), so somebody will climb it
 	var bo := false         # shored up by a repair (rank 9 of Barricades): a quarter stronger until dawn
 	var rs := false         # a contraption that has set itself up again tonight (rank 10 of Barricades)

@@ -516,6 +516,8 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 		"pot": R.drink(p, int(m.get("k", -1)))
 		"efish": R.eat_fish(p)
 		"ord": R.do_order(p)
+		"phome": R.posse_home(p)
+		"pwhis": R.posse_whistle(p)
 		"bld": R.try_place(p, str(m.k), float(m.x), float(m.z), float(m.rot))
 		"rdy": if R.phase == "day": p.ready = bool(m.v)
 		"act": R.do_act(p, str(m.a), m.get("arg"))
@@ -555,7 +557,7 @@ func _host_tick(delta: float) -> void:
 		_send({"t": "dawn", "d": R.dawn})
 	if R.sv != _sent_sv:
 		_sent_sv = R.sv
-		_send({"t": "st", "a": R.structs.map(func(s): return [s.id, s.k, s.x, s.z, s.rot, s.built, s.hp, s.mhp, s.slot, s.hc, s.re, s.bl, s.nr, s.site, s.kept, s.fire])})
+		_send({"t": "st", "a": R.structs.map(func(s): return [s.id, s.k, s.x, s.z, s.rot, s.built, s.hp, s.mhp, s.slot, s.hc, s.re, s.bl, s.nr, s.site, s.kept, s.fire, s.dep])})
 	if R.tv != _sent_tv:
 		_sent_tv = R.tv
 		var codes := []
@@ -666,6 +668,7 @@ func _client_msg(m: Dictionary) -> void:
 				s.k = str(a[1]); s.x = a[2]; s.z = a[3]; s.rot = a[4]; s.built = a[5]; s.hp = a[6]; s.mhp = a[7]
 				s.slot = int(a[8]); s.hc = int(a[9]); s.re = a[10]; s.bl = a[11]; s.nr = a[12]
 				s.site = int(a[13]) if a.size() > 13 else -1; s.kept = a[14] if a.size() > 14 else true; s.fire = float(a[15]) if a.size() > 15 else 0.0
+				s.dep = a[16] if a.size() > 16 else {}
 				s.hw = D.SDIM[s.k].x; s.hd = D.SDIM[s.k].y
 				out.append(s)
 			R.structs = out

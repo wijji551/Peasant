@@ -15,6 +15,7 @@ signal build_pressed(k: String)
 signal bar_pressed(id: String)
 signal pack_pressed
 signal skills_pressed
+signal posse_pressed
 signal menu_pressed
 
 var window: Control
@@ -255,7 +256,8 @@ func _chip(name_: String, parent: Control = null) -> void:   # one slot in the b
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(96, 58)
-	b.mouse_filter = Control.MOUSE_FILTER_STOP if name_ in ["pack", "skills"] else Control.MOUSE_FILTER_IGNORE
+	b.mouse_filter = Control.MOUSE_FILTER_STOP if name_ in ["pack", "skills", "posse"] else Control.MOUSE_FILTER_IGNORE
+	if name_ == "posse": b.pressed.connect(func(): posse_pressed.emit())
 	if name_ == "pack": b.pressed.connect(func(): pack_pressed.emit())
 	if name_ == "skills": b.pressed.connect(func(): skills_pressed.emit())
 	var h := HBoxContainer.new()
@@ -280,6 +282,11 @@ func _chip(name_: String, parent: Control = null) -> void:   # one slot in the b
 	var text := Look.label(v, "", 15, Look.INK)
 	(parent if parent else _hotbar).add_child(b)
 	_chips[name_] = {"box": b, "icon": ic, "text": text, "key": key}
+
+
+## Where the posse slot is on the screen, for the little menu that opens above it.
+func posse_rect() -> Rect2:
+	return (_chips["posse"].box as Control).get_global_rect()
 
 
 func _set_chip(name_: String, shown: bool, icon_key, key: String, text: String, tip: String, dim: bool = false) -> void:
@@ -425,7 +432,7 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		if q.owner == p.id and q.state != "body" and q.state != "hide" and q.nv < nv: nv = q.nv
 	var orders := Rules.rk(p, 6) >= 1
 	_set_chip("posse", true, "posse", ["following", "holding", "charging"][p.order] if orders else "", "Posse %d/%d" % [p.posse, R.posse_max(p)],
-		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + ((" Orders, on the action bar: follow, hold, charge." if Rules.rk(p, 6) >= 3 else " Orders, on the action bar: follow, or hold.") if orders else ""), p.posse == 0)
+		"Your posse." + (" About to run." if p.posse and nv < 40 else " Uneasy." if p.posse and nv < 70 else "") + ((" Orders, on the action bar: follow, hold, charge." if Rules.rk(p, 6) >= 3 else " Orders, on the action bar: follow, or hold.") if orders else "") + " Click to send them home to your cottage, or whistle for them.", p.posse == 0)
 	_set_chip("pack", true, "pack", Keys.name("pack"), "Backpack %d/%d" % [p.inv.size(), D.PACK_MAX], "Your backpack: what is on you, and six places for spares. Click or press {pack}.")
 	var owned := p.books.filter(func(r): return r > 0).size()
 	_set_chip("skills", true, "book", Keys.name("skills"), ("Skills +" if p.spare >= 1 else "Skills") if owned else "No book",

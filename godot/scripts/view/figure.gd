@@ -213,6 +213,7 @@ func player(p: E.Player, is_me: bool) -> void:
 		_bar.visible = false
 	_model.scale = Vector3.ONE * 1.2
 	_lift = 0.6 if p.ride else 0.0                  # on a sheep: up on its back, and the sheep under
+	_riding = p.ride
 	if p.ride and _mount == null: _mount = _sheep_node(self, (p.slot * 5 + p.id) % D.SHEEP_NAMES.size())
 	if _mount:
 		_mount.visible = p.ride
@@ -291,6 +292,7 @@ var _wobble := false
 
 
 var _bar_f := 1.0
+var _riding := false                 # astride a sheep: the legs sit still either side of it, and the sheep does the walking (version 7.20)
 var _lift := 0.0                    # how far off the ground this figure stands (on a watch platform)
 
 
@@ -421,7 +423,6 @@ var _glow_light: OmniLight3D
 ## The colour a relic or a rune weapon glows: gold for most relics, silver for the silvered ones, violet for runes.
 static func glow_of(id: int) -> Color:
 	var I: Dictionary = D.IT[id]
-	if I.blessed: return Color(1.0, 0.88, 0.5, 0.6)                # blessed for good: holy gold
 	if I.tier == "rune": return Color(0.4, 0.66, 1.0, 0.55)      # rune glows blue; mithril purple
 	if I.runed: return Color(0.62, 0.42, 1.0, 0.55)
 	var t: Array = I.tint
@@ -480,9 +481,7 @@ func _set_gear(ids: Array) -> void:
 			gm.emission_enabled = true
 			gm.emission = Color(gc.r, gc.g, gc.b)
 			gm.emission_energy_multiplier = 0.7
-		if D.IT[id].blessed:                               # blessed for good: a holy light that breathes (see _process)
-			gm.emission_enabled = true
-			gm.emission = Color(1.0, 0.82, 0.4)
+		if D.IT[id].blessed:                               # blessed for good: the rune blue, and a halo above (version 7.20)
 			_blessed.append(gm)
 		if D.IT[id].s == "f":                              # boots go on the feet, one on each leg, and walk with them (version 7.18)
 			for leg in [_leg_l, _leg_r]:
@@ -492,12 +491,19 @@ func _set_gear(ids: Array) -> void:
 			continue
 		var mi := _mi(_gear, Models.gear_pool(id), gm)
 		mi.set_meta("slot", D.IT[id].s)
-	if _blessed.size() and _holy_halo == null:             # and a soft halo of holy light about whoever wears it
-		_holy_halo = halo(Color(1.0, 0.86, 0.45, 0.32), 2.2)
-		_holy_halo.position = Vector3(0, 1.1, 0)
+	if _blessed.size() and _holy_halo == null:             # and an angel's ring over the head, like the priest's, that breathes gold and white
+		_holy_halo = MeshInstance3D.new()
+		var tm := TorusMesh.new(); tm.inner_radius = 0.2; tm.outer_radius = 0.26; tm.rings = 20; tm.ring_segments = 6
+		_holy_halo.mesh = tm
+		_halo_mat = StandardMaterial3D.new()
+		_halo_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_halo_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_halo_mat.albedo_color = Color(1.0, 0.86, 0.45, 0.85)
+		_holy_halo.material_override = _halo_mat
+		_holy_halo.position = Vector3(0, 2.08, 0)
 		_model.add_child(_holy_halo)
-		_holy_light = OmniLight3D.new(); _holy_light.light_color = Color(1.0, 0.9, 0.6); _holy_light.omni_range = 4.0
-		_holy_light.position = Vector3(0, 1.4, 0); _model.add_child(_holy_light)
+		_holy_light = OmniLight3D.new(); _holy_light.light_color = Color(1.0, 0.9, 0.6); _holy_light.omni_range = 3.2
+		_holy_light.position = Vector3(0, 2.0, 0); _model.add_child(_holy_light)
 	if _holy_halo:
 		_holy_halo.visible = _blessed.size() > 0
 		_holy_light.visible = _blessed.size() > 0
@@ -545,6 +551,7 @@ var _boots: Array = []               # the boots, one on each leg
 var _blessed: Array = []             # the materials of blessed armour worn, which glow and breathe
 var _holy_halo: MeshInstance3D
 var _holy_light: OmniLight3D
+var _halo_mat: StandardMaterial3D
 var _collar: MeshInstance3D          # a dog's collar, and its material
 var _collar_mat: StandardMaterial3D
 
@@ -624,13 +631,13 @@ func _process(delta: float) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	var stoop := 0.5 + sin(now / 0.18 + get_instance_id()) * 0.12 if _tool == "food" or _tool == "search" else 0.0
 	var wob := sin(now / 0.17) * 0.22 if _wobble else 0.0
-	var swing_ := sin(_walk) * 0.7 * _mv
-	_leg_l.rotation.x = swing_
-	_leg_r.rotation.x = -swing_
+	var swing_ := 0.0 if _riding else sin(_walk) * 0.7 * _mv
+	_leg_l.rotation.x = -0.55 + sin(_walk * 2.0) * 0.06 * _mv if _riding else swing_   # astride: legs forward round the fleece, jogging a little
+	_leg_r.rotation.x = -0.55 + sin(_walk * 2.0 + 1.0) * 0.06 * _mv if _riding else -swing_
 	rotation.y = lerp_angle(rotation.y, _r, minf(1.0, delta * 16.0))
 	if _frozen: rotation.y += sin(now * 47.0) * 0.06
-	_model.rotation = Vector3(-1.45 * _fall + stoop, 0, sin(_walk) * 0.07 * _mv + wob)
-	_model.position.y = absf(sin(_walk)) * 0.14 * _mv + _fall * 0.2
+	_model.rotation = Vector3(-1.45 * _fall + stoop + (0.08 * _mv if _riding else 0.0), 0, (sin(_walk) * 0.03 if _riding else sin(_walk) * 0.07) * _mv + wob)
+	_model.position.y = (absf(sin(_walk * 2.0)) * 0.06 if _riding else absf(sin(_walk)) * 0.14) * _mv + _fall * 0.2
 	_model.position.z = sin(_atk * PI) * 0.22 if _tool == "" and not _down else 0.0     # into the blow, and back
 	var f := (1.0 + _flash * 1.2) * _dim
 	_body_mat.albedo_color = Color(f, f, f)
@@ -651,15 +658,15 @@ func _process(delta: float) -> void:
 	else:
 		_hand.position = Vector3(0.42, 0.6, 0.14 + s2 * (0.25 if _held_swing else 0.55))
 		_hand.rotation = Vector3(0.12 + s2 * (1.7 if _held_swing else 1.4), -s2 * 0.9 if _held_swing else 0.0, 0)
-	if _blessed.size():                                  # blessed armour: a holy glow that swells and fades, and motes of light rising
-		var hp_ := 0.5 + 0.5 * sin(now * 2.4 + get_instance_id() % 5)
-		for m in _blessed: m.emission_energy_multiplier = (0.12 + 0.5 * hp_) * (1.0 - 0.45 * dark)
+	if _blessed.size():                                  # blessed armour: the halo slowly breathes between gold and white
+		var hp_ := 0.5 + 0.5 * sin(now * 1.3 + get_instance_id() % 5)
 		if _holy_halo:
-			_holy_halo.scale = Vector3.ONE * (0.8 + 0.35 * hp_)
+			_halo_mat.albedo_color = Color(1.0, 0.84, 0.4, 0.8).lerp(Color(1.0, 0.98, 0.9, 0.95), hp_)
+			_holy_halo.position.y = 2.08 + 0.03 * sin(now * 1.3)
 			_holy_halo.visible = not _down
-			_holy_light.light_energy = (0.25 + 0.55 * dark) * (0.5 + 0.5 * hp_)
-		if fx and not _down and randf() < delta * 6.0:
-			fx.puff(global_position.x + randf_range(-0.5, 0.5), randf_range(0.6, 2.2), global_position.z + randf_range(-0.5, 0.5), 1, fx.C_HOLY, 0.5)
+			_holy_light.light_energy = (0.15 + 0.45 * dark) * (0.6 + 0.4 * hp_)
+		if fx and not _down and randf() < delta * 1.5:
+			fx.puff(global_position.x + randf_range(-0.2, 0.2), 2.1, global_position.z + randf_range(-0.2, 0.2), 1, fx.C_HOLY, 0.3)
 	if _glow_col.a > 0.0 and _halo:                      # the glow breathes
 		var pulse := 0.75 + 0.25 * sin(now * 3.2 + get_instance_id() % 7)
 		_held_mat.emission_energy_multiplier = 0.9 + 0.9 * pulse

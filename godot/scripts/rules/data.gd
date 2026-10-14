@@ -311,7 +311,7 @@ static func _more_tiers() -> Array:
 	for b in ARMOUR:                                                             # 82-84: rune armour, blessed for good
 		var o := _tier_of(_IT[b], b, "rune")
 		o.n = "blessed " + o.n; o.blessed = true; o.cost = {}
-		o.tint = [0.95, 1.05, 1.45]                      # (version 7.18: still blue, a little paler, with a golden light of its own)
+		o.tint = [0.85, 1.05, 1.7]                       # the rune blue; a halo marks them out (version 7.20)
 		o.note = "Rune, blessed for good by the priest. The dead that strike you are scorched, and wraiths do half their harm"
 		out.append(o)
 	for t in ["crude", "forged", "steel"]:                                       # 85-90: posse kits, a ranger and a watchman in each

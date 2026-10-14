@@ -1424,7 +1424,7 @@ func save_data() -> Dictionary:
 			tree_codes.append([t.i, t.st, t.par, t.gd])
 	var ss := []
 	for s in structs:
-		ss.append({"k": s.k, "x": s.x, "z": s.z, "rot": s.rot, "built": s.built, "hp": s.hp, "max": s.mhp, "slot": s.slot, "re": s.re, "bl": s.bl, "nr": s.nr, "age": s.age, "site": s.site, "kept": s.kept})
+		ss.append({"k": s.k, "x": s.x, "z": s.z, "rot": s.rot, "built": s.built, "hp": s.hp, "max": s.mhp, "slot": s.slot, "re": s.re, "bl": s.bl, "nr": s.nr, "age": s.age, "site": s.site, "kept": s.kept, "dep": s.dep})
 	var ps := []
 	for p in players:
 		ps.append(player_record(p))
@@ -1558,7 +1558,7 @@ func load_game(d: Dictionary, infos: Array) -> void:
 	for s in d.structs:
 		var st := mk_struct(s.k, s.x, s.z, s.rot, s.built, s.hp, s.max, int(s.slot))
 		st.re = s.re; st.bl = s.bl; st.nr = s.get("nr", false); st.age = int(s.get("age", 0))
-		st.site = int(s.get("site", -1)); st.kept = s.get("kept", true)
+		st.site = int(s.get("site", -1)); st.kept = s.get("kept", true); st.dep = s.get("dep", {})
 		if st.slot >= 0: st.z = D.VN                   # a save from before the wall moved forward
 		structs.append(st)
 	add_sites()
@@ -1856,16 +1856,16 @@ func find_interact(p: E.Player):
 			var dx := clampf(p.x, s.x - 3, s.x + 3) - p.x
 			var dz: float = s.z - p.z
 			if dx * dx + dz * dz < 9:
-				var c := cost_of(p, s.k)
-				var ok := has(p, c)
+				var c := still_owed(p, s)
+				var ok := can_put(p, c)
 				return {"type": "found", "target": s, "key": "s%d" % s.id, "ok": ok, "dur": 1.1, "x": s.x, "z": s.z, "rad": 3.2, "wide": true,
-					"label": ("Hold {interact} to build a %s (%s)" if ok else "A %s needs %s") % [D.SNAME[s.k], D.cost_text(c)]}
+					"label": found_label(p, s, "a " + D.SNAME[s.k], c, ok)}
 		if not s.built and s.site >= 0 and in_box(p.x, p.z, 1.6, s):     # a tower site, or a side gate
-			var c := cost_of(p, s.k)
-			var ok := has(p, c)
+			var c := still_owed(p, s)
+			var ok := can_put(p, c)
 			var what := "watch tower" if s.k == "tower" else "gate on the %s gateway" % ("west" if s.x < 0 else "east")
 			return {"type": "found", "target": s, "key": "s%d" % s.id, "ok": ok, "dur": 1.1, "x": s.x, "z": s.z, "rad": 3.2 if s.k == "gate" else 1.6, "wide": s.k == "gate", "rot": s.rot,
-				"label": ("Hold {interact} to build a %s (%s)" if ok else "A %s needs %s") % [what, D.cost_text(c)]}
+				"label": found_label(p, s, "a " + what, c, ok)}
 	best = null; bd = 1e9
 	for s in structs:
 		if s.built and in_box(p.x, p.z, 1.7, s):
@@ -2068,6 +2068,31 @@ func gather_one(kind: String, t: E.Trunk, p: E.Player, posse: bool = false) -> b
 	add_xp(p, g.book, 1)
 	return true
 
+## What a foundation, tower site or side gate still wants, after what has been put in already (by anybody).
+func still_owed(p: E.Player, s: E.Struct) -> Dictionary:
+	var out := {}
+	var c := cost_of(p, s.k)
+	for k in c:
+		var n: int = int(c[k]) - int(s.dep.get(k, 0))
+		if n > 0: out[k] = n
+	return out
+
+## Whether you carry anything it still wants.
+func can_put(p: E.Player, owed: Dictionary) -> bool:
+	for k in owed:
+		if int(p.get(k)) > 0: return true
+	return owed.is_empty()
+
+static func _cap1(t: String) -> String:
+	return t.substr(0, 1).to_upper() + t.substr(1)
+
+func found_label(p: E.Player, s: E.Struct, what: String, owed: Dictionary, ok: bool) -> String:
+	if s.dep.is_empty():
+		if has(p, owed): return "Hold {interact} to build %s (%s)" % [what, D.cost_text(owed)]
+		return ("Hold {interact} to start %s: it needs %s, and can be brought in loads" if ok else "%s needs %s. It can be brought in loads") % [what if ok else _cap1(what), D.cost_text(owed)]
+	if has(p, owed): return "Hold {interact} to finish %s (%s still wanted)" % [what, D.cost_text(owed)]
+	return ("Hold {interact} to put in what you have. %s still wants %s" if ok else "%s still wants %s") % [_cap1(what), D.cost_text(owed)]
+
 func try_place(p: E.Player, k: String, x: float, z: float, rot: float) -> bool:
 	if not (D.BUILDS.has(k) or D.CONTR.has(k) or (k == "firepot" and rk(p, D.B_FIRE) >= 5)) or p.state != "ok" or not live() or not can_contr(p, k):
 		return false
@@ -2098,7 +2123,7 @@ func destroy_struct(s: E.Struct) -> void:
 		ev.append(["build", r1(s.x), r1(s.z)])
 		return
 	if s.slot >= 0 or s.site >= 0:
-		s.built = false; s.hp = 0; s.re = false; s.bl = false; s.mhp = D.SHP[s.k]
+		s.built = false; s.hp = 0; s.re = false; s.bl = false; s.mhp = D.SHP[s.k]; s.dep = {}
 		if s.k == "tower":
 			for q in peasants:
 				if q.plat == s.id:
@@ -2986,10 +3011,54 @@ func do_order(p: E.Player) -> void:   # follow, hold here, charge
 	p.order = (p.order + 1) % (3 if rk(p, 6) >= 3 else 2)     # charge comes with the third rank
 	if p.posse > 0 and p.ordN < D.ORDERS_DAY:                 # leading is learned by leading: the first few orders of a day teach it
 		p.ordN += 1; add_xp(p, 6, D.ORDER_XP)
+	for q in peasants:
+		if q.owner == p.id and q.sent and same_side(q, p): q.sent = false   # an order brings home whoever can hear it
 	if p.order == 1:
 		for q in peasants:
-			if q.owner == p.id:
+			if q.owner == p.id and not q.sent:
 				q.px = q.x; q.pz = q.z
+
+## Your posse, the part of it that walks with you: not dogs, sheep, guards, the hiding, or anybody up a tower.
+func posse_walkers(p: E.Player) -> Array:
+	return peasants.filter(func(q): return q.owner == p.id and (q.kind == 0 or q.kind == 2) and q.plat == 0 and not q.errand and not q.state in ["body", "idle", "gone", "inn", "hide"])
+
+## Whether a peasant is on the same side of the river as their leader.
+func same_side(q: E.Peasant, p: E.Player) -> bool:
+	return (room_at(q.x, q.z) == "riverside") == (p.room == "riverside")
+
+## Sent home to the cottage (version 7.20): they walk back to your door and wait there, defending it, until you whistle.
+## Those across the river with you stay with you: the raft does not run errands.
+func posse_home(p: E.Player) -> void:
+	if p.state != "ok": return
+	var C := D.cottage(p.slot)
+	var n := 0
+	var far := 0
+	for q in posse_walkers(p):
+		if room_at(q.x, q.z) != "":
+			far += 1; continue
+		var f: Array = FOLLOW[n % FOLLOW.size()]
+		q.sent = true; q.px = C.sx + f[0] * 1.1; q.pz = C.sz + C.dir * (1.2 - f[1] * 0.6); q.tree = null; q.ct = 0
+		n += 1
+	if n == 0 and far == 0: return
+	sv += 1
+	if n > 0: say("%s has sent %s home to the cottage, to wait by the door. %s" % [p.dn, "their posse" if n > 1 else "one of their posse", pick(["They went, slowly, in case it was a trick.", "They have been told not to touch anything.", "They went without arguing, which is a first."])])
+	if far > 0: ev.append(["found", p.id, "%d of your posse cannot go home from here: the raft does not run errands. They stay with you" % far if far > 1 else "One of your posse cannot go home from here: the raft does not run errands. They stay with you", r1(p.x), r1(p.z), 0, 0])
+
+## A whistle (version 7.20): whoever of yours is sent home and can hear it comes to you, and the posse follows again.
+func posse_whistle(p: E.Player) -> void:
+	if p.state != "ok": return
+	var n := 0
+	var far := 0
+	for q in posse_walkers(p):
+		if not q.sent: continue
+		if same_side(q, p):
+			q.sent = false; n += 1
+		else: far += 1
+	p.order = 0
+	sv += 1
+	ev.append(["whistle", r1(p.x), r1(p.z)])
+	if far > 0: ev.append(["found", p.id, ("%d of your posse are" % far if far > 1 else "One of your posse is") + " across the river and cannot hear you. Fetch them when you are back", r1(p.x), r1(p.z), 0, 0])
+	elif n > 0: say("%s has whistled, and %s come running." % [p.dn, "their posse" if n > 1 else "one of their posse"])
 
 func do_eat(p: E.Player) -> void:
 	if p.state != "ok" or p.food < 1 or p.eatCd > 0:
@@ -4327,10 +4396,17 @@ func player_step(p: E.Player, dt: float) -> void:
 					do_tithe(p)
 				"body":
 					peasants.erase(it.target); p.bodies += 1
-				"found":
+				"found":                                # in it goes, as much as you have of what is still wanted; built once it is all in
 					var s: E.Struct = it.target
-					pay(p, cost_of(p, s.k)); s.built = true; s.mhp = D.SHP[s.k]; s.hp = s.mhp; s.re = false; s.bl = false; s.kept = true; stats.built += 1; sv += 1; add_xp(p, 2, 1)
-					if s.k == "tower": say("%s has put up a watch tower %s. Somebody will have to climb it." % [p.dn, D.TOWER_NAMES[s.site]])
+					var c := still_owed(p, s)
+					if not can_put(p, c): return
+					for k in c:
+						var put := mini(int(p.get(k)), int(c[k]))
+						p.set(k, p.get(k) - put); s.dep[k] = int(s.dep.get(k, 0)) + put
+					sv += 1; ev.append(["build", r1(s.x), r1(s.z)])
+					if still_owed(p, s).is_empty():
+						s.dep = {}; s.built = true; s.mhp = D.SHP[s.k]; s.hp = s.mhp; s.re = false; s.bl = false; s.kept = true; stats.built += 1; add_xp(p, 2, 1)
+						if s.k == "tower": say("%s has put up a watch tower %s. Somebody will have to climb it." % [p.dn, D.TOWER_NAMES[s.site]])
 				"repair":
 					var s: E.Struct = it.target
 					pay(p, repair_cost(p, s)); s.hp = s.mhp; s.hc += 1; sv += 1; add_xp(p, 2, 0.5); ev.append(["build", r1(s.x), r1(s.z)])
@@ -4380,6 +4456,26 @@ func player_step(p: E.Player, dt: float) -> void:
 
 
 const FOLLOW := [[-1.2, -1.7], [1.2, -1.7], [0, -2.8], [-2.3, -3.1], [2.3, -3.1], [0, -4.1], [-1.2, -4.6], [1.2, -4.6]]
+
+## Walking somewhere a long way off: straight there, and if something is in the way, along it until it is not.
+func walk_round(e, x: float, z: float, spd: float, dt: float) -> void:
+	var bx: float = e.x
+	var bz: float = e.z
+	step_to(e, x, z, spd, dt, 0.0)
+	var want := spd * dt
+	if Vector2(e.x - bx, e.z - bz).length() > want * 0.4: return
+	var a := atan2(x - bx, z - bz)
+	var best := Vector2(e.x, e.z)
+	var bd := 1e9
+	for turn in [1.1, -1.1, 1.9, -1.9]:                  # of the ways that are open, the one that ends nearest
+		e.x = bx; e.z = bz
+		var b: float = a + turn
+		step_to(e, bx + sin(b) * 3.0, bz + cos(b) * 3.0, spd, dt, 0.0)
+		if Vector2(e.x - bx, e.z - bz).length() > want * 0.5:
+			var d := D.d2(e.x, e.z, x, z)
+			if d < bd: bd = d; best = Vector2(e.x, e.z)
+	e.x = best.x; e.z = best.y
+	e.r = atan2(e.x - bx, e.z - bz) if bd < 1e9 else e.r
 
 func step_to(e, x: float, z: float, spd: float, dt: float, stop: float = 0.0) -> float:
 	var dx: float = x - e.x
@@ -4477,7 +4573,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		return
 	var Ld := player_by_id(q.owner)
 	if Ld == null or Ld.state == "dead":
-		q.owner = 0; q.plat = 0; q.state = "idle" if phase == "day" else "hide"
+		q.owner = 0; q.plat = 0; q.sent = false; q.state = "idle" if phase == "day" else "hide"
 		return
 	posse_cook(q, Ld, dt)
 	if q.plat != 0:                                    # posted on a watch platform or tower: up it from dusk, throwing stones at whatever comes near
@@ -4527,7 +4623,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 	if Ld.state == "inn":
 		q.state = "inn"
 		return
-	var order := Ld.order                              # 0 follow, 1 hold here, 2 charge
+	var order := 1 if q.sent else Ld.order             # 0 follow, 1 hold here, 2 charge; sent home is holding, at the cottage
 	var tgt: E.Undead = null
 	var kg := kit_gear(q.kit, q.ni) if q.kind == 0 else [-1, -1, -1]
 	var KW: Dictionary = D.IT[kg[0]] if kg[0] >= 0 else {}
@@ -4565,7 +4661,10 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 				hit_u(tgt, base * bonus, qs)
 	elif order == 1:
 		q.state = "follow"; q.tree = null; q.ct = 0
-		if Vector2(q.px - q.x, q.pz - q.z).length() > 0.5: step_to(q, q.px, q.pz, 5.4, dt, 0.3)
+		if q.sent and Vector2(q.px - q.x, q.pz - q.z).length() > 1.5:   # the long way home, round things
+			var wp := way_to(q.x, q.z, q.px, q.pz)
+			walk_round(q, wp.x, wp.y, 5.4, dt)
+		elif Vector2(q.px - q.x, q.pz - q.z).length() > 0.5: step_to(q, q.px, q.pz, 5.4, dt, 0.3)
 	elif Ld.workT > 0 and Ld.workK != "fish" and (Ld.get(D.GATHER[Ld.workK].res) < cap(Ld) or (rk(Ld, 0) >= 10 and store.has(D.GATHER[Ld.workK].res))) and D.d2(q.x, q.z, Ld.x, Ld.z) < 400:
 		q.state = "chop"
 		var wt := D.PEASANT_WORK_TIME * (0.65 if rk(Ld, 0) >= 3 else 1.0) * (0.5 if Ld.many > 0 else 1.0)   # Many Hands
