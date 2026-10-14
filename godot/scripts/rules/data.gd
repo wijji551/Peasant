@@ -32,6 +32,7 @@ const NIGHT_HEADS := 420             # the most that rise in one night. A bigger
 const NIGHT_RISE := 80.0             # seconds the dead keep rising on night 1
 const NIGHT_RISE_DAY := 10.0         # and how much longer each night after
 const CARRY := 20
+const ARMOUR_FLOOR := 0.35           # armour, all together, takes at most 65% off a blow (version 7.24: full rune armour reached 78%, or 85% praying)
 const POSSE_MAX := 3
 const POSSE_SOLO := 5
 const POSSE_PAIR := 4                # two players start with four followers each: a pair is short-handed for two hordes
@@ -154,7 +155,7 @@ const _IT := [
 	{"n": "spear", "s": "w", "tier": "forged", "dmg": 20, "cd": 0.5, "reach": 2.9, "arc": 0.85, "ab": "brace", "pool": "spear", "cost": {"iron": 4, "wood": 4}, "note": "The longest reach, a narrow jab"},
 	{"n": "mace", "s": "w", "tier": "forged", "dmg": 22, "cd": 0.6, "reach": 1.9, "arc": 0.5, "blunt": true, "ab": "shatter", "pool": "mace", "swing": 1, "cost": {"iron": 8, "wood": 2}, "note": "Skeletons it breaks stay broken"},
 	{"n": "billhook", "s": "w", "tier": "forged", "dmg": 20, "cd": 0.6, "reach": 2.8, "arc": 0.0, "heavy": true, "ab": "hook", "pool": "bill", "swing": 1, "cost": {"iron": 8, "wood": 4}, "note": "Heavy. Long reach and a wide sweep"},
-	{"n": "warhammer", "s": "w", "tier": "forged", "dmg": 45, "cd": 1.0, "reach": 2.0, "arc": 0.5, "blunt": true, "heavy": true, "ab": "smash", "pool": "hammer", "swing": 1, "cost": {"iron": 12, "wood": 4}, "note": "Heavy. Slow and devastating"},
+	{"n": "warhammer", "s": "w", "tier": "forged", "dmg": 52, "cd": 1.0, "reach": 2.0, "arc": 0.5, "blunt": true, "heavy": true, "ab": "smash", "pool": "hammer", "swing": 1, "cost": {"iron": 12, "wood": 4}, "note": "Heavy. Slow and devastating"},
 	{"n": "club", "s": "w", "tier": "found", "dmg": 24, "cd": 0.75, "reach": 1.8, "arc": 0.5, "blunt": true, "ab": "wallop", "pool": "club", "swing": 1, "note": "Slow, heavy single hits"},
 	{"n": "spade", "s": "w", "tier": "found", "dmg": 19, "cd": 0.7, "reach": 2.0, "arc": 0.4, "kb": 0.8, "ab": "bury", "pool": "spade", "swing": 1, "note": "A slow swing with a knock-back"},
 	{"n": "rake", "s": "w", "tier": "found", "dmg": 11, "cd": 0.4, "reach": 2.6, "arc": 0.3, "ab": "trip", "pool": "rake", "swing": 1, "note": "Long and light"},
@@ -166,13 +167,13 @@ const _IT := [
 	{"n": "crossbow", "s": "w", "tier": "forged", "dmg": 34, "cd": 1.35, "rng": 18, "heavy": true, "ab": "pierce", "pool": "xbow", "shot": 1, "need": [5, 3], "cost": {"iron": 10, "wood": 8}, "note": "Heavy. Slow to load, hits very hard"},
 	{"n": "the Slightly Blessed Spade", "s": "w", "tier": "relic", "dmg": 26, "cd": 0.6, "reach": 2.1, "arc": 0.4, "kb": 1.6, "holy": true, "ab": "bury", "pool": "spade", "swing": 1, "tint": [1.25, 1.1, 0.6], "note": "Holy, with a heavy knock-back"},
 	{"n": "Saint Wilbur’s Pitchfork", "s": "w", "tier": "relic", "dmg": 20, "cd": 0.4, "reach": 2.7, "arc": 0.5, "holy": true, "line": true, "ab": "pin", "pool": "fork", "tint": [1.25, 1.1, 0.6], "note": "Holy. Its Pin goes through a whole line"},
-	{"n": "the Silvered Sword", "s": "w", "tier": "relic", "dmg": 28, "cd": 0.34, "reach": 2.0, "arc": 0.5, "holy": true, "ab": "parry", "pool": "sword", "swing": 1, "tint": [1.2, 1.25, 1.35], "note": "Holy, quick and sharp"},
+	{"n": "the Silvered Sword", "s": "w", "tier": "relic", "dmg": 28, "cd": 0.42, "reach": 2.0, "arc": 0.5, "holy": true, "ab": "parry", "pool": "sword", "swing": 1, "tint": [1.2, 1.25, 1.35], "note": "Holy, quick and sharp"},
 	{"n": "cooking pot", "s": "h", "tier": "found", "cut": 0.08, "pool": "helm", "tint": [0.42, 0.4, 0.42]},
 	{"n": "iron cap", "s": "h", "tier": "forged", "cut": 0.15, "pool": "helm", "tint": [0.8, 0.83, 0.88], "cost": {"iron": 5}},
 	{"n": "the Helm of the Unbothered", "s": "h", "tier": "relic", "cut": 0.2, "pool": "helm", "tint": [1.25, 1.05, 0.5], "note": "Your posse never loses its nerve"},
 	{"n": "padded jerkin", "s": "b", "tier": "found", "cut": 0.15, "pool": "mail", "tint": [0.74, 0.55, 0.36]},
 	{"n": "chain shirt", "s": "b", "tier": "forged", "cut": 0.3, "slow": 0.06, "pool": "mail", "tint": [0.68, 0.71, 0.76], "cost": {"iron": 10}},
-	{"n": "the Vicar’s Breastplate", "s": "b", "tier": "relic", "cut": 0.4, "pool": "mail", "tint": [1.2, 1.05, 0.55], "note": "Burns any undead that strikes you"},
+	{"n": "the Vicar’s Breastplate", "s": "b", "tier": "relic", "cut": 0.3, "pool": "mail", "tint": [1.2, 1.05, 0.55], "note": "Burns any undead that strikes you"},
 	{"n": "barrel lid", "s": "o", "tier": "found", "cut": 0.08, "arrow": 0.3, "pool": "shield", "tint": [0.8, 0.66, 0.46]},
 	{"n": "iron-rimmed shield", "s": "o", "tier": "forged", "cut": 0.15, "arrow": 0.5, "pool": "shield", "tint": [1, 1, 1], "cost": {"iron": 4, "wood": 4}},
 	{"n": "the Chapel Handbell", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.3, 1.0, 0.35], "note": "{carry} rings it: every undead nearby is stunned. A long wait between rings"},
@@ -575,7 +576,7 @@ const SLUM_FOOD := 5
 const FISH_FOOD := 5                  # fish in a catch (it was 3: no better than foraging, and a posse cannot help you fish)
 ## Fish (version 7.17): their own catch, apart from the farm's food. One fish, eaten, puts you back to full health, and
 ## then there is a wait before the next. They sell at the market for twice what food does (twice again at rank V).
-const FISH := {"wait": 20.0, "wait9": 12.0, "sell": 2, "sell5": 4, "cook": 8.0, "prize": 0.1, "prize_coin": 12}
+const FISH := {"heal": 60.0, "wait": 30.0, "wait9": 20.0, "sell": 2, "sell5": 4, "cook": 8.0, "prize": 0.1, "prize_coin": 12}
 const FISH_FINDS := [0.015, 0.05, 0.2]   # the chance a catch brings up: something somebody dropped; a lump of mithril; a few coins
 const BLESS_FEE := 24
 const HOLY_TIME := 45.0
@@ -592,7 +593,7 @@ const HONE_COST := 10                # spare points for one page honed into a bo
 const HONE_MAX := 5                  # pages a book takes
 const SPARE_PAY := 12                # past rank VII, each further first step's worth of learning is a spare point, sold for this many pence
 const BOOKS := [
-	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material", "Carry 60 of each material", "The trees you work give a third more before they are spent", "Your posse carries what it gathers to the storehouse by itself, once you can carry no more"]},
+	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material", "Your posse gathers a quarter faster", "The trees you work give a third more before they are spent", "Your posse carries what it gathers to the storehouse by itself, once you can carry no more"]},
 	{"name": "Field, Hook and Pot", "what": "Food, fish and the posse’s cooking", "base": 40, "by": "fishing, foraging, and feeding your posse", "ranks": [
 		"Fish and forage faster (and faster again with every rank). The posse’s cook: at night, any of your posse badly hurt eats one of your food and mends",
 		"Meals heal 35, for you and for your posse",
@@ -603,13 +604,13 @@ const BOOKS := [
 		"Meals heal 65 and settle your posse’s nerves",
 		"A catch is 9 fish, and one catch in ten is a prize, worth a shilling to you on the spot",
 		"A meal cures a hangover and a fright, and you can eat a fish again sooner",
-		"Meals heal 80, your posse has 20 more health until dawn, and a fish you eat heals everyone near you as well"]},
+		"Meals heal 80, your posse has 20 more health until dawn, and a fish heals you fully, and everyone near you as well"]},
 	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank). Contraption: the chicken decoy", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger. Contraption: the pitfall", "Your barricades do not rot at dusk. Contraption: the tar pit", "Your spike rows last twice as long. Contraption: the holy water trough", "Your barricades and body walls are half as strong again. Contraption: the log roller", "Contraption: the Thresher, a spinning flail", "Your watch towers cost half their upkeep", "What you repair is a quarter stronger until dawn", "Your contraptions set themselves up again, once a night, the first time they are spent"]},
 	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge iron arms, not just crude ones, with a third less iron (and a little less with every rank), and crude kits for your posse", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm or kit out your whole posse in one go, and forge iron kits", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears, and you can forge steel kits", "You can forge mithril arms and armour, from steel and the mithril of the Old Mine. Facing, banding and bracing a defence costs half", "Armour you wear stops a tenth more", "Kits you hand out do not wear out", "You can forge rune arms and armour, given runes, which are across the river"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["You hit harder up close (and harder again with every rank)", "One blow in eight against you misses", "Your weapon’s trick is ready a fifth sooner", "Your swings sweep wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow you land is twice as hard", "20 more health again", "Every fourth blow is twice as hard", "A killing blow carries on into the next of the dead"]},
 	{"name": "Slings, Bows and Thrown Turnips", "what": "Ranged combat", "base": 40, "by": "landing shots", "ranks": ["You can use a bow, and a sling comes with the book (shots hit harder with every rank)", "Your shots never miss", "You can use a crossbow", "You shoot a fifth faster", "Emergency toilet breaks come round a third sooner", "Every shot also hits a second of the dead nearby", "Aimed stones, volleys and piercing bolts are ready in half the time", "You shoot a third faster", "Your shots go through to the one behind", "Every tenth shot is a volley, free"]},
 	{"name": "How to Win Peasants and Lead Them", "what": "Peasant leadership", "base": 40, "by": "giving orders, recruiting, your posse’s work and blows, and bringing them through the night", "ranks": ["Orders: {orders} tells your posse to follow you or hold where they stand. Your posse keeps its nerve better (and better again with every rank)", "A posse one larger", "A third order: charge", "A posse two larger", "Your posse hits a quarter harder", "A posse three larger", "Your posse never runs away", "A posse four larger", "Your peasants in a watch tower throw faster", "The war cry reaches everybody’s posse"]},
-	{"name": "The Landlord’s Ledger", "what": "Dutch courage", "base": 4, "by": "drinking at the Thorny Rose Inn", "ranks": ["Every tankard gives more courage (and more again with every rank)", "A longer charge: 26 seconds", "Half the hangover", "No hangover", "When you drink, everyone else in the inn gets a little courage too", "A longer charge: 32 seconds", "The charge hits twice as hard", "A longer charge: 38 seconds", "A hip flask: you carry one tankard out of the inn, to drink later from your backpack", "While you charge, nothing can knock you back"]},
+	{"name": "The Landlord’s Ledger", "what": "Dutch courage", "base": 4, "by": "drinking at the Thorny Rose Inn", "ranks": ["Every tankard gives more courage (and more again with every rank)", "A longer charge: 26 seconds", "Half the hangover", "No hangover", "When you drink, everyone else in the inn gets a little courage too", "A longer charge: 32 seconds", "The charge hits harder still", "A longer charge: 38 seconds", "A hip flask: you carry one tankard out of the inn, to drink later from your backpack", "While you charge, nothing can knock you back"]},
 	{"name": "Relics and Where They Were Left", "what": "Relic lore", "base": 4, "by": "searching the ruins", "ranks": ["You search rubble faster (and faster again with every rank)", "Your map marks the rubble that still hides something", "Relics turn up half as often again", "You find twice the materials and coin in rubble", "Holy weapons, blessings and holy slop hit harder in your hands", "Relics turn up far more often", "Nothing lurking in the ruins notices you searching", "The relics you carry work a tenth better", "You search twice as fast at night", "Once a day, one heap you search is certain to hold something good"]},
 	{"name": "Granny’s Remedies", "what": "Healing", "base": 4, "by": "bandaging and reviving", "ranks": ["Bandage a hurt ally: hold {interact} beside them (it heals more with every rank)", "Revive twice as fast, and to better health", "Each of your posse survives one fatal blow a night", "You heal slowly all the time, even in a fight", "Knocked down, you last twice as long before you die", "A bandage heals completely", "Once a night you get back up by yourself", "A bandage also cures a fright (and burning, should anyone take it up)", "Each of your posse survives two fatal blows a night", "Your bandage reaches across the road"]},
 	{"name": "The Holy Book (Abridged)", "what": "Divine powers: the apprentice priest", "base": 30, "by": "smiting and praying", "class": 0, "ranks": [
@@ -640,12 +641,12 @@ const BOOKS := [
 		"You see further through fog and the dark",
 		"The dark lantern, on the action bar: close the shutter and the dead lose sight of you for six seconds, or until you hit one",
 		"The lost chest and the outer ruins are on your map from the morning they appear",
-		"Your first blow on one of the dead that has not noticed you is three times as hard",
+		"Out in the dark, or with your lantern shut, your first blow on one of the dead that has not noticed you is twice as hard (never a boss)",
 		"The dead outside the wall notice you from half as far",
 		"Your whole posse walks as fast as you do, and is noticed as little",
 		"Boots you wear are half as good again",
 		"The lantern lasts ten seconds, and hides your posse too",
-		"A blow from the dark is five times as hard"]},
+		"A blow from the dark is three times as hard"]},
 	{"name": "Hiding Behind Things", "what": "Shield-work", "base": 30, "by": "taking blows on a shield", "ranks": [
 		"Your shield stops more (and more again with every rank)",
 		"With a shield up, you are knocked back half as far",

@@ -138,7 +138,15 @@ func _init() -> void:
 	var first := hh - n2.hp
 	hh = n2.hp
 	R.hit_u(n2, 10.0, {"p": m, "farm": false})
-	ok("rank 5: the first blow on one that has not noticed you is three times as hard; the next is not", absf(first - 30) < 0.5 and absf((hh - n2.hp) - 10) < 0.5, [first, hh - n2.hp])
+	ok("rank 5: out in the dark, the first blow on one that has not noticed you is twice as hard; the next is not (version 7.24)", absf(first - 20) < 0.5 and absf((hh - n2.hp) - 10) < 0.5, [first, hh - n2.hp])
+	var mx0 := m.x
+	var mz0 := m.z
+	m.x = 0; m.z = 10; m.dark = 0
+	var n3 := one(0, 1, 11); n3.nt = 0
+	hh = n3.hp
+	R.hit_u(n3, 10.0, {"p": m, "farm": false})
+	ok("but not inside the wall with the lantern open", absf((hh - n3.hp) - 10) < 0.5, hh - n3.hp)
+	m.x = mx0; m.z = mz0
 	R.undead.clear()
 	# ---------- shield-work
 	only(D.B_SHIELD, 0)

@@ -726,3 +726,22 @@ From Matt's play.
 - **Relic boots.** All three glowed the same relic gold (`glow_of` gave every relic gold unless it was bluish), so they looked alike, and swapping one pair for another hardly changed anything you could see; their icons were the same gold too. Each now has a darker tint and a `glow` of its own: Brother Fleet's deep green, the Sandals of the Extremely Devout deep blue, Brother Cinder's deep red. The boots' emission is that colour at a lower strength (0.45), so it reads as colour rather than white; a small light at the feet casts it on the ground (`figure._feet_light`); `Look.icon` draws them in their colour instead of relic gold.
 - **Robert Bailiff's back door**: there was a notice for it, a sign and a knock, but no door on the back wall of his house. Now there is: frame, planks, iron hinges, knocker, lintel and step.
 - All suites and co-op pass.
+
+## Version 7.24: balance pass, haunted hilltop, villagers' variety, see-through player (build counter 31)
+
+Before the test groups. Agreed with Matt as a set.
+
+- **Balance.**
+  - Blow from the dark (`hit_u`): only when the player is outside the wall or the lantern is shut, never a boss, x2 (rank V) / x3 (rank X). It had applied to every first blow on every undead, x3/x5, which a sweeping weapon spread across the front row.
+  - Armour: `gear_cut` never below `D.ARMOUR_FLOOR` 0.35 (65% off at most; full rune with the books was 78%, 85% praying). Vicar's Breastplate cut 0.4 to 0.3.
+  - Fish: heal `D.FISH.heal` 60, fully at rank X; wait 30 s (20 at IX).
+  - Holy: 1.35 (1.6 at relic rank V), was 1.5/1.9, in `src_of`, the Thunderer's chain and the blessed handbell. Charge 1.35 / 1.6 at Ledger VII (was 1.6 / 2). Burning (fire IX) and held (dog VI) no longer multiply together: a quarter more, whichever.
+  - Silvered Sword cd 0.42 (was 0.34). Warhammer base 52 (was 45), so every tier up about a sixth. `cap` stops at 50; Woodcutter VIII is now the posse gathering a quarter faster.
+  - New `balance_test` (11).
+- **Towers** back to climbing at dusk (7.22 had them go straight up; Matt had forgotten the morning upkeep). The walk round obstacles and hired swords are kept. `tower_test` as before.
+- **Posse card**: the Posse slot now opens a parchment card with the theme's buttons (`hud.posse_menu`) instead of a system `PopupMenu`; it closes on a choice, a second click, Esc, or after eight seconds. "Send home" from your own doorstep, and "whistle" with nobody away, now say so; that was the "first time it does nothing" report (tested with real simulated clicks: the commands themselves worked).
+- **The castle hilltop** (`world._hilltop`): grey turf, a ruined curtain wall in a ring with a gateway and skull-topped gateposts, the Lord's graveyard (twelve leaning stones, railings, a mausoleum with a green light), a dry fountain with glowing green water, gargoyles and green-flame lanterns up the road, dead trees with crows round the back, stacked and standing coffins, bones, a faint mist. The hill's sides are duller.
+- **Villagers** (`figure.peasant`): the straw hat is no longer part of the head for non-players (`torso_bare`, `tunic_bare`); each villager gets a hat or hair from ten (`HATS`: straw, cap, hood, headscarf, felt, bald fringe, mop, ginger), a skin tone (`SKINS`) and an unowned tunic colour (`TUNICS`) from their name; a posse's tunics vary a little in shade of their leader's colour. A helmet replaces the hat.
+- **See-through player**: players' materials use Godot's stencil X-ray (`STENCIL_MODE_XRAY`), so behind a roof or a tree you show as a pale shape, and not through yourself.
+- **Small touches**: running dust, swimming splashes, a puff when a dog bites; the Out signs moved to the side of each doorway.
+- All 32 suites and co-op pass.

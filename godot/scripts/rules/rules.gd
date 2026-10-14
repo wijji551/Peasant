@@ -358,7 +358,7 @@ static func power_wait(p: E.Player, i: int) -> float:
 
 static func cap(p: E.Player) -> int:
 	var r := rk(p, 0)
-	return 60 if r >= 8 else 50 if r >= 7 else 40 if r >= 5 else 30 if r >= 2 else D.CARRY
+	return 50 if r >= 7 else 40 if r >= 5 else 30 if r >= 2 else D.CARRY   # (version 7.24: no more 60 at rank VIII)
 
 func posse_max(p: E.Player) -> int:
 	var r := rk(p, 6)
@@ -553,7 +553,7 @@ static func gear_cut(p: E.Player) -> float:
 			var sh: float = (1.0 + 0.06 * mini(rk(p, D.B_SHIELD), 7)) * hn(p, D.B_SHIELD) if id == p.off and D.IT[id].pool == "shield" else 1.0   # Hiding Behind Things: a shield stops more
 			m *= 1 - minf(0.7, D.IT[id].cut * sh * (1.1 if rk(p, 3) >= 8 else 1.0) * (1.1 if D.IT[id].tier == "relic" and rk(p, 8) >= 8 else 1.0))
 			any = true
-	return m * 0.95 if any and rk(p, 3) >= 5 else m
+	return maxf(D.ARMOUR_FLOOR, m * 0.95 if any and rk(p, 3) >= 5 else m)   # (version 7.24: never more than 65% off a blow, however it is stacked)
 
 static func can_use(p: E.Player, id: int) -> bool:
 	var n: Array = D.IT[id].need
@@ -2228,16 +2228,19 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if holy: d *= holy
 	if u.vuln > 0: d *= 1.5
 	if u.mark > 0: d *= 1.25                         # The Marked Man
+	var extra := 1.0                                 # (version 7.24: burning and held do not add up; one quarter more, whichever)
 	if u.burn > 0 and u.burnby:                      # rank 9 of the fire book: the burning take a quarter more
 		var fb := player_by_id(u.burnby)
-		if fb and rk(fb, D.B_FIRE) >= 9: d *= 1.25
+		if fb and rk(fb, D.B_FIRE) >= 9: extra = 1.25
 	if u.held > 0 and u.heldby:                      # rank 6 of the dog book: whatever it holds takes a quarter more
 		var hb_ := player_by_id(u.heldby)
-		if hb_ and rk(hb_, D.B_DOG) >= 6: d *= 1.25
+		if hb_ and rk(hb_, D.B_DOG) >= 6: extra = 1.25
+	d *= extra
 	var sp_ = s.get("p")
 	if sp_ and not s.get("dot", false):              # the night watchman: a blow from the dark
 		var bit := 1 << int(sp_.slot)
-		if rk(sp_, D.B_WATCH) >= 5 and not (u.nt & bit): d *= 5.0 if rk(sp_, D.B_WATCH) >= 10 else 3.0
+		if rk(sp_, D.B_WATCH) >= 5 and not (u.nt & bit) and not U.boss and (sp_.dark > 0 or not D.inside_village(sp_.x, sp_.z)):
+			d *= 3.0 if rk(sp_, D.B_WATCH) >= 10 else 2.0   # (version 7.24: out in the dark or the lantern shut, never a boss; x2, x3 at rank X. It was x3 and x5 on every first blow)
 		u.nt |= bit
 		sp_.dark = 0.0                               # and the lantern's shutter is open again
 		if not D.inside_village(sp_.x, sp_.z): add_xp(sp_, D.B_WATCH, 0.3)
@@ -2405,14 +2408,14 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 static func dmg_of(p: E.Player, I: Dictionary, mul: float = 1.0) -> float:
 	var d: float = I.dmg * mul * (1 + (0.08 * mini(rk(p, 5), 7) if I.rng else 0.06 * mini(rk(p, 4), 7))) * hn(p, 5 if I.rng else 4) * (1.1 if I.tier == "relic" and rk(p, 8) >= 8 else 1.0)
 	if (I.tier == "forged" or I.tier == "steel" or I.tier == "mithril" or I.tier == "rune") and rk(p, 3) >= 4: d *= 1.1
-	if p.charge > 0: d *= 2.0 if rk(p, 7) >= 7 else 1.6
+	if p.charge > 0: d *= 1.6 if rk(p, 7) >= 7 else 1.35   # (version 7.24: was 2 and 1.6)
 	if p.whet > 0: d *= 1.2                          # The Whetstone
 	if p.wpn == 17 and I.n == D.IT[17].n and lore(p, 17): d *= 1.25
 	if (I.tier == "forged" or I.tier == "steel" or I.tier == "mithril" or I.tier == "rune") and lore(p, D.I_TONGS): d *= 1.1
 	return d
 
 static func src_of(p: E.Player, I: Dictionary, kb: float = 0.0) -> Dictionary:
-	return {"x": p.x, "z": p.z, "p": p, "fire": I.fire, "blunt": I.blunt, "holy": ((1.9 if rk(p, 8) >= 5 else 1.5) if I.holy or (p.bless & 1) or p.hb > 0 else 0.0),
+	return {"x": p.x, "z": p.z, "p": p, "fire": I.fire, "blunt": I.blunt, "holy": ((1.6 if rk(p, 8) >= 5 else 1.35) if I.holy or (p.bless & 1) or p.hb > 0 else 0.0),
 		"kb": I.kb + kb, "ranged": I.rng > 0, "farm": I.tier == "found", "heavy": I.heavy, "rune": I.runed}
 
 ## The Lord fights in three stages: he watches from the road and sends his bats, then he comes down himself, then
@@ -2525,7 +2528,7 @@ func lightning(p: E.Player, I: Dictionary, from: E.Undead, mul: float = 1.0) -> 
 	var last := from
 	for u in near.slice(0, I.chain + (1 if book else 0)):
 		ev.append(["zap", r1(last.x), r1(last.z), r1(u.x), r1(u.z)])
-		hit_u(u, dmg_of(p, I, mul) * 0.5, {"p": p, "holy": 1.5 if rk(p, 8) < 5 else 1.9, "ranged": true})
+		hit_u(u, dmg_of(p, I, mul) * 0.5, {"p": p, "holy": 1.35 if rk(p, 8) < 5 else 1.6, "ranged": true})
 		last = u
 
 
@@ -3023,7 +3026,7 @@ func do_use(p: E.Player) -> void:   # whatever you carry
 		for u in undead:
 			if D.d2(u.x, u.z, x, z) < 16:
 				scare(u, x, z, 6)
-				if holy: hit_u(u, 30, {"p": p, "holy": 1.9 if rk(p, 8) >= 5 else 1.5})
+				if holy: hit_u(u, 30, {"p": p, "holy": 1.6 if rk(p, 8) >= 5 else 1.35})
 		p.trk = -1; p.bless &= ~2
 	elif p.trk == 26 and p.useCd <= 0:   # the Chapel Handbell
 		p.useCd = 40; ev.append(["ring", r1(p.x), r1(p.z)])
@@ -3073,7 +3076,9 @@ func posse_home(p: E.Player) -> void:
 		n += 1
 	if n == 0 and far == 0: return
 	sv += 1
-	if n > 0: say("%s has sent %s home to the cottage, to wait by the door. %s" % [p.dn, "their posse" if n > 1 else "one of their posse", pick(["They went, slowly, in case it was a trick.", "They have been told not to touch anything.", "They went without arguing, which is a first."])])
+	if n > 0 and D.d2(p.x, p.z, C.sx, C.sz) < 36.0:   # (version 7.24) sent home from the doorstep: say so, or it looks as though nothing happened
+		ev.append(["found", p.id, "Your posse is home already: you are standing at your cottage door. They will wait here when you go", r1(p.x), r1(p.z), 0, 0])
+	elif n > 0: say("%s has sent %s home to the cottage, to wait by the door. %s" % [p.dn, "their posse" if n > 1 else "one of their posse", pick(["They went, slowly, in case it was a trick.", "They have been told not to touch anything.", "They went without arguing, which is a first."])])
 	if far > 0: ev.append(["found", p.id, "%d of your posse cannot go home from here: the raft does not run errands. They stay with you" % far if far > 1 else "One of your posse cannot go home from here: the raft does not run errands. They stay with you", r1(p.x), r1(p.z), 0, 0])
 
 ## A whistle (version 7.20): whoever of yours is sent home and can hear it comes to you, and the posse follows again.
@@ -3091,6 +3096,7 @@ func posse_whistle(p: E.Player) -> void:
 	ev.append(["whistle", r1(p.x), r1(p.z)])
 	if far > 0: ev.append(["found", p.id, ("%d of your posse are" % far if far > 1 else "One of your posse is") + " across the river and cannot hear you. Fetch them when you are back", r1(p.x), r1(p.z), 0, 0])
 	elif n > 0: say("%s has whistled, and %s come running." % [p.dn, "their posse" if n > 1 else "one of their posse"])
+	else: ev.append(["found", p.id, "Your posse is with you already. They look at you, and then at each other", r1(p.x), r1(p.z), 0, 0])
 
 func do_eat(p: E.Player) -> void:
 	if p.state != "ok" or p.food < 1 or p.eatCd > 0:
@@ -3117,7 +3123,7 @@ func eat_fish(p: E.Player) -> void:
 	if p.state != "ok" or p.fish < 1 or p.fishCd > 0: return
 	if p.hp >= max_hp(p) and not (rk(p, 1) >= 10 and players.any(func(o): return o != p and o.state == "ok" and o.hp < max_hp(o) and D.d2(o.x, o.z, p.x, p.z) < 49)): return
 	p.fish -= 1; p.fishCd = D.FISH.wait9 if rk(p, 1) >= 9 else D.FISH.wait
-	p.hp = max_hp(p); p.frozen = 0.0
+	p.hp = max_hp(p) if rk(p, 1) >= 10 else minf(max_hp(p), p.hp + D.FISH.heal); p.frozen = 0.0   # (version 7.24: 60, and fully at rank X)
 	if rk(p, 1) >= 10:
 		for o in players:
 			if o != p and o.state == "ok" and D.d2(o.x, o.z, p.x, p.z) < 49: o.hp = max_hp(o)
@@ -4706,7 +4712,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		elif Vector2(q.px - q.x, q.pz - q.z).length() > 0.5: step_to(q, q.px, q.pz, 5.4, dt, 0.3)
 	elif Ld.workT > 0 and Ld.workK != "fish" and (Ld.get(D.GATHER[Ld.workK].res) < cap(Ld) or (rk(Ld, 0) >= 10 and store.has(D.GATHER[Ld.workK].res))) and D.d2(q.x, q.z, Ld.x, Ld.z) < 400:
 		q.state = "chop"
-		var wt := D.PEASANT_WORK_TIME * (0.65 if rk(Ld, 0) >= 3 else 1.0) * (0.5 if Ld.many > 0 else 1.0)   # Many Hands
+		var wt := D.PEASANT_WORK_TIME * (0.65 if rk(Ld, 0) >= 3 else 1.0) * (0.75 if rk(Ld, 0) >= 8 else 1.0) * (0.5 if Ld.many > 0 else 1.0)   # Many Hands; rank VIII a quarter faster (version 7.24)
 		if Ld.workK == "tree":
 			if q.tree == null or not q.tree.alive or D.d2(q.tree.x, q.tree.z, Ld.x, Ld.z) > 196:
 				q.tree = null

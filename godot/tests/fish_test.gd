@@ -17,7 +17,7 @@ func _init() -> void:
 	ok("a catch is fish, not food", m.fish == 5 and m.food == 0, [m.fish, m.food])
 	m.hp = 10
 	R.eat_fish(m)
-	ok("one fish: back to full health at once", m.hp == Rules.max_hp(m) and m.fish == 4)
+	ok("one fish: 60 health at once (version 7.24)", m.hp == 70 and m.fish == 4, m.hp)
 	m.hp = 10
 	R.eat_fish(m)
 	ok("and then a wait before the next", m.hp == 10 and m.fish == 4 and m.fishCd > 15)

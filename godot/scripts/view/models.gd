@@ -43,6 +43,27 @@ static func _build(name: String, b: Mesher) -> void:
 		"torso":                                             # a body without the legs, which swing on their own
 			b.box(0.42, 0.4, 0.4, 0, 1.03, 0.02, P.skin).box(0.1, 0.1, 0.06, 0, 1.15, 0.24, 0xd9a279)
 			b.cyl(0.34, 0.34, 0.07, 7, 0, 1.42, 0, P.straw).cyl(0.17, 0.2, 0.2, 7, 0, 1.56, 0, P.straw)
+		"torso_bare":                                        # (version 7.24) the same, without the straw hat: villagers wear all sorts
+			b.box(0.42, 0.4, 0.4, 0, 1.03, 0.02, P.skin).box(0.1, 0.1, 0.06, 0, 1.15, 0.24, 0xd9a279)
+		"tunic_bare":
+			b.box(0.66, 0.6, 0.42, 0, 0.44, 0, 0xffffff).box(0.17, 0.5, 0.2, -0.42, 0.52, 0, 0xffffff).box(0.17, 0.5, 0.2, 0.42, 0.52, 0, 0xffffff)
+			b.box(0.64, 0.09, 0.42, 0, 0.5, 0, 0x9a8a78)
+		"hat_straw":
+			b.cyl(0.34, 0.34, 0.07, 7, 0, 1.42, 0, P.straw).cyl(0.17, 0.2, 0.2, 7, 0, 1.56, 0, P.straw).cyl(0.21, 0.23, 0.08, 7, 0, 1.48, 0, 0x8a5a3a)
+		"hat_cap":                                           # a flat cloth cap
+			b.box(0.46, 0.12, 0.46, 0, 1.4, 0, 0x5b4a3a).box(0.32, 0.04, 0.18, 0, 1.41, 0.28, 0x4d3e30)
+		"hat_hood":                                          # a hood, up
+			b.box(0.5, 0.5, 0.47, 0, 0.98, -0.05, 0x6b5a48).box(0.44, 0.1, 0.16, 0, 1.4, 0.14, 0x6b5a48)
+		"hat_scarf":                                         # a headscarf, knotted at the back
+			b.box(0.46, 0.22, 0.46, 0, 1.3, -0.01, 0xa8443a).box(0.16, 0.14, 0.12, 0, 1.3, -0.27, 0x8e3830)
+		"hat_felt":                                          # a tall felt hat, somewhat above its station
+			b.cyl(0.3, 0.3, 0.05, 7, 0, 1.42, 0, 0x3a3a42).cyl(0.15, 0.19, 0.34, 7, 0, 1.47, 0, 0x3a3a42).cyl(0.2, 0.2, 0.05, 7, 0, 1.5, 0, 0x7a5a2a)
+		"hair_bald":                                         # nothing on top but a fringe round the back
+			b.box(0.44, 0.12, 0.26, 0, 1.2, -0.1, 0x8a7a68).box(0.06, 0.16, 0.3, -0.21, 1.18, -0.02, 0x8a7a68).box(0.06, 0.16, 0.3, 0.21, 1.18, -0.02, 0x8a7a68)
+		"hair_mop":                                          # a great deal of hair
+			b.box(0.46, 0.18, 0.44, 0, 1.36, 0, 0x3a2a1c).box(0.46, 0.34, 0.12, 0, 1.12, -0.18, 0x3a2a1c).box(0.46, 0.06, 0.08, 0, 1.38, 0.22, 0x3a2a1c)
+		"hair_ginger":
+			b.box(0.46, 0.16, 0.44, 0, 1.36, 0, 0xb5582a).box(0.46, 0.26, 0.1, 0, 1.18, -0.19, 0xb5582a)
 		"leg":
 			b.box(0.2, 0.46, 0.22, 0, -0.46, 0, 0x4a3a2c)
 		"tunic":

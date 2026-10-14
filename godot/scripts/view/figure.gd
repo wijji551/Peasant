@@ -77,8 +77,8 @@ func _ready() -> void:
 	_leg_r = Node3D.new(); _leg_r.position = Vector3(0.14, 0.46, 0); _model.add_child(_leg_r)
 	_mi(_leg_l, "leg", _body_mat)
 	_mi(_leg_r, "leg", _body_mat)
-	_mi(_model, "torso", _body_mat)
-	_mi(_model, "tunic", _tunic_mat)
+	_mi(_model, "torso" if is_player else "torso_bare", _body_mat)    # (version 7.24: villagers get their own hats and hair)
+	_mi(_model, "tunic" if is_player else "tunic_bare", _tunic_mat)
 	if is_player:
 		_banner_mat = _mat(Color.WHITE)
 		_mi(_model, "banner", _banner_mat)
@@ -146,6 +146,13 @@ func _place(x: float, z: float, r: float, snap: bool) -> void:
 ## Show a player, as the rules have them now.
 func player(p: E.Player, is_me: bool) -> void:
 	visible = p.state != "hide" and p.state != "swim"                          # (drinking at the bar of the Rose, you can be seen: it is a room now; a swimmer is under the water)
+	var dt_ := get_process_delta_time()
+	if fx and p.state == "swim" and randf() < dt_ * 5.0: fx.puff(p.x + randf_range(-0.5, 0.5), 0.1, p.z + randf_range(-0.5, 0.5), 2, fx.C_SPLASH, 1.1)   # in the river: a splash or two (version 7.24)
+	if fx and p.state == "ok" and not p.ride and _mv > 0.7 and randf() < dt_ * 7.0: fx.puff(p.x - sin(p.r) * 0.3, 0.08, p.z - cos(p.r) * 0.3, 1, fx.C_DUST, 0.5)   # dust at your heels, running
+	_xray_t -= dt_
+	if _xray_t <= 0.0:                                # (version 7.24) behind a tree or a roof, a player still shows, as a pale shape
+		_xray_t = 0.5
+		_xray(_model)
 	_place(p.x, p.z, p.r, false)
 	_censer(p.trk == 27 and p.state == "ok" and p.room == "")
 	_frozen = p.frozen > 0                                          # frozen with fright: rooted, and trembling
@@ -268,12 +275,17 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 		if fx and q.state != "body": fx.puff(q.x, 1, q.z, 3, fx.C_BLOOD, 2)
 	_down = q.state == "body"
 	_dim = 0.6 if _down else 1.0
-	_tunic_mat.albedo_color = CORPSE if _down else Color(0.22, 0.4, 0.28) if q.kind == 1 else Color(D.PCOL[own.col % 8]).lerp(Color(0.5, 0.45, 0.38), 0.45 if q.stray else 0.0) if own else Color(0.55, 0.5, 0.42) if q.stray else Color(0.72, 0.62, 0.46)
+	if _hat == null:                                  # who they are: a hat or hair of their own, a skin and a shade of tunic, from their name
+		_hat = _mi(_model, HATS[(q.ni * 7 + 3) % HATS.size()], _mat(Color.WHITE))
+		_skin = SKINS[(q.ni * 5 + 1) % SKINS.size()]
+		_shade = 0.86 + 0.07 * ((q.ni * 3) % 5)
+	_tunic_mat.albedo_color = CORPSE if _down else Color(0.22, 0.4, 0.28) if q.kind == 1 else (Color(D.PCOL[own.col % 8]) * _shade).lerp(Color(0.5, 0.45, 0.38), 0.45 if q.stray else 0.0) if own else Color(0.55, 0.5, 0.42) if q.stray else TUNICS[(q.ni * 11) % TUNICS.size()]
 	_wobble = false
 	_set_work(kind)
 	var kg := Rules.kit_gear(q.kit, q.ni) if q.kind == 0 and q.kit > 0 else [-1, -1, -1]
 	_set_held(kg[0] if kg[0] >= 0 else 2 if q.kind == 1 else 3 if q.kind == 2 else 2 if q.armed else 0, false)   # a kit's weapon, a guard's spear, a mercenary's mace
 	_set_gear([kg[1], kg[2]] if kg[0] >= 0 else [19, 22] if q.kind == 1 else [22, 25] if q.kind == 2 else [])
+	_hat.visible = not (kg[0] >= 0 and kg[1] >= 0) and q.kind != 1      # a helmet goes on instead
 	if fx and q.prot > 0 and randf() < get_process_delta_time() * 8: fx.puff(q.x + randf_range(-0.4, 0.4), 0.4, q.z + randf_range(-0.4, 0.4), 1, fx.C_GLAD, 0.5)
 	if q.hp < Rules.q_max(q) and not _down:
 		_show_bar(2.1, 0.9, q.hp / Rules.q_max(q), Color(0.56, 0.78, 0.36))
@@ -286,6 +298,21 @@ func peasant(q: E.Peasant, own: E.Player) -> void:
 
 
 var _down := false
+var _xray_t := 0.0
+func _xray(n: Node) -> void:                       # Godot's own X-ray: shown through whatever is in front, but not through itself
+	for c in n.get_children():
+		if c is MeshInstance3D:
+			var mm = (c as MeshInstance3D).material_override
+			if mm is StandardMaterial3D and (mm as StandardMaterial3D).stencil_mode == BaseMaterial3D.STENCIL_MODE_DISABLED and (mm as StandardMaterial3D).transparency == BaseMaterial3D.TRANSPARENCY_DISABLED:
+				(mm as StandardMaterial3D).stencil_mode = BaseMaterial3D.STENCIL_MODE_XRAY
+				(mm as StandardMaterial3D).stencil_color = Color(1.0, 0.95, 0.8, 0.35)
+		if c.get_child_count() > 0 and not (c is OmniLight3D): _xray(c)
+var _hat: MeshInstance3D                 # a villager's own hat or hair (version 7.24)
+var _skin := Color.WHITE
+var _shade := 1.0
+const HATS := ["hat_straw", "hat_cap", "hat_hood", "hat_scarf", "hair_bald", "hat_felt", "hair_mop", "hat_straw", "hair_ginger", "hat_cap"]
+const SKINS := [Color(1, 1, 1), Color(0.93, 0.86, 0.8), Color(0.8, 0.68, 0.58), Color(0.62, 0.48, 0.38), Color(1.04, 0.97, 0.93), Color(0.88, 0.78, 0.7)]
+const TUNICS := [Color(0.72, 0.62, 0.46), Color(0.58, 0.52, 0.4), Color(0.62, 0.66, 0.5), Color(0.66, 0.5, 0.42), Color(0.55, 0.58, 0.62), Color(0.76, 0.7, 0.56), Color(0.5, 0.46, 0.5)]
 var _bar_y := 2.0
 var _dim := 1.0
 var _wobble := false
@@ -622,7 +649,9 @@ func _dog_show(q: E.Peasant, own: E.Player) -> void:
 		_dog_legs[i].rotation.x = sin(_walk + (PI if i % 3 == 0 else 0.0)) * 0.6 * _mv
 	_dog_tail.rotation.z = sin(Time.get_ticks_msec() / 90.0) * (0.6 if q.state != "down" else 0.0)
 	if q.ac != _dog_seen[0]:
-		if _dog_seen[0] >= 0: Sound.play("growl" if randf() < 0.5 else "swing", 0.5, Vector2(q.x, q.z))
+		if _dog_seen[0] >= 0:
+			Sound.play("growl" if randf() < 0.5 else "swing", 0.5, Vector2(q.x, q.z))
+			if fx: fx.puff(q.x + sin(q.r) * 0.7, 0.5, q.z + cos(q.r) * 0.7, 3, fx.C_DUST, 1.2)   # a snap of the jaws (version 7.24)
 		_dog_seen[0] = q.ac
 	if q.hc != _dog_seen[1]:
 		if _dog_seen[1] >= 0: Sound.play("hit", 0.4, Vector2(q.x, q.z))
@@ -651,7 +680,7 @@ func _process(delta: float) -> void:
 	_model.position.y = (absf(sin(_walk * 2.0)) * 0.06 if _riding else absf(sin(_walk)) * 0.14) * _mv + _fall * 0.2
 	_model.position.z = sin(_atk * PI) * 0.22 if _tool == "" and not _down else 0.0     # into the blow, and back
 	var f := (1.0 + _flash * 1.2) * _dim
-	_body_mat.albedo_color = Color(f, f, f)
+	_body_mat.albedo_color = Color(f * _skin.r, f * _skin.g, f * _skin.b)
 	_hand.visible = not _down and stoop == 0.0
 	for g in _gear.get_children():                       # a body on the ground keeps its hat and its coat
 		var s: String = g.get_meta("slot")

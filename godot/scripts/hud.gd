@@ -16,6 +16,7 @@ signal bar_pressed(id: String)
 signal pack_pressed
 signal skills_pressed
 signal posse_pressed
+signal posse_choice(i: int)
 signal menu_pressed
 
 var window: Control
@@ -289,6 +290,50 @@ func posse_rect() -> Rect2:
 	return (_chips["posse"].box as Control).get_global_rect()
 
 
+## The posse's two choices (version 7.24: a parchment card with the game's own buttons, not the plain system menu).
+var _pcard: PanelContainer
+var _pbtn: Array = []
+var _pcard_t := 0.0
+func posse_menu(open: bool, away: int, can_send: bool) -> void:
+	if _pcard == null:
+		_pcard = _card(root)
+		_pcard.mouse_filter = Control.MOUSE_FILTER_STOP
+		var v := _vbox(_pcard, 4)
+		Look.label(v, "Your posse", 17, Look.INK, true).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		for i in 2:
+			var b := Button.new()
+			b.focus_mode = Control.FOCUS_NONE
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.custom_minimum_size = Vector2(270, 36)
+			var ii := i
+			b.pressed.connect(func(): posse_choice.emit(ii); _pcard.visible = false)
+			v.add_child(b)
+			_pbtn.append(b)
+		_pcard.visible = false
+		_zones.append(_pcard)
+	if not open:
+		_pcard.visible = false
+		return
+	_pbtn[0].text = "Send them home to your cottage"
+	_pbtn[0].disabled = not can_send
+	_pbtn[1].text = "Whistle them to you" + (" (%d at home)" % away if away > 0 else "")
+	_pcard.reset_size()
+	var r := posse_rect()
+	_pcard.position = Vector2(r.position.x, r.position.y - _pcard.size.y - 8)
+	_pcard.visible = true
+	_pcard_t = 8.0
+
+
+func posse_menu_open() -> bool:
+	return _pcard != null and _pcard.visible
+
+
+func _posse_menu_tick(delta: float) -> void:     # it goes away by itself after a while, or when you press Esc
+	if _pcard == null or not _pcard.visible: return
+	_pcard_t -= delta
+	if _pcard_t <= 0.0 or Input.is_action_just_pressed("ui_cancel"): _pcard.visible = false
+
+
 func _set_chip(name_: String, shown: bool, icon_key, key: String, text: String, tip: String, dim: bool = false) -> void:
 	var c: Dictionary = _chips[name_]
 	c.box.visible = shown
@@ -357,6 +402,7 @@ func zones() -> Array[Rect2]:
 
 
 func _process(delta: float) -> void:
+	_posse_menu_tick(delta)
 	for l in _feed.get_children():
 		var t: float = l.get_meta("t") - delta
 		l.set_meta("t", t)

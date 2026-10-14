@@ -151,6 +151,7 @@ func _ready() -> void:
 	hud.pack_pressed.connect(func(): if screen == "game" and me.state == "ok": _open_pack())
 	hud.menu_pressed.connect(func(): menus.menu())
 	hud.posse_pressed.connect(_posse_menu)
+	hud.posse_choice.connect(func(i): cmd({"t": "phome" if i == 0 else "pwhis"}))
 	hud.skills_pressed.connect(func(): if screen == "game": _open_skills())
 	menus = Menus.new(self, win)
 	labels = Labels.new()
@@ -580,7 +581,7 @@ func bar_info(id: String) -> Array:
 		"toilet":
 			return ["toilet", "Toilet", p.tbCd, "Emergency toilet break: the dead nearby run from your posse."]
 		"fish":
-			return ["fish", "Fish ×%d" % p.fish, p.fishCd, "Eat a fish: back to full health at once%s. Then a wait before the next." % (", and everyone near you too" if Rules.rk(p, 1) >= 10 else "")]
+			return ["fish", "Fish ×%d" % p.fish, p.fishCd, ("Eat a fish: back to full health at once, and everyone near you too. Then a wait before the next." if Rules.rk(p, 1) >= 10 else "Eat a fish: 60 health at once. Then a wait before the next.")]
 		"pot0", "pot1", "pot2", "pot3":
 			var P: Dictionary = D.POTIONS[int(id.substr(3))]
 			return [P.k, "%s ×%d" % [P.short, p.get(P.k)], [p.potA, p.potS, p.potD, p.potI][int(id.substr(3))], "%s: %s. Drinking another only starts it again." % [P.n, P.d]]
@@ -747,25 +748,14 @@ func _place_ghost() -> void:
 	cmd({"t": "bld", "k": k, "x": g.x, "z": g.z, "rot": g.rot})
 
 
-## Click the Posse slot: send them home to your cottage, or whistle them to you (version 7.20).
-var _pmenu: PopupMenu
+## Click the Posse slot: send them home to your cottage, or whistle them to you (version 7.20; in the game's own look, 7.24).
 func _posse_menu() -> void:
-	if screen != "game" or me == null or me.state != "ok": return
-	if _pmenu == null:
-		_pmenu = PopupMenu.new()
-		_pmenu.add_theme_font_size_override("font_size", 17)
-		_pmenu.add_item("Send them home to your cottage", 0)
-		_pmenu.add_item("Whistle them to you", 1)
-		_pmenu.id_pressed.connect(func(i): cmd({"t": "phome" if i == 0 else "pwhis"}))
-		hud.add_child(_pmenu)
+	if screen != "game" or me == null or me.state != "ok" or me.posse == 0: return
+	if hud.posse_menu_open():
+		hud.posse_menu(false, 0, false)
+		return
 	var away := R.peasants.filter(func(q): return q.owner == me.id and q.sent).size()
-	_pmenu.set_item_disabled(0, me.posse == 0 or away >= me.posse)
-	_pmenu.set_item_text(1, "Whistle them to you" + (" (%d at home)" % away if away > 0 else ""))
-	_pmenu.set_item_disabled(1, me.posse == 0)
-	var r: Rect2 = hud.posse_rect()
-	_pmenu.reset_size()
-	_pmenu.position = Vector2i(int(r.position.x), int(r.position.y - _pmenu.size.y - 6))
-	_pmenu.popup()
+	hud.posse_menu(true, away, away < me.posse)
 
 func _open_pack() -> void:
 	if win.is_open("pack"):
@@ -1778,6 +1768,12 @@ func _test_hook() -> void:
 	if _frame == at - 40 and OS.get_environment("DTV_RIVER") != "" and me:   # for pictures: across the river, with the raft and the cave done
 		R.raft = true; R.raftW = D.RAFT.wood; R.rcave = true
 		R.enter_room(me, "riverside"); me.x = -160.0; me.z = 318.0; me.tx = me.x; me.tz = me.z; me.wpn = D.I_TITHE
+	if OS.get_environment("DTV_PMENU") != "" and me:          # for pictures: a posse of three, and their card open
+		if _frame == at - 40:
+			var n := 0
+			for q in R.peasants:
+				if n < 3 and q.kind == 0 and q.owner == 0 and q.state != "body": q.owner = me.id; q.state = "follow"; q.x = me.x + 1.0 + n; q.z = me.z + 1.5; n += 1
+		if _frame == at - 10: _posse_menu()
 	if _frame == at - 40 and OS.get_environment("DTV_SHEEP") != "" and me:   # for pictures: on a sheep by the Herder, with a stray in the posse
 		me.herd = true; me.sheep = true; me.sheepFed = R.day; me.food = 5
 		me.x = D.HERDER.x - 4.0; me.z = D.HERDER.z - 1.0; me.r = PI / 2

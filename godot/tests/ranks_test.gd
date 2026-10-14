@@ -32,7 +32,7 @@ func _init() -> void:
 	ok("a book stops at ten, and the rest is spare", m.books[4] == 10 and m.spare > 0, [m.books[4], m.spare])
 	# ---------- what the new ranks do (a few of each book)
 	at(0, 7); var c7 := Rules.cap(m); at(0, 8)
-	ok("Woodcutter VIII: carry 60", c7 == 50 and Rules.cap(m) == 60)
+	ok("Woodcutter VIII: carry stays at 50 (version 7.24)", c7 == 50 and Rules.cap(m) == 50)
 	at(6, 7); var p7 := R.posse_max(m); at(6, 8)
 	ok("Leader VIII: a posse four larger than it began", R.posse_max(m) == p7 + 1 and R.posse_max(m) == R.pm + 4)
 	at(4, 8)

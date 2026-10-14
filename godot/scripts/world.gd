@@ -151,7 +151,7 @@ func _ground() -> void:
 
 
 func _castle() -> void:
-	Build.cyl(self, 30, 42, 7, HILL, Color("87a65d"), 14)
+	Build.cyl(self, 30, 42, 7, HILL, Color("75855a"), 14)   # (version 7.24: duller, as befits it)
 	Build.box(self, Vector3(6.5, 0.3, 14.4), Vector3(0, 3.42, -80.2), C.path2, 0.0, 0.53)
 	Build.box(self, Vector3(6.5, 0.1, 22), Vector3(0, 7, -97.5), C.path2)
 	var n := Node3D.new()
@@ -177,6 +177,129 @@ func _castle() -> void:
 	Build.glow_box(n, Vector3(1.2, 1.9, 0.2), Vector3(0, 18.4, 2.56), lit)
 	_castle_lit = lit
 	_evil_build(n)
+	_hilltop()
+
+
+## The castle's hilltop (version 7.24): it was bare grass. Now: dead turf, a ruined curtain wall, the Lord's own graveyard
+## with its mausoleum, a dry fountain gone green, gargoyles and green-lit lanterns up the road, dead trees with crows on
+## them, coffins waiting, bones, and a low mist.
+func _hilltop() -> void:
+	var top := HILL + Vector3(0, 7.0, 0)
+	var n := Node3D.new(); n.position = top; add_child(n)
+	var rg := RandomNumberGenerator.new(); rg.seed = 1313
+	var r := func(a: float, b: float) -> float: return rg.randf_range(a, b)
+	var stone := C.castle2
+	var stone2 := Color("5a5466")
+	var iron := Color("2c2c33")
+	var bone := Color("e6dcc4")
+	var free := func(x: float, z: float, pad: float) -> bool:      # off the castle, off the road, on the hill
+		if absf(x) < 12.5 + pad and absf(z) < 8.5 + pad: return false
+		if absf(x) < 4.2 + pad and z > 6.0: return false
+		return Vector2(x, z).length() < 27.0 - pad
+	Build.cyl(n, 29.6, 29.6, 0.04, Vector3(0, 0.0, 0), Color("6f7c5a"), 14)                  # the turf, gone grey
+	for i in 26:
+		var x: float = r.call(-26, 26); var z: float = r.call(-26, 26)
+		if free.call(x, z, 0.0): Build.box(n, Vector3(r.call(2, 6), 0.05, r.call(1.5, 4)), Vector3(x, 0.02, z), [Color("5f6b4c"), Color("6a6250"), Color("7a8466")][i % 3], r.call(0, 3))
+	# the curtain wall, mostly fallen: pieces in a ring, gaps, and a gateway where the road comes up
+	for i in 22:
+		var a := TAU * i / 22.0
+		if absf(wrapf(a - PI / 2, -PI, PI)) < 0.35: continue                                  # the gateway, towards the village
+		if i % 4 == 1: continue                                                               # where it has come down
+		var rad := 21.0
+		var x := cos(a) * rad
+		var z := sin(a) * rad
+		var h: float = r.call(1.2, 3.4)
+		Build.box(n, Vector3(5.6, h, 1.2), Vector3(x, 0, z), stone if i % 2 else stone2, -a + PI / 2, 0.0, r.call(-0.06, 0.06))
+		if h > 2.4:
+			for c in 2: Build.box(n, Vector3(0.9, 0.6, 1.2), Vector3(x, h, z) + Vector3(-sin(a), 0, cos(a)) * (c * 2.2 - 1.1), stone2, -a + PI / 2)
+		for k in 3: Build.box(n, Vector3(r.call(0.4, 0.9), r.call(0.3, 0.6), r.call(0.4, 0.8)), Vector3(x, 0, z) + Vector3(r.call(-2.5, 2.5), 0, r.call(-2.5, 2.5)), stone2, r.call(0, 3))
+	for sx in [-1.0, 1.0]:                                                                    # the gateposts, with a skull on each
+		Build.box(n, Vector3(1.4, 4.2, 1.4), Vector3(sx * 3.9, 0, 20.8), stone)
+		Build.box(n, Vector3(1.7, 0.3, 1.7), Vector3(sx * 3.9, 4.2, 20.8), stone2)
+		Build.box(n, Vector3(0.6, 0.55, 0.6), Vector3(sx * 3.9, 4.5, 20.8), bone)
+		Build.box(n, Vector3(0.14, 0.14, 0.05), Vector3(sx * 3.9 - 0.14, 4.75, 21.11), Color("17131c"))
+		Build.box(n, Vector3(0.14, 0.14, 0.05), Vector3(sx * 3.9 + 0.14, 4.75, 21.11), Color("17131c"))
+	# gargoyles on plinths, and green-lit lanterns, up the road
+	var gl := StandardMaterial3D.new(); gl.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; gl.albedo_color = Color(0.45, 1.0, 0.55)
+	for row in 2:
+		var gz := 12.0 + row * 5.5
+		for sx in [-1.0, 1.0]:
+			var gp := Node3D.new(); gp.position = Vector3(sx * 5.4, 0, gz); gp.rotation.y = -sx * 0.5; n.add_child(gp)
+			Build.box(gp, Vector3(1.0, 1.3, 1.0), Vector3.ZERO, stone2)
+			Build.box(gp, Vector3(0.6, 0.6, 0.8), Vector3(0, 1.3, 0), stone)                        # hunched
+			Build.box(gp, Vector3(0.44, 0.4, 0.42), Vector3(0, 1.85, 0.22), stone)                  # a head, leaning out
+			for ex in [-0.12, 0.12]: Build.box(gp, Vector3(0.08, 0.08, 0.04), Vector3(ex, 2.0, 0.44), Color(0.6, 1.0, 0.6)).material_override = gl
+			for wx in [-1.0, 1.0]: Build.box(gp, Vector3(0.1, 0.7, 0.6), Vector3(wx * 0.38, 1.5, -0.1), stone2, 0.0, 0.3, wx * 0.5)   # wings
+			for hx in [-0.14, 0.14]: Build.cone(gp, 0.06, 0.26, Vector3(hx, 2.04, 0.12), stone2, 4)   # horns
+		var lp := Vector3(-4.6 if row == 0 else 4.6, 0, gz + 2.6)                              # a lantern on a crooked post
+		Build.box(n, Vector3(0.16, 2.6, 0.16), lp, iron, 0.0, 0.0, 0.06)
+		Build.box(n, Vector3(0.7, 0.1, 0.1), lp + Vector3(0.3, 2.5, 0), iron)
+		Build.box(n, Vector3(0.36, 0.44, 0.36), lp + Vector3(0.6, 1.95, 0), iron)
+		Build.cone(n, 0.12, 0.3, lp + Vector3(0.6, 2.0, 0), Color.WHITE, 5).material_override = gl
+		var ll := OmniLight3D.new(); ll.light_color = Color(0.45, 1.0, 0.55); ll.omni_range = 5.0; ll.light_energy = 0.9
+		ll.position = lp + Vector3(0.6, 2.1, 0); n.add_child(ll)
+	# the Lord's graveyard, to the west, behind iron railings, with the family's mausoleum
+	var gy := Vector3(-18.0, 0, 8.0)
+	for i in 12:
+		var hp_ := gy + Vector3(-4.0 + (i % 4) * 2.4 + r.call(-0.3, 0.3), 0, -3.0 + (i / 4) * 2.4 + r.call(-0.3, 0.3))
+		var tall := i % 3 == 0
+		Build.box(n, Vector3(0.7, 1.4 if tall else 0.9, 0.22), hp_, [stone, stone2, Color("8a8494")][i % 3], r.call(-0.25, 0.25), r.call(-0.25, 0.2), r.call(-0.2, 0.2))
+		if tall: Build.box(n, Vector3(0.9, 0.18, 0.24), hp_ + Vector3(0, 1.05, 0), stone, 0.0, 0.0, r.call(-0.1, 0.1))   # a cross
+		Build.box(n, Vector3(0.8, 0.08, 1.5), hp_ + Vector3(0, 0, 0.9), Color("4f4636"))             # the grave
+	for i in 18:                                                                              # the railings round it
+		var t := i / 17.0
+		for side in [[Vector3(-6.0 + t * 12.0, 0, -4.8)], [Vector3(-6.0 + t * 12.0, 0, 5.0)], [Vector3(-6.0, 0, -4.8 + t * 9.8)], [Vector3(6.0, 0, -4.8 + t * 9.8)]]:
+			if i % 6 == 2 and side[0].z > 4.0: continue
+			Build.box(n, Vector3(0.06, 1.3, 0.06), gy + side[0], iron)
+			Build.cone(n, 0.08, 0.18, gy + side[0] + Vector3(0, 1.3, 0), iron, 4)
+	var mz := gy + Vector3(0, 0, -7.8)                                                       # the mausoleum
+	Build.box(n, Vector3(4.6, 3.4, 3.6), mz, stone2)
+	Build.box(n, Vector3(5.0, 0.4, 4.0), mz + Vector3(0, 3.4, 0), stone)
+	Build.cone(n, 3.0, 1.6, mz + Vector3(0, 3.8, 0), C.croof, 4, PI / 4)
+	Build.box(n, Vector3(1.4, 2.2, 0.1), mz + Vector3(0, 0, 1.82), Color("17131c"))
+	for sx in [-1.0, 1.0]: Build.cyl(n, 0.25, 0.28, 3.2, mz + Vector3(sx * 1.6, 0, 2.0), stone, 6)
+	var mg := OmniLight3D.new(); mg.light_color = Color(0.5, 1.0, 0.6); mg.omni_range = 3.0; mg.light_energy = 0.7
+	mg.position = mz + Vector3(0, 1.0, 2.4); n.add_child(mg)
+	# a dry fountain to the east, its last water gone green and glowing; coffins stacked by it
+	var fz := Vector3(18.0, 0, 7.0)
+	Build.cyl(n, 2.6, 2.8, 0.7, fz, stone2, 10)
+	var wm := StandardMaterial3D.new(); wm.albedo_color = Color(0.25, 0.5, 0.3); wm.emission_enabled = true; wm.emission = Color(0.3, 0.9, 0.4); wm.emission_energy_multiplier = 0.8
+	var wt := Build.cyl(n, 2.3, 2.3, 0.08, fz + Vector3(0, 0.55, 0), Color.WHITE, 10); wt.material_override = wm
+	Build.cyl(n, 0.35, 0.45, 2.0, fz, stone, 6)
+	Build.cyl(n, 0.9, 0.5, 0.3, fz + Vector3(0, 2.0, 0), stone, 8)
+	Build.box(n, Vector3(0.4, 0.5, 0.5), fz + Vector3(0, 2.3, 0), stone2)                       # a small gargoyle that used to spit water, and now just looks
+	var fl := OmniLight3D.new(); fl.light_color = Color(0.4, 1.0, 0.5); fl.omni_range = 5.0; fl.light_energy = 0.8
+	fl.position = fz + Vector3(0, 1.0, 0); n.add_child(fl)
+	for i in 5:                                                                               # coffins, some stood up, waiting
+		var up := i >= 3
+		var cp := fz + Vector3(4.0 + (i % 3) * 0.9, 0.0 if up else (i / 1) * 0.0 + 0.0, -4.0 + (i % 3) * 0.2) if not up else fz + Vector3(-3.6 + (i - 3) * 1.1, 0, -4.6)
+		if up: Build.box(n, Vector3(0.75, 2.0, 0.42), cp, Color("3b2a22"), r.call(-0.3, 0.3), -0.1)
+		else: Build.box(n, Vector3(0.8, 0.45, 2.0), cp + Vector3(0, i * 0.45 if i < 2 else 0.0, 0), Color("4a3428"), r.call(-0.1, 0.1))
+	# dead trees round the back, with crows sitting in them
+	var bark := Color("2e2620")
+	for i in 9:
+		var a: float = -PI / 2 + r.call(-1.3, 1.3)
+		var tp := Vector3(cos(a) * float(r.call(14.0, 25.0)), 0, sin(a) * float(r.call(11.0, 24.0)))
+		if not free.call(tp.x, tp.z, 0.5): continue
+		var tr := Node3D.new(); tr.position = tp; tr.rotation = Vector3(0, r.call(0, TAU), r.call(-0.15, 0.15)); n.add_child(tr)
+		var h: float = r.call(3.0, 5.2)
+		Build.cyl(tr, 0.15, 0.36, h, Vector3.ZERO, bark, 5)
+		for b in 3:
+			var br := Node3D.new(); br.position = Vector3(0, h * r.call(0.5, 0.95), 0); br.rotation = Vector3(0, r.call(0, TAU), r.call(0.6, 1.1)); tr.add_child(br)
+			var bl: float = r.call(1.0, 2.0)
+			Build.cyl(br, 0.04, 0.1, bl, Vector3.ZERO, bark, 4)
+			if b == 0 and i % 2 == 0:                                                            # a crow
+				Build.box(br, Vector3(0.2, 0.22, 0.34), Vector3(0, bl * 0.8, 0), Color("141018"))
+				Build.box(br, Vector3(0.12, 0.12, 0.14), Vector3(0, bl * 0.8 + 0.18, 0.16), Color("141018"))
+	# bones in the grass, and a low mist that lies on the hilltop
+	for i in 30:
+		var x: float = r.call(-25, 25); var z: float = r.call(-25, 25)
+		if free.call(x, z, 0.0): Build.box(n, Vector3(0.5, 0.08, 0.1), Vector3(x, 0.04, z), bone, r.call(0, 3))
+	var mist := StandardMaterial3D.new(); mist.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; mist.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mist.albedo_color = Color(0.82, 0.9, 0.84, 0.07); mist.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for i in 14:
+		var x: float = r.call(-24, 24); var z: float = r.call(-24, 24)
+		if Vector2(x, z).length() < 26: Build.glow_box(n, Vector3(r.call(5, 10), 0.6, r.call(4, 8)), Vector3(x, 0.05, z), mist, r.call(0, 3))
 
 
 ## Ashhollow gets worse as the month goes on. Three sets of things, hidden to begin with: one more is shown each week.
