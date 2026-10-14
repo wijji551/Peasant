@@ -59,7 +59,7 @@ static func tower_page(R: Rules, i: int, p: E.Player) -> Dictionary:
 	var o := []
 	var crew := R.tower_crew(s)
 	var mine := crew.filter(func(q): return q.owner == p.id)
-	var free := R.peasants.any(func(q): return q.owner == p.id and q.kind == 0 and q.plat == 0 and Rules.active(q))
+	var free := R.peasants.any(func(q): return q.owner == p.id and (q.kind == 0 or q.kind == 2) and q.plat == 0 and Rules.active(q))
 	var full := crew.size() >= D.TOWER.seats
 	var names := []
 	for q in crew:

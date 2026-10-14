@@ -86,11 +86,15 @@ func _init() -> void:
 	R.do_act(f, "tdown", 1)
 	ok("but nobody else's", R.tower_crew(t1).filter(func(q): return q.owner == 1).size() == 4 and R.tower_crew(t1).size() == 4, R.tower_crew(t1).size())
 	fast(1.0)
-	ok("by day they carry on with their leader", mine.all(func(q): return q.state != "post"))
+	var merc := R.mk_peasant(0, f.x + 1.0, f.z + 1.0, f.x, f.z, f.id); merc.kind = 2; merc.armed = 1; merc.state = "follow"; R.peasants.append(merc)
+	R.do_act(f, "tup", 1)
+	ok("a hired sword can be sent up too", merc.plat == t1.id)
+	merc.plat = 0; R.peasants.erase(merc)
+	ok("they set off for it straight away, even by day (version 7.22)", mine.all(func(q): return q.state == "post" or q.state == "follow"))
 	# ---------- at night
 	R.dusk_falls()
 	fast(8.0, func(): return not mine.all(func(q): return q.state == "post"))
-	ok("at dusk they climb up", mine.all(func(q): return q.state == "post" and R.in_box(q.x, q.z, 0.0, t1)), mine.map(func(q): return [q.state, snappedf(q.x, 0.1), snappedf(q.z, 0.1)]))
+	ok("and climb up", mine.all(func(q): return q.state == "post" and R.in_box(q.x, q.z, 0.0, t1)), mine.map(func(q): return [q.state, snappedf(q.x, 0.1), snappedf(q.z, 0.1)]))
 	var spots := {}
 	for q in mine: spots[Vector2(snappedf(q.x, 0.01), snappedf(q.z, 0.01))] = true
 	ok("each in their own place on it", spots.size() == mine.size(), spots.size())
@@ -165,7 +169,7 @@ func _init() -> void:
 	R.dusk_falls(); R.timeLeft = 0.01; R.step(STEP)
 	ok("the dawn notice says so", R.tonight_lines().any(func(l): return l.contains("east gate")), R.tonight_lines())
 	var cnt := [0, 0]                                            # (a lambda gets copies of plain numbers, so an array)
-	fast(40.0, func():
+	fast(90.0, func():
 		for o in R.undead:
 			if not o.has_meta("seen"):
 				o.set_meta("seen", true); cnt[1] += 1

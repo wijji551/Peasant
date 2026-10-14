@@ -1400,10 +1400,14 @@ func _inn_room() -> void:
 	_npc(n, Vector3(-4.6, 0, -0.35), 0.0, Color("8a6f8f"), "bonnet")
 	Build.box(n, Vector3(0.5, 0.06, 1.5), Vector3(-4.6, 0.72, 0.2), Color("9a9a9a"), 0.2)             # the knitting, which is long, and grey
 	_npc(n, Vector3(4.4, 0, -0.1), 0.0, Color("5d6b3f"), "cap")
-	# the stranger's corner, a long way from the fire
-	Build.box(n, Vector3(1.8, 0.8, 1.0), Vector3(-7.5, 0, -5.0), C.wood2)
-	Build.cyl(n, 0.1, 0.09, 0.2, Vector3(-7.2, 0.8, -4.8), Color("b9bcc4"), 7)
-	_npc(n, Vector3(-7.45, 0, -5.55), 0.5, Color("3b3340"), "hood")
+	# the stranger's corner, a long way from the fire: a small table and a chair of his own (version 7.22: he had been sat in the barrels)
+	Build.box(n, Vector3(1.1, 0.72, 0.9), Vector3(6.2, 0, 4.3), C.wood2)
+	Build.box(n, Vector3(1.2, 0.06, 1.0), Vector3(6.2, 0.72, 4.3), C.wood3)
+	Build.cyl(n, 0.1, 0.09, 0.2, Vector3(6.0, 0.78, 4.1), Color("b9bcc4"), 7)                        # a drink that has not gone down
+	Build.cyl(n, 0.05, 0.05, 0.14, Vector3(6.4, 0.78, 4.5), Color("e8dcc0"), 6)                      # and a stub of candle
+	Build.box(n, Vector3(0.6, 0.42, 0.6), Vector3(7.1, 0, 4.3), C.wood)                               # his chair
+	Build.box(n, Vector3(0.1, 0.8, 0.6), Vector3(7.38, 0.42, 4.3), C.wood)
+	_npc(n, Vector3(7.05, 0, 4.3), -PI * 0.5, Color("3b3340"), "hood")
 	# the gambler's table: a pack of cards and three cups
 	Build.box(n, Vector3(1.8, 0.8, 1.4), Vector3(6.6, 0, -3.4), C.wood2)
 	Build.box(n, Vector3(1.9, 0.05, 1.5), Vector3(6.6, 0.8, -3.4), Color("3f6b3a"))

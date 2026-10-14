@@ -776,9 +776,21 @@ func dog_step(q: E.Peasant, dt: float) -> void:
 		if r >= 5 and q.downT <= 0:
 			q.state = "follow"; q.hp = D.DOG.hp * 0.6
 		return
-	if Ld.room != "" or Ld.state == "hide":            # indoors: the dog waits outside, by the door
+	var over := room_at(q.x, q.z) == "riverside"       # (version 7.22) the dogs cross the river on the raft with the posse
+	var with_: bool = Ld.room != "" and D.ROOMS.has(Ld.room) and (Ld.rafted or over) and (Ld.room == "riverside" or D.ROOMS[Ld.room].get("parent", "") == "riverside")
+	if Ld.room != "" and D.ROOMS.has(Ld.room) and D.ROOMS[Ld.room].has("wait") and with_:   # its player has gone into a cave: it waits at the mouth
+		var wt: Array = D.ROOMS[Ld.room].wait
+		var mine_ := peasants.filter(func(o): return o.kind == 3 and o.owner == q.owner)
+		var sd := 1.0 if mine_.find(q) % 2 == 0 else -1.0
+		if D.d2(q.x, q.z, wt[0], wt[1]) > 1600: q.x = wt[0]; q.z = wt[1] + sd * 1.2
+		else: step_to(q, wt[0], wt[1] + sd * 1.2, D.DOG.spd, dt, 0.4)
+		q.state = "follow"; collide_friend(q, 0.3)
+		return
+	if (Ld.room != "" and not (Ld.room == "riverside" and with_)) or Ld.state == "hide":   # indoors: the dog waits outside, by the door
 		if Ld.room != "" and D.ROOMS.has(Ld.room):
-			var dr: Array = D.ROOMS[Ld.room].door
+			var dr: Array = D.ROOMS[D.ROOMS[Ld.room].get("parent", Ld.room)].door
+			if D.ROOMS[Ld.room].get("parent", Ld.room) == "riverside" and over:   # left on the far bank (its player swam back): it stays put
+				return
 			step_to(q, dr[0] + 1.0, dr[1] + 1.6, D.DOG.spd, dt, 0.4)
 		return
 	var bite := (D.DOG.bite + D.DOG.per * mini(r, 7)) * hn(Ld, D.B_DOG) * (1.25 if lore(Ld, D.I_LEAD) else 1.0)
@@ -3586,7 +3598,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					var best_q: E.Peasant = null
 					var bq := 1e9
 					for q in peasants:
-						if q.owner == p.id and q.kind == 0 and q.plat == 0 and active(q) and D.d2(q.x, q.z, s.x, s.z) < bq:
+						if q.owner == p.id and (q.kind == 0 or q.kind == 2) and q.plat == 0 and active(q) and D.d2(q.x, q.z, s.x, s.z) < bq:   # (version 7.22: hired swords too)
 							bq = D.d2(q.x, q.z, s.x, s.z); best_q = q
 					if best_q:
 						best_q.plat = s.id; best_q.roof = s.re
@@ -4439,7 +4451,7 @@ func player_step(p: E.Player, dt: float) -> void:
 					var best_q: E.Peasant = null
 					var bq := 1e9
 					for q in peasants:
-						if q.owner == p.id and q.kind == 0 and q.plat == 0 and active(q) and D.d2(q.x, q.z, s.x, s.z) < bq:
+						if q.owner == p.id and (q.kind == 0 or q.kind == 2) and q.plat == 0 and active(q) and D.d2(q.x, q.z, s.x, s.z) < bq:   # (version 7.22: hired swords too)
 							bq = D.d2(q.x, q.z, s.x, s.z); best_q = q
 					if best_q:
 						best_q.plat = s.id; best_q.roof = s.re
@@ -4603,7 +4615,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		if ps == null:
 			q.plat = 0
 			if q.state == "post": q.state = "follow"
-		elif phase == "day" or not ps.kept:            # by day, or up a tower nobody has seen to: with their leader
+		elif not ps.kept or (phase == "day" and ps.k == "platform"):   # up a tower nobody has seen to today: with their leader. (Version 7.22: a tower's crew goes straight up when sent, day or night)
 			if q.state == "post": q.state = "follow"
 		else:
 			q.roof = ps.re; q.tree = null
@@ -4615,7 +4627,14 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 				at += Vector2((n % 3 - 1) * 0.55, (n / 3) * 0.7 - 0.35)
 			if q.state != "post":
 				q.state = "follow"
-				if step_to(q, at.x, at.y, 5.4, dt, 0.2) < 0.7 or (ps.k == "tower" and in_box(q.x, q.z, 0.6, ps)):
+				var dl := Vector2(at.x - q.x, at.y - q.z).length()
+				var there := false
+				if dl > 2.0:                               # the walk there, round whatever is in the way
+					var wp := way_to(q.x, q.z, at.x, at.y)
+					walk_round(q, wp.x, wp.y, 6.4, dt)
+				else:
+					there = step_to(q, at.x, at.y, 5.4, dt, 0.2) < 0.7
+				if there or (ps.k == "tower" and in_box(q.x, q.z, 0.6, ps)):
 					q.state = "post"; q.x = at.x; q.z = at.y
 				return
 			q.x = at.x; q.z = at.y

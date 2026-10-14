@@ -709,3 +709,12 @@ From Matt's play.
 - **The Riverside's river**: the countryside's ground box reached right over the river, so only a thin strip showed. It now stops at the bank; the near bank's sand is raised above the grass.
 - **Banners**: the wave's speed no longer changes with the wind (that jolted it whenever you stopped); only its size does.
 - `river_test` (62) now goes in and out of the caves, checks the boarded door, reaches everything inside each cave, and the posse waiting outside. All suites and co-op pass.
+
+## Version 7.22: tower crews, dogs across the river, the stranger's table (build counter 29)
+
+From Matt's play.
+
+- **Tower crews.** Sent up a watch tower (`tup`, or `post` for the old platform), a peasant now goes straight there and stays, day or night, until coaxed down; only a tower nobody has seen to today sends its crew back to their leader. The walk there uses `way_to` and `walk_round`, so they no longer catch on houses (it took half a minute from the market). Hired swords (kind 2) can be sent too, and the notice counts them as free. In testing a kitted peasant went up the same as any; the trouble was the dusk-only climb and the slow walk, and hired swords not counting.
+- **Dogs across the river.** `dog_step`: if its player has crossed on the raft (or the dog is already over), the dog goes too (teleported over at the crossing, as the posse is), waits at a cave's `wait` spot while its player is inside, and comes back on the raft. A dog left over there when its player swims back stays put.
+- **The stranger** in the Thorny Rose had been drawn inside the barrels behind the bar. He now has his own small table, with his drink and a candle stub, and a chair, in the front corner by the door (the room's box, his notice and his sign moved with him).
+- Tests: `river_test` (67) takes two dogs across, into a cave's mouth and home; `tower_test` (35) sends a hired sword up, and counts the side-gate share over 90 seconds instead of 40 (it was on a knife-edge). All suites and co-op pass.

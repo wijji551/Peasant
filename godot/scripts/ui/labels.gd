@@ -9,7 +9,7 @@ const PLACES := [
 	["Old ruins: search", 10.9, -14.8, 3.0], ["Ruins: search", "ruin1", 0.0, 5.0], ["Ruins: search", "ruin2", 0.0, 5.0],
 	["Outcrop: stone", "quarry", 0.0, 3.6], ["Mine: iron", "mine", 0.0, 4.0], ["Jetty: fishing", "jetty", 0.0, 1.6],
 	["Old mine: steel", -108.0, -44.0, 4.0], ["The old mill", 104.0, 30.0, 9.0], ["Merchant", "cart", 0.0, 3.2], ["Bailiff’s back door", -14.5, -16.4, 2.8],
-	["A chest", "chest", 0.0, 1.9], ["The bar", 60.0, 235.3, 2.6], ["Old Marge", 55.4, 240.9, 2.3], ["Tam the Carter", 64.4, 241.2, 2.4], ["A stranger", 52.6, 235.0, 2.3],
+	["A chest", "chest", 0.0, 1.9], ["The bar", 60.0, 235.3, 2.6], ["Old Marge", 55.4, 240.9, 2.3], ["Tam the Carter", 64.4, 241.2, 2.4], ["A stranger", 66.6, 244.3, 2.3],
 	["The gambler", 66.8, 236.6, 2.4], ["A bookshelf", 52.4, 239.3, 2.9], ["Out", 60.0, 245.6, 1.4], ["The ladder up", 0.0, 250.0, 2.0], ["The Old Mine", -104.0, -40.2, 3.2], ["Notice board", -5.5, -9.5, 2.5], ["A new letter from the castle", "letter", 0.0, 2.9],
 	["The raft", "raft", 0.0, 4.6],
 	# the Riverside (version 7.14)

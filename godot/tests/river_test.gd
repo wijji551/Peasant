@@ -313,6 +313,25 @@ func _init() -> void:
 	fast(8.0)
 	var TW: Array = D.ROOMS.tcave.wait
 	ok("the posse waits outside the cave's mouth", pq.all(func(q): return D.d2(q.x, q.z, TW[0], TW[1]) < 25.0), pq.map(func(q): return [snappedf(q.x, 0.1), snappedf(q.z, 0.1)]))
+	# the dogs (version 7.22): across on the raft, at the cave's mouth, and home again
+	R.leave_room(m); R.leave_room(m)
+	ok("back home, out of the cave and over on the raft", m.room == "")
+	var dogs := []
+	for i in 2:
+		var dg := R.mk_peasant(3, m.x + 1.0 + i, m.z + 1.0, m.x, m.z, m.id); dg.state = "follow"; R.peasants.append(dg); dogs.append(dg)
+	R.enter_room(m, "riverside")
+	fast(2.0)
+	ok("the dogs come across on the raft too", dogs.all(func(dg): return R.room_at(dg.x, dg.z) == "riverside" and D.d2(dg.x, dg.z, m.x, m.z) < 25.0), dogs.map(func(dg): return [snappedf(dg.x, 0.1), snappedf(dg.z, 0.1)]))
+	R.enter_room(m, "rcave")
+	fast(6.0)
+	var RW: Array = D.ROOMS.rcave.wait
+	ok("and wait at the cave's mouth", dogs.all(func(dg): return D.d2(dg.x, dg.z, RW[0], RW[1]) < 16.0), dogs.map(func(dg): return [snappedf(dg.x, 0.1), snappedf(dg.z, 0.1)]))
+	R.leave_room(m)
+	fast(3.0)
+	ok("and come to heel when you come out", dogs.all(func(dg): return D.d2(dg.x, dg.z, m.x, m.z) < 16.0))
+	R.leave_room(m)
+	fast(2.0)
+	ok("and home again on the raft", dogs.all(func(dg): return R.room_at(dg.x, dg.z) == "" and D.d2(dg.x, dg.z, m.x, m.z) < 25.0), dogs.map(func(dg): return [snappedf(dg.x, 0.1), snappedf(dg.z, 0.1)]))
 	# ---------------------------------------------------------------- kept and sent
 	var sv := R.save_data()
 	var R2 := Rules.new()

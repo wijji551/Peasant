@@ -436,7 +436,7 @@ const ROOMS := {
 		"box": [[-3.4, 243.0, 0.5, 0.5], [3.4, 243.0, 0.5, 0.5], [-3.4, 236.0, 0.5, 0.5], [3.4, 236.0, 0.5, 0.5], [1.6, 232.4, 1.0, 0.7]]},
 	"inn": {"name": "the Thorny Rose Inn", "x": 60.0, "z": 240.0, "hw": 8.0, "hd": 6.0, "at": [60.0, 245.3], "door": [-13.2, -4.7],
 		"in": "go into the Thorny Rose", "out": "go back out into the square",
-		"box": [[60.0, 235.3, 4.6, 0.55], [55.4, 240.9, 0.85, 0.85], [64.4, 241.2, 0.85, 0.85], [66.6, 236.6, 0.9, 0.7], [52.35, 239.3, 0.35, 1.2], [52.5, 235.0, 0.9, 0.5], [53.4, 244.6, 0.4, 0.4]]},
+		"box": [[60.0, 235.3, 4.6, 0.55], [55.4, 240.9, 0.85, 0.85], [64.4, 241.2, 0.85, 0.85], [66.6, 236.6, 0.9, 0.7], [52.35, 239.3, 0.35, 1.2], [66.4, 244.3, 1.0, 0.5], [53.4, 244.6, 0.4, 0.4]]},
 	# the far bank of the river (version 7.12): out of doors, a long way off the map like the inn and the mine. "open": it has
 	# the sky over it, and the posse comes across on the raft. The river is along its north edge; the door is the raft.
 	"riverside": {"name": "the Riverside", "x": -160.0, "z": 320.0, "hw": 50.0, "hd": 36.0, "at": [-160.0, 285.5], "door": [-30.0, 51.0], "open": true,
@@ -884,7 +884,7 @@ const STATIONS := [
 	{"id": "letter", "x": -4.2, "z": -18.4, "r": 1.6, "name": "the gatepost", "verb": "read the letter nailed to the gatepost"},
 	{"id": "local0", "x": 55.4, "z": 242.3, "r": 1.7, "room": "inn", "name": "Old Marge", "verb": "talk to Old Marge"},
 	{"id": "local1", "x": 64.4, "z": 242.6, "r": 1.7, "room": "inn", "name": "Tam the Carter", "verb": "talk to Tam the Carter"},
-	{"id": "local2", "x": 53.6, "z": 235.9, "r": 1.6, "room": "inn", "name": "the stranger in the corner", "verb": "talk to the stranger in the corner"},
+	{"id": "local2", "x": 64.9, "z": 244.3, "r": 1.6, "room": "inn", "name": "the stranger in the corner", "verb": "talk to the stranger in the corner"},
 	{"id": "gambler", "x": 65.6, "z": 237.9, "r": 1.7, "room": "inn", "name": "the gambler", "verb": "sit down with the gambler"},
 	{"id": "shelf", "x": 53.1, "z": 239.3, "r": 1.4, "room": "inn", "name": "the inn’s bookshelf", "verb": "look at the inn’s bookshelf"},
 	{"id": "prospero", "x": 54.4, "z": 244.6, "r": 1.4, "room": "inn", "name": "Prospero", "verb": "talk to Prospero, on the stool by the fire"},
