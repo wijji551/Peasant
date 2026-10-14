@@ -39,6 +39,10 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.16: a bit of character underfoot", [
+		"The open grass, in the village’s fields and across the river, now has tufts of long grass, pebbles, little clumps of flowers, bare patches of earth and the odd small bush. And toadstools under the trees of the forest.",
+		"Mole hills. A few turn up every morning out in the countryside, and three across the river (never in the village or the hamlet). Walk past one and the mole pops out, has a look at you, and leaves a few pence behind. Nobody knows where moles get money, and nobody has asked them.",
+	]],
 	["Version 7.15: the dead, as they should look", [
 		"The dead are back to the colours of the dead: grey, mottled, and in want of a wash. The green is now only a faint glow about the edges, and a sickly green light on the ground about each of them, so you can still pick them out at night. They should no longer be mistaken for anything from a block-building game.",
 		"The raft’s building site, on the riverbank south-west of the village, can now be found: a sandy slipway with planks, stakes and rope, a sign, a red flag on a tall pole, a label saying how much wood it has, and a red mark on the map.",

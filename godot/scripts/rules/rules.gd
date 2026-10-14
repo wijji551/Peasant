@@ -31,6 +31,7 @@ var tore_day := 0             # the day the piece of ore in the coveted relic's 
 var merch2 := -1              # the travelling merchant at the Riverside today (never the one in the village)
 var wares2: Array = []
 var brew: Array = [{}, {}, {}, {}]   # what the druid asks for each potion today
+var moles: Array = []         # mole hills (version 7.16): [x, z, popped today, "" or "riverside"]; a mole pops up once, with a few coins
 var smokes: Array = []        # the Jester's lingering smoke (rank 5): [x, z, radius, seconds left]; the dead in it are slowed
 var jest_force := -1          # for the tests: the next trick's luck (0 fails, 1 works, 2 lucky, 3 the Big Finish), or -1 for the dice
 var fires: Array = []         # burning oil on the ground: [x, z, radius, seconds left, whose, tick]
@@ -369,6 +370,42 @@ func strays_of(p: E.Player) -> int:
 	for q in peasants:
 		if q.stray and q.owner == p.id and q.state != "body": n += 1
 	return n
+
+## Mole hills, new each morning: out in the countryside, never in the village or the hamlet, nor on a road or a field.
+func make_moles(rng: RandomNumberGenerator) -> void:
+	moles = []
+	var tries := 0
+	while moles.size() < D.MOLES.main and tries < 400:
+		tries += 1
+		var x := rng.randf_range(D.X0 + 6, D.X1 - 6)
+		var z := rng.randf_range(D.Z0 + 6, 50.0)
+		if x > -D.VW - 6 and x < D.VW + 6 and z > D.VN - 6 and z < D.VS + 6: continue
+		if absf(x) < 5 or absf(z - D.GATE_Z) < 4 or Vector2(x, z).distance_to(D.HILL) < 34: continue
+		if x > D.FARM.x0 - 2 and x < D.FARM.x1 + 2 and z > D.FARM.z0 - 2 and z < D.FARM.z1 + 2: continue
+		if near_colliders(x, z).any(func(c): return absf(x - c.x) < c.hw + 1 and absf(z - c.z) < c.hd + 1): continue
+		if near_trees(x, z).any(func(t): return t.alive and D.d2(x, z, t.x, t.z) < 2.0): continue
+		moles.append([x, z, false, ""])
+	var M: Dictionary = D.ROOMS.riverside
+	tries = 0
+	var n := 0
+	while n < D.MOLES.river and tries < 300:
+		tries += 1
+		var x := rng.randf_range(M.x - M.hw + 3, M.x + M.hw - 3)
+		var z := rng.randf_range(M.z - M.hd + 6, M.z + M.hd - 3)
+		if x > -182 and x < -138 and z > 292 and z < 330: continue                     # the hamlet and its fence
+		if absf(x + 160.0) < 3 or M.box.any(func(b): return absf(x - b[0]) < b[2] + 1 and absf(z - b[1]) < b[3] + 1): continue
+		moles.append([x, z, false, "riverside"]); n += 1
+
+## Walking past a mole hill: the mole pops out, has a look, and leaves a few coins behind (who knows where it gets them).
+func moles_step() -> void:
+	for p in players:
+		if p.state != "ok" or (p.room != "" and p.room != "riverside"): continue
+		for m in moles:
+			if not m[2] and m[3] == p.room and D.d2(p.x, p.z, m[0], m[1]) < D.MOLES.r * D.MOLES.r:
+				m[2] = true
+				var n: int = D.MOLES.coin[0] + randi() % (D.MOLES.coin[1] - D.MOLES.coin[0] + 1)
+				p.coin += n
+				ev.append(["mole", r1(m[0]), r1(m[1]), p.id, n])
 
 ## The developer console (the test copy): straight to the morning of day d, as if the night before had just ended.
 func dev_day(d: int) -> void:
@@ -1231,6 +1268,7 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	for wv in wares2: wv.price = ceili(wv.price * D.TRAVEL_MUL)
 	brew = []
 	for k in D.POTIONS.size(): brew.append(druid_price(rng, k))
+	make_moles(rng)
 	for p in players:
 		p.job = false; p.jobT = 0.0; p.merc = false; p.drill = 0.0; p.game = {}; p.gwon = 0; p.treated = 0
 	bail_mood = 0
@@ -3648,6 +3686,7 @@ func step(dt: float) -> void:
 	for q in peasants:
 		peasant_step(q, dt)
 	village_step(dt)
+	moles_step()
 	undead_step(dt); spikes_step(dt); contraptions_step(dt)
 	if undead.any(func(u): return u.dead):
 		var keep := []

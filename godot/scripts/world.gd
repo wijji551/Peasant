@@ -101,6 +101,7 @@ func _ready() -> void:
 	_farms()
 	_downs()
 	_riverside()
+	_ground_detail()
 
 
 func rr(a: float, b: float) -> float:
@@ -447,6 +448,100 @@ func _walls() -> void:
 
 
 ## Many copies of one mesh, each with its own place and colour.
+## Small things on the ground (version 7.16), so the open grass is not one flat green: tufts of grass, pebbles,
+## flowers, bare patches of earth, little bushes, and toadstools in the forest. A handful of shared meshes, drawn many
+## times each; nothing to bump into. Fewer in the village and the hamlet, none on the roads, the fields or the river.
+func _ground_detail() -> void:
+	var rg := RandomNumberGenerator.new()
+	rg.seed = 7160
+	var cs := Map.colliders()
+	var clear := func(x: float, z: float, r: float) -> bool:   # not inside anything built
+		for c: E.Box in cs:
+			if absf(x - c.x) < c.hw + r and absf(z - c.z) < c.hd + r: return false
+		return true
+	var main_ok := func(x: float, z: float) -> bool:
+		if x < D.X0 + 1 or x > D.X1 - 1 or z < D.Z0 + 2 or z > 52.5: return false
+		if absf(x) < 3.6 and z < D.VN: return false                                      # the castle road
+		if absf(z - D.GATE_Z) < 2.6 and absf(x) < 48: return false                       # the gate roads
+		if x > D.FARM.x0 - 1 and x < D.FARM.x1 + 1 and z > D.FARM.z0 - 1 and z < D.FARM.z1 + 1: return false
+		if Vector2(x, z).distance_to(D.HILL) < 30: return false                          # the castle
+		if Vector2(x - D.MILL.x, z - D.MILL.z).length() < 4.5: return false
+		var inside := x > -D.VW and x < D.VW and z > D.VN and z < D.VS
+		if inside and (rg.randf() < 0.7 or absf(x) < 4.5): return false                  # the village: a few, round the edges
+		return clear.call(x, z, 0.5)
+	var RM: Dictionary = D.ROOMS.riverside
+	var river_ok := func(x: float, z: float) -> bool:
+		if absf(x - RM.x) > RM.hw - 0.5 or z < RM.z - RM.hd + 3 or z > RM.z + RM.hd - 0.5: return false
+		if absf(x + 160.0) < 2.6 and z > 324: return false                                # the road south
+		if x > -128 and x < -116 and z > 328: return false                                # the fields
+		var inside := x > -178 and x < -142 and z > 296 and z < 326
+		if inside and rg.randf() < 0.65: return false
+		for b in RM.box:
+			if absf(x - b[0]) < b[2] + 0.5 and absf(z - b[1]) < b[3] + 0.5: return false
+		return true
+	var spots := func(n: int, ok_: Callable, x0: float, x1: float, z0: float, z1: float) -> Array:
+		var out := []
+		for t in n * 3:
+			if out.size() >= n: break
+			var x := rg.randf_range(x0, x1)
+			var z := rg.randf_range(z0, z1)
+			if ok_.call(x, z): out.append(Vector2(x, z))
+		return out
+	var areas := [[main_ok, D.X0, D.X1, D.Z0, 53.0, 1.0], [river_ok, RM.x - RM.hw, RM.x + RM.hw, RM.z - RM.hd, RM.z + RM.hd, 0.28]]
+	var tuft := PrismMesh.new(); tuft.size = Vector3(0.36, 0.42, 0.12)
+	var pebble := BoxMesh.new(); pebble.size = Vector3(0.3, 0.12, 0.24)
+	var stem := BoxMesh.new(); stem.size = Vector3(0.04, 0.26, 0.04)
+	var petal := BoxMesh.new(); petal.size = Vector3(0.14, 0.08, 0.14)
+	var dirt := CylinderMesh.new(); dirt.top_radius = 0.5; dirt.bottom_radius = 0.5; dirt.height = 0.025; dirt.radial_segments = 7; dirt.rings = 1
+	var bush := SphereMesh.new(); bush.radius = 0.5; bush.height = 0.7; bush.radial_segments = 7; bush.rings = 3
+	var cap := CylinderMesh.new(); cap.top_radius = 0.04; cap.bottom_radius = 0.2; cap.height = 0.14; cap.radial_segments = 7
+	var mstem := CylinderMesh.new(); mstem.top_radius = 0.05; mstem.bottom_radius = 0.06; mstem.height = 0.18; mstem.radial_segments = 6
+	var lists := {"tuft": [[], []], "pebble": [[], []], "stem": [[], []], "petal": [[], []], "dirt": [[], []], "bush": [[], []], "cap": [[], []], "mstem": [[], []]}
+	var put := func(k: String, xf: Transform3D, c: Color) -> void:
+		lists[k][0].append(xf); lists[k][1].append(c)
+	var flowers := [Color("f2c94c"), Color("f6f0ff"), Color("e05a7a"), Color("b36ad8"), Color("6aa8f0"), Color("f08a3a")]
+	for A in areas:
+		var f: float = A[5]
+		for p in spots.call(int(1700 * f), A[0], A[1], A[2], A[3], A[4]):            # tufts of grass, in little clumps
+			for j in 3:
+				var h := rg.randf_range(0.7, 1.4)
+				put.call("tuft", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, rg.randf_range(-0.2, 0.2))).scaled(Vector3(1, h, 1)), Vector3(p.x + rg.randf_range(-0.3, 0.3), 0.2 * h, p.y + rg.randf_range(-0.3, 0.3))),
+					[Color("6f9a3e"), Color("83ad4c"), Color("9cbf5e"), Color("7a9440")][j % 4])
+		for p in spots.call(int(650 * f), A[0], A[1], A[2], A[3], A[4]):               # pebbles
+			var s := rg.randf_range(0.6, 1.5)
+			put.call("pebble", Transform3D(Basis.from_euler(Vector3(rg.randf_range(-0.2, 0.2), rg.randf() * TAU, 0)).scaled(Vector3(s, s, s)), Vector3(p.x, 0.04 * s, p.y)), [Color("a69f90"), Color("c3bcab"), Color("8a8478")][rg.randi() % 3])
+		for p in spots.call(int(380 * f), A[0], A[1], A[2], A[3], A[4]):               # flowers, a few together and all of a colour
+			var col: Color = flowers[rg.randi() % flowers.size()]
+			for j in rg.randi_range(2, 5):
+				var at := Vector3(p.x + rg.randf_range(-0.6, 0.6), 0, p.y + rg.randf_range(-0.6, 0.6))
+				put.call("stem", Transform3D(Basis(), at + Vector3(0, 0.13, 0)), Color("5d8a3a"))
+				put.call("petal", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, 0)), at + Vector3(0, 0.28, 0)), col)
+		for p in spots.call(int(140 * f), A[0], A[1], A[2], A[3], A[4]):               # bare earth
+			var s := Vector3(rg.randf_range(0.9, 2.0), 1, rg.randf_range(0.7, 1.5))
+			put.call("dirt", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, 0)).scaled(s), Vector3(p.x, 0.02, p.y)), [Color("9c7d47"), Color("a88a55"), Color("8a6e40")][rg.randi() % 3])
+		for p in spots.call(int(150 * f), A[0], A[1], A[2], A[3], A[4]):               # little bushes
+			var s := rg.randf_range(0.6, 1.3)
+			put.call("bush", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, 0)).scaled(Vector3(s * 1.2, s, s)), Vector3(p.x, 0.22 * s, p.y)), [C.leaf, C.leaf2, C.hedge3][rg.randi() % 3])
+	var trees_ := Map.trees()                                                           # toadstools, by the trees of the forest
+	for k in 110:
+		var t: E.Trunk = trees_[rg.randi() % trees_.size()]
+		if t.x > -34: continue
+		var a := rg.randf() * TAU
+		var at := Vector3(t.x + cos(a) * rg.randf_range(0.9, 1.6), 0, t.z + sin(a) * rg.randf_range(0.9, 1.6))
+		for j in rg.randi_range(1, 3):
+			var o := at + Vector3(rg.randf_range(-0.3, 0.3), 0, rg.randf_range(-0.3, 0.3))
+			var s := rg.randf_range(0.7, 1.3)
+			var red := rg.randf() < 0.6
+			put.call("mstem", Transform3D(Basis().scaled(Vector3(s, s, s)), o + Vector3(0, 0.09 * s, 0)), Color("efe6cf"))
+			put.call("cap", Transform3D(Basis().scaled(Vector3(s, s, s)), o + Vector3(0, 0.22 * s, 0)), Color("c0262e") if red else Color("b08a5a"))
+	var meshes := {"tuft": tuft, "pebble": pebble, "stem": stem, "petal": petal, "dirt": dirt, "bush": bush, "cap": cap, "mstem": mstem}
+	for k in lists:
+		var xf: Array[Transform3D] = []
+		var cl: Array[Color] = []
+		xf.assign(lists[k][0]); cl.assign(lists[k][1])
+		if xf.size(): _multi(meshes[k], xf, cl)
+
+
 func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color]) -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -1703,6 +1798,38 @@ func _hamlet_step(delta: float) -> void:
 					Sound.play("cluck", 0.5, Vector2(c[1].x, c[1].z))
 
 
+# ---------------------------------------------------------------- mole hills (version 7.16)
+var _moles: Array = []                    # [hill node, mole node, seconds of popping left]
+var _mole_sig := ""
+
+## Put the day's mole hills where the rules say (a hill that has popped is flattened a little, its mole gone home).
+func set_moles(ml: Array) -> void:
+	var sig := str(ml.map(func(m): return [roundi(m[0]), roundi(m[1]), m[2]]))
+	if sig == _mole_sig: return
+	_mole_sig = sig
+	while _moles.size() < ml.size():
+		var h := Node3D.new(); add_child(h)
+		Build.cyl(h, 0.25, 0.75, 0.42, Vector3.ZERO, Color("6b4a2f"), 9)
+		for k in 5: Build.box(h, Vector3(0.22, 0.12, 0.2), Vector3(cos(k * 1.3) * 0.7, 0, sin(k * 1.3) * 0.7), Color("7a5a38"), k)
+		var mo := Node3D.new(); h.add_child(mo); mo.visible = false
+		Build.box(mo, Vector3(0.32, 0.36, 0.3), Vector3(0, 0, 0), Color("3a3430"))
+		Build.box(mo, Vector3(0.1, 0.08, 0.1), Vector3(0, 0.24, 0.16), Color("f0a0b0"))            # its pink nose
+		for sx in [-0.17, 0.17]: Build.box(mo, Vector3(0.12, 0.05, 0.1), Vector3(sx, 0.12, 0.12), Color("f0c0c8"))   # and its digging hands
+		_moles.append([h, mo, 0.0])
+	for i in _moles.size():
+		var h: Node3D = _moles[i][0]
+		h.visible = i < ml.size()
+		if i < ml.size():
+			h.position = Vector3(float(ml[i][0]), 0, float(ml[i][1]))
+			h.scale = Vector3(1, 0.55 if ml[i][2] else 1.0, 1)
+
+## A mole pops out of the hill at (x, z), looks about, and goes back down.
+func mole_pop(x: float, z: float) -> void:
+	for m in _moles:
+		if Vector2(m[0].position.x - x, m[0].position.z - z).length() < 0.5:
+			m[2] = 1.8
+
+
 func _raft_node(at: Vector3) -> Node3D:
 	var r := Node3D.new(); r.position = at; add_child(r)
 	for i in 6: Build.cyl(r, 0.28, 0.28, 4.2, Vector3(-1.4 + i * 0.56, 0.12, 0), C.wood if i % 2 else C.wood2, 7, 0, PI / 2)
@@ -1806,4 +1933,11 @@ func _process(delta: float) -> void:
 	if _inn_fire: _inn_fire.light_energy = 2.0 + 0.5 * sin(Time.get_ticks_msec() / 90.0) + 0.3 * sin(Time.get_ticks_msec() / 37.0)
 	if mill_sails: mill_sails.rotation.x += delta * 0.55
 	_hamlet_step(delta)
+	for m in _moles:                                 # a mole, popping up and going down again
+		if m[2] > 0:
+			m[2] = maxf(0.0, m[2] - delta)
+			var t: float = 1.0 - m[2] / 1.8
+			m[1].visible = m[2] > 0
+			m[1].position = Vector3(0, -0.2 + 0.62 * sin(minf(1.0, t * 1.6) * PI * 0.5) * (1.0 - smoothstep(0.75, 1.0, t)), 0)
+			m[1].rotation.y = sin(t * 9.0) * 0.6
 	if maypole: maypole.rotation.y += delta * 0.12

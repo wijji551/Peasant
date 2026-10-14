@@ -1084,6 +1084,10 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"fetched": if ev[1] == me.id: hud.banner("Fetched", "The dog has brought you %s." % ev[2], 1.8)
 		"no": if ev[1] == me.id: Sound.play("no"); hud.banner(ev[3] if ev.size() > 3 else "Not here", ev[2], 1.6 if ev.size() < 4 else 2.4)
 		"baa": Sound.play("baa", 0.8, Vector2(ev[1], ev[2]))
+		"mole":                                           # a mole pops up out of its hill, and there are coins
+			world.mole_pop(ev[1], ev[2]); F.puff(ev[1], 0.3, ev[2], 10, F.C_WOOD, 2.0); F.puff(ev[1], 0.8, ev[2], 5, F.C_COIN, 2.0)
+			Sound.play("pop", 0.9, Vector2(ev[1], ev[2])); Sound.play("coin", 0.8, Vector2(ev[1], ev[2]))
+			if ev[3] == me.id: hud.banner("A mole!", "It pops up, has a look at you, and leaves %s behind. Nobody knows where moles get money." % D.coins(int(ev[4])), 2.6)
 		"raft": F.puff(ev[1], 0.3, ev[2], 10, F.C_SPLASH, 2.0); Sound.play("splash", 0.8, Vector2(ev[1], ev[2]))
 		"splash": F.puff(ev[1], 0.3, ev[2], 16, F.C_SPLASH, 3.0); Sound.play("splash", 1.0, Vector2(ev[1], ev[2]))
 		"drink":
@@ -1414,6 +1418,7 @@ func _camera(delta: float) -> void:
 	if indoors: _pan_t = -1.0
 	world.set_veins(R.rune_left)
 	world.set_riverside(R.raft, R.raftW, R.rcave, R.runes2)
+	world.set_moles(R.moles)
 	atmos.indoors = indoors
 	if not win.is_open("menu"):
 		_yaw_goal += ((1.0 if Keys.held("cam_right") else 0.0) - (1.0 if Keys.held("cam_left") else 0.0)) * delta * 2.2

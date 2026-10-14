@@ -584,7 +584,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind + (100 if q.stray else 0), q.plat, q.kit])
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
-		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "rv2": [R.raftW, R.raft, R.rcave, R.spots2, R.runes2, R.tore_day, R.merch2, R.wares2, R.brew], "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]), "po": R.pools,
+		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "mo": R.moles, "rv2": [R.raftW, R.raft, R.rcave, R.spots2, R.runes2, R.tore_day, R.merch2, R.wares2, R.brew], "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]), "po": R.pools,
 		"pl": pl, "pe": pe, "ev": ev_out}
 	if with_undead:
 		var un := PackedFloat32Array()
@@ -691,6 +691,7 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 	R.letters = lt[0]; R.letter_new = bool(lt[1])
 	R.chest = m.get("ch", {})
 	R.rune_left = m.get("rn", R.rune_left)
+	R.moles = m.get("mo", R.moles)
 	var rv2: Array = m.get("rv2", [])
 	if rv2.size() >= 9:
 		R.raftW = int(rv2[0]); R.raft = bool(rv2[1]); R.rcave = bool(rv2[2]); R.spots2 = rv2[3]; R.runes2 = rv2[4]; R.tore_day = int(rv2[5]); R.merch2 = int(rv2[6]); R.wares2 = rv2[7]; R.brew = rv2[8]

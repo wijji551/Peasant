@@ -461,6 +461,7 @@ const TITHE_RUBBLE := {"x": -185.8, "z": 306.4, "time": 60.0, "day": 1.0 / 20.0,
 const TITHE_ORE := {"x": -185.8, "z": 311.6}                          # one piece of ore a day, for whoever gets to it first
 const TITHE_FEE := 12                                                 # what the cave's owner charges a search, a shilling more each week
 const RCAVE_WOOD := 20
+const MOLES := {"main": 7, "river": 3, "r": 1.6, "coin": [3, 12]}      # mole hills each morning, how near you pass to wake one, and what it leaves (pence)
 const RESIDENT := {"wood": 30, "stone": 30, "iron": 30, "food": 30, "steel": 45, "mith": 60, "rune": 120, "weapon": 480, "armour": 360}   # five of a material (one of mithril or runes), or a rune weapon or piece of armour
 const TRAVEL_MUL := 1.5                                              # the travelling merchant charges half as much again
 # --- Granny's potions, which the druid brews (and will not explain). Each lasts two minutes; the last, fifteen to twenty seconds.
