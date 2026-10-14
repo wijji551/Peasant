@@ -39,6 +39,11 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.19: wind, a sharper tithe, and tidier grass", [
+		"Banners now fly in the wind. The cloth ripples and flaps on its pole, harder when you run, as though it were trying to get there first.",
+		"The Tithe Collector now hits for 50, up from 40. It is the best weapon in the game, and it now has the figures to say so.",
+		"The ground has been thinned by about a quarter: fewer tufts, pebbles, flowers, bushes and toadstools. The countryside was getting above itself.",
+	]],
 	["Version 7.18: mends to boots, dogs and the blessed", [
 		"Boots now stay on your feet. Before, they stood still where they were while your legs walked off without them.",
 		"The dog no longer walks backwards. It was being turned round twice, which is once too many for a dog. It also waits until its place at your side is a little way off before it trots over, so it no longer goes round in circles every time you turn; and with two dogs, each keeps to its own side.",

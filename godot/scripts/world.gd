@@ -502,28 +502,28 @@ func _ground_detail() -> void:
 	var flowers := [Color("f2c94c"), Color("f6f0ff"), Color("e05a7a"), Color("b36ad8"), Color("6aa8f0"), Color("f08a3a")]
 	for A in areas:
 		var f: float = A[5]
-		for p in spots.call(int(1700 * f), A[0], A[1], A[2], A[3], A[4]):            # tufts of grass, in little clumps
+		for p in spots.call(int(1275 * f), A[0], A[1], A[2], A[3], A[4]):            # tufts of grass, in little clumps
 			for j in 3:
 				var h := rg.randf_range(0.7, 1.4)
 				put.call("tuft", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, rg.randf_range(-0.2, 0.2))).scaled(Vector3(1, h, 1)), Vector3(p.x + rg.randf_range(-0.3, 0.3), 0.2 * h, p.y + rg.randf_range(-0.3, 0.3))),
 					[Color("6f9a3e"), Color("83ad4c"), Color("9cbf5e"), Color("7a9440")][j % 4])
-		for p in spots.call(int(650 * f), A[0], A[1], A[2], A[3], A[4]):               # pebbles
+		for p in spots.call(int(490 * f), A[0], A[1], A[2], A[3], A[4]):               # pebbles
 			var s := rg.randf_range(0.6, 1.5)
 			put.call("pebble", Transform3D(Basis.from_euler(Vector3(rg.randf_range(-0.2, 0.2), rg.randf() * TAU, 0)).scaled(Vector3(s, s, s)), Vector3(p.x, 0.04 * s, p.y)), [Color("a69f90"), Color("c3bcab"), Color("8a8478")][rg.randi() % 3])
-		for p in spots.call(int(380 * f), A[0], A[1], A[2], A[3], A[4]):               # flowers, a few together and all of a colour
+		for p in spots.call(int(285 * f), A[0], A[1], A[2], A[3], A[4]):               # flowers, a few together and all of a colour
 			var col: Color = flowers[rg.randi() % flowers.size()]
 			for j in rg.randi_range(2, 5):
 				var at := Vector3(p.x + rg.randf_range(-0.6, 0.6), 0, p.y + rg.randf_range(-0.6, 0.6))
 				put.call("stem", Transform3D(Basis(), at + Vector3(0, 0.13, 0)), Color("5d8a3a"))
 				put.call("petal", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, 0)), at + Vector3(0, 0.28, 0)), col)
-		for p in spots.call(int(140 * f), A[0], A[1], A[2], A[3], A[4]):               # bare earth
+		for p in spots.call(int(105 * f), A[0], A[1], A[2], A[3], A[4]):               # bare earth
 			var s := Vector3(rg.randf_range(0.9, 2.0), 1, rg.randf_range(0.7, 1.5))
 			put.call("dirt", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, 0)).scaled(s), Vector3(p.x, 0.02, p.y)), [Color("9c7d47"), Color("a88a55"), Color("8a6e40")][rg.randi() % 3])
-		for p in spots.call(int(150 * f), A[0], A[1], A[2], A[3], A[4]):               # little bushes
+		for p in spots.call(int(112 * f), A[0], A[1], A[2], A[3], A[4]):               # little bushes
 			var s := rg.randf_range(0.6, 1.3)
 			put.call("bush", Transform3D(Basis.from_euler(Vector3(0, rg.randf() * TAU, 0)).scaled(Vector3(s * 1.2, s, s)), Vector3(p.x, 0.22 * s, p.y)), [C.leaf, C.leaf2, C.hedge3][rg.randi() % 3])
 	var trees_ := Map.trees()                                                           # toadstools, by the trees of the forest
-	for k in 110:
+	for k in 82:
 		var t: E.Trunk = trees_[rg.randi() % trees_.size()]
 		if t.x > -34: continue
 		var a := rg.randf() * TAU

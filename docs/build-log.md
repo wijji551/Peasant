@@ -677,3 +677,10 @@ Fixes from Matt's play.
 - **Saint Wilbur's Dog Lead** had the bucket's model. It has its own (`lead`: a coil of leather and a brass clip at the hip); while it is carried a leather strap is drawn from the player's hand to each dog's collar, sagging a little (`main._leads_view`, seven short pieces, let go of beyond nine paces); and every dog now has a collar (`dog_collar`), red, or gold and faintly glowing on a dog led by the Lead.
 - **Blessed rune armour:** a little paler blue; its own golden emission that swells and fades (`figure._blessed`), a soft golden halo and a small warm light about the wearer, and motes of holy light rising off them. `glow_of` gives blessed things gold.
 - All suites and co-op pass.
+
+## Version 7.19: banners in the wind, the Tithe Collector, the ground (build counter 26)
+
+- **Banners ripple.** The `banner` model is now only the pole and its gold knob; the cloth is its own model, `banner_flag` (eight upright strips and a swallowtail), drawn with a small shader (`figure._flag_shader`) that waves it along its length, more towards the free end, and droops it a little. Each figure's flag starts at a different point in the wave, and it flaps harder when its owner is moving (`gust`). The pole is now wood-coloured; the flag carries the player's colour.
+- **The Tithe Collector** hits for 50 (was 40).
+- **Ground detail** cut by a quarter: grass tufts 1275, pebbles 490, flowers 285, earth patches 105, bushes 112, toadstool groups 82.
+- All suites and co-op pass.

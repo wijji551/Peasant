@@ -352,7 +352,7 @@ const BOOT_RELICS := [98, 99, 100]   # the relic boots: every player may find on
 const _V711 := [
 	{"n": "a note from the library", "s": "c", "tier": "paper", "pool": "card", "note": JEST_NOTE},
 	{"n": "Prospero’s Marotte", "s": "t", "tier": "relic", "pool": "marotte", "tint": [1.35, 0.8, 1.2], "note": "A stick with a small head on it, which answers back. Your tricks never fail twice running"},
-	{"n": "the Tithe Collector", "s": "w", "tier": "relic", "dmg": 40, "cd": 0.5, "reach": 2.6, "arc": -0.2, "holy": true, "fire": true, "ab": "quake", "pool": "flail", "swing": 1, "tint": [1.5, 0.72, 0.32],
+	{"n": "the Tithe Collector", "s": "w", "tier": "relic", "dmg": 50, "cd": 0.5, "reach": 2.6, "arc": -0.2, "holy": true, "fire": true, "ab": "quake", "pool": "flail", "swing": 1, "tint": [1.5, 0.72, 0.32],
 		"note": "A flail. Holy and burning at once, and a wide sweep. It cannot be traded: whoever finds it keeps it"},
 ]
 const I_NOTE := 101

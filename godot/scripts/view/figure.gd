@@ -30,6 +30,33 @@ var _tunic_mat: StandardMaterial3D
 var _body_mat: StandardMaterial3D
 var _held_mat: StandardMaterial3D
 var _banner_mat: StandardMaterial3D
+var _flag_mat: ShaderMaterial
+
+static var _flag_sh: Shader
+## A flag in the wind: each point moves out of the flat by more the further it is from the pole, in a ripple that runs
+## along it; and a little up and down. gust: how hard the wind is (more when its bearer runs).
+static func _flag_shader() -> Shader:
+	if _flag_sh == null:
+		_flag_sh = Shader.new()
+		_flag_sh.code = """shader_type spatial;
+render_mode cull_disabled;
+uniform vec3 col : source_color = vec3(1.0);
+uniform float phase = 0.0;
+uniform float gust = 1.0;
+void vertex() {
+	float d = max(VERTEX.x + 0.27, 0.0);
+	float t = TIME * (4.2 + gust * 1.6) + phase;
+	VERTEX.z += sin(t - VERTEX.x * 6.0) * 0.11 * d * gust;
+	VERTEX.y += sin(t * 0.7 - VERTEX.x * 4.0) * 0.035 * d * gust - 0.05 * d * d;
+	VERTEX.x -= 0.04 * d * d * (1.0 - 0.3 * gust);
+}
+void fragment() {
+	ALBEDO = col * COLOR.rgb;
+	ROUGHNESS = 1.0;
+	SPECULAR = 0.15;
+}
+"""
+	return _flag_sh
 var _gear: Node3D
 var _gear_sig := ""
 var _carry: Node3D
@@ -55,6 +82,10 @@ func _ready() -> void:
 	if is_player:
 		_banner_mat = _mat(Color.WHITE)
 		_mi(_model, "banner", _banner_mat)
+		_flag_mat = ShaderMaterial.new()                 # the flag ripples in the wind, and harder when you run (version 7.19)
+		_flag_mat.shader = _flag_shader()
+		_flag_mat.set_shader_parameter("phase", randf() * TAU)
+		_mi(_model, "banner_flag", _flag_mat)
 	_hand = Node3D.new()
 	_hand.position = Vector3(0.42, 0.6, 0.14)
 	_model.add_child(_hand)
@@ -139,7 +170,9 @@ func player(p: E.Player, is_me: bool) -> void:
 	_down = p.state == "down" or p.state == "dead"
 	_dim = 0.6 if p.state == "dead" else 1.0
 	_tunic_mat.albedo_color = tint
-	_banner_mat.albedo_color = tint
+	_banner_mat.albedo_color = Color(0.36, 0.26, 0.18)
+	_flag_mat.set_shader_parameter("col", tint)
+	_flag_mat.set_shader_parameter("gust", 1.0 + 1.4 * _mv)
 	_wobble = p.hang > 0
 	_set_work(kind)
 	_set_held(p.wpn, (p.bless & 1) != 0 or p.hb > 0)

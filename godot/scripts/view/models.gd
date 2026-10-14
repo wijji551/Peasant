@@ -49,7 +49,15 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.66, 0.6, 0.42, 0, 0.44, 0, 0xffffff).box(0.17, 0.5, 0.2, -0.42, 0.52, 0, 0xffffff).box(0.17, 0.5, 0.2, 0.42, 0.52, 0, 0xffffff)
 			b.box(0.64, 0.09, 0.42, 0, 0.5, 0, 0x9a8a78).cyl(0.23, 0.25, 0.1, 7, 0, 1.48, 0, 0xffffff)
 		"banner":                                            # a tall flag in the player's colour: how you tell who is who
-			b.box(0.06, 2.3, 0.06, -0.3, 0.55, -0.27, 0xffffff).box(0.86, 0.56, 0.06, 0.14, 2.28, -0.27, 0xffffff).box(0.3, 0.2, 0.06, 0.72, 2.28, -0.27, 0xffffff)
+			b.box(0.06, 2.3, 0.06, -0.3, 0.55, -0.27, 0xffffff).box(0.1, 0.08, 0.1, -0.3, 2.85, -0.27, 0xd8b040)   # the pole, and its knob
+		"banner_flag":                                       # the flag itself, in strips, so that it can ripple (version 7.19)
+			for k in 8:
+				var w := 0.145
+				var x := -0.27 + w * (k + 0.5)
+				b.box(w + 0.004, 0.56, 0.05, x, 2.28, -0.27, 0xffffff)
+			for k in 2:                                      # and its tail, a swallowtail
+				var x2 := -0.27 + 0.145 * 8 + 0.1 * (k + 0.5)
+				b.box(0.104, 0.18, 0.05, x2, 2.28 + 0.38 - 0.0, -0.27, 0xffffff).box(0.104, 0.18, 0.05, x2, 2.28, -0.27, 0xffffff)
 		"axe":
 			b.box(0.07, 1.05, 0.07, 0, -0.25, 0, P.wood).box(0.1, 0.26, 0.34, 0, 0.5, 0.16, P.iron)
 		"rod":
