@@ -423,6 +423,7 @@ var _glow_light: OmniLight3D
 ## The colour a relic or a rune weapon glows: gold for most relics, silver for the silvered ones, violet for runes.
 static func glow_of(id: int) -> Color:
 	var I: Dictionary = D.IT[id]
+	if I.has("glow"): return Color(I.glow[0], I.glow[1], I.glow[2], 0.55)    # (version 7.23) the relic boots: green, blue and red, each its own
 	if I.tier == "rune": return Color(0.4, 0.66, 1.0, 0.55)      # rune glows blue; mithril purple
 	if I.runed: return Color(0.62, 0.42, 1.0, 0.55)
 	var t: Array = I.tint
@@ -472,6 +473,7 @@ func _set_gear(ids: Array) -> void:
 	for b in _boots: b.queue_free()
 	_boots = []
 	_blessed = []
+	var glow_feet := Color(0, 0, 0, 0)
 	for id in ids:
 		if id < 0: continue
 		var t: Array = D.IT[id].tint
@@ -480,7 +482,9 @@ func _set_gear(ids: Array) -> void:
 			var gc := glow_of(id)
 			gm.emission_enabled = true
 			gm.emission = Color(gc.r, gc.g, gc.b)
-			gm.emission_energy_multiplier = 0.7
+			gm.emission_energy_multiplier = 0.45 if D.IT[id].has("glow") else 0.7    # (coloured boots: enough to glow, not so much it goes white)
+		if D.IT[id].has("glow"):                           # and a little pool of their own light on the ground round your feet
+			glow_feet = Color(D.IT[id].glow[0], D.IT[id].glow[1], D.IT[id].glow[2])
 		if D.IT[id].blessed:                               # blessed for good: the rune blue, and a halo above (version 7.20)
 			_blessed.append(gm)
 		if D.IT[id].s == "f":                              # boots go on the feet, one on each leg, and walk with them (version 7.18)
@@ -491,6 +495,12 @@ func _set_gear(ids: Array) -> void:
 			continue
 		var mi := _mi(_gear, Models.gear_pool(id), gm)
 		mi.set_meta("slot", D.IT[id].s)
+	if glow_feet.a > 0.0 and _feet_light == null:
+		_feet_light = OmniLight3D.new(); _feet_light.omni_range = 1.8; _feet_light.light_energy = 1.1
+		_feet_light.position = Vector3(0, 0.25, 0.1); _model.add_child(_feet_light)
+	if _feet_light:
+		_feet_light.visible = glow_feet.a > 0.0
+		if glow_feet.a > 0.0: _feet_light.light_color = glow_feet
 	if _blessed.size() and _holy_halo == null:             # and an angel's ring over the head, like the priest's, that breathes gold and white
 		_holy_halo = MeshInstance3D.new()
 		var tm := TorusMesh.new(); tm.inner_radius = 0.2; tm.outer_radius = 0.26; tm.rings = 20; tm.ring_segments = 6
@@ -552,6 +562,7 @@ var _blessed: Array = []             # the materials of blessed armour worn, whi
 var _holy_halo: MeshInstance3D
 var _holy_light: OmniLight3D
 var _halo_mat: StandardMaterial3D
+var _feet_light: OmniLight3D             # relic boots: a little of their colour on the ground (version 7.23)
 var _collar: MeshInstance3D          # a dog's collar, and its material
 var _collar_mat: StandardMaterial3D
 

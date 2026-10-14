@@ -262,9 +262,12 @@ static func icon(key, px: int = 40) -> Texture2D:
 		gold = D.IT[key].tier == "relic"
 		col = TIER_INK.get(D.IT[key].tier, col)       # each tier in its own colour: crude brown, steel grey-blue, mithril purple, rune blue
 		if D.IT[key].blessed: col = "#2c63c8"
+		if D.IT[key].has("glow"):                     # the relic boots: drawn in their own colour, not relic gold (version 7.23)
+			var gl: Array = D.IT[key].glow
+			col = "#" + Color(gl[0], gl[1], gl[2]).darkened(0.25).to_html(false)
 	else:
 		name = key
-	if gold: col = "#a8761c"
+	if gold and not (key is int and D.IT[key].has("glow")): col = "#a8761c"
 	var k := "%s|%d|%s|%s" % [name, px, gold, col]
 	if _icons.has(k):
 		return _icons[k]

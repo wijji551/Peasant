@@ -718,3 +718,11 @@ From Matt's play.
 - **Dogs across the river.** `dog_step`: if its player has crossed on the raft (or the dog is already over), the dog goes too (teleported over at the crossing, as the posse is), waits at a cave's `wait` spot while its player is inside, and comes back on the raft. A dog left over there when its player swims back stays put.
 - **The stranger** in the Thorny Rose had been drawn inside the barrels behind the bar. He now has his own small table, with his drink and a candle stub, and a chair, in the front corner by the door (the room's box, his notice and his sign moved with him).
 - Tests: `river_test` (67) takes two dogs across, into a cave's mouth and home; `tower_test` (35) sends a hired sword up, and counts the side-gate share over 90 seconds instead of 40 (it was on a knife-edge). All suites and co-op pass.
+
+## Version 7.23: relic boots in three colours, the Bailiff's back door (build counter 30)
+
+From Matt's play.
+
+- **Relic boots.** All three glowed the same relic gold (`glow_of` gave every relic gold unless it was bluish), so they looked alike, and swapping one pair for another hardly changed anything you could see; their icons were the same gold too. Each now has a darker tint and a `glow` of its own: Brother Fleet's deep green, the Sandals of the Extremely Devout deep blue, Brother Cinder's deep red. The boots' emission is that colour at a lower strength (0.45), so it reads as colour rather than white; a small light at the feet casts it on the ground (`figure._feet_light`); `Look.icon` draws them in their colour instead of relic gold.
+- **Robert Bailiff's back door**: there was a notice for it, a sign and a knock, but no door on the back wall of his house. Now there is: frame, planks, iron hinges, knocker, lintel and step.
+- All suites and co-op pass.

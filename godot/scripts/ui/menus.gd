@@ -39,6 +39,10 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.23: three colours of relic boots, and a back door", [
+		"The three relic boots now look like three different things: Brother Fleet’s are a deep green, the Sandals of the Extremely Devout a deep blue, and Brother Cinder’s a deep red. Each glows in its own colour rather than all in the same gold, casts a little of that colour on the ground round your feet, and has its picture drawn in its colour in the backpack and the storehouse.",
+		"Robert Bailiff’s back door now exists. People had been knocking on a wall. It has a knocker now, and a step, and it is still bolted.",
+	]],
 	["Version 7.22: tower crews, dogs over the river, and the stranger’s table", [
 		"Sent up a watch tower, they now go straight there and stay, day or night, until you coax them down, walking round whatever is in the way. Before, they only climbed at dusk, and got caught on houses on the way. Hired swords can be sent up too. If nobody sees to a tower in the morning, its crew comes down until somebody does.",
 		"Your dog, and Saint Wilbur’s second dog, now come across the river on the raft with you, wait at a cave’s mouth while you are inside, and come home on the raft.",

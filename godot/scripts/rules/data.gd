@@ -333,9 +333,9 @@ const _V79 := [
 	{"n": "Somebody Else’s Turnshoes", "s": "f", "tier": "found", "pool": "boots", "spd": 0.05, "tint": [0.72, 0.55, 0.38], "note": "Low, soft and not yours. You walk a little faster"},
 	{"n": "hobnailed boots", "s": "f", "tier": "forged", "pool": "boots", "spd": 0.1, "cost": {"iron": 3, "wood": 1}, "tint": [0.55, 0.42, 0.3], "note": "You walk a tenth faster, and everyone hears you coming"},
 	{"n": "sabatons (two left feet)", "s": "f", "tier": "steel", "pool": "boots", "spd": 0.1, "cut": 0.05, "cost": {"steel": 4}, "tint": [1.12, 1.18, 1.3], "note": "Steel boots: a tenth faster, and a twentieth off every blow. Both of them are left feet"},
-	{"n": "Brother Fleet’s Swiftly Departing Boots", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.25, "tint": [0.6, 1.4, 0.6], "note": "They glow green. You walk a quarter faster, mostly away"},
-	{"n": "the Sandals of the Extremely Devout", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.0, "tint": [1.3, 1.2, 0.75], "note": "Leathery, and a size too small. Where you walk is hallowed for a moment: the dead that tread there are scorched"},
-	{"n": "Brother Cinder’s Hot-Foot Boots", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.0, "tint": [1.4, 0.55, 0.3], "fire": true, "note": "They smoulder. The dead that touch you catch light"},
+	{"n": "Brother Fleet’s Swiftly Departing Boots", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.25, "tint": [0.2, 0.62, 0.24], "glow": [0.25, 1.0, 0.3], "note": "They glow green. You walk a quarter faster, mostly away"},
+	{"n": "the Sandals of the Extremely Devout", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.0, "tint": [0.2, 0.32, 0.95], "glow": [0.3, 0.55, 1.0], "note": "Leathery, and a size too small. Where you walk is hallowed for a moment: the dead that tread there are scorched"},
+	{"n": "Brother Cinder’s Hot-Foot Boots", "s": "f", "tier": "relic", "pool": "boots", "spd": 0.0, "tint": [0.78, 0.14, 0.08], "glow": [1.0, 0.22, 0.08], "fire": true, "note": "They smoulder. The dead that touch you catch light"},
 ]
 const I_MATCH := 91
 const I_LANTERN := 92

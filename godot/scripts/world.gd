@@ -685,6 +685,16 @@ func _buildings() -> void:
 	Build.box(self, Vector3(1.7, 0.12, 0.34), Vector3(D.BAILIFF_AT.x, 2.14, -9.22), C.wood2)
 	for sx in [-1.0, 1.0]:
 		Build.box(self, Vector3(0.62, 1.2, 0.07), Vector3(D.BAILIFF_AT.x + sx * 1.02, 2.28, -9.3), C.red, 0.0, 0.0, 0.0)
+	# (version 7.23) and his back door, which there now is: stout planks in a frame, iron hinges, a knocker, a step, and a bolt you can hear
+	var bz := -15.86
+	Build.box(self, Vector3(1.5, 2.3, 0.14), Vector3(-14.5, 0, bz), C.timber)                     # the frame
+	Build.box(self, Vector3(1.18, 2.08, 0.1), Vector3(-14.5, 0.05, bz - 0.07), C.wood2)               # the door
+	for k in 4: Build.box(self, Vector3(0.03, 2.04, 0.04), Vector3(-14.5 - 0.44 + k * 0.29, 0.07, bz - 0.13), C.wood3)   # between the planks
+	for hy in [0.45, 1.65]: Build.box(self, Vector3(0.62, 0.08, 0.04), Vector3(-14.72, hy, bz - 0.14), C.iron)   # hinges
+	Build.cyl(self, 0.09, 0.09, 0.03, Vector3(-14.2, 1.2, bz - 0.15), C.iron, 8, 0.0, PI / 2)        # the knocker
+	Build.box(self, Vector3(0.05, 0.05, 0.05), Vector3(-14.2, 1.3, bz - 0.15), C.iron)
+	Build.box(self, Vector3(1.6, 0.16, 0.6), Vector3(-14.5, 0, bz - 0.4), C.stone2)                   # the step
+	Build.box(self, Vector3(1.7, 0.12, 0.3), Vector3(-14.5, 2.32, bz - 0.1), C.wood3)                 # a lintel
 	# the old ruins and the priest's chapel
 	_chapel()
 	for i in 6:                                     # (smaller since version 7.6: the towers wanted the elbow room)
