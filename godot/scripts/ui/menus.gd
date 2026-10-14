@@ -39,6 +39,11 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.15: the dead, as they should look", [
+		"The dead are back to the colours of the dead: grey, mottled, and in want of a wash. The green is now only a faint glow about the edges, and a sickly green light on the ground about each of them, so you can still pick them out at night. They should no longer be mistaken for anything from a block-building game.",
+		"The raft’s building site, on the riverbank south-west of the village, can now be found: a sandy slipway with planks, stakes and rope, a sign, a red flag on a tall pole, a label saying how much wood it has, and a red mark on the map.",
+		"A test copy: Thornhallow-Test.exe, on the same download page, is the same game with a Developer tab in the handbook. Go to any day of the month, at dawn or straight to dusk; everything always full; nothing can hurt you; every book at any rank; a priest or a jester at once; every relic on the rack; the raft and the Rune Cave built. It keeps its own saved game, so it never spoils a real one.",
+	]],
 	["Version 7.14: the Riverside, done properly", [
 		"The hamlet across the river is smaller and snugger: a fence round it with a gate on each side, a market round a bonfire, three cottages with window boxes, a well, and two of the hamlet’s folk to talk to, Widow Thrupp and Young Ned.",
 		"The druid now looks like a druid (antlers, beard, staff, and the general air of a man who talks to trees), and lives in a cottage with a tree growing up through the roof, and flowers and toadstools round it.",
@@ -461,12 +466,80 @@ func _big(parent: Control, text: String, cb: Callable, primary: bool) -> Button:
 
 
 # ---------------------------------------------------------------- the handbook
+# ---------------------------------------------------------------- the developer console (the test copy, version 7.15)
+var dev_day := 1
+var dev_msg := ""
+
+func dev_page(b: VBoxContainer) -> void:
+	var R: Rules = m.R
+	var p: E.Player = m.me
+	if Net.me.is_client():
+		w.para("Only whoever is hosting can use the developer console. Ask them, or start a game of your own.", 15)
+		return
+	if dev_day < 1: dev_day = R.day
+	w.para("For trying things out. None of this is in the real game, and this copy keeps its own saved game." + ("  " + dev_msg if dev_msg != "" else ""), 14, Look.INK_SOFT)
+	var btn := func(row: HBoxContainer, t: String, f: Callable) -> void:
+		var c := Button.new(); c.text = t; c.focus_mode = Control.FOCUS_NONE
+		c.pressed.connect(func(): f.call(); menu())
+		row.add_child(c)
+	var row_ := func() -> HBoxContainer:
+		var h := HBoxContainer.new(); h.add_theme_constant_override("separation", 8); b.add_child(h); return h
+	w.head("The day")
+	var r1: HBoxContainer = row_.call()
+	btn.call(r1, " − ", func(): dev_day = maxi(1, dev_day - 1))
+	Look.label(r1, "Day %d of %d" % [dev_day, R.last_day], 17, Look.INK, true)
+	btn.call(r1, " + ", func(): dev_day = mini(R.last_day, dev_day + 1))
+	btn.call(r1, "Go to that morning", func(): R.dev_day(dev_day); dev_msg = "It is the morning of day %d." % R.day)
+	btn.call(r1, "…and straight to dusk", func(): R.dev_day(dev_day); R.timeLeft = 0.5; dev_msg = "Day %d, and dusk is falling." % R.day)
+	var bn := ""
+	for d in D.BOSS_NIGHTS:
+		if int(d) == dev_day: bn = D.UN[D.BOSS_NIGHTS[d]].name
+	var mo := Rules.moon_of(dev_day, R.last_day)
+	w.para(("Night %d brings %s. " % [dev_day, bn] if bn != "" else "No boss that night. ") + ("The %s moon is up." % mo if mo != "" else ""), 13, Look.INK_SOFT)
+	var r2: HBoxContainer = row_.call()
+	btn.call(r2, "Dusk now", func(): if R.phase == "day": R.timeLeft = 0.5)
+	btn.call(r2, "Clear the dead", func():
+		for u in R.undead: u.hp = 0; R.kill_undead(u)
+		if R.night: R.night.q = []; R.night.boss = -1)
+	btn.call(r2, "End the night", func():
+		R.undead = []; R.boss = null
+		if R.night: R.night.q = []; R.night.boss = -1)
+	w.head("You")
+	var r3: HBoxContainer = row_.call()
+	var full := CheckBox.new(); full.text = "Always full of everything"; full.button_pressed = Dev.full; full.focus_mode = Control.FOCUS_NONE
+	full.toggled.connect(func(on_): Dev.full = on_); r3.add_child(full)
+	var safe := CheckBox.new(); safe.text = "Nothing can hurt you"; safe.button_pressed = Dev.safe; safe.focus_mode = Control.FOCUS_NONE
+	safe.toggled.connect(func(on_): Dev.safe = on_); r3.add_child(safe)
+	var r4: HBoxContainer = row_.call()
+	Look.label(r4, "Every book at rank", 15)
+	for rk_ in [1, 4, 7, 10]:
+		btn.call(r4, str(rk_), func(): Dev.books(p, rk_); dev_msg = "Every book at rank %d." % rk_)
+	btn.call(r4, "No books", func(): for i in p.books.size(): p.books[i] = 0; p.xp[i] = 0.0; p.jl = 0)
+	var r5: HBoxContainer = row_.call()
+	btn.call(r5, "Make me a priest", func(): Dev.calling(p, 0); dev_msg = "An apprentice priest, at rank X.")
+	btn.call(r5, "Make me a jester", func(): Dev.calling(p, 1); dev_msg = "A jester, all three lessons, rank X.")
+	btn.call(r5, "Neither", func(): Dev.calling(p, -1))
+	w.head("The village")
+	var r6: HBoxContainer = row_.call()
+	btn.call(r6, "Every relic and rune piece on the rack", func(): Dev.rack(R); dev_msg = "The storehouse rack is full of good things.")
+	btn.call(r6, "Build the raft and the Rune Cave", func(): R.raft = true; R.raftW = D.RAFT.wood; R.rcave = true; R.sv += 1)
+	var r7: HBoxContainer = row_.call()
+	btn.call(r7, "Take me to the Riverside", func(): R.raft = true; R.raftW = D.RAFT.wood; R.enter_room(p, "riverside"); w.close())
+	btn.call(r7, "Take me home", func(): if p.room != "": R.leave_room(p); w.close())
+	btn.call(r7, "A sheep, and the Herder's lesson", func(): p.herd = true; p.sheep = true; p.sheepFed = R.day)
+
+
 func menu(tab: String = "") -> void:
 	if tab != "": menu_tab = tab
 	var in_game: bool = m.in_game()
-	var b: VBoxContainer = w.open("menu", "The handbook", "", 760, 600, true)
-	w.tabs([["guide", "Guide"], ["keys", "Controls"], ["opts", "Options"]], menu_tab, func(t): rebinding = ""; bind_msg = ""; menu(t))
+	var b: VBoxContainer = w.open("menu", "The handbook" + (" (test copy)" if Dev.on() else ""), "", 760, 600, true)
+	var tabs_ := [["guide", "Guide"], ["keys", "Controls"], ["opts", "Options"]]
+	if Dev.on() and in_game: tabs_.append(["dev", "Developer"])
+	if menu_tab == "dev" and not (Dev.on() and in_game): menu_tab = "guide"
+	w.tabs(tabs_, menu_tab, func(t): rebinding = ""; bind_msg = ""; menu(t))
 	match menu_tab:
+		"dev":
+			dev_page(b)
 		"guide":
 			for g in GUIDE:
 				w.head(g[0])

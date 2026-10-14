@@ -63,6 +63,7 @@ jobs:
           $G --headless --path godot --export-release "Windows" ../out/Thornhallow.exe
           $G --headless --path godot --export-pack "Windows" ../out/thornhallow.pck
           test -s out/Thornhallow.exe && test -s out/thornhallow.pck
+          cp out/Thornhallow.exe out/Thornhallow-Test.exe   # the test copy: the same game, which turns on its developer console by its name
           python3 tools/release_info.py ${GODOT%.*}
           ls -la out
       - name: Publish
@@ -80,7 +81,9 @@ jobs:
             echo "The first time, Windows may say it protected your PC: choose *More info*, then *Run anyway*."
             echo
             echo "If you already have the game you do not need to download anything: start it, and it fetches this version by itself."
+            echo
+            echo "**For testing:** **Thornhallow-Test.exe** is the same game with a developer console in the handbook (go to any day, everything always full). It keeps its own saved game, and updates itself like the other."
           } > /tmp/notes.md
           gh release delete "build-$N" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "build-$N" out/Thornhallow.exe out/thornhallow.pck out/version.json --draft --title "Thornhallow Thirty Nights, version $V" --notes-file /tmp/notes.md --target "$GITHUB_SHA"
+          gh release create "build-$N" out/Thornhallow.exe out/Thornhallow-Test.exe out/thornhallow.pck out/version.json --draft --title "Thornhallow Thirty Nights, version $V" --notes-file /tmp/notes.md --target "$GITHUB_SHA"
           gh release edit "build-$N" --draft=false --latest

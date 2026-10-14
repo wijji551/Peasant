@@ -83,6 +83,8 @@ func _draw() -> void:
 	mark.call(R.MINEC.x, R.MINEC.z, Color("b5653a"))
 	mark.call(D.STEEL_MINE.x, D.STEEL_MINE.z, Color("7d93b5"))
 	draw_circle(Vector2(mx(D.MILL.x), mz(D.MILL.z)), 3.0, Color("8b6b47"))
+	var rd: Array = D.ROOMS.riverside.door                                              # the raft (or where it is to be built)
+	mark.call(rd[0], rd[1], Color("c0503c") if not R.raft else Color("8b6b47"))
 	mark.call(R.JETTY.x, R.JETTY.z + 2, Color("8fd0e0"))
 	var fr := Rect2(mx(D.FARM.x0), mz(D.FARM.z0), mx(D.FARM.x1) - mx(D.FARM.x0), mz(D.FARM.z1) - mz(D.FARM.z0))   # the farm: a field of its own colour, and a mark
 	draw_rect(fr, Color(0.86, 0.72, 0.3, 0.55))

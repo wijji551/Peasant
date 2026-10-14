@@ -370,6 +370,19 @@ func strays_of(p: E.Player) -> int:
 		if q.stray and q.owner == p.id and q.state != "body": n += 1
 	return n
 
+## The developer console (the test copy): straight to the morning of day d, as if the night before had just ended.
+func dev_day(d: int) -> void:
+	undead = []; boss = null; night = null; lobs = []; pools = []; holy_ground = []; fires = []; smokes = []; marked = null; wave = 0; left = 0
+	day = clampi(d, 1, last_day)
+	roll_day(false)
+	tough = tough_of(mday()); tough_hp = hp_of(mday()); crowd = 1.0; crowd_d = 1.0
+	for p in players:
+		if p.state != "ok": p.state = "ok"; p.hp = max_hp(p)
+		p.room = ""; p.ride = false; p.swimT = 0
+		var c := D.cottage(p.slot)
+		p.x = c.sx; p.z = c.sz; p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1
+	start_day(["Developer: it is now the morning of day %d." % day] + tonight_lines())
+
 ## Why Prospero will not give this player their next lesson just now ("" if he will).
 func jest_why(p: E.Player) -> String:
 	if class_of(p) == 0: return "“One calling to a peasant,” Prospero says. “You have the Holy Book. I have nothing to teach a priest but humility, and you would not take it.”"

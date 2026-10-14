@@ -56,6 +56,7 @@ var _inn_fire: OmniLight3D                # the fire in the Thorny Rose
 var _veins: Array = []                    # the rune veins in the old workings: [node, material, light]
 var _raft: Node3D                         # the raft on the village bank, once it is built
 var _raft_pile: Node3D                    # and the wood stacked for it until then
+var _raft_flag: Node3D                    # the flag over its building site
 var _raft_far: Node3D                     # the raft, tied up at the Riverside
 var _rcave_props: Node3D                  # the Rune Cave's props, once it has been made fit to explore
 var _seams: Array = []                    # its seams of runes: [node, material]
@@ -1376,7 +1377,27 @@ func _riverside() -> void:
 	_raft = _raft_node(dr + Vector3(0, 0, 3.2))
 	_raft_pile = Node3D.new(); add_child(_raft_pile)
 	for i in 6: Build.cyl(_raft_pile, 0.25, 0.25, 3.2, dr + Vector3(-1.5 + (i % 3) * 0.55, 0.25 + floorf(i / 3.0) * 0.45, 0), C.wood, 7, PI / 2, 0, PI / 2)
-	Build.box(self, Vector3(0.18, 1.2, 0.18), dr + Vector3(2.2, 0, 1.2), C.timber)
+	# (version 7.15) the building site, so it can be found: a sandy slipway, stakes and rope round it, trestles, a sign and a flag
+	Build.box(self, Vector3(7.0, 0.05, 6.0), dr + Vector3(0, 0.02, 1.2), C.sand)
+	for k in 5: Build.box(self, Vector3(6.0, 0.06, 0.4), dr + Vector3(0, 0.04, -1.0 + k * 1.1), C.wood3 if k % 2 else C.wood2)   # the slipway's planks
+	var corners := [Vector3(-3.4, 0, -1.8), Vector3(3.4, 0, -1.8), Vector3(3.4, 0, 4.2), Vector3(-3.4, 0, 4.2)]
+	for i in 4:
+		Build.box(self, Vector3(0.16, 1.0, 0.16), dr + corners[i], C.timber)
+		var a: Vector3 = corners[i]
+		var b: Vector3 = corners[(i + 1) % 4]
+		if i == 1 or i == 3: continue                                                     # (open at the ends: the water side, and the way in)
+		Build.box(self, Vector3(0.04, 0.04, a.distance_to(b)), dr + (a + b) / 2 + Vector3(0, 0.85, 0), Color("d8c8a0"), atan2(b.x - a.x, b.z - a.z))
+	for sx in [-1.6, 1.6]:                                                                # trestles
+		Build.box(self, Vector3(0.12, 0.7, 2.4), dr + Vector3(sx, 0, 1.2), C.wood2)
+	var sgp := dr + Vector3(-4.2, 0, -2.6)                                                 # the sign, facing the village
+	Build.box(self, Vector3(0.16, 2.2, 0.16), sgp, C.timber)
+	Build.box(self, Vector3(1.8, 0.8, 0.08), sgp + Vector3(0, 1.5, -0.1), C.wood3)
+	Build.box(self, Vector3(1.2, 0.14, 0.09), sgp + Vector3(0, 1.82, -0.12), Color("5b3a22"))
+	Build.box(self, Vector3(0.9, 0.14, 0.09), sgp + Vector3(0, 1.58, -0.12), Color("5b3a22"))
+	var fp := dr + Vector3(3.6, 0, -2.2)                                                   # a tall pole with a red flag, seen from far off
+	Build.box(self, Vector3(0.12, 4.2, 0.12), fp, C.timber)
+	_raft_flag = Node3D.new(); _raft_flag.position = fp + Vector3(0, 3.7, 0); add_child(_raft_flag)
+	Build.box(_raft_flag, Vector3(1.1, 0.6, 0.04), Vector3(0.6, -0.3, 0), C.red)
 
 
 ## A low-poly tree: a trunk and two or three layers of leaves.
@@ -1695,6 +1716,7 @@ func set_riverside(built: bool, wood: int, cave: bool, seams: Array) -> void:
 	if _raft == null: return
 	_raft.visible = built; _raft_far.visible = built
 	_raft_pile.visible = not built and wood > 0
+	if _raft_flag: _raft_flag.rotation.y = sin(Time.get_ticks_msec() / 700.0) * 0.35
 	_raft_pile.scale = Vector3.ONE * clampf(0.4 + wood / float(D.RAFT.wood), 0.4, 1.2)
 	_rcave_props.visible = cave
 	for i in mini(seams.size(), _seams.size()):

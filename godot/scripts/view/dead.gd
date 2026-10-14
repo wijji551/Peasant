@@ -10,11 +10,34 @@ const MAX := [260, 260, 160, 4, 160, 120, 120, 120, 80, 8, 2, 2, 2, 4, 120, 120,
 var fx: Node3D                       # for the puffs when they are hit and when they go
 var _body := []                      # MultiMesh per kind
 var _eyes := []
+var _aura: MultiMesh                 # a faint, sickly green light on the ground about each of the dead (version 7.15)
 var enraged := false                 # a night of the bells
 var _v := {}                         # undead id -> what the view remembers: [x, z, r, walk, atk, flash, ac, hc, rise, pile, mv]
 
 
 func _ready() -> void:
+	_aura = MultiMesh.new()
+	_aura.transform_format = MultiMesh.TRANSFORM_3D
+	_aura.use_colors = true
+	var q := QuadMesh.new(); q.size = Vector2(1, 1); q.orientation = PlaneMesh.FACE_Y
+	_aura.mesh = q
+	_aura.instance_count = 2400
+	_aura.visible_instance_count = 0
+	var am := MultiMeshInstance3D.new(); am.multimesh = _aura
+	am.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var sh := Shader.new()
+	sh.code = """shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+uniform vec3 hue = vec3(0.35, 0.9, 0.4);
+void fragment() {
+	float d = length(UV - vec2(0.5)) * 2.0;
+	float a = smoothstep(1.0, 0.0, d);
+	ALBEDO = hue * a * a * 0.45 * COLOR.a;
+}
+"""
+	var mat := ShaderMaterial.new(); mat.shader = sh
+	am.material_override = mat
+	add_child(am)
 	for k in KINDS.size():
 		_body.append(_mm(Models.get_mesh(KINDS[k]), MAX[k], _ghostly() if k == D.U_WRAITH or k == D.U_SHADOW else null if D.UN[k].boss else _evil()))
 		_eyes.append(_mm(Models.get_mesh(KINDS[k] + "_eyes"), MAX[k], Models.glow()))
@@ -79,13 +102,13 @@ static func _evil() -> Material:
 	if _evil_mat == null:
 		var sh := Shader.new()
 		sh.code = """shader_type spatial;
-uniform vec3 hue = vec3(0.42, 1.0, 0.36);
+uniform vec3 hue = vec3(0.45, 1.0, 0.5);
 void fragment() {
 	ALBEDO = COLOR.rgb;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.15;
-	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.4);
-	EMISSION = hue * (rim * 0.5 + 0.035);
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 5.0);   // (version 7.15: only the very edges, faintly, so they are not green all over)
+	EMISSION = hue * (rim * 0.2 + 0.02);
 }
 """
 		var m := ShaderMaterial.new()
@@ -134,6 +157,7 @@ func sync(R: Rules, delta: float) -> void:
 	var n := []
 	n.resize(KINDS.size()); n.fill(0)
 	var seen := {}
+	var na := 0
 	var now := Time.get_ticks_msec() / 1000.0
 	for u: E.Undead in R.undead:
 		seen[u.id] = true
@@ -216,7 +240,13 @@ func sync(R: Rules, delta: float) -> void:
 		_eyes[k].set_instance_transform(n[k], xf)
 		_eyes[k].set_instance_color(n[k], Color(1, 1, 1) if u.state != "pile" else Color(0, 0, 0, 0))
 		n[k] += 1
+		if not D.UN[k].boss and k != D.U_BATS and k != D.U_WRAITH and k != D.U_SHADOW and na < _aura.instance_count:   # the glow about it
+			var gs: float = 2.6 * s
+			_aura.set_instance_transform(na, Transform3D(Basis().scaled(Vector3(gs, 1, gs)), Vector3(v[0], 0.07, v[1])))
+			_aura.set_instance_color(na, Color(1, 1, 1, (0.0 if u.state == "pile" else 1.0) * v[8]))
+			na += 1
 	if _lord and not seen.has(_lord_id): _lord.visible = false
+	_aura.visible_instance_count = na
 	for k in KINDS.size():
 		_body[k].visible_instance_count = n[k]
 		_eyes[k].visible_instance_count = n[k]

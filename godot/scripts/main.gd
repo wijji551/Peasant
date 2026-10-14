@@ -22,7 +22,7 @@ const Atmos := preload("res://scripts/view/atmos.gd")
 const SoundNode := preload("res://scripts/audio/sound.gd")
 
 const STEP := 1.0 / 30.0         # the rules run thirty times a second, as in the web version
-const SAVE_PATH := "user://dtv-save.json"
+var SAVE_PATH := "user://dtv-save-test.json" if Dev.on() else "user://dtv-save.json"   # (the test copy keeps its own)
 
 # the look of day, night and the moment between
 const SUN_DAY := Color(1.0, 0.94, 0.8)
@@ -902,6 +902,7 @@ func _tick() -> void:
 			_atk_cd = I.cd * (0.8 if I.rng and Rules.rk(p, 5) >= 5 else 1.0)
 			R.aim_assist(p); cmd({"t": "atk", "r": p.r})
 	if not Net.me.is_client():                           # a joined game does not run the rules: the host does
+		Dev.step(R)                                      # (the test copy: everything kept full)
 		R.step(STEP)
 		if Net.me.is_host():
 			Net.me.ev_out.append_array(R.ev)
