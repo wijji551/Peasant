@@ -30,7 +30,7 @@ var _boss_bar: ProgressBar
 var _boss_num: Label
 var _boss_name: Label
 var _title: Label
-var _steel_row: HBoxContainer
+var _carry_grid: GridContainer       # what you carry: only the things you have, two to a row
 var _res := {}                       # name -> Label
 var _carry: Label
 var _hp_bar: ProgressBar
@@ -64,16 +64,40 @@ func _ready() -> void:
 	root.theme = Look.theme()
 	add_child(root)
 
-	# --- top left: the day
+	# --- top left: one scroll with the day, who you are, and what you carry (version 7.13: smaller, and only what you have)
 	var tl := _card(root)
-	_pin(tl, Control.PRESET_TOP_LEFT, 14, 12, 254, 12)
+	_pin(tl, Control.PRESET_TOP_LEFT, 14, 12, 232, 12)
 	var v := _vbox(tl, 0)
-	_phase = Look.label(v, "Day 1", 30, Look.INK, true)
-	_timer = Look.label(v, "", 15, Look.INK_SOFT)
-	_title = Look.label(v, "", 13, Color("5d2a6e"))
+	_phase = Look.label(v, "Day 1", 24, Look.INK, true)
+	_timer = Look.label(v, "", 13, Look.INK_SOFT)
+	_title = Look.label(v, "", 12, Color("5d2a6e"))
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_ready_lab = Look.label(v, "", 13, Look.RUST)
+	_ready_lab = Look.label(v, "", 12, Look.RUST)
 	_ready_lab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var rule := ColorRect.new(); rule.color = Color(Look.RUST, 0.35); rule.custom_minimum_size = Vector2(0, 1); rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(rule)
+	_carry_grid = GridContainer.new()
+	_carry_grid.columns = 2
+	_carry_grid.add_theme_constant_override("h_separation", 10)
+	_carry_grid.add_theme_constant_override("v_separation", 0)
+	_carry_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(_carry_grid)
+	for r in ["coin", "wood", "stone", "iron", "food", "steel", "mith", "rune", "pot_a", "pot_s", "pot_d", "pot_i", "frock"]:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 4)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.custom_minimum_size.x = 92
+		_carry_grid.add_child(h)
+		var ic := TextureRect.new(); ic.texture = Look.icon(r, 22); ic.custom_minimum_size = Vector2(22, 22)
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED; ic.tooltip_text = D.RES_NAME.get(r, r.capitalize()); h.add_child(ic)
+		_res[r] = Look.label(h, "0", 16, Look.INK, true)
+		_res[r].vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_res[r + "_row"] = h
+		if r != "coin" and not r.begins_with("pot") and r != "frock":
+			_res[r + "_cap"] = Look.label(h, "/30", 11, Look.INK_SOFT)
+			_res[r + "_cap"].vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_carry = Look.para(v, "", 12, Look.INK_SOFT)
+	_zones.append(tl)
 
 	# --- top middle: the keep, and the Steward when he comes
 	var tm := _card(root)
@@ -98,48 +122,22 @@ func _ready() -> void:
 	# --- top right: the map, and the handbook
 	var top_right := VBoxContainer.new()
 	root.add_child(top_right)
-	_pin(top_right, Control.PRESET_TOP_RIGHT, -241, 12, -14, 12)
+	_pin(top_right, Control.PRESET_TOP_RIGHT, -196, 12, -14, 12)
 	top_right.add_theme_constant_override("separation", 6)
+	var mf := PanelContainer.new()                     # the map, in a parchment frame of its own (version 7.13)
+	mf.add_theme_stylebox_override("panel", Look.card(Look.PAPER_LIGHT, Look.OUTLINE, 2))
+	mf.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_right.add_child(mf)
 	map_slot = Control.new()
-	map_slot.custom_minimum_size = Vector2(227, 174)   # the minimap's size (it is wider than tall: the map grew east and west)
+	map_slot.custom_minimum_size = Vector2(182, 140)   # the minimap's size (it is wider than tall: the map grew east and west; smaller since 7.13)
 	map_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_right.add_child(map_slot)
+	mf.add_child(map_slot)
 	var mb := Button.new()
 	mb.text = "Handbook  (Esc)"
 	mb.focus_mode = Control.FOCUS_NONE
 	mb.pressed.connect(func(): menu_pressed.emit())
 	top_right.add_child(mb)
 	_zones.append(top_right)
-
-	# --- left: what you carry
-	var lc := VBoxContainer.new()
-	root.add_child(lc)
-	_pin(lc, Control.PRESET_TOP_LEFT, 14, 142, 254, 142)
-	lc.add_theme_constant_override("separation", 8)
-	lc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var rc := _card(lc)
-	rc.custom_minimum_size.x = 240
-	var rv := _vbox(rc, 2)
-	Look.label(rv, "What you carry", 20, Look.RUST, true)
-	for r in ["wood", "stone", "iron", "steel", "mith", "rune", "food", "coin"]:
-		var h := HBoxContainer.new()
-		if r == "steel": _steel_row = h
-		h.add_theme_constant_override("separation", 8)
-		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		rv.add_child(h)
-		var ic := TextureRect.new(); ic.texture = Look.icon(r, 30); ic.custom_minimum_size = Vector2(30, 30)
-		ic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED; h.add_child(ic)
-		var nm := Look.label(h, D.RES_NAME.get(r, r.capitalize()), 18, Look.INK)
-		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_res[r] = Look.label(h, "0", 22, Look.INK, true)
-		_res[r].vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		if r != "coin":
-			_res[r + "_cap"] = Look.label(h, "/30", 14, Look.INK_SOFT)
-			_res[r + "_cap"].custom_minimum_size.x = 28
-			_res[r + "_cap"].vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_carry = Look.para(rv, "", 14, Look.INK_SOFT)
-	_zones.append(lc)
 
 	# --- bottom middle (version 7.8): your health, and under it the action bar, with your posse, backpack and skills beside it
 	_feed = VBoxContainer.new()
@@ -404,13 +402,17 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		_boss_name.text = bn[0].to_upper() + bn.substr(1)
 		_boss_bar.value = maxf(0, R.boss.hp) / maxf(1, R.boss.mhp)
 		_boss_num.text = "%d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)]
-	# what you carry
+	# what you carry: only the things you have (coin always; a full load in rose)
 	var c := Rules.cap(p)
 	for r in ["wood", "stone", "iron", "food", "steel", "mith", "rune"]:
 		var n: int = p.get(r)
 		_res[r].text = str(n)
 		_res[r].add_theme_color_override("font_color", Look.ROSE if n >= c else Look.INK)
 		_res[r + "_cap"].text = "/%d" % c
+		_res[r + "_row"].visible = n > 0
+	for r in ["pot_a", "pot_s", "pot_d", "pot_i", "frock"]:
+		_res[r].text = str(p.get(r))
+		_res[r + "_row"].visible = p.get(r) > 0
 	_res.coin.text = D.coins(p.coin)
 	_carry.text = "Bodies: %d of %d%s" % [p.bodies, D.MAX_BODIES, " (%d blessed)" % p.bbod if p.bbod else ""] if p.bodies else ""
 	_carry.visible = p.bodies > 0

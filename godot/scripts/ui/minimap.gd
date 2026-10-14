@@ -9,7 +9,8 @@ const Z0 := -128.0
 const Z1 := 72.0
 const W := 195.0
 const H := 150.0
-const SC := 1.16                  # wider than the web version's: the map grew east and west
+const SC := 0.93                  # wider than the web version's: the map grew east and west (and smaller, since version 7.13)
+const PAD := 0.0                  # (the parchment border round it is the frame in hud.gd, so the edge of the map clips cleanly)
 
 var R: Rules
 var me: E.Player
@@ -25,19 +26,25 @@ func _ready() -> void:
 	clip_contents = true                          # nothing is drawn past the edge of the map
 
 
-func mx(x: float) -> float: return (x - X0) / (X1 - X0) * W * SC
-func mz(z: float) -> float: return (z - Z0) / (Z1 - Z0) * H * SC
+func mx(x: float) -> float: return PAD + (x - X0) / (X1 - X0) * W * SC
+func mz(z: float) -> float: return PAD + (z - Z0) / (Z1 - Z0) * H * SC
 
 
 func _rect(img: Image, x0: float, z0: float, x1: float, z1: float, c: Color) -> void:
-	var r := Rect2i(int(mx(x0)), int(mz(z0)), maxi(1, int(mx(x1) - mx(x0))), maxi(1, int(mz(z1) - mz(z0))))
+	var r := Rect2i(int(mx(x0) - PAD), int(mz(z0) - PAD), maxi(1, int(mx(x1) - mx(x0))), maxi(1, int(mz(z1) - mz(z0))))
 	img.fill_rect(r.intersection(Rect2i(0, 0, img.get_width(), img.get_height())), c)
 
 
 func _make_bg() -> void:
 	var img := Image.create(int(W * SC), int(H * SC), false, Image.FORMAT_RGBA8)
-	img.fill(Color("e4d3a0"))
-	_rect(img, X0, 58, X1, Z1, Color("7fb6c4"))                                      # the river
+	img.fill(Color("e9dcb2"))
+	var rg := RandomNumberGenerator.new()                                           # a little mottle, so it reads as parchment
+	rg.seed = 713
+	for i in 260:
+		var px := rg.randi() % img.get_width()
+		var py := rg.randi() % img.get_height()
+		img.set_pixel(px, py, Color("dccb9c"))
+	_rect(img, X0, 58, X1, Z1, Color("8dbdc9"))                                      # the river
 	_rect(img, -2.5, -100, 2.5, D.VN, Color("cdb77a"))                                # the castle road
 	_rect(img, -46, D.GATE_Z - 2, 46, D.GATE_Z + 2, Color("cdb77a"))                 # the gate road
 	_rect(img, -D.VW, D.VN, D.VW, D.VS, Color("d9c890"))                              # the village
@@ -123,4 +130,4 @@ func _draw() -> void:
 			draw_colored_polygon(PackedVector2Array([c, c + f.rotated(-0.42) * 17, c + f * 19, c + f.rotated(0.42) * 17]), Color(1, 0.98, 0.85, 0.42))
 		draw_circle(c, 4.2 if p == me else 3.4, Color("2f2318"))
 		draw_circle(c, 3.0 if p == me else 2.3, Color(D.PCOL[p.col % 8]))
-	draw_rect(Rect2(Vector2.ZERO, size), Color("4a2a12"), false, 2.0)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.29, 0.17, 0.07, 0.75), false, 1.0)   # a thin ink line round the map itself

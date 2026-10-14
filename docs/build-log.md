@@ -627,3 +627,11 @@ Stage I.
 - **The Tithe Collector** (103): a flail, holy and burning, arc -0.2, trick `quake` (everything within reach + 1: ×1.5, frightened 4 s, alight). The cave's owner (`keeper`, `tpay`, `tithe_fee`: 12d × the week) sells one search (`p.tpaid`); the rubble (`tithe`, 60 s, `do_tithe`) finds it 1 in 20 by day and 1 in 8 after dark. Untradeable: not dropped, racked, destroyed, stolen by a mercenary, left behind by a player who goes home, or lost on death; `stow` takes it even into a full pack. The day's piece of ore (`tore`, `R.tore_day`), rune or mithril.
 - Saved: `raft` [raftW, raft, rcave, tore_day]; players' potions, `frock`, `recipes`, `tithe`. Sent: those, `rafted`, `swimT`, `tired`, the potions' timers, `tpaid`; the world's in `rv2`.
 - Tests: new `river_test` (55). Co-op host 15, friend 12, latecomer 9.
+
+## Version 7.13: a tidier corner (build counter 20)
+
+The first of the polish updates, from Matt's review.
+
+- **Top left** is one scroll (`hud.gd`): the day (24pt, down from 30), the time, the title and the ready line, a thin rule, then a two-column grid of what you carry as 22px icons with a number (`_carry_grid`, `_res[r + "_row"]`): coin always, and each material, potion and the fire rocks only while there is any; a full load in rose. The separate "What you carry" card is gone.
+- **The map** is a fifth smaller (`Minimap.SC` 0.93; the slot 182 by 140) and sits in its own parchment frame (`Look.card`, 2px padding) in the top right; the map's own paper is lighter and lightly mottled, the river a touch softer, and the heavy brown border is a thin ink line.
+- The handbook's "Reading the screen" says so.
