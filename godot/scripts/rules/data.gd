@@ -47,8 +47,9 @@ const PLAYER_SPEED := 7.0
 const PEASANT_WORK_TIME := 4.0
 const TREE_WOOD := 6
 const RES := ["wood", "stone", "iron", "food", "steel"]
-const STORE_RES := ["wood", "stone", "iron", "food", "steel", "mith", "rune"]      # what the storehouse keeps (mithril and runes too, for whoever is the smith)
-const RES_NAME := {"wood": "Wood", "stone": "Stone", "iron": "Iron", "food": "Food", "steel": "Steel", "mith": "Mithril", "rune": "Runes"}
+const STORE_RES := ["wood", "stone", "iron", "food", "steel", "mith", "rune", "pot_a", "pot_s", "pot_d", "pot_i"]      # what the storehouse keeps (mithril and runes too, for whoever is the smith)
+const RES_NAME := {"wood": "Wood", "stone": "Stone", "iron": "Iron", "food": "Food", "steel": "Steel", "mith": "Mithril", "rune": "Runes",
+	"pot_a": "Pick-Me-Up", "pot_s": "Get-a-Move-On", "pot_d": "Thick Skin", "pot_i": "Last Warning", "frock": "Fire rocks"}
 const GATHER := {
 	"tree": {"res": "wood", "time": 1.5, "verb": "chop", "book": 0},
 	"stone": {"res": "stone", "time": 1.9, "verb": "quarry stone", "book": 0},
@@ -351,9 +352,12 @@ const BOOT_RELICS := [98, 99, 100]   # the relic boots: every player may find on
 const _V711 := [
 	{"n": "a note from the library", "s": "c", "tier": "paper", "pool": "card", "note": JEST_NOTE},
 	{"n": "Prospero’s Marotte", "s": "t", "tier": "relic", "pool": "marotte", "tint": [1.35, 0.8, 1.2], "note": "A stick with a small head on it, which answers back. Your tricks never fail twice running"},
+	{"n": "the Tithe Collector", "s": "w", "tier": "relic", "dmg": 40, "cd": 0.5, "reach": 2.6, "arc": -0.2, "holy": true, "fire": true, "ab": "quake", "pool": "flail", "swing": 1, "tint": [1.5, 0.72, 0.32],
+		"note": "A flail. Holy and burning at once, and a wide sweep. It cannot be traded: whoever finds it keeps it"},
 ]
 const I_NOTE := 101
 const I_MAROTTE := 102
+const I_TITHE := 103                 # the Tithe Collector (version 7.12): whoever finds it keeps it
 static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers() + _V79 + _V711, _IT_DEF)
 const I_CARD := 47
 const I_TORCH := 48
@@ -433,7 +437,34 @@ const ROOMS := {
 	"inn": {"name": "the Thorny Rose Inn", "x": 60.0, "z": 240.0, "hw": 8.0, "hd": 6.0, "at": [60.0, 245.3], "door": [-13.2, -4.7],
 		"in": "go into the Thorny Rose", "out": "go back out into the square",
 		"box": [[60.0, 235.3, 4.6, 0.55], [55.4, 240.9, 0.85, 0.85], [64.4, 241.2, 0.85, 0.85], [66.6, 236.6, 0.9, 0.7], [52.35, 239.3, 0.35, 1.2], [52.5, 235.0, 0.9, 0.5], [53.4, 244.6, 0.4, 0.4]]},
+	# the far bank of the river (version 7.12): out of doors, a long way off the map like the inn and the mine. "open": it has
+	# the sky over it, and the posse comes across on the raft. The river is along its north edge; the door is the raft.
+	"riverside": {"name": "the Riverside", "x": -160.0, "z": 320.0, "hw": 36.0, "hd": 24.0, "at": [-160.0, 297.5], "door": [-30.0, 51.0], "open": true,
+		"in": "take the raft across to the Riverside", "out": "take the raft back to Thornhallow",
+		"box": [[-186.0, 312.0, 3.0, 2.4], [-184.0, 324.0, 2.6, 2.2], [-171.0, 331.0, 3.0, 2.4], [-140.0, 306.0, 2.6, 2.2], [-125.4, 331.0, 1.0, 5.6], [-130.0, 325.8, 3.6, 0.8], [-130.0, 336.2, 3.6, 0.8], [-148.0, 341.5, 4.0, 2.6], [-174.0, 303.6, 1.6, 0.6], [-164.0, 303.6, 1.4, 0.8]]},
 }
+## The Riverside (version 7.12). The raft is built once, for everyone, from 100 wood; it crosses by day. Swimming, once
+## there is a raft, is how anyone gets across after dusk: twenty seconds, half your health, and forty-five tired seconds after.
+const RAFT := {"wood": 100, "swim": 20.0, "tired": 45.0, "tired_mul": 0.75, "tired_spd": 0.6}
+const RIVER_SPOTS := [[-188.0, 334.0], [-183.0, 337.0], [-178.0, 333.0], [-190.0, 340.0], [-185.0, 342.0], [-179.0, 340.0], [-174.0, 337.5], [-192.0, 328.0], [-176.0, 342.5], [-170.0, 340.0]]   # the far ruin: ten heaps, and nothing in it bites
+const RUNE_SEAMS := [[-127.6, 328.0], [-127.6, 331.0], [-127.6, 334.0]]   # in the Rune Cave, once it has been made fit to explore
+const RUNE_PER_SEAM := 2
+const CAMPFIRE := {"x": -150.0, "z": 314.0, "rock": 0.4}             # the hamlet's campfire, where fire rocks are raked out (four times in ten)
+const TITHE_RUBBLE := {"x": -146.0, "z": 337.0, "time": 60.0, "day": 1.0 / 20.0, "night": 1.0 / 8.0}   # the coveted relic, under it, somewhere
+const TITHE_ORE := {"x": -151.5, "z": 338.6}                          # one piece of ore a day, for whoever gets to it first
+const TITHE_FEE := 12                                                 # what the cave's owner charges a search, a shilling more each week
+const RCAVE_WOOD := 20
+const RESIDENT := {"wood": 30, "stone": 30, "iron": 30, "food": 30, "steel": 45, "mith": 60, "rune": 120, "weapon": 480, "armour": 360}   # five of a material (one of mithril or runes), or a rune weapon or piece of armour
+const TRAVEL_MUL := 1.5                                              # the travelling merchant charges half as much again
+# --- Granny's potions, which the druid brews (and will not explain). Each lasts two minutes; the last, fifteen to twenty seconds.
+const POTIONS := [
+	{"k": "pot_a", "n": "Granny’s Pick-Me-Up", "short": "Pick-Me-Up", "d": "you hit a quarter harder for two minutes"},
+	{"k": "pot_s", "n": "Granny’s Get-a-Move-On", "short": "Move-On", "d": "you walk and swing a fifth faster for two minutes"},
+	{"k": "pot_d", "n": "Granny’s Thick Skin", "short": "Thick Skin", "d": "a quarter less harm for two minutes"},
+	{"k": "pot_i", "n": "Granny’s Last Warning", "short": "Last Warning", "d": "for fifteen to twenty seconds you are wreathed in flame, and the dead near you catch fire. It does not burn you"},
+]
+const POT := {"t": 120.0, "atk": 1.25, "spd": 1.2, "def": 0.75, "imm": [15.0, 20.0], "reach": 2.6, "recipe": 60}
+const DRUID_LINES := ["The druid says the recipe is a family secret, and that you are not family.", "The druid says the trick is in the stirring, and will not say which way.", "The druid is humming. He says it is part of it.", "The druid says Granny learned it from him. Granny, if asked, says the opposite."]
 ## The chest that never arrived: who sent it, and the note inside.
 const CHEST_FROM := [
 	["the Mayor of Nether Wopping", "To the brave peasants of Thornhallow, with the Mayor’s admiration, from a safe distance."],
@@ -508,6 +539,7 @@ const AB := {
 	"aimed": {"n": "Aimed stone", "cd": 6.0, "d": "a careful shot that hits three times as hard and staggers"},
 	"volley": {"n": "Volley", "cd": 9.0, "d": "three arrows at once"},
 	"pierce": {"n": "Pierce", "cd": 10.0, "d": "a bolt that passes through everything in its way"},
+	"quake": {"n": "Quake", "cd": 9.0, "d": "strikes everything round you, holy and burning, and leaves the dead quaking in their boots"},
 }
 const PEASANT_ARM := {"iron": 3, "wood": 2}
 const STEEL_SELL := 3                # the market pays this much a piece for steel, and sells none
@@ -815,6 +847,11 @@ const STATIONS := [
 	{"id": "gambler", "x": 65.6, "z": 237.9, "r": 1.7, "room": "inn", "name": "the gambler", "verb": "sit down with the gambler"},
 	{"id": "shelf", "x": 53.1, "z": 239.3, "r": 1.4, "room": "inn", "name": "the inn’s bookshelf", "verb": "look at the inn’s bookshelf"},
 	{"id": "prospero", "x": 54.4, "z": 244.6, "r": 1.4, "room": "inn", "name": "Prospero", "verb": "talk to Prospero, on the stool by the fire"},
+	{"id": "rmerch", "x": -174.0, "z": 306.0, "r": 2.6, "room": "riverside", "name": "the merchant who never leaves", "verb": "see what the merchant who never leaves has"},
+	{"id": "tmerch", "x": -164.0, "z": 306.0, "r": 2.6, "room": "riverside", "name": "the travelling merchant", "verb": "see what the travelling merchant has"},
+	{"id": "druid", "x": -143.0, "z": 310.0, "r": 2.4, "room": "riverside", "name": "the druid", "verb": "speak to the druid"},
+	{"id": "rcave", "x": -134.0, "z": 331.0, "r": 2.6, "room": "riverside", "name": "the Rune Cave", "verb": "look at the Rune Cave"},
+	{"id": "keeper", "x": -153.0, "z": 335.0, "r": 2.2, "room": "riverside", "name": "the cave’s owner", "verb": "speak to the man who owns the cave"},
 	{"id": "mill", "x": 101.0, "z": 30.0, "r": 2.6, "name": "the windmill", "verb": "see the miller about a banquet"},
 	{"id": "plate", "x": 24.6, "z": 5.4, "r": 1.9, "name": "the offering plate", "verb": "look at the offering plate"},
 	{"id": "herder", "x": 98.6, "z": 39.6, "r": 2.4, "name": "the Herder", "verb": "talk to the Herder"},

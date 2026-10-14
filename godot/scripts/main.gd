@@ -550,6 +550,8 @@ func bar_all() -> Array:
 	if Rules.rk(p, 6) >= 1: out.append("orders")
 	if p.posse > 0: out.append("toilet")
 	if p.sheep: out.append("sheep")
+	for k in D.POTIONS.size():                        # Granny's potions, while there are any to drink
+		if p.get(D.POTIONS[k].k) > 0: out.append("pot%d" % k)
 	return out
 
 
@@ -575,6 +577,9 @@ func bar_info(id: String) -> Array:
 			return ["posse", ["Follow", "Hold", "Charge"][p.order], 0.0, "Posse orders: follow you, hold where they stand%s." % (", or charge" if Rules.rk(p, 6) >= 3 else "")]
 		"toilet":
 			return ["toilet", "Toilet", p.tbCd, "Emergency toilet break: the dead nearby run from your posse."]
+		"pot0", "pot1", "pot2", "pot3":
+			var P: Dictionary = D.POTIONS[int(id.substr(3))]
+			return [P.k, "%s ×%d" % [P.short, p.get(P.k)], [p.potA, p.potS, p.potD, p.potI][int(id.substr(3))], "%s: %s. Drinking another only starts it again." % [P.n, P.d]]
 		"sheep":
 			return ["sheep", "Get off" if p.ride else "Ride", 0.0, "Your sheep: a quarter quicker than walking, by day. From its back you cannot fight, gather or use any place. It wants one food a day."]
 	if id.begins_with("b"):
@@ -608,6 +613,8 @@ func bar_do(id: String) -> void:
 			if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
 			elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
 			else: cmd({"t": "tb"})
+		"pot0", "pot1", "pot2", "pot3":
+			cmd({"t": "pot", "k": int(id.substr(3))})
 		"sheep":
 			if not p.ride and R.phase != "day": Sound.play("no"); hud.banner("Not tonight", "Your sheep is under the stairs, and will not come out until morning.", 1.8)
 			else: cmd({"t": "ride", "on": not p.ride})
@@ -1076,6 +1083,12 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"fetched": if ev[1] == me.id: hud.banner("Fetched", "The dog has brought you %s." % ev[2], 1.8)
 		"no": if ev[1] == me.id: Sound.play("no"); hud.banner(ev[3] if ev.size() > 3 else "Not here", ev[2], 1.6 if ev.size() < 4 else 2.4)
 		"baa": Sound.play("baa", 0.8, Vector2(ev[1], ev[2]))
+		"raft": F.puff(ev[1], 0.3, ev[2], 10, F.C_SPLASH, 2.0); Sound.play("splash", 0.8, Vector2(ev[1], ev[2]))
+		"splash": F.puff(ev[1], 0.3, ev[2], 16, F.C_SPLASH, 3.0); Sound.play("splash", 1.0, Vector2(ev[1], ev[2]))
+		"drink":
+			F.puff(ev[3], 1.6, ev[4], 10, [F.C_ALE, F.C_SPLASH, F.C_HOLY, F.C_FIRE][int(ev[2])], 2.0); Sound.play("gulp", 0.9, Vector2(ev[3], ev[4]))
+			if ev[1] == me.id: hud.banner(D.POTIONS[int(ev[2])].n, D.POTIONS[int(ev[2])].d[0].to_upper() + D.POTIONS[int(ev[2])].d.substr(1) + ".", 2.4)
+		"quake": F.shock(ev[1], ev[2], 3.6, Color(1.0, 0.6, 0.25, 0.9), 0.5); F.puff(ev[1], 0.6, ev[2], 20, F.C_FIRE, 4.0); Sound.play("thump", 1.0, Vector2(ev[1], ev[2]))
 		"card":                                           # Is This Your Card?
 			F.fly(ev[1], ev[2], ev[3], ev[4], 5); Sound.play("whoosh", 0.6, Vector2(ev[1], ev[2]))
 			if int(ev[5]) > 0: F.puff(ev[3], 1.2, ev[4], 6 * int(ev[5]), F.C_MOTLEY, 2.5)
@@ -1392,13 +1405,14 @@ func _camera(delta: float) -> void:
 			var ja := randf() * TAU
 			_kick += Vector3(sin(ja), 0, cos(ja)) * 0.6
 		_my_hc = me.hc
-	var indoors: bool = me.room != ""
+	var indoors: bool = me.room != "" and not D.ROOMS.get(me.room, {}).get("open", false)   # (the Riverside has the sky over it)
 	if Vector2(me.x - _focus.x, me.z - _focus.z).length() > 60.0:      # through a door: the view goes with you at once
 		_focus = Vector3(me.x, 0, me.z); _zoom = 0.38 if indoors else 1.0 + 0.12 * R.nf
 	_focus = _focus.lerp(Vector3(me.x, 0, me.z), minf(1.0, delta * 6.0))
 	_zoom = lerpf(_zoom, 0.38 if indoors else 1.0 + 0.12 * R.nf, minf(1.0, delta * 3.0))
 	if indoors: _pan_t = -1.0
 	world.set_veins(R.rune_left)
+	world.set_riverside(R.raft, R.raftW, R.rcave, R.runes2)
 	atmos.indoors = indoors
 	if not win.is_open("menu"):
 		_yaw_goal += ((1.0 if Keys.held("cam_right") else 0.0) - (1.0 if Keys.held("cam_left") else 0.0)) * delta * 2.2
@@ -1671,6 +1685,9 @@ func _test_hook() -> void:
 		if OS.get_environment("DTV_FEET") != "": me.feet = int(OS.get_environment("DTV_FEET"))
 		if Rules.rk(me, D.B_FIRE) >= 5:
 			me.iron = 5; R.try_place(me, "firepot", me.x + 2.2, me.z - 1.5, 0.0)
+	if _frame == at - 40 and OS.get_environment("DTV_RIVER") != "" and me:   # for pictures: across the river, with the raft and the cave done
+		R.raft = true; R.raftW = D.RAFT.wood; R.rcave = true
+		R.enter_room(me, "riverside"); me.x = -160.0; me.z = 318.0; me.tx = me.x; me.tz = me.z; me.wpn = D.I_TITHE
 	if _frame == at - 40 and OS.get_environment("DTV_SHEEP") != "" and me:   # for pictures: on a sheep by the Herder, with a stray in the posse
 		me.herd = true; me.sheep = true; me.sheepFed = R.day; me.food = 5
 		me.x = D.HERDER.x - 4.0; me.z = D.HERDER.z - 1.0; me.r = PI / 2

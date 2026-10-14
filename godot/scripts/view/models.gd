@@ -385,6 +385,9 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.4, 0.28, 0.3, 0.6, 0.0, -0.2, 0x7a4a2a).box(0.36, 0.05, 0.3, 0.3, 0.3, 0.6, 0x9b2c2c).cone(0.06, 0.4, 4, 0.36, 0.34, 0.6, 0xefe6cf)   # satchel; hat with a feather
 		"pcard":                                             # a playing card, thrown: white, with a red pip
 			b.box(0.24, 0.02, 0.34, 0, 0, 0, 0xfaf6ea).box(0.08, 0.025, 0.08, 0, 0, 0, 0xc0262e).box(0.04, 0.025, 0.04, -0.07, 0, 0.12, 0xc0262e).box(0.04, 0.025, 0.04, 0.07, 0, -0.12, 0xc0262e)
+		"flail":                                             # the Tithe Collector: a haft, a short chain, and a spiked head
+			b.box(0.07, 0.9, 0.07, 0, -0.15, 0, P.timber).box(0.1, 0.12, 0.1, 0, 0.72, 0, 0x8f949e).box(0.04, 0.3, 0.04, 0.04, 0.8, 0.06, 0x70757f, 0, 0.4, 0)
+			b.ico(0.17, 0.12, 1.12, 0.12, 0xffffff).box(0.4, 0.06, 0.06, 0.12, 1.12, 0.12, 0xdddddd).box(0.06, 0.06, 0.4, 0.12, 1.12, 0.12, 0xdddddd).box(0.06, 0.4, 0.06, 0.12, 0.95, 0.12, 0xdddddd)
 		"marotte":                                           # Prospero's Marotte: a stick with a small jester's head on it, carried at the side
 			b.box(0.05, 0.9, 0.05, -0.48, 0.4, -0.12, 0x5b4130).box(0.2, 0.2, 0.2, -0.48, 1.36, -0.12, 0xe8b98f).box(0.26, 0.08, 0.26, -0.48, 1.5, -0.12, 0xffffff)
 			b.cone(0.07, 0.22, 4, -0.58, 1.56, -0.12, 0xffffff).cone(0.07, 0.22, 4, -0.38, 1.56, -0.12, 0xdddddd)

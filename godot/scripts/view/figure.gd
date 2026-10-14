@@ -114,7 +114,7 @@ func _place(x: float, z: float, r: float, snap: bool) -> void:
 
 ## Show a player, as the rules have them now.
 func player(p: E.Player, is_me: bool) -> void:
-	visible = p.state != "hide"                                                # (drinking at the bar of the Rose, you can be seen: it is a room now)
+	visible = p.state != "hide" and p.state != "swim"                          # (drinking at the bar of the Rose, you can be seen: it is a room now; a swimmer is under the water)
 	_place(p.x, p.z, p.r, false)
 	_censer(p.trk == 27 and p.state == "ok" and p.room == "")
 	_frozen = p.frozen > 0                                          # frozen with fright: rooted, and trembling
@@ -167,6 +167,10 @@ func player(p: E.Player, is_me: bool) -> void:
 		if p.prot > 0 and randf() < dt * 10: fx.puff(p.x + randf_range(-0.5, 0.5), 0.4, p.z + randf_range(-0.5, 0.5), 1, fx.C_GLAD, 0.6)   # prayed over
 		if Rules.class_of(p) == 0 and p.state == "ok" and randf() < dt * 1.5: fx.puff(p.x, 2.1, p.z, 1, fx.C_HOLY, 0.2)   # an apprentice priest, faintly glowing
 		if p.parry > 0 and randf() < dt * 14: fx.puff(p.x + sin(p.r) * 0.7, 1.2, p.z + cos(p.r) * 0.7, 1, fx.C_SPARK, 0.8)
+		if p.tired > 0 and randf() < dt * 6: fx.puff(p.x + randf_range(-0.3, 0.3), 1.6, p.z + randf_range(-0.3, 0.3), 1, fx.C_SPLASH, 0.4)   # dripping
+		if p.potI > 0 and randf() < dt * 24: fx.puff(p.x + randf_range(-0.6, 0.6), randf_range(0.3, 2.0), p.z + randf_range(-0.6, 0.6), 1, fx.C_FIRE, 1.6)   # the Last Warning
+		if (p.potA > 0 or p.potS > 0 or p.potD > 0) and randf() < dt * 2: fx.puff(p.x, 2.2, p.z, 1, fx.C_GLAD, 0.3)
+		if p.wpn == D.I_TITHE and p.state == "ok" and randf() < dt * 8: fx.puff(p.x + sin(p.r + 0.6) * 0.6, 1.8, p.z + cos(p.r + 0.6) * 0.6, 1, fx.C_FIRE, 0.7)   # the flail smoulders
 	var mx := Rules.max_hp(p)
 	if p.state == "down":
 		_show_bar(1.4, 1.3, p.downT / (30.0 if Rules.rk(p, 9) >= 5 else 15.0), Color(0.86, 0.36, 0.26))

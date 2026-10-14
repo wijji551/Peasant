@@ -22,6 +22,15 @@ var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
 var lobs: Array = []          # the dead in the air, thrown: [the undead, where it lands x, z, seconds left]
 var holy_ground: Array = []   # Consecrate: [x, z, radius, seconds left]; the dead will not step into it
+var raftW := 0               # wood put into the raft so far (version 7.12)
+var raft := false             # the raft is built: the Riverside can be reached (and the river swum)
+var rcave := false            # the Rune Cave has been made fit to explore
+var spots2: Array = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]   # searches left in each heap of the far ruin, today
+var runes2: Array = [2, 2, 2]  # runes left in each seam of the Rune Cave, today
+var tore_day := 0             # the day the piece of ore in the coveted relic's cave was taken
+var merch2 := -1              # the travelling merchant at the Riverside today (never the one in the village)
+var wares2: Array = []
+var brew: Array = [{}, {}, {}, {}]   # what the druid asks for each potion today
 var smokes: Array = []        # the Jester's lingering smoke (rank 5): [x, z, radius, seconds left]; the dead in it are slowed
 var jest_force := -1          # for the tests: the next trick's luck (0 fails, 1 works, 2 lucky, 3 the Big Finish), or -1 for the dice
 var fires: Array = []         # burning oil on the ground: [x, z, radius, seconds left, whose, tick]
@@ -449,7 +458,7 @@ static func forge_why(p: E.Player, id: int) -> String:   # why not, for the smit
 	var I: Dictionary = D.IT[id]
 	if I.s == "k" and rk(p, 3) < D.KIT_RANK[I.tier]: return "%s kits need rank %d of Hammer and Tongs." % [D.TIER_NAME[I.tier], D.KIT_RANK[I.tier]]
 	if I.s == "k": return ""
-	if I.tier == "rune" and rk(p, 3) < D.RUNE_RANK: return "Rune needs rank 10 of Hammer and Tongs, and runes, from a cave across the river, which nobody can get across yet."
+	if I.tier == "rune" and rk(p, 3) < D.RUNE_RANK: return "Rune needs rank 10 of Hammer and Tongs, and runes, from the Rune Cave across the river."
 	if I.tier == "mithril" and rk(p, 3) < D.MITHRIL_RANK: return "Mithril needs rank %d of Hammer and Tongs." % D.MITHRIL_RANK
 	if I.tier == "steel" and rk(p, 3) < 4: return "Steel needs rank 4 of Hammer and Tongs."
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return "Heavy arms need rank 2 of Hammer and Tongs."
@@ -617,7 +626,7 @@ func add_villagers(slot: int, n: int) -> void:
 
 func clear_world() -> void:
 	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []; lobs = []; holy_ground = []; marked = null; fires = []; hallows = []; smokes = []
-	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0, "rune": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
+	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0, "rune": 0, "pot_a": 0, "pot_s": 0, "pot_d": 0, "pot_i": 0}; raftW = 0; raft = false; rcave = false; tore_day = 0; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
 	letters = []; letter_new = false; seen = {}; chest = {}; tenant_day = 0
 	for t in trees:
@@ -800,6 +809,56 @@ func dog_step(q: E.Peasant, dt: float) -> void:
 	if dd > 40: q.x = tx; q.z = tz
 	elif dd > 0.4: step_to(q, tx, tz, D.DOG.spd * (1.4 if dd > 8 else 1.0) if dd > 3 else 5.0, dt, 0.2)
 	collide_friend(q, 0.3)
+
+# ---------------------------------------------------------------- the Riverside (version 7.12)
+## Into the river: once there is a raft, and not by day (the raft is for that). The posse stays where it is.
+func start_swim(p: E.Player) -> void:
+	if not raft or phase == "day" or p.state != "ok": return
+	p.swimTo = "" if p.room == "riverside" else "riverside"
+	if p.room != "" and p.room != "riverside": return
+	p.state = "swim"; p.swimT = D.RAFT.swim; p.gk = 0; p.prog = 0
+	ev.append(["splash", r1(p.x), r1(p.z)])
+	say("%s has gone into the river, and is swimming for the %s." % [p.dn, "far bank" if p.swimTo == "riverside" else "village"])
+
+func end_swim(p: E.Player) -> void:
+	var M: Dictionary = D.ROOMS.riverside
+	if p.swimTo == "riverside":
+		p.room = "riverside"; p.x = M.at[0] + rnd2(-3, 3); p.z = M.at[1] + 2.6
+	else:
+		p.room = ""; p.x = M.door[0] + rnd2(-1.5, 1.5); p.z = M.door[1] - 2.0
+	p.rafted = false; p.state = "ok"; p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1; p.eLock = true
+	p.hp = maxf(1.0, p.hp * 0.5); p.tired = D.RAFT.tired
+	ev.append(["splash", r1(p.x), r1(p.z)])
+	say("%s has crawled out of the river, soaked and half drowned." % p.dn)
+
+## One minute's search of the rubble in the cave across the river, paid for: it is there, somewhere, for everyone.
+func do_tithe(p: E.Player) -> void:
+	if p.tithe or not p.tpaid: return
+	p.tpaid = false; p.cc += 1; add_xp(p, 8, 2)
+	var pr: float = D.TITHE_RUBBLE.day if phase == "day" else D.TITHE_RUBBLE.night
+	if randf() < pr:
+		p.tithe = true; gain(p, D.I_TITHE)
+		ev.append(["found", p.id, "the Tithe Collector! A flail, burning and holy at once, in a chest under the rubble. It is yours, and nobody else’s", r1(p.x), r1(p.z), 1, 1])
+		say("%s has found the Tithe Collector in the cave across the river." % p.dn)
+	else:
+		ev.append(["found", p.id, pick(["a great deal of rubble", "a chest-shaped rock", "the lid of something, and no chest", "a note in the dust that says ‘nearly’"]), r1(p.x), r1(p.z), 0, 0])
+
+## What the cave's owner charges a search: a shilling, and a shilling more every week.
+func tithe_fee() -> int:
+	return D.TITHE_FEE * week_of(mday())
+
+## Granny's potions: drinking one (k: which, in D.POTIONS). A second of the same only starts it again.
+func drink(p: E.Player, k: int) -> void:
+	if k < 0 or k >= D.POTIONS.size() or p.state != "ok": return
+	var key: String = D.POTIONS[k].k
+	if p.get(key) < 1: return
+	p.set(key, p.get(key) - 1)
+	match k:
+		0: p.potA = D.POT.t
+		1: p.potS = D.POT.t
+		2: p.potD = D.POT.t
+		3: p.potI = rnd2(D.POT.imm[0], D.POT.imm[1]) * (0.5 if weather == "rain" and p.room == "" else 1.0); p.potIt = 0.0
+	ev.append(["drink", p.id, k, r1(p.x), r1(p.z)])
 
 # ---------------------------------------------------------------- village life (version 7.10)
 ## A tamed sheep is a peasant of its own kind (4). By day it trots after its player, or carries them; at dusk it is put
@@ -1149,6 +1208,16 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	job = {"work": 0.0, "done": false}
 	reserve = false
 	make_wares()
+	spots2 = []; for i in D.RIVER_SPOTS.size(): spots2.append(D.SEARCHES)
+	runes2 = []; for i in D.RUNE_SEAMS.size(): runes2.append(D.RUNE_PER_SEAM)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = gseed * 7919 + day * 104729
+	merch2 = rng.randi() % D.MERCHANTS.size()
+	if merch2 == merchant: merch2 = (merch2 + 1 + rng.randi() % (D.MERCHANTS.size() - 1)) % D.MERCHANTS.size()
+	wares2 = wares_of(merch2)
+	for wv in wares2: wv.price = ceili(wv.price * D.TRAVEL_MUL)
+	brew = []
+	for k in D.POTIONS.size(): brew.append(druid_price(rng, k))
 	for p in players:
 		p.job = false; p.jobT = 0.0; p.merc = false; p.drill = 0.0; p.game = {}; p.gwon = 0; p.treated = 0
 	bail_mood = 0
@@ -1164,19 +1233,22 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 
 ## What is on today's merchant's cart. Prices in pence. The better things turn up later in the month.
 func make_wares() -> void:
-	wares = []
-	if merchant < 0: return
+	wares = wares_of(merchant) if merchant >= 0 else []
+
+## What a merchant (an index into D.MERCHANTS) has on his cart today.
+func wares_of(mi: int) -> Array:
+	var out := []
 	var w := week_of(mday())
 	var it := func(id: int, price: int) -> Dictionary: return {"n": D.it_a(id), "price": price, "left": 1, "give": "it", "it": id}
-	match D.MERCHANTS[merchant].id:
+	match D.MERCHANTS[mi].id:
 		"tinker":
-			wares = [{"n": "5 iron", "price": 9, "left": 4, "give": "iron"}, it.call(7, 14), it.call(8, 10), it.call(9, 16),
+			out = [{"n": "5 iron", "price": 9, "left": 4, "give": "iron"}, it.call(7, 14), it.call(8, 10), it.call(9, 16),
 				{"n": "a box of cogs, for a contraption", "price": 24, "left": 3, "give": "cogs"}]
 		"armourer":
 			for a in [[1, 24], [2, 24], [3, 30], [19, 18], [22, 36], [25, 24]] + ([[5, 48], [14, 60]] if w >= 3 else []):
-				wares.append(it.call(a[0], a[1]))
+				out.append(it.call(a[0], a[1]))
 		"brewer":
-			wares = [{"n": "5 food", "price": 8, "left": 6, "give": "food"}, {"n": "a barrel of ale for the Thorny Rose (5 tankards)", "price": 10, "left": 4, "give": "ale"}]
+			out = [{"n": "5 food", "price": 8, "left": 6, "give": "food"}, {"n": "a barrel of ale for the Thorny Rose (5 tankards)", "price": 10, "left": 4, "give": "ale"}]
 		"pedlar":
 			var left_ := relics_left()
 			var real: int = left_[randi() % left_.size()] if left_.size() else -1
@@ -1184,9 +1256,30 @@ func make_wares() -> void:
 			names.shuffle()
 			var at := randi() % 3
 			for i in 3:
-				wares.append({"n": names[i], "price": 36, "left": 1, "give": "relic", "real": real if i == at else -1})
+				out.append({"n": names[i], "price": 36, "left": 1, "give": "relic", "real": real if i == at else -1})
 		"bookseller":
-			wares = [{"n": "a loose page", "price": 18, "left": 8, "give": "page"}, {"n": "An Index of Further Reading", "price": 72, "left": 2, "give": "index"}]
+			out = [{"n": "a loose page", "price": 18, "left": 8, "give": "page"}, {"n": "An Index of Further Reading", "price": 72, "left": 2, "give": "index"}]
+	return out
+
+## What the druid asks for one potion today: at most three kinds of thing; five to ten of a common material; one or two of
+## steel, mithril or runes; and the Last Warning always a fire rock besides.
+static func druid_price(rng: RandomNumberGenerator, k: int) -> Dictionary:
+	var c := {}
+	var kinds := 1 + rng.randi() % (2 if k == 3 else 3)
+	if k == 3: c["frock"] = 1
+	var common := ["wood", "stone", "iron", "food"]
+	var rare := ["steel", "mith", "rune"]
+	var tries := 0
+	while c.size() < kinds + (1 if k == 3 else 0) and tries < 20:
+		tries += 1
+		if rng.randf() < 0.72 or (k == 3 and c.size() == 1 and kinds == 1):
+			var m: String = common[rng.randi() % common.size()]
+			if not c.has(m): c[m] = 5 + rng.randi() % 6
+		else:
+			var m: String = rare[rng.randi() % rare.size()]
+			if not c.has(m): c[m] = 1 + rng.randi() % 2
+	if c.size() == (1 if k == 3 else 0): c["food"] = 5
+	return c
 
 func job_spot() -> Dictionary:   # where today's job is done: {x, z, r}
 	if merchant < 0: return {}
@@ -1261,7 +1354,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote"]
+const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote", "pot_a", "pot_s", "pot_d", "pot_i", "frock", "recipes", "tithe"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -1285,7 +1378,7 @@ func save_data() -> Dictionary:
 	var ds := []
 	for d in drops:
 		ds.append({"it": d.it, "x": d.x, "z": d.z, "day": d.day})
-	return {"v": 4, "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
+	return {"v": 4, "raft": [raftW, raft, rcave, tore_day], "day": day, "last": last_day, "pm": pm, "seed": gseed, "keepHp": keepHp, "store": store.duplicate(), "items": items.duplicate(), "relics": relics.duplicate(),
 		"sites": sites.duplicate(), "stats": stats.duplicate(), "letters": letters.duplicate(true), "letter_new": letter_new, "seen": seen.duplicate(), "chest": chest.duplicate(), "lines": dawn.lines, "drops": ds, "trees": tree_codes, "structs": ss, "players": ps, "away": away.duplicate(true), "peasants": qs}
 
 ## A player as the save keeps them: what they carry, wear and know.
@@ -1324,12 +1417,12 @@ func leave_player(id: int) -> void:
 	if p.state == "inn": leave_inn(p, false)
 	for f in ["wpn", "head", "body", "off", "trk", "feet"]:           # relics stay with the village, not with whoever went home
 		var it: int = p.get(f)
-		if it > 0 and D.IT[it].tier == "relic":
+		if it > 0 and D.IT[it].tier == "relic" and it != D.I_TITHE:
 			drop_item(it, p.x if p.room == "" else D.cottage(p.slot).sx, p.z if p.room == "" else D.cottage(p.slot).sz)
 			p.set(f, 0 if f == "wpn" else -1)
 	var keep_inv := []
 	for it in p.inv:
-		if it > 0 and D.IT[it].tier == "relic": drop_item(it, p.x if p.room == "" else D.cottage(p.slot).sx, p.z if p.room == "" else D.cottage(p.slot).sz)
+		if it > 0 and D.IT[it].tier == "relic" and it != D.I_TITHE: drop_item(it, p.x if p.room == "" else D.cottage(p.slot).sx, p.z if p.room == "" else D.cottage(p.slot).sz)
 		else: keep_inv.append(it)
 	p.inv = keep_inv
 	p.room = ""; p.game = {}; p.bodies = 0
@@ -1379,6 +1472,8 @@ func load_game(d: Dictionary, infos: Array) -> void:
 		store.mith = int(d.store.get("rune", 0)); store.rune = 0
 	for k in stats:
 		stats[k] = int(d.stats.get(k, 0))
+	var rf: Array = d.get("raft", [0, false, false, 0])
+	raftW = int(rf[0]); raft = bool(rf[1]); rcave = bool(rf[2]); tore_day = int(rf[3])
 	for l in d.get("letters", []): letters.append([int(l[0]), int(l[1])])
 	letter_new = bool(d.get("letter_new", false))
 	var ch: Dictionary = d.get("chest", {})
@@ -1501,13 +1596,22 @@ static func box_point(x: float, z: float, c) -> Vector2:   # nearest point of an
 ## Going in: to where the room really is, far off to the south.
 func enter_room(p: E.Player, k: String) -> void:
 	var M: Dictionary = D.ROOMS[k]
-	p.room = k; p.x = M.at[0]; p.z = M.at[1] - 1.2; p.tx = p.x; p.tz = p.z; p.r = PI; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
+	if k == "riverside":
+		p.rafted = true; ev.append(["raft", r1(M.door[0]), r1(M.door[1])])
+		note("raft")
+	p.room = k; p.x = M.at[0]; p.z = M.at[1] + (2.6 if k == "riverside" else -1.2); p.tx = p.x; p.tz = p.z; p.r = PI; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
 	ev.append(["door", r1(M.door[0]), r1(M.door[1])])
 
 func leave_room(p: E.Player) -> void:
 	if p.room == "": return
 	var M: Dictionary = D.ROOMS[p.room]
-	p.room = ""; p.x = M.door[0] + rnd2(-0.4, 0.4); p.z = M.door[1] + 1.2; p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
+	if p.room == "riverside":
+		ev.append(["raft", r1(M.at[0]), r1(M.at[1])])
+		if p.rafted:                                   # the posse comes back on the raft too
+			for q in peasants:
+				if q.owner == p.id and active(q) and room_at(q.x, q.z) != "":
+					q.x = M.door[0] + rnd2(-2, 2); q.z = M.door[1] - rnd2(2, 4); q.tx = q.x; q.tz = q.z
+	p.room = ""; p.rafted = false; p.x = M.door[0] + rnd2(-0.4, 0.4); p.z = M.door[1] + (-2.0 if M.get("open", false) else 1.2); p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
 	ev.append(["door", r1(p.x), r1(p.z)])
 
 ## What holding E would do, indoors.
@@ -1522,19 +1626,60 @@ func room_interact(p: E.Player):
 				var full := p.mith >= cap(p)
 				return {"type": "rune", "i": i, "key": "rune%d" % i, "ok": lit and left > 0 and not full, "dur": D.RUNE_TIME * (0.8 if rk(p, 0) >= 3 else 1.0), "x": v[0], "z": v[1], "rad": 1.0,
 					"label": "It is too dark to work. You need a burning torch in your hand" if not lit else "This vein is worked out until tomorrow" if left <= 0 else "You can carry no more mithril" if full else "Hold {interact} to prise out a lump of mithril"}
+	if p.room == "riverside":
+		var r_ = riverside_interact(p)
+		if r_ != null: return r_
 	for st in D.STATIONS:
 		if st.get("room", "") == p.room and D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "station", "st": st, "key": "st" + st.id, "ok": true, "dur": 0.12, "x": st.x, "z": st.z, "rad": 1.1, "label": "Hold {interact} to " + st.verb}
+	if p.room == "riverside" and D.d2(p.x, p.z, M.at[0], M.at[1]) < 9.0:
+		if phase == "day":
+			return {"type": "leave", "key": "leave", "ok": true, "dur": 0.8, "x": M.at[0], "z": M.at[1], "rad": 2.2, "label": "Hold {interact} to take the raft back to Thornhallow" + (". Your posse comes too" if p.rafted else "")}
+		return {"type": "swim", "key": "swim", "ok": true, "dur": 0.8, "x": M.at[0], "z": M.at[1], "rad": 2.2, "label": "The raft does not cross after dark. Hold {interact} to swim back: twenty seconds, and half your health"}
 	if D.d2(p.x, p.z, M.at[0], M.at[1]) < 4.0:
 		return {"type": "leave", "key": "leave", "ok": true, "dur": 0.6, "x": M.at[0], "z": M.at[1], "rad": 1.1, "label": "Hold {interact} to " + M.out}
 	return null
 
+## At the Riverside, what holding E would do that is not a place's notice: the heaps of the far ruin, the campfire, the
+## seams of the Rune Cave, the rubble that hides the Tithe Collector and the ore beside it.
+func riverside_interact(p: E.Player):
+	for k in D.RIVER_SPOTS.size():
+		var sp: Array = D.RIVER_SPOTS[k]
+		if D.d2(p.x, p.z, sp[0], sp[1]) < 4.0:
+			var n: int = spots2[k] if k < spots2.size() else 0
+			return {"type": "search", "i": 100 + k, "key": "x%d" % (100 + k), "ok": n > 0, "dur": search_time(p, phase != "day"), "x": sp[0], "z": sp[1], "rad": 1.1,
+				"label": "Hold {interact} to search the rubble. Nothing here bites" if n > 0 else "Nothing more under here until tomorrow"}
+	if D.d2(p.x, p.z, D.CAMPFIRE.x, D.CAMPFIRE.z) < 5.0:
+		return {"type": "ember", "key": "ember", "ok": true, "dur": 3.0, "x": D.CAMPFIRE.x, "z": D.CAMPFIRE.z, "rad": 1.3, "label": "Hold {interact} to rake through the campfire for a fire rock"}
+	if rcave:
+		for k in D.RUNE_SEAMS.size():
+			var v: Array = D.RUNE_SEAMS[k]
+			if D.d2(p.x, p.z, v[0], v[1]) < 3.0:
+				var left: int = runes2[k] if k < runes2.size() else 0
+				var full := p.rune >= cap(p)
+				return {"type": "rune2", "i": k, "key": "seam%d" % k, "ok": left > 0 and not full, "dur": D.RUNE_TIME, "x": v[0], "z": v[1], "rad": 0.9,
+					"label": "This seam is worked out until tomorrow" if left <= 0 else "You can carry no more runes" if full else "Hold {interact} to prise out a rune"}
+	if D.d2(p.x, p.z, D.TITHE_ORE.x, D.TITHE_ORE.z) < 2.6:
+		return {"type": "tore", "key": "tore", "ok": tore_day != day, "dur": 2.0, "x": D.TITHE_ORE.x, "z": D.TITHE_ORE.z, "rad": 0.8,
+			"label": "Hold {interact} to take the piece of ore. Somebody ought to" if tore_day != day else "Somebody has had today’s piece of ore"}
+	if D.d2(p.x, p.z, D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z) < 5.0:
+		var why := "You have yours. There is only one each, and it is in your hand, or near it." if p.tithe else "" if p.tpaid else "The man who owns the cave wants paying first, a search at a time"
+		return {"type": "tithe", "key": "tithe", "ok": why == "", "dur": D.TITHE_RUBBLE.time, "x": D.TITHE_RUBBLE.x, "z": D.TITHE_RUBBLE.z, "rad": 1.4,
+			"label": why if why != "" else "Hold {interact} to search the rubble for the chest: a whole minute, and it is %s" % ("a better chance after dark" if phase == "day" else "a better chance now it is dark")}
+	return null
+
+## Which room a peasant is standing in, if any (only the Riverside has peasants in it).
+static func room_at(x: float, z: float) -> String:
+	var M: Dictionary = D.ROOMS.riverside
+	return "riverside" if absf(x - M.x) <= M.hw + 2 and absf(z - M.z) <= M.hd + 2 else ""
+
 func collide_friend(e, r: float, axis: int = -1) -> void:   # villagers: buildings, built walls, trees, the edge of the map
-	if e is E.Player and e.room != "":                 # indoors: the room's own walls and furniture
-		var M: Dictionary = D.ROOMS[e.room]
+	var rm_: String = e.room if e is E.Player else room_at(e.x, e.z) if e is E.Peasant else ""
+	if rm_ != "":                                       # indoors (or across the river): the room's own walls and furniture
+		var M: Dictionary = D.ROOMS[rm_]
 		for b in M.box:
 			push_out(e, r, E.Box.new(b[0], b[1], b[2], b[3]), axis)
-		e.x = clampf(e.x, M.x - M.hw + r, M.x + M.hw - r); e.z = clampf(e.z, M.z - M.hd + r, M.z + M.hd - r)
+		e.x = clampf(e.x, M.x - M.hw + r, M.x + M.hw - r); e.z = clampf(e.z, M.z - M.hd + r + (1.2 if rm_ == "riverside" else 0.0), M.z + M.hd - r)
 		return
 	for c in near_colliders(e.x, e.z):
 		push_out(e, r, c, axis)
@@ -1582,6 +1727,16 @@ func find_interact(p: E.Player):
 	if p.state == "ok":
 		for k in D.ROOMS:
 			var M: Dictionary = D.ROOMS[k]
+			if k == "riverside":                       # the raft (version 7.12)
+				if D.d2(p.x, p.z, M.door[0], M.door[1]) < 9.0:
+					var dr: Array = M.door
+					if not raft:
+						return {"type": "raftw", "key": "raftw", "ok": p.wood > 0, "dur": 1.0, "x": dr[0], "z": dr[1], "rad": 2.2,
+							"label": ("Hold {interact} to put your wood into the raft (%d of %d so far)" if p.wood > 0 else "A raft for the whole village needs %d more wood (%d of %d so far)") % ([raftW, D.RAFT.wood] if p.wood > 0 else [D.RAFT.wood - raftW, raftW, D.RAFT.wood])}
+					if phase == "day":
+						return {"type": "enter", "room": k, "key": "enterriverside", "ok": true, "dur": 0.8, "x": dr[0], "z": dr[1], "rad": 2.2, "label": "Hold {interact} to take the raft across to the Riverside. Your posse comes too"}
+					return {"type": "swim", "key": "swim", "ok": true, "dur": 0.8, "x": dr[0], "z": dr[1], "rad": 2.2, "label": "The raft does not cross after dark. Hold {interact} to swim for it: twenty seconds, half your health, and your posse stays here"}
+				continue
 			if D.d2(p.x, p.z, M.door[0], M.door[1]) < 4.0:
 				var shut: bool = k == "inn" and innHp <= 0
 				return {"type": "enter", "room": k, "key": "enter" + k, "ok": not shut, "dur": 0.6, "x": M.door[0], "z": M.door[1], "rad": 1.1,
@@ -1802,7 +1957,7 @@ func drop_item(id: int, x: float, z: float) -> void:
 	drops.append(d)
 
 func stow(p: E.Player, id: int) -> void:
-	if p.inv.size() < D.PACK_MAX: p.inv.append(id)
+	if p.inv.size() < D.PACK_MAX or id == D.I_TITHE: p.inv.append(id)   # (the Tithe Collector is never left lying about)
 	else: drop_item(id, p.x, p.z)
 
 func wear(p: E.Player, id: int) -> void:
@@ -1953,6 +2108,8 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if U.shadow and (s.get("dot", false) or s.get("fire", false)):   # fire: the shadow is simply not there when it lands
 		shadow_blink(u)
 		return
+	var by_ = s.get("p")
+	if by_ is E.Player: d *= (D.POT.atk if by_.potA > 0 else 1.0) * (D.RAFT.tired_mul if by_.tired > 0 else 1.0)   # a Pick-Me-Up; just out of the river
 	var d0 := d                                      # what the blow was worth before what it landed on is counted
 	if holy: d *= holy
 	if u.vuln > 0: d *= 1.5
@@ -2073,7 +2230,7 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 				var bl_ := maxf(0.01, sqrt(bx * bx + bz * bz))
 				u.x += bx / bl_ * 1.2; u.z += bz / bl_ * 1.2
 			return
-		d *= gear_cut(e) * (0.5 if e.charge > 0 else 1.0) * (0.67 if e.prot > 0 else 1.0)
+		d *= gear_cut(e) * (0.5 if e.charge > 0 else 1.0) * (0.67 if e.prot > 0 else 1.0) * (D.POT.def if e.potD > 0 else 1.0)
 		if e.off >= 0 and D.IT[e.off].pool == "shield" and rk(e, D.B_SHIELD) > 0: add_xp(e, D.B_SHIELD, 0.3)   # learned by taking blows on a shield
 		if u and not ranged and e.feet == D.I_HOTFOOT: ignite(u, e, 3.0)   # Brother Cinder's Hot-Foot Boots
 		var bl := blessed_worn(e)                      # rune armour blessed for good: wraiths do half, and whatever strikes it is scorched
@@ -2226,7 +2383,7 @@ func do_attack(p: E.Player) -> void:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	if phase == "night": p.fought = true
-	p.atkCd = I.cd * ((0.6 if rk(p, 5) >= 8 else 0.8) if I.rng and rk(p, 5) >= 4 else 1.0) * (0.67 if p.mist > 0 else 1.0); p.ac += 1   # Red Mist: a third faster
+	p.atkCd = I.cd * ((0.6 if rk(p, 5) >= 8 else 0.8) if I.rng and rk(p, 5) >= 4 else 1.0) * (0.67 if p.mist > 0 else 1.0) / (D.POT.spd if p.potS > 0 else 1.0); p.ac += 1   # Red Mist: a third faster
 	if I.fire and rk(p, D.B_FIRE) >= 3: light_tar(p.x + sin(p.r) * 1.6, p.z + cos(p.r) * 1.6, p)   # a torch, swung at a tar pit
 	var mul := 1.0
 	if rk(p, 4) >= 7:                                  # every fifth blow twice as hard (every fourth from rank 9)
@@ -2361,6 +2518,10 @@ func do_ability(p: E.Player) -> void:   # the weapon's own trick
 		"reap":
 			for u in targets(p, I.reach + 0.3, -1.0):
 				hit_u(u, D_.call(1.6), src)
+		"quake":                                     # the Tithe Collector: everything round you, and they quake
+			for u in targets(p, I.reach + 1.0, -1.0):
+				hit_u(u, D_.call(1.5), src); scare(u, p.x, p.z, 4.0); ignite(u, p, 3.0)
+			ev.append(["quake", r1(p.x), r1(p.z)])
 		"backstab":
 			var l := targets(p, I.reach + 0.3, I.arc)
 			if l.size():
@@ -2809,12 +2970,21 @@ func do_fish(p: E.Player) -> void:
 			ev.append(["found", p.id, "%s in a purse somebody dropped off the jetty" % D.coins(c), r1(p.x), r1(p.z), 0, 0])
 	p.bite = 0; p.fishT = fish_wait(p)   # pulling early scares the fish off
 
-func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of rubble
-	var sps: Array = Map.ruin_layout(gseed, day).spots
-	if i < 0 or i >= sps.size() or spots[i] <= 0:
-		return
-	var sp: Dictionary = sps[i]
-	spots[i] -= 1; add_xp(p, 8, 1)
+func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of rubble (from 100: the far ruin, at the Riverside)
+	var river := i >= 100
+	var sp: Dictionary
+	if river:
+		var k := i - 100
+		if k >= D.RIVER_SPOTS.size() or spots2[k] <= 0: return
+		spots2[k] -= 1
+		sp = {"x": D.RIVER_SPOTS[k][0], "z": D.RIVER_SPOTS[k][1], "ruin": 0, "river": true}
+	else:
+		var sps: Array = Map.ruin_layout(gseed, day).spots
+		if i < 0 or i >= sps.size() or spots[i] <= 0:
+			return
+		sp = sps[i]
+		spots[i] -= 1
+	add_xp(p, 8, 1)
 	if sp.ruin: add_xp(p, D.B_WATCH, 1)               # the night watchman learns by finding things out there
 	var is_night := phase != "day"
 	var lore := rk(p, 8)
@@ -2831,7 +3001,7 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 	if left_.size() and (honed or certain or randf() < pr):
 		var id: int = pick(left_)
 		relics.append(id); gain(p, id); found = D.IT[id].n; big = 1
-		say("%s has found %s in %s!" % [p.dn, D.IT[id].n, D.RUINS[sp.ruin].name])
+		say("%s has found %s in %s!" % [p.dn, D.IT[id].n, "the far ruin, across the river" if river else D.RUINS[sp.ruin].name])
 	else:
 		var r := 0.4 if certain else randf()
 		if certain: dbl *= 2                           # (no relic left to find: a fat purse instead)
@@ -2867,6 +3037,7 @@ func do_search(p: E.Player, i: int) -> void:   # one rummage through a heap of r
 		else:
 			found = pick(D.JUNK)
 	ev.append(["found", p.id, found, r1(sp.x), r1(sp.z), big, 1 if p.inv.size() > inv0 else 0])
+	if river: return                                 # nothing in the far ruin bites
 	# by day, in the outer ruins, the rummaging now and then wakes something much worse than a shambler
 	if sp.ruin and not is_night and day >= 2 and tenant_day != day and randf() < D.TENANT_CHANCE + 0.01 * (week_of(mday()) - 1):
 		tenant_day = day
@@ -3055,10 +3226,10 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				if n > 0:
 					store[tb[0]] -= n; p.set(tb[0], p.get(tb[0]) + n)
 		"puti":
-			if near_station(p, "store") and ia >= 0 and ia < p.inv.size() and items.size() < 60:
+			if near_station(p, "store") and ia >= 0 and ia < p.inv.size() and items.size() < 60 and p.inv[ia] != D.I_TITHE:
 				items.append(p.inv.pop_at(ia))
 		"pute":
-			if near_station(p, "store") and D.SLOTS.has(sa) and p.get(sa) > 0 and items.size() < 60:
+			if near_station(p, "store") and D.SLOTS.has(sa) and p.get(sa) > 0 and items.size() < 60 and p.get(sa) != D.I_TITHE:
 				items.append(p.get(sa)); take_off(p, sa)
 		"takei":
 			if near_station(p, "store") and ia >= 0 and ia < items.size() and (p.inv.size() < D.PACK_MAX or wears_now(p, items[ia])):
@@ -3070,10 +3241,10 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 			if D.SLOTS.has(sa) and p.get(sa) > 0 and p.inv.size() < D.PACK_MAX:
 				p.inv.append(p.get(sa)); take_off(p, sa)
 		"dropi":
-			if ia >= 0 and ia < p.inv.size():
+			if ia >= 0 and ia < p.inv.size() and p.inv[ia] != D.I_TITHE:
 				drop_item(p.inv.pop_at(ia), p.x, p.z)
 		"destroy":                                  # broken up, burnt or thrown in the river: gone for good
-			if ia >= 0 and ia < p.inv.size():
+			if ia >= 0 and ia < p.inv.size() and p.inv[ia] != D.I_TITHE:
 				var gone: int = p.inv.pop_at(ia)
 				if D.IT[gone].tier == "relic": relics.erase(gone)   # (a relic finds its way back into the rubble, in time)
 				ev.append(["smash", r1(p.x), r1(p.z)])
@@ -3155,11 +3326,15 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					if q.owner == p.id and (q.state == "follow" or q.state == "fight" or q.state == "chop"):
 						q.state = "inn"; q.tree = null
 				say("%s has gone into the Thorny Rose Inn and barred the door." % p.dn)
-		"mbuy":                                     # buy from the merchant. arg: "i" or "i:book"
+		"mbuy":                                     # buy from the merchant. arg: "i" or "i:book"; "t:i" from the travelling merchant at the Riverside
 			var bits: PackedStringArray = str(arg).split(":")
+			var trav := bits.size() > 1 and bits[0] == "t"
+			if trav: bits = bits.slice(1)
 			var i := int(bits[0])
-			if near_station(p, "cart") and merchant >= 0 and phase == "day" and i >= 0 and i < wares.size():
-				var wv: Dictionary = wares[i]
+			var wl: Array = wares2 if trav else wares
+			var here_: bool = (near_station(p, "tmerch") and merch2 >= 0) if trav else (near_station(p, "cart") and merchant >= 0 and phase == "day")
+			if here_ and i >= 0 and i < wl.size():
+				var wv: Dictionary = wl[i]
 				if wv.left > 0 and p.coin >= wv.price:
 					var done := true
 					match wv.give:
@@ -3313,6 +3488,34 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 		"study":
 			if near_station(p, "priest") and p.holy < 2:
 				p.study = not p.study
+		"rbuy":                                         # the merchant who never leaves: materials, or a piece of rune (arg: a material, or an item)
+			if not near_station(p, "rmerch"): return
+			if typeof(arg) == TYPE_STRING and D.RESIDENT.has(sa) and sa != "weapon" and sa != "armour":
+				var n := 1 if sa == "mith" or sa == "rune" else 5
+				var price: int = D.RESIDENT[sa]
+				if p.coin >= price and p.get(sa) < cap(p):
+					p.coin -= price; p.set(sa, mini(cap(p), p.get(sa) + n)); spark.call("coin")
+			elif ia >= 0 and ia < D.IT.size() and D.IT[ia].tier == "rune" and not D.IT[ia].blessed:
+				var price: int = D.RESIDENT.armour if D.IT[ia].s != "w" else D.RESIDENT.weapon
+				if p.coin >= price and (p.inv.size() < D.PACK_MAX or wears_now(p, ia)):
+					p.coin -= price; gain(p, ia); spark.call("coin")
+					say("%s has bought %s from the merchant who never leaves, for %s. He is still counting it." % [p.dn, D.it_a(ia), D.coins(price)])
+		"recipe":                                       # one of the druid's recipes (for a reader of Granny's Remedies)
+			if near_station(p, "druid") and ia >= 0 and ia < D.POTIONS.size() and rk(p, 9) >= 1 and not (p.recipes & (1 << ia)) and p.coin >= D.POT.recipe:
+				p.coin -= D.POT.recipe; p.recipes |= 1 << ia; spark.call("coin")
+				say("%s has bought the druid’s recipe for %s, which is a list of what to bring him." % [p.dn, D.POTIONS[ia].n])
+		"brew":                                         # what he asks for today, and he brews one
+			if near_station(p, "druid") and ia >= 0 and ia < D.POTIONS.size() and (p.recipes & (1 << ia)) and ia < brew.size() and has(p, brew[ia]):
+				var key: String = D.POTIONS[ia].k
+				pay(p, brew[ia]); p.set(key, p.get(key) + 1); spark.call("holy")
+				ev.append(["found", p.id, D.POTIONS[ia].n + ". " + pick(D.DRUID_LINES), r1(p.x), r1(p.z), 0, 0])
+		"tpay":                                         # a search of the cave's rubble, paid in advance
+			if near_station(p, "keeper") and not p.tithe and not p.tpaid and p.coin >= tithe_fee():
+				p.coin -= tithe_fee(); p.tpaid = true; spark.call("coin")
+		"rcfix":                                        # make the Rune Cave fit to explore: twenty wood, once, for everyone
+			if near_station(p, "rcave") and not rcave and p.wood >= D.RCAVE_WOOD:
+				p.wood -= D.RCAVE_WOOD; rcave = true; sv += 1; spark.call("build")
+				say("%s has shored up the Rune Cave. It is now fit to explore, in the sense that it will probably stay up." % p.dn)
 		"banq":                                         # the windmill's banquet: at the mill, or from the offering plate by the east gate
 			if phase != "day" or p.banq == day or p.banqP: return
 			if sa == "mill" and near_station(p, "mill") and has(p, D.BANQUET.mill):
@@ -3727,11 +3930,11 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 			var was: String = p.dn
 			var kept := []
 			for id in [p.wpn, p.head, p.body, p.off, p.trk, p.feet] + p.inv:
-				if id > 0 and D.IT[id].tier == "relic": kept.append(id)
+				if id > 0 and D.IT[id].tier == "relic" and id != D.I_TITHE: kept.append(id)
 			p.deaths += 1; p.dn = D.rel_name(p.name, p.deaths)
 			for id in kept: drop_item(id, p.x, p.z)
 			p.wood = 0; p.stone = 0; p.iron = 0; p.food = 0; p.bodies = 0; p.bbod = 0; p.wpn = 0; p.head = -1; p.body = -1; p.off = -1; p.trk = -1; p.feet = -1
-			p.inv = []; p.hp = D.PLAYER_HP; p.state = "ok"; p.coward = false
+			p.inv = [D.I_TITHE] if p.tithe else []; p.hp = D.PLAYER_HP; p.state = "ok"; p.coward = false   # (whoever found it keeps it, even now)
 			var kn := []
 			for id in kept: kn.append(D.it_cap(id))
 			lines.append("%s did not see the dawn. %s has taken up the pitchfork, and the cottage." % [was, p.dn[0].to_upper() + p.dn.substr(1)]
@@ -3755,7 +3958,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 			else:
 				p.coin += share; paid += 1
 		var c := D.cottage(p.slot)
-		p.x = c.sx; p.tx = p.x; p.z = c.sz; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.bite = 0; p.room = ""
+		p.x = c.sx; p.tx = p.x; p.z = c.sz; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.bite = 0; p.room = ""; p.rafted = false; p.swimT = 0; p.tired = 0
 		# blessings and Dutch courage both wear off by morning
 		p.sure = false; p.bless = 0; p.bbod = 0; p.cg = 0; p.charge = 0; p.hang = 0; p.drinkT = 0; p.parry = 0; p.guard = 0; p.upOnce = false; p.study = false; p.order = 0; p.ordN = 0; p.abCd = 0; p.useCd = 0; p.tbCd = 0; p.p1Cd = 0; p.p2Cd = 0; p.prot = 0; p.hb = 0
 	if paid: lines.append("The village passed the hat: %s for everyone who stood and fought." % D.coins(share))
@@ -3769,9 +3972,9 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 			if own.coin >= 24:
 				own.coin -= 24; lines.append("%s turned on %s at dawn and demanded another two shillings. %s paid up." % [D.qname(q), own.dn, own.dn])
 			else:
-				var things: Array = own.inv.duplicate()
+				var things: Array = own.inv.filter(func(x): return x != D.I_TITHE)
 				for k in ["wpn", "head", "body", "off", "trk", "feet"]:
-					if own.get(k) > 0: things.append(own.get(k))
+					if own.get(k) > 0 and own.get(k) != D.I_TITHE: things.append(own.get(k))
 				if things.is_empty():
 					lines.append("%s turned on %s at dawn for two more shillings, found nothing worth taking, and left in disgust." % [D.qname(q), own.dn])
 				else:
@@ -3873,6 +4076,17 @@ func player_step(p: E.Player, dt: float) -> void:
 	if p.remote:
 		var k := minf(1, dt * 16)
 		p.x = lerpf(p.x, p.tx, k); p.z = lerpf(p.z, p.tz, k); p.r = D.ang_lerp(p.r, p.goal_r, k)
+	p.tired = maxf(0, p.tired - dt); p.potA = maxf(0, p.potA - dt); p.potS = maxf(0, p.potS - dt); p.potD = maxf(0, p.potD - dt)
+	if p.potI > 0:                                 # the Last Warning: wreathed in flame, and the dead near you catch
+		p.potI = maxf(0, p.potI - dt); p.potIt -= dt
+		if p.potIt <= 0 and p.state == "ok":
+			p.potIt = 0.5
+			for u in undead:
+				if not u.dead and u.state != "rise" and D.d2(u.x, u.z, p.x, p.z) < D.POT.reach * D.POT.reach: ignite(u, p, 3.0)
+	if p.state == "swim":                          # in the river
+		p.swimT -= dt
+		if p.swimT <= 0: end_swim(p)
+		return
 	if p.state == "down":
 		p.downT -= dt
 		if p.downT <= 0:
@@ -3955,7 +4169,9 @@ func player_step(p: E.Player, dt: float) -> void:
 			if not p.remote: p.r = D.ang_lerp(p.r, atan2(it.x - p.x, it.z - p.z), minf(1, dt * 12))
 		elif it.type == "search":
 			p.gk = 6
-		elif it.type == "rune":
+		elif it.type == "tithe" or it.type == "ember":
+			p.gk = 6
+		elif it.type == "rune" or it.type == "rune2":
 			p.gk = 3
 			if not p.remote: p.r = D.ang_lerp(p.r, atan2(it.x - p.x, it.z - p.z), minf(1, dt * 12))
 		if p.itT >= it.dur:
@@ -3991,6 +4207,33 @@ func player_step(p: E.Player, dt: float) -> void:
 					elif randf() < 0.6: bark(it.target, D.BARK_RALLY)
 				"dismount":
 					ride(p, false); p.eLock = true
+				"raftw":                                # wood into the raft, for the whole village
+					var wn := mini(p.wood, D.RAFT.wood - raftW)
+					if wn > 0 and not raft:
+						p.wood -= wn; raftW += wn; ev.append(["build", r1(it.x), r1(it.z)]); add_xp(p, 2, 1)
+						if raftW >= D.RAFT.wood:
+							raft = true; sv += 1; note("raft")
+							say("%s has finished the raft. Thornhallow can now cross the river to the Riverside, by day." % p.dn)
+				"swim":
+					start_swim(p)
+				"ember":                                # the campfire: four times in ten, a fire rock
+					if randf() < D.CAMPFIRE.rock:
+						p.frock += 1; ev.append(["found", p.id, "a fire rock, still warm" + (" (%d now)" % p.frock if p.frock > 1 else ""), r1(it.x), r1(it.z), 0, 0])
+					else:
+						ev.append(["found", p.id, "only ash", r1(it.x), r1(it.z), 0, 0])
+				"rune2":
+					if runes2[it.i] > 0 and p.rune < cap(p):
+						runes2[it.i] -= 1; p.rune += 1; p.cc += 1; add_xp(p, 0, 3)
+						ev.append(["found", p.id, "a rune, glowing blue" if p.rune > 1 else "a rune: blue, and humming faintly. A master smith works them into the best arms and armour there are", r1(p.x), r1(p.z), 0, 0])
+				"tore":
+					if tore_day != day:
+						tore_day = day
+						var rn := randf() < 0.5
+						if rn: p.rune = mini(cap(p), p.rune + 1)
+						else: p.mith = mini(cap(p), p.mith + 1)
+						ev.append(["found", p.id, "a rune" if rn else "a lump of mithril", r1(p.x), r1(p.z), 0, 0])
+				"tithe":
+					do_tithe(p)
 				"body":
 					peasants.erase(it.target); p.bodies += 1
 				"found":
@@ -4280,9 +4523,15 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		var sn := sin(Ld.r)
 		var tx: float = Ld.x + f[0] * cs + f[1] * sn
 		var tz: float = Ld.z - f[0] * sn + f[1] * cs
-		if Ld.room != "":                                # the leader has gone in somewhere: wait by the door
+		var q_far := room_at(q.x, q.z) != ""
+		if Ld.room == "riverside" and Ld.rafted:        # across the river on the raft, with their leader
+			pass
+		elif q_far and Ld.room != "riverside":           # left on the far bank (the leader swam back): they stay, until dawn
+			collide_friend(q, 0.35)
+			return
+		elif Ld.room != "":                              # the leader has gone in somewhere: wait by the door
 			var dr: Array = D.ROOMS[Ld.room].door
-			tx = dr[0] + f[0]; tz = dr[1] + 2.2 - f[1] * 0.7
+			tx = dr[0] + f[0]; tz = dr[1] + (-2.6 if Ld.room == "riverside" else 2.2) - f[1] * 0.7
 		var d := Vector2(tx - q.x, tz - q.z).length()
 		if d > 40:
 			q.x = tx; q.z = tz
@@ -5096,7 +5345,7 @@ func spikes_step(dt: float) -> void:
 # mx, mz: the direction held, each -1..1. t: seconds since the start, for the hangover wobble.
 ## The space bar: a leap the way you are heading (or facing, standing still). Not frozen, and not too often.
 func jump(p: E.Player, mx: float, mz: float) -> bool:
-	if p.state != "ok" or p.frozen > 0 or p.jumpCd > 0 or p.jumpT > 0 or p.room != "": return false
+	if p.state != "ok" or p.frozen > 0 or p.jumpCd > 0 or p.jumpT > 0 or (p.room != "" and p.room != "riverside"): return false
 	var l := sqrt(mx * mx + mz * mz)
 	if l < 0.01:                                    # nothing pressed: straight up, on the spot
 		p.jdx = 0.0; p.jdz = 0.0
@@ -5120,6 +5369,7 @@ func move_player(p: E.Player, mx: float, mz: float, dt: float, t: float = 0.0) -
 		return ""
 	var sp: float = D.PLAYER_SPEED * (1 - D.IT[p.body].slow if p.body >= 0 else 1.0) * (1 - 0.05 * p.bodies) * (1.35 if p.charge > 0 else 0.6 if p.hang > 0 else 1.0) * (0.85 if weather == "snow" else D.MUD if weather == "rain" and p.room == "" else 1.0) * stride(p)
 	if p.ride: sp = D.PLAYER_SPEED * D.SHEEP.spd * (D.MUD if weather == "rain" else 1.0)   # a sheep: boots and armour make no odds to it
+	sp *= (D.POT.spd if p.potS > 0 else 1.0) * (D.RAFT.tired_spd if p.tired > 0 else 1.0)
 	mx /= l; mz /= l
 	if p.hang > 0:                                 # the hangover wobble
 		var w := sin(t / 0.26) * 0.6

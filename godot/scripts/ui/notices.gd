@@ -83,6 +83,26 @@ static func tower_page(R: Rules, i: int, p: E.Player) -> Dictionary:
 	return {"title": "The watch tower, %s" % D.TOWER_NAMES[i], "intro": intro, "o": o}
 
 
+## A merchant's wares, as options to buy (pre: "t:" for the travelling merchant at the Riverside).
+static func wares_list(o: Array, p: E.Player, wl: Array, pre: String, lore: bool) -> void:
+	for i in wl.size():
+		var wv: Dictionary = wl[i]
+		var gone: bool = wv.left <= 0
+		if wv.give == "page":
+			for b in p.books.size():
+				var r := Rules.rk(p, b)
+				if r > 0 and r < D.MAX_RANK:
+					o.append({"label": "A loose page of " + D.book_title(b), "sub": D.coins(wv.price) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= wv.price and p.jobT <= 0, "a": "mbuy", "arg": pre + "%d:%d" % [i, b]})
+			continue
+		var sub: String = D.coins(wv.price) + (". Sold." if gone else ".")
+		if wv.give == "it": sub += " " + item_sub(p, wv.it)
+		elif wv.give == "relic":
+			sub += " He swears it is genuine." + ((" Your relic lore says: it is!" if wv.real >= 0 else " Your relic lore says: it is not.") if lore else "")
+		elif wv.give == "cogs": sub += " Lets you build a contraption you have not learned yet. You have %d." % p.cogs
+		elif wv.give == "index": sub += " A fifth book." if not p.xslot else " You have read it already."
+		o.append({"label": wv.n[0].to_upper() + wv.n.substr(1), "sub": sub, "ok": not gone and p.coin >= wv.price and not (wv.give == "index" and p.xslot), "a": "mbuy", "arg": pre + str(i)})
+
+
 static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 	var o := []
 	if id.begins_with("tower"):
@@ -238,22 +258,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var M: Dictionary = D.MERCHANTS[R.merchant]
 			var lore := Rules.rk(p, 8) >= 2
 			o.append({"head": "For sale"})
-			for i in R.wares.size():
-				var wv: Dictionary = R.wares[i]
-				var gone: bool = wv.left <= 0
-				if wv.give == "page":
-					for b in p.books.size():
-						var r := Rules.rk(p, b)
-						if r > 0 and r < D.MAX_RANK:
-							o.append({"label": "A loose page of " + D.book_title(b), "sub": D.coins(wv.price) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= wv.price and p.jobT <= 0, "a": "mbuy", "arg": "%d:%d" % [i, b]})
-					continue
-				var sub: String = D.coins(wv.price) + (". Sold." if gone else ".")
-				if wv.give == "it": sub += " " + item_sub(p, wv.it)
-				elif wv.give == "relic":
-					sub += " He swears it is genuine." + ((" Your relic lore says: it is!" if wv.real >= 0 else " Your relic lore says: it is not.") if lore else "")
-				elif wv.give == "cogs": sub += " Lets you build a contraption you have not learned yet. You have %d." % p.cogs
-				elif wv.give == "index": sub += " A fifth book." if not p.xslot else " You have read it already."
-				o.append({"label": wv.n[0].to_upper() + wv.n.substr(1), "sub": sub, "ok": not gone and p.coin >= wv.price and not (wv.give == "index" and p.xslot), "a": "mbuy", "arg": str(i)})
+			wares_list(o, p, R.wares, "", lore)
 			o.append({"head": "The job"})
 			var pct := roundi(R.job.work / D.JOB_WORK * 100)
 			if R.job.done:
@@ -268,6 +273,52 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var fee := R.guard_fee()
 			o.append({"label": "Hire a village guard for tonight", "sub": ("%s%s. He holds %s until dawn. %d of the %d guards are still free." % [D.coins(fee), " (the Bailiff has been jeered at today)" if R.bail_mood > 0 else "", D.POST_NAMES[R.guards % D.POSTS.size()], left, D.GUARDS]) if left > 0 else "Every guard is out tonight already.", "ok": left > 0 and p.coin >= fee, "a": "guard"})
 			return {"title": "Robert Bailiff’s back door", "intro": "You knock. After a while a voice says the Bailiff is not at home, and that his guards cost %s a night, paid in advance, through the letterbox." % D.coins(fee), "o": o}
+		"tmerch":                                     # the travelling merchant at the Riverside: never today's one in the village, and dearer
+			if R.merch2 < 0 or R.merch2 >= D.MERCHANTS.size():
+				return {"title": "The travelling merchant", "intro": "He has gone to find more things to sell.", "o": o}
+			var M2: Dictionary = D.MERCHANTS[R.merch2]
+			o.append({"head": "For sale, at Riverside prices"})
+			wares_list(o, p, R.wares2, "t:", Rules.rk(p, 8) >= 2)
+			return {"title": M2.name[0].to_upper() + M2.name.substr(1) + ", at the Riverside", "intro": "Selling %s, at half as much again as he would charge in Thornhallow. He says it is the cost of the river. You have %s." % [M2.sells, D.coins(p.coin)], "o": o}
+		"rmerch":                                     # the merchant who never leaves
+			o.append({"head": "Materials"})
+			for k in ["wood", "stone", "iron", "food", "steel", "mith", "rune"]:
+				var one: bool = k == "mith" or k == "rune"
+				o.append({"label": "Buy %s %s" % ["1" if one else "5", D.RES_NAME[k].to_lower()], "sub": "%s. You carry %d." % [D.coins(D.RESIDENT[k]), p.get(k)], "ok": p.coin >= D.RESIDENT[k] and p.get(k) < Rules.cap(p), "a": "rbuy", "arg": k})
+			o.append({"head": "Rune arms and armour"})
+			for b in D.STEEL_W + D.BOWS + D.ARMOUR:
+				var rid := D.tier_item(b, "rune")
+				if rid < 0: continue
+				var pr: int = D.RESIDENT.armour if D.IT[rid].s != "w" else D.RESIDENT.weapon
+				o.append({"label": "Buy " + D.it_a(rid), "sub": D.coins(pr) + ". " + item_sub(p, rid), "ok": p.coin >= pr and (p.inv.size() < D.PACK_MAX or Rules.wears_now(p, rid)), "a": "rbuy", "arg": rid})
+			return {"title": "The merchant who never leaves", "intro": "He has been here longer than the river, he says, and he knows exactly how far it is to the nearest other shop. You have %s." % D.coins(p.coin), "o": o}
+		"druid":
+			var granny := Rules.rk(p, 9) >= 1
+			o.append({"head": "Today he asks"})
+			for k in D.POTIONS.size():
+				var P: Dictionary = D.POTIONS[k]
+				var known: bool = (p.recipes & (1 << k)) != 0
+				var c: Dictionary = R.brew[k] if k < R.brew.size() else {}
+				if known:
+					o.append({"label": "Have him brew %s (%s)" % [P.n, D.cost_text(c)], "sub": "%s. You carry %d." % [P.d[0].to_upper() + P.d.substr(1), p.get(P.k)], "ok": Rules.has(p, c), "a": "brew", "arg": k})
+				else:
+					o.append({"label": "Buy the recipe for %s (%s)" % [P.n, D.coins(D.POT.recipe)], "sub": ("%s. The recipe is a list of what to bring him; he does the rest, and will not say how." % (P.d[0].to_upper() + P.d.substr(1))) if granny else "He only sells recipes to readers of Granny’s Remedies. Granny was very firm about it.", "ok": granny and p.coin >= D.POT.recipe, "a": "recipe", "arg": k})
+			o.append({"text": "What he asks for changes every morning, and is the same for everybody. Fire rocks come out of the campfire. Potions go in your backpack; drink one from the action bar. One of each kind works at a time."})
+			return {"title": "The druid", "intro": "A man in a robe the colour of moss, who knows how Granny’s potions are made and is not going to tell a peasant. Did anybody honestly believe we would be taught the secret art of alchemy?", "o": o}
+		"keeper":
+			var fee := R.tithe_fee()
+			if p.tithe:
+				o.append({"text": "“You have found it,” he says. “I should have charged more.”"})
+			else:
+				o.append({"label": "Pay for a search of the rubble (%s)" % D.coins(fee), "sub": "Paid: go and search. It takes a whole minute." if p.tpaid else "One search, of one minute. Not every search finds it. It is said to be easier to find after dark, when the raft has stopped.", "ok": not p.tpaid and p.coin >= fee, "a": "tpay"})
+			o.append({"text": "There is a single piece of ore in there as well: rune or mithril, for whoever gets to it first today. He does not charge for that, because he has not noticed it."})
+			return {"title": "The man who owns the cave", "intro": "An unscrupulous villager, who knows perfectly well how desperate Thornhallow is. In a chest, under the rubble in his cave, he says, is the best weapon there is. He charges by the search, and his price goes up every week. It is %s today." % D.coins(fee), "o": o}
+		"rcave":
+			if R.rcave:
+				o.append({"text": "It is fit to explore now, more or less. Three seams of runes glow blue at the back: two to a seam each day. Stand beside one and hold the interact key."})
+			else:
+				o.append({"label": "Make it fit to explore (%d wood)" % D.RCAVE_WOOD, "sub": "Once, for everybody: props, planks and a ladder that stays where it is put. You carry %d wood." % p.wood, "ok": p.wood >= D.RCAVE_WOOD, "a": "rcfix"})
+			return {"title": "The Rune Cave", "intro": "Its previous owner did not maintain it, and it was poorly designed to begin with. Something at the back glows blue.", "o": o}
 		"mill", "plate":                              # the windmill's banquet, paid for at the mill or from the plate by the east gate
 			var mill := id == "mill"
 			var c: Dictionary = D.BANQUET.mill if mill else D.BANQUET.plate

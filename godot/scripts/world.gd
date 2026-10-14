@@ -54,6 +54,11 @@ var rider: Node3D                         # the headless rider who brings it
 var _rider_t := -1.0
 var _inn_fire: OmniLight3D                # the fire in the Thorny Rose
 var _veins: Array = []                    # the rune veins in the old workings: [node, material, light]
+var _raft: Node3D                         # the raft on the village bank, once it is built
+var _raft_pile: Node3D                    # and the wood stacked for it until then
+var _raft_far: Node3D                     # the raft, tied up at the Riverside
+var _rcave_props: Node3D                  # the Rune Cave's props, once it has been made fit to explore
+var _seams: Array = []                    # its seams of runes: [node, material]
 var _evil: Array[Node3D] = []             # the castle's worse and worse looks, one set a week
 var _evil_now := -1
 var _castle_lit: StandardMaterial3D       # the one window that is always lit
@@ -87,6 +92,7 @@ func _ready() -> void:
 	_inn_room()
 	_farms()
 	_downs()
+	_riverside()
 
 
 func rr(a: float, b: float) -> float:
@@ -1175,6 +1181,110 @@ func _inn_room() -> void:
 		l.light_energy = 1.5
 		l.position = at
 		n.add_child(l)
+
+
+## The far bank (version 7.12): the Riverside, a long way off the map like the inn and the mine, with the river along its
+## north side. The hamlet's three houses, the two merchants, the druid's hut and the campfire, the far ruin, the Rune
+## Cave and the cave with the coveted relic in it. And on the village bank, the raft (or the wood for it).
+func _riverside() -> void:
+	var M: Dictionary = D.ROOMS.riverside
+	var c0 := Vector3(M.x, 0, M.z)
+	var rg := RandomNumberGenerator.new()
+	rg.seed = 7120
+	Build.box(self, Vector3(M.hw * 2 + 30, 0.1, M.hd * 2 + 30), c0 + Vector3(0, -0.02, 6), C.grass2)
+	Build.box(self, Vector3(M.hw * 2, 0.1, M.hd * 2), c0 + Vector3(0, 0.02, 0), C.grass)
+	Build.box(self, Vector3(M.hw * 2 + 30, 0.12, 14.0), c0 + Vector3(0, 0.03, -M.hd - 6.5), C.water)      # the river, along the north
+	Build.box(self, Vector3(M.hw * 2 + 30, 0.13, 1.4), c0 + Vector3(0, 0.03, -M.hd + 0.2), C.sand)
+	for i in 20:                                                                                         # a few ripples
+		Build.box(self, Vector3(rg.randf_range(1.5, 4.0), 0.14, 0.18), c0 + Vector3(rg.randf_range(-M.hw - 10, M.hw + 10), 0.04, -M.hd - rg.randf_range(1.5, 12.0)), C.water2)
+	for i in 34:                                                                                         # trees round the edge
+		var a := rg.randf() * TAU
+		var e := Vector3(cos(a) * (M.hw + rg.randf_range(2, 8)), 0, sin(a) * (M.hd + rg.randf_range(2, 8)))
+		if e.z < -M.hd: continue
+		Build.cyl(self, 0.22, 0.3, 1.6, c0 + e, C.trunk, 6)
+		Build.cone(self, 1.6, 3.2, c0 + e + Vector3(0, 1.4, 0), C.leaf if i % 2 else C.leaf2, 7)
+	var lp := Vector3(M.at[0], 0, M.at[1])                                                               # the landing
+	Build.box(self, Vector3(5.0, 0.3, 3.0), lp + Vector3(0, 0, -1.8), C.wood2)
+	for sx in [-2.3, 2.3]: Build.box(self, Vector3(0.25, 1.1, 0.25), lp + Vector3(sx, 0, -3.1), C.timber)
+	_raft_far = _raft_node(lp + Vector3(0, 0, -5.2))
+	# the hamlet: three houses, and a path
+	house(-186.0, 312.0, 0.0, 6.0, 4.8, 2.6, C.cream2, C.thatch, false, true)
+	house(-184.0, 324.0, PI / 2, 4.4, 5.2, 2.4, C.cream, C.roof3, false, true)
+	house(-171.0, 331.0, 0.0, 6.0, 4.8, 2.6, C.cream2, C.roof2, false, true)
+	for i in 22:
+		Build.box(self, Vector3(rg.randf_range(0.5, 1.0), 0.06, rg.randf_range(0.5, 1.0)), lp + Vector3(rg.randf_range(-1, 1) - i * 0.5, 0.04, 3.0 + i * 0.75), C.path2, rg.randf() * 3)
+	# the merchant who never leaves: a stall with a roof; the travelling merchant: his cart
+	var st := Vector3(-174, 0, 303.6)
+	Build.box(self, Vector3(3.2, 1.0, 1.2), st, C.wood2)
+	for sx in [-1.5, 1.5]: Build.box(self, Vector3(0.14, 2.4, 0.14), st + Vector3(sx, 0, 0.5), C.timber)
+	Build.box(self, Vector3(3.6, 0.12, 1.8), st + Vector3(0, 2.4, 0.2), Color("3f6b8f"))
+	for i in 4: Build.box(self, Vector3(0.4, 0.3, 0.3), st + Vector3(-1.2 + i * 0.8, 1.0, 0), [C.wood, C.stone, C.iron, Color("3f7ed8")][i])
+	_npc(self, st + Vector3(0, 0, -1.0), 0.0, Color("4b5a3a"), "cap", false)
+	var ct := Vector3(-164, 0, 303.6)
+	Build.box(self, Vector3(2.6, 0.9, 1.4), ct + Vector3(0, 0.6, 0), C.wood)
+	for sx in [-1.2, 1.2]: Build.cyl(self, 0.6, 0.6, 0.18, ct + Vector3(sx, 0.6, 0), C.timber, 10, 0, 0, PI / 2)
+	Build.box(self, Vector3(2.4, 0.9, 1.2), ct + Vector3(0, 1.5, 0), Color("a0523a"))
+	_npc(self, ct + Vector3(1.8, 0, 1.0), -PI / 2, Color("6a4a7a"), "hood", false)
+	# the druid's hut, and the campfire
+	house(-140.0, 306.0, 0.0, 5.2, 4.4, 2.2, C.wood3, C.leaf, true)
+	_npc(self, Vector3(-143.0, 0, 309.0), PI * 0.8, Color("4f6b3a"), "hood", false)
+	var cf := Vector3(D.CAMPFIRE.x, 0, D.CAMPFIRE.z)
+	for i in 7: Build.box(self, Vector3(0.4, 0.3, 0.4), cf + Vector3(cos(i * TAU / 7) * 0.9, 0, sin(i * TAU / 7) * 0.9), C.stone3, i)
+	var flame := Build.mat(Color(1.0, 0.6, 0.2), 2.0)
+	for i in 3: Build.cone(self, 0.3 - i * 0.06, 0.8 + i * 0.2, cf + Vector3(rg.randf_range(-0.2, 0.2), 0.1, rg.randf_range(-0.2, 0.2)), Color.WHITE, 5).material_override = flame
+	var fl := OmniLight3D.new(); fl.light_color = Color(1.0, 0.62, 0.3); fl.omni_range = 9.0; fl.light_energy = 1.4; fl.position = cf + Vector3(0, 1.2, 0); add_child(fl)
+	lanterns.append(fl)
+	# the far ruin: broken walls and heaps of rubble
+	for i in 9:
+		Build.box(self, Vector3(rg.randf_range(1.0, 3.0), rg.randf_range(0.6, 2.2), 0.6), Vector3(rg.randf_range(-194, -168), 0, rg.randf_range(327, 344)), C.stone2 if i % 2 else C.stone3, rg.randf() * 3)
+	for sp in D.RIVER_SPOTS:
+		for j in 4: Build.box(self, Vector3(rg.randf_range(0.5, 1.1), rg.randf_range(0.3, 0.6), rg.randf_range(0.5, 1.0)), Vector3(sp[0] + rg.randf_range(-0.7, 0.7), 0, sp[1] + rg.randf_range(-0.7, 0.7)), C.stone if j % 2 else C.stone2, rg.randf() * 3)
+	# the Rune Cave: a hollow of rock, open to the west, with three blue seams at the back
+	var rock := Color("6e6878")
+	Build.box(self, Vector3(2.0, 4.0, 11.2), Vector3(-125.4, 0, 331.0), rock)
+	Build.box(self, Vector3(7.2, 3.4, 1.6), Vector3(-130.0, 0, 325.8), rock)
+	Build.box(self, Vector3(7.2, 3.4, 1.6), Vector3(-130.0, 0, 336.2), rock)
+	Build.box(self, Vector3(7.6, 0.8, 11.6), Vector3(-129.4, 3.4, 331.0), Color("5f5a69"))
+	for v in D.RUNE_SEAMS:
+		var m := Build.mat(Color("3f7ed8"), 1.6)
+		var b := Build.box(self, Vector3(0.3, 1.2, 0.9), Vector3(v[0] + 1.5, 0.6, v[1]), Color("3f7ed8"))
+		b.material_override = m
+		_seams.append([b, m])
+	_rcave_props = Node3D.new(); add_child(_rcave_props)
+	for z in [327.0, 331.0, 335.0]:
+		Build.box(_rcave_props, Vector3(0.22, 3.2, 0.22), Vector3(-132.5, 0, z), C.timber)
+		Build.box(_rcave_props, Vector3(0.22, 0.22, 2.2), Vector3(-132.5, 3.1, z), C.timber)
+	Build.box(_rcave_props, Vector3(3.0, 0.08, 1.2), Vector3(-133.5, 0.05, 331.0), C.wood3)
+	# the cave of the coveted relic, its owner, the rubble and the ore
+	Build.box(self, Vector3(8.0, 3.6, 5.2), Vector3(-148.0, 0, 341.5), Color("5d5866"))
+	Build.box(self, Vector3(2.4, 2.2, 0.4), Vector3(-148.0, 0, 338.8), Color("14111a"))
+	_npc(self, Vector3(-153.0, 0, 334.0), PI * 0.2, Color("7a3a2a"), "bald", false)
+	for j in 9: Build.box(self, Vector3(rg.randf_range(0.6, 1.3), rg.randf_range(0.4, 0.9), rg.randf_range(0.6, 1.2)), Vector3(D.TITHE_RUBBLE.x + rg.randf_range(-1.2, 1.2), 0, D.TITHE_RUBBLE.z + rg.randf_range(-0.8, 0.8)), C.stone2 if j % 2 else C.stone3, rg.randf() * 3)
+	Build.box(self, Vector3(0.4, 0.3, 0.4), Vector3(D.TITHE_ORE.x, 0, D.TITHE_ORE.z), Color("7d5fb3"), 0.4)
+	# and on the village bank: the raft, or what there is of it so far
+	var dr := Vector3(M.door[0], 0, M.door[1])
+	_raft = _raft_node(dr + Vector3(0, 0, 3.2))
+	_raft_pile = Node3D.new(); add_child(_raft_pile)
+	for i in 6: Build.cyl(_raft_pile, 0.25, 0.25, 3.2, dr + Vector3(-1.5 + (i % 3) * 0.55, 0.25 + floorf(i / 3.0) * 0.45, 0), C.wood, 7, PI / 2, 0, PI / 2)
+	Build.box(self, Vector3(0.18, 1.2, 0.18), dr + Vector3(2.2, 0, 1.2), C.timber)
+
+func _raft_node(at: Vector3) -> Node3D:
+	var r := Node3D.new(); r.position = at; add_child(r)
+	for i in 6: Build.cyl(r, 0.28, 0.28, 4.2, Vector3(-1.4 + i * 0.56, 0.12, 0), C.wood if i % 2 else C.wood2, 7, 0, PI / 2)
+	Build.box(r, Vector3(3.6, 0.1, 0.3), Vector3(0, 0.42, -1.2), C.timber)
+	Build.box(r, Vector3(3.6, 0.1, 0.3), Vector3(0, 0.42, 1.2), C.timber)
+	Build.box(r, Vector3(0.1, 2.6, 0.1), Vector3(1.6, 0.3, 1.6), C.timber)
+	return r
+
+## The raft and the Rune Cave as the rules have them: built or not, and how much of the raft's wood is in.
+func set_riverside(built: bool, wood: int, cave: bool, seams: Array) -> void:
+	if _raft == null: return
+	_raft.visible = built; _raft_far.visible = built
+	_raft_pile.visible = not built and wood > 0
+	_raft_pile.scale = Vector3.ONE * clampf(0.4 + wood / float(D.RAFT.wood), 0.4, 1.2)
+	_rcave_props.visible = cave
+	for i in mini(seams.size(), _seams.size()):
+		_seams[i][1].emission_energy_multiplier = (1.6 + 0.5 * sin(Time.get_ticks_msec() / 380.0 + i)) if int(seams[i]) > 0 else 0.15
 
 
 ## How much is left in each rune vein today: a worked-out vein goes dull.

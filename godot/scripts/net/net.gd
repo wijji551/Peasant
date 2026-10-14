@@ -24,7 +24,7 @@ const MAX_PLAYERS := 8
 const SEND_RATE := 1.0 / 12.0
 const INPUT_RATE := 1.0 / 15.0
 const ALPHA := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # no I, O, 0 or 1: they are too easy to mix up
-const PSTATE := ["ok", "down", "dead", "hide", "inn"]
+const PSTATE := ["ok", "down", "dead", "hide", "inn", "swim"]
 const QSTATE := ["idle", "follow", "chop", "fight", "hide", "body", "gone", "inn", "post", "down", "graze", "ride"]
 const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 # a player's fields, in the order they are sent
@@ -32,7 +32,8 @@ const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel"
 	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "room", "rune", "mith", "game", "gwon", "treated", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t", "fs", "fsT", "oilCd", "dark", "braced",
 	"banq", "banqP", "herd", "herdT", "herdL", "herdQ", "herdW", "sheep", "sheepFed", "ride", "strayW",
-	"jl", "jhw", "jlT", "jlL", "jlQ", "jlW", "jlPaid", "jnote", "jfail"]
+	"jl", "jhw", "jlT", "jlL", "jlQ", "jlW", "jlPaid", "jnote", "jfail",
+	"rafted", "swimT", "tired", "pot_a", "pot_s", "pot_d", "pot_i", "potA", "potS", "potD", "potI", "frock", "recipes", "tpaid", "tithe"]
 
 static var me: Net
 
@@ -512,6 +513,7 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 		"bp": p.r = float(m.get("r", p.r)); p.goal_r = p.r; R.book_power(p, int(m.b))     # a book's own power, from the action bar
 		"oil": R.oil_power(p)
 		"ride": R.ride(p, bool(m.get("on", not p.ride)))
+		"pot": R.drink(p, int(m.get("k", -1)))
 		"ord": R.do_order(p)
 		"bld": R.try_place(p, str(m.k), float(m.x), float(m.z), float(m.rot))
 		"rdy": if R.phase == "day": p.ready = bool(m.v)
@@ -582,7 +584,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind + (100 if q.stray else 0), q.plat, q.kit])
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
-		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]), "po": R.pools,
+		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "rv2": [R.raftW, R.raft, R.rcave, R.spots2, R.runes2, R.tore_day, R.merch2, R.wares2, R.brew], "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]), "po": R.pools,
 		"pl": pl, "pe": pe, "ev": ev_out}
 	if with_undead:
 		var un := PackedFloat32Array()
@@ -689,6 +691,9 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 	R.letters = lt[0]; R.letter_new = bool(lt[1])
 	R.chest = m.get("ch", {})
 	R.rune_left = m.get("rn", R.rune_left)
+	var rv2: Array = m.get("rv2", [])
+	if rv2.size() >= 9:
+		R.raftW = int(rv2[0]); R.raft = bool(rv2[1]); R.rcave = bool(rv2[2]); R.spots2 = rv2[3]; R.runes2 = rv2[4]; R.tore_day = int(rv2[5]); R.merch2 = int(rv2[6]); R.wares2 = rv2[7]; R.brew = rv2[8]
 	if str(m.si) != str(R.sites):
 		R.sites = m.si
 		R.set_sites(R.sites)
