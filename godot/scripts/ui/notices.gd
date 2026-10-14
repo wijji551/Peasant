@@ -112,10 +112,11 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var pr := func(n: int) -> int: return floori(n * 1.5) if p.gab else n
 			o.append({"head": "Sell"})
 			for r in D.RES:
-				o.append({"label": "Sell 5 " + r, "sub": "for %dd. You carry %d." % [pr.call(mini(5, p.get(r)) * (D.STEEL_SELL if r == "steel" else 1)), p.get(r)], "ok": p.get(r) > 0, "a": "sell", "arg": r})
+				var each: int = D.STEEL_SELL if r == "steel" else (D.FISH.sell5 if Rules.rk(p, 1) >= 5 else D.FISH.sell) if r == "fish" else 1
+				o.append({"label": "Sell 5 " + r, "sub": "for %dd. You carry %d." % [pr.call(mini(5, p.get(r)) * each), p.get(r)], "ok": p.get(r) > 0, "a": "sell", "arg": r})
 			o.append({"head": "Buy"})
 			for r in D.RES:
-				if r == "steel": continue                  # nobody sells steel
+				if r == "steel" or r == "fish": continue   # nobody sells steel, and the market's fish is not fit to eat
 				o.append({"label": "Buy 5 " + r, "sub": "for 10d", "ok": p.coin >= 2 and p.get(r) < Rules.cap(p), "a": "buy", "arg": r})
 			return {"title": "The market", "intro": "You have %s. " % D.coins(p.coin) + ("You have the Gift of the Gab: the stalls pay you three pence for every two pieces, and still charge two a piece." if p.gab else "The stalls pay a penny a piece and charge two."), "o": o}
 		"store":

@@ -33,7 +33,7 @@ const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel"
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t", "fs", "fsT", "oilCd", "dark", "braced",
 	"banq", "banqP", "herd", "herdT", "herdL", "herdQ", "herdW", "sheep", "sheepFed", "ride", "strayW",
 	"jl", "jhw", "jlT", "jlL", "jlQ", "jlW", "jlPaid", "jnote", "jfail",
-	"rafted", "swimT", "tired", "pot_a", "pot_s", "pot_d", "pot_i", "potA", "potS", "potD", "potI", "frock", "recipes", "tpaid", "tithe"]
+	"rafted", "swimT", "tired", "pot_a", "pot_s", "pot_d", "pot_i", "potA", "potS", "potD", "potI", "frock", "recipes", "tpaid", "tithe", "fish", "fishCd"]
 
 static var me: Net
 
@@ -514,6 +514,7 @@ static func apply(R: Rules, p: E.Player, m: Dictionary) -> void:
 		"oil": R.oil_power(p)
 		"ride": R.ride(p, bool(m.get("on", not p.ride)))
 		"pot": R.drink(p, int(m.get("k", -1)))
+		"efish": R.eat_fish(p)
 		"ord": R.do_order(p)
 		"bld": R.try_place(p, str(m.k), float(m.x), float(m.z), float(m.rot))
 		"rdy": if R.phase == "day": p.ready = bool(m.v)

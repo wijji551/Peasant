@@ -23,7 +23,7 @@ static func step(R: Rules) -> void:
 	for p in R.players:
 		if full:
 			var c := Rules.cap(p)
-			for k in ["wood", "stone", "iron", "food", "steel", "mith", "rune"]:
+			for k in ["wood", "stone", "iron", "food", "fish", "steel", "mith", "rune"]:
 				if p.get(k) < c: p.set(k, c)
 			if p.coin < 9600: p.coin = 9600                       # forty gold pieces
 			for k in ["pot_a", "pot_s", "pot_d", "pot_i"]:

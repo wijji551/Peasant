@@ -550,6 +550,7 @@ func bar_all() -> Array:
 	if Rules.rk(p, 6) >= 1: out.append("orders")
 	if p.posse > 0: out.append("toilet")
 	if p.sheep: out.append("sheep")
+	if p.fish > 0: out.append("fish")
 	for k in D.POTIONS.size():                        # Granny's potions, while there are any to drink
 		if p.get(D.POTIONS[k].k) > 0: out.append("pot%d" % k)
 	return out
@@ -577,6 +578,8 @@ func bar_info(id: String) -> Array:
 			return ["posse", ["Follow", "Hold", "Charge"][p.order], 0.0, "Posse orders: follow you, hold where they stand%s." % (", or charge" if Rules.rk(p, 6) >= 3 else "")]
 		"toilet":
 			return ["toilet", "Toilet", p.tbCd, "Emergency toilet break: the dead nearby run from your posse."]
+		"fish":
+			return ["fish", "Fish ×%d" % p.fish, p.fishCd, "Eat a fish: back to full health at once%s. Then a wait before the next." % (", and everyone near you too" if Rules.rk(p, 1) >= 10 else "")]
 		"pot0", "pot1", "pot2", "pot3":
 			var P: Dictionary = D.POTIONS[int(id.substr(3))]
 			return [P.k, "%s ×%d" % [P.short, p.get(P.k)], [p.potA, p.potS, p.potD, p.potI][int(id.substr(3))], "%s: %s. Drinking another only starts it again." % [P.n, P.d]]
@@ -613,6 +616,10 @@ func bar_do(id: String) -> void:
 			if p.tbCd > 0: Sound.play("no"); hud.banner("Not yet", "The posse needs %d more seconds, and a drink of water." % ceili(p.tbCd), 1.3)
 			elif not p.posse: Sound.play("no"); hud.banner("No posse", "An emergency toilet break needs a posse.", 1.3)
 			else: cmd({"t": "tb"})
+		"fish":
+			if p.fishCd > 0: Sound.play("no"); hud.banner("Not yet", "You are still full of the last one. %d seconds." % ceili(p.fishCd), 1.3)
+			elif p.hp >= Rules.max_hp(p) and Rules.rk(p, 1) < 10: Sound.play("no"); hud.banner("Not hungry", "You are in perfect health. Keep it for when you are not.", 1.3)
+			else: cmd({"t": "efish"})
 		"pot0", "pot1", "pot2", "pot3":
 			cmd({"t": "pot", "k": int(id.substr(3))})
 		"sheep":
@@ -1084,6 +1091,9 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"fetched": if ev[1] == me.id: hud.banner("Fetched", "The dog has brought you %s." % ev[2], 1.8)
 		"no": if ev[1] == me.id: Sound.play("no"); hud.banner(ev[3] if ev.size() > 3 else "Not here", ev[2], 1.6 if ev.size() < 4 else 2.4)
 		"baa": Sound.play("baa", 0.8, Vector2(ev[1], ev[2]))
+		"eatfish":
+			F.puff(ev[2], 1.6, ev[3], 14, F.C_GLAD, 2.4); F.ring(ev[2], ev[3], 1.6, 16, F.C_SPLASH); Sound.play("eat", 1.0, Vector2(ev[2], ev[3]))
+			if ev[1] == me.id: hud.banner("A fish", "Back to full health. It was very fresh.", 1.4)
 		"mole":                                           # a mole pops up out of its hill, and there are coins
 			world.mole_pop(ev[1], ev[2]); F.puff(ev[1], 0.3, ev[2], 10, F.C_WOOD, 2.0); F.puff(ev[1], 0.8, ev[2], 5, F.C_COIN, 2.0)
 			Sound.play("pop", 0.9, Vector2(ev[1], ev[2])); Sound.play("coin", 0.8, Vector2(ev[1], ev[2]))

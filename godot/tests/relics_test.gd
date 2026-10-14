@@ -149,18 +149,18 @@ func _init() -> void:
 	R.gather_one("tree", R.trees.filter(func(t): return t.alive)[0], m)
 	ok("your own chopping teaches no leading", m.xp[6] == 0.0)
 	# ---------- fishing
-	m.books[1] = 0; m.food = 0; m.gk = 5; m.bite = 1.0
+	m.books[1] = 0; m.fish = 0; m.gk = 5; m.bite = 1.0
 	R.do_fish(m)
-	ok("a catch is five fish", m.food == D.FISH_FOOD and D.FISH_FOOD == 5, m.food)
-	m.books[1] = 3; m.food = 0; m.gk = 5; m.bite = 1.0
+	ok("a catch is five fish", m.fish == D.FISH_FOOD and D.FISH_FOOD == 5, m.fish)
+	m.books[1] = 3; m.fish = 0; m.gk = 5; m.bite = 1.0
 	R.do_fish(m)
-	ok("seven with the third rank of the book", m.food == 7, m.food)
+	ok("seven with the third rank of the book", m.fish == 7, m.fish)
 	var coins := 0
 	var runes := 0
 	var things := 0
 	m.books[1] = 0
 	for i in 2000:
-		m.food = 0; m.gk = 5; m.bite = 1.0; m.inv = []
+		m.fish = 0; m.gk = 5; m.bite = 1.0; m.inv = []
 		var c0 := m.coin
 		var r0 := m.mith
 		m.mith = 0

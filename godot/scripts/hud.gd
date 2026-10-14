@@ -82,7 +82,7 @@ func _ready() -> void:
 	_carry_grid.add_theme_constant_override("v_separation", 0)
 	_carry_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(_carry_grid)
-	for r in ["coin", "wood", "stone", "iron", "food", "steel", "mith", "rune", "pot_a", "pot_s", "pot_d", "pot_i", "frock"]:
+	for r in ["coin", "wood", "stone", "iron", "food", "fish", "steel", "mith", "rune", "pot_a", "pot_s", "pot_d", "pot_i", "frock"]:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 4)
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -404,7 +404,7 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		_boss_num.text = "%d / %d" % [maxi(0, ceili(R.boss.hp)), roundi(R.boss.mhp)]
 	# what you carry: only the things you have (coin always; a full load in rose)
 	var c := Rules.cap(p)
-	for r in ["wood", "stone", "iron", "food", "steel", "mith", "rune"]:
+	for r in ["wood", "stone", "iron", "food", "fish", "steel", "mith", "rune"]:
 		var n: int = p.get(r)
 		_res[r].text = str(n)
 		_res[r].add_theme_color_override("font_color", Look.ROSE if n >= c else Look.INK)

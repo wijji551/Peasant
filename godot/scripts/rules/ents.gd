@@ -58,6 +58,8 @@ class Player:
 	var stone := 0
 	var iron := 0
 	var food := 0
+	var fish := 0           # fish (version 7.17): caught, not farmed; one eaten puts you back to full health
+	var fishCd := 0.0       # until another fish can be eaten
 	var steel := 0
 	var fought := false     # swung at the dead tonight: crude weapons wear
 	var coin := 0
@@ -235,6 +237,7 @@ class Peasant:
 	var drag := 0           # a dog: the fallen player it is dragging out of the fight (an id), or 0
 	var stray := false      # a stray (version 7.10): weaker, over the posse's usual size, and apt to run off in the night
 	var errand := false     # carrying food from the offering plate out to the windmill
+	var ate := 0.0          # until this peasant will eat from its leader's food again (the posse's cook, version 7.17)
 	var kw := 0             # nights a crude kit has been through: it falls to bits after two
 	var fed := false        # fed by a leader at rank 10 of Field, Hook and Pot: twenty more health until dawn
 	var saved2 := false     # a second fatal blow survived tonight (rank 9 of Granny's Remedies)

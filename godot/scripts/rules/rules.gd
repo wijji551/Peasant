@@ -676,7 +676,7 @@ func add_villagers(slot: int, n: int) -> void:
 
 func clear_world() -> void:
 	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []; lobs = []; holy_ground = []; marked = null; fires = []; hallows = []; smokes = []
-	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0, "rune": 0, "pot_a": 0, "pot_s": 0, "pot_d": 0, "pot_i": 0}; raftW = 0; raft = false; rcave = false; tore_day = 0; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
+	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "fish": 0, "steel": 0, "mith": 0, "rune": 0, "pot_a": 0, "pot_s": 0, "pot_d": 0, "pot_i": 0}; raftW = 0; raft = false; rcave = false; tore_day = 0; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
 	letters = []; letter_new = false; seen = {}; chest = {}; tenant_day = 0
 	for t in trees:
@@ -1405,7 +1405,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote", "pot_a", "pot_s", "pot_d", "pot_i", "frock", "recipes", "tithe"]
+const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "fish", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote", "pot_a", "pot_s", "pot_d", "pot_i", "frock", "recipes", "tithe"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -3001,13 +3001,42 @@ func do_eat(p: E.Player) -> void:
 		for q in mine: q.nv = 100
 	ev.append(["eat", r1(p.x), r1(p.z)])
 
+## A fish, eaten: back to full health at once (and at rank X, everyone near you too). Then a wait before the next.
+func eat_fish(p: E.Player) -> void:
+	if p.state != "ok" or p.fish < 1 or p.fishCd > 0: return
+	if p.hp >= max_hp(p) and not (rk(p, 1) >= 10 and players.any(func(o): return o != p and o.state == "ok" and o.hp < max_hp(o) and D.d2(o.x, o.z, p.x, p.z) < 49)): return
+	p.fish -= 1; p.fishCd = D.FISH.wait9 if rk(p, 1) >= 9 else D.FISH.wait
+	p.hp = max_hp(p); p.frozen = 0.0
+	if rk(p, 1) >= 10:
+		for o in players:
+			if o != p and o.state == "ok" and D.d2(o.x, o.z, p.x, p.z) < 49: o.hp = max_hp(o)
+		for q in peasants:
+			if q.owner == p.id and active(q): q.hp = q_max(q)
+	add_xp(p, 1, 1)
+	ev.append(["eatfish", p.id, r1(p.x), r1(p.z)])
+
+## The posse's cook (rank I): at night, one of your posse who is badly hurt (below half, or below three quarters from rank VI)
+## eats one of your food, and mends as you would from a meal. Each eats at most once every few seconds.
+func posse_cook(q: E.Peasant, Ld: E.Player, dt: float) -> void:
+	q.ate = maxf(0.0, q.ate - dt)
+	if phase == "day" or q.ate > 0 or Ld.food < 1 or rk(Ld, 1) < 1 or q.kind != 0: return
+	if q.hp >= q_max(q) * (0.75 if rk(Ld, 1) >= 6 else 0.5): return
+	Ld.food -= 1; q.ate = D.FISH.cook
+	q.hp = minf(q_max(q), q.hp + meal_hp(Ld))
+	if rk(Ld, 1) >= 7: q.nv = 100.0
+	add_xp(Ld, 1, 1)
+	ev.append(["eat", r1(q.x), r1(q.z)])
+
 func do_fish(p: E.Player) -> void:
 	if p.state != "ok" or p.gk != 5:
 		return
 	if p.bite > 0:
-		var n := mini(D.FISH_FOOD + (4 if rk(p, 1) >= 8 else 2 if rk(p, 1) >= 3 else 0), cap(p) - p.food)
-		p.food += n; add_xp(p, 1, n); p.cc += 1; ev.append(["fish", r1(JETTY.x), r1(JETTY.z + 2.6)]); note("fish")
-		var roll := randf()                               # the river keeps what falls in it, and now and then gives it back
+		var n := mini(D.FISH_FOOD + (4 if rk(p, 1) >= 8 else 2 if rk(p, 1) >= 3 else 0), cap(p) - p.fish)
+		p.fish += n; add_xp(p, 1, n); p.cc += 1; ev.append(["fish", r1(JETTY.x), r1(JETTY.z + 2.6)]); note("fish")
+		if rk(p, 1) >= 8 and randf() < D.FISH.prize:      # rank 8: a prize fish, sold on the spot
+			p.coin += D.FISH.prize_coin
+			ev.append(["found", p.id, "a prize pike, as long as your arm. A passing carter gives you a shilling for it, and will not say why", r1(p.x), r1(p.z), 0, 0])
+		var roll := randf() / (2.0 if rk(p, 1) >= 3 else 1.0)   # the river keeps what falls in it, and now and then gives it back (twice as often from rank 3)
 		if roll < D.FISH_FINDS[0]:
 			var it: int = (D.FOUND_W + D.FOUND_A)[randi() % (D.FOUND_W.size() + D.FOUND_A.size())]
 			gain_or_drop(p, it)
@@ -3256,11 +3285,11 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 		"sell":
 			if near_station(p, "market") and D.RES.has(sa):
 				var n := mini(5, p.get(sa))
-				var each := D.STEEL_SELL if sa == "steel" else 1
+				var each: int = D.STEEL_SELL if sa == "steel" else (D.FISH.sell5 if rk(p, 1) >= 5 else D.FISH.sell) if sa == "fish" else 1
 				p.set(sa, p.get(sa) - n); p.coin += floori(n * each * 1.5) if p.gab else n * each
 				if n: spark.call("coin")
 		"buy":
-			if near_station(p, "market") and D.RES.has(sa) and sa != "steel":     # nobody sells steel
+			if near_station(p, "market") and D.RES.has(sa) and sa != "steel" and sa != "fish":     # nobody sells steel, and the market's fish is not fit to eat
 				var n := mini(mini(5, cap(p) - p.get(sa)), floori(p.coin / 2.0))
 				if n > 0:
 					p.set(sa, p.get(sa) + n); p.coin -= n * 2; spark.call("coin")
@@ -4106,7 +4135,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 
 func player_step(p: E.Player, dt: float) -> void:
 	p.stuckT = maxf(0, p.stuckT - dt); p.frozen = maxf(0, p.frozen - dt)
-	p.atkCd = maxf(0, p.atkCd - dt); p.eatCd = maxf(0, p.eatCd - dt); p.hurtT += dt; p.workT = maxf(0, p.workT - dt)
+	p.atkCd = maxf(0, p.atkCd - dt); p.eatCd = maxf(0, p.eatCd - dt); p.fishCd = maxf(0, p.fishCd - dt); p.hurtT += dt; p.workT = maxf(0, p.workT - dt)
 	p.p1Cd = maxf(0, p.p1Cd - dt); p.p2Cd = maxf(0, p.p2Cd - dt); p.prot = maxf(0, p.prot - dt); p.hb = maxf(0, p.hb - dt)
 	p.p3Cd = maxf(0, p.p3Cd - dt); p.many = maxf(0, p.many - dt); p.whet = maxf(0, p.whet - dt); p.mist = maxf(0, p.mist - dt); p.cry = maxf(0, p.cry - dt)
 	p.hone_t = maxf(0, p.hone_t - dt)
@@ -4440,6 +4469,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 	if Ld == null or Ld.state == "dead":
 		q.owner = 0; q.plat = 0; q.state = "idle" if phase == "day" else "hide"
 		return
+	posse_cook(q, Ld, dt)
 	if q.plat != 0:                                    # posted on a watch platform or tower: up it from dusk, throwing stones at whatever comes near
 		var ps: E.Struct = null
 		for s in structs:

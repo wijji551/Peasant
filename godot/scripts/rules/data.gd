@@ -46,16 +46,16 @@ const INN_HP := 160.0
 const PLAYER_SPEED := 7.0
 const PEASANT_WORK_TIME := 4.0
 const TREE_WOOD := 6
-const RES := ["wood", "stone", "iron", "food", "steel"]
-const STORE_RES := ["wood", "stone", "iron", "food", "steel", "mith", "rune", "pot_a", "pot_s", "pot_d", "pot_i"]      # what the storehouse keeps (mithril and runes too, for whoever is the smith)
-const RES_NAME := {"wood": "Wood", "stone": "Stone", "iron": "Iron", "food": "Food", "steel": "Steel", "mith": "Mithril", "rune": "Runes",
+const RES := ["wood", "stone", "iron", "food", "steel", "fish"]
+const STORE_RES := ["wood", "stone", "iron", "food", "fish", "steel", "mith", "rune", "pot_a", "pot_s", "pot_d", "pot_i"]      # what the storehouse keeps (mithril and runes too, for whoever is the smith)
+const RES_NAME := {"wood": "Wood", "stone": "Stone", "iron": "Iron", "food": "Food", "fish": "Fish", "steel": "Steel", "mith": "Mithril", "rune": "Runes",
 	"pot_a": "Pick-Me-Up", "pot_s": "Get-a-Move-On", "pot_d": "Thick Skin", "pot_i": "Last Warning", "frock": "Fire rocks"}
 const GATHER := {
 	"tree": {"res": "wood", "time": 1.5, "verb": "chop", "book": 0},
 	"stone": {"res": "stone", "time": 1.9, "verb": "quarry stone", "book": 0},
 	"iron": {"res": "iron", "time": 2.3, "verb": "mine iron", "book": 0},
 	"food": {"res": "food", "time": 1.6, "verb": "forage", "book": 1},
-	"fish": {"res": "food", "time": 0.0, "verb": "fish", "book": 1},
+	"fish": {"res": "fish", "time": 0.0, "verb": "fish", "book": 1},
 	"steel": {"res": "steel", "time": 3.2, "verb": "mine steel ore", "book": 0},
 }
 const GK := ["", "tree", "stone", "iron", "food", "fish", "search", "steel"]
@@ -565,6 +565,9 @@ const PEASANT_ARM := {"iron": 3, "wood": 2}
 const STEEL_SELL := 3                # the market pays this much a piece for steel, and sells none
 const SLUM_FOOD := 5
 const FISH_FOOD := 5                  # fish in a catch (it was 3: no better than foraging, and a posse cannot help you fish)
+## Fish (version 7.17): their own catch, apart from the farm's food. One fish, eaten, puts you back to full health, and
+## then there is a wait before the next. They sell at the market for twice what food does (twice again at rank V).
+const FISH := {"wait": 20.0, "wait9": 12.0, "sell": 2, "sell5": 4, "cook": 8.0, "prize": 0.1, "prize_coin": 12}
 const FISH_FINDS := [0.015, 0.05, 0.2]   # the chance a catch brings up: something somebody dropped; a lump of mithril; a few coins
 const BLESS_FEE := 24
 const HOLY_TIME := 45.0
@@ -582,7 +585,17 @@ const HONE_MAX := 5                  # pages a book takes
 const SPARE_PAY := 12                # past rank VII, each further first step's worth of learning is a spare point, sold for this many pence
 const BOOKS := [
 	{"name": "The Woodcutter’s Almanac", "what": "Resource gathering", "base": 60, "by": "chopping, quarrying and mining", "ranks": ["Gather wood, stone and iron faster (and faster again with every rank)", "Carry 30 of each material", "Your posse works faster", "Your posse keeps gathering while you do something else nearby", "Carry 40 of each material", "One piece in five comes with a second", "Carry 50 of each material", "Carry 60 of each material", "The trees you work give a third more before they are spent", "Your posse carries what it gathers to the storehouse by itself, once you can carry no more"]},
-	{"name": "Field, Hook and Pot", "what": "Food", "base": 40, "by": "fishing and foraging", "ranks": ["Fish and forage faster (and faster again with every rank)", "Meals heal 35", "A catch is 7 fish", "Eating heals your whole posse too", "Meals heal 50", "Slum recruits cost 3 food", "Meals heal 65 and settle your posse’s nerves", "A catch is 9 fish", "A meal also cures a hangover and a fright", "Meals heal 80, and your posse has 20 more health until dawn"]},
+	{"name": "Field, Hook and Pot", "what": "Food, fish and the posse’s cooking", "base": 40, "by": "fishing, foraging, and feeding your posse", "ranks": [
+		"Fish and forage faster (and faster again with every rank). The posse’s cook: at night, any of your posse badly hurt eats one of your food and mends",
+		"Meals heal 35, for you and for your posse",
+		"A catch is 7 fish, and the river gives up its lost things twice as often",
+		"Eating heals your whole posse too",
+		"Meals heal 50, and fish sell at the market for twice as much",
+		"Slum recruits cost 3 food, and your posse eats before it is badly hurt, not after",
+		"Meals heal 65 and settle your posse’s nerves",
+		"A catch is 9 fish, and one catch in ten is a prize, worth a shilling to you on the spot",
+		"A meal cures a hangover and a fright, and you can eat a fish again sooner",
+		"Meals heal 80, your posse has 20 more health until dawn, and a fish you eat heals everyone near you as well"]},
 	{"name": "Barricades for Beginners", "what": "Defence making", "base": 8, "by": "building and repairing", "ranks": ["Building costs a fifth less (and a little less with every rank). Contraption: the chicken decoy", "Repairs are quicker and cost half", "Your barricades and body walls are a quarter stronger. Contraption: the pitfall", "Your barricades do not rot at dusk. Contraption: the tar pit", "Your spike rows last twice as long. Contraption: the holy water trough", "Your barricades and body walls are half as strong again. Contraption: the log roller", "Contraption: the Thresher, a spinning flail", "Your watch towers cost half their upkeep", "What you repair is a quarter stronger until dawn", "Your contraptions set themselves up again, once a night, the first time they are spent"]},
 	{"name": "Hammer and Tongs", "what": "Blacksmithing", "base": 3, "by": "forging", "ranks": ["You can forge iron arms, not just crude ones, with a third less iron (and a little less with every rank), and crude kits for your posse", "You can forge heavy arms (billhook, warhammer, crossbow) and iron tips for spike rows", "Arm or kit out your whole posse in one go, and forge iron kits", "You can forge steel, from the old steel mine, and forged weapons hit a tenth harder in your hands", "Any armour you wear takes a further twentieth off every blow", "Your posse hit harder with their spears, and you can forge steel kits", "You can forge mithril arms and armour, from steel and the mithril of the old workings. Facing, banding and bracing a defence costs half", "Armour you wear stops a tenth more", "Kits you hand out do not wear out", "You can forge rune arms and armour, given runes, which are across the river"]},
 	{"name": "The Art of Hitting Things", "what": "Combat training", "base": 60, "by": "landing blows", "ranks": ["You hit harder up close (and harder again with every rank)", "One blow in eight against you misses", "Your weapon’s trick is ready a fifth sooner", "Your swings sweep wider", "Your weapon’s trick is ready a third sooner", "20 more health", "Every fifth blow you land is twice as hard", "20 more health again", "Every fourth blow is twice as hard", "A killing blow carries on into the next of the dead"]},
