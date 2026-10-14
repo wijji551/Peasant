@@ -1216,6 +1216,46 @@ func shake_tree_near(x: float, z: float) -> void:   # a figure chopped: the tree
 	trees_view.shake_near(x, z)
 
 
+# ---------------------------------------------------------------- Saint Wilbur's Dog Lead, held (version 7.18)
+var _lead_segs: Array = []           # short pieces of leather strap, laid end to end from hand to collar
+const LEAD_N := 7
+
+## For everyone carrying the Dog Lead: a strap from their hand to each of their dogs' collars, sagging a little.
+func _leads_view() -> void:
+	var used := 0
+	for p: E.Player in R.players:
+		if p.trk != D.I_LEAD or p.state != "ok" or p.room != "": continue
+		var pf = _figs.get("p%d" % p.id)
+		if pf == null: continue
+		for q: E.Peasant in R.peasants:
+			if q.kind != 3 or q.owner != p.id or q.state == "down": continue
+			var qf = _figs.get("q%d" % q.id)
+			if qf == null: continue
+			var pr: float = pf.rotation.y
+			var a: Vector3 = pf.position + Vector3(cos(pr) * 0.5 + sin(pr) * 0.2, 0.95, -sin(pr) * 0.5 + cos(pr) * 0.2)   # the hand
+			var qr: float = qf.rotation.y
+			var b: Vector3 = qf.position + Vector3(sin(qr) * 0.36, 0.55, cos(qr) * 0.36)                                      # the collar
+			if a.distance_to(b) > 9.0: continue                                                                               # (let go of)
+			var prev := a
+			for k in LEAD_N:
+				var t := (k + 1) / float(LEAD_N)
+				var pt := a.lerp(b, t) - Vector3(0, sin(t * PI) * minf(0.45, a.distance_to(b) * 0.12), 0)
+				while _lead_segs.size() <= used:
+					var mi := MeshInstance3D.new()
+					var bx := BoxMesh.new(); bx.size = Vector3(0.05, 0.05, 1.0); mi.mesh = bx
+					mi.material_override = Build.mat(Color("7a4a26"))
+					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					add_child(mi); _lead_segs.append(mi)
+				var seg: MeshInstance3D = _lead_segs[used]
+				seg.visible = true
+				var mid := (prev + pt) * 0.5
+				var ln := maxf(0.01, prev.distance_to(pt))
+				var dv := (pt - prev).normalized() if ln > 0.01 else Vector3.FORWARD
+				seg.global_transform = Transform3D(Basis.looking_at(dv, Vector3.RIGHT if absf(dv.y) > 0.98 else Vector3.UP).scaled(Vector3(1, 1, ln)), mid)
+				prev = pt; used += 1
+	for i in range(used, _lead_segs.size()): _lead_segs[i].visible = false
+
+
 func _fig(key: String, player: bool) -> Node3D:
 	var f = _figs.get(key)
 	if f == null:
@@ -1243,6 +1283,7 @@ func _draw(delta: float) -> void:
 		if not live.has(key):
 			_figs[key].queue_free()
 			_figs.erase(key)
+	_leads_view()
 	dead_view.sync(R, delta)
 	_pools_view(delta)
 	if me and me.frozen > 0 and not _was_frozen: hud.banner("Frozen with fright", "The howl has you rooted to the spot. It will pass. Probably.", 2.4)
@@ -1699,6 +1740,8 @@ func _test_hook() -> void:
 			me.books[int(bb[0])] = int(bb[1])
 		me.trk = 28; me.wood = 20; me.stone = 10
 		if OS.get_environment("DTV_FEET") != "": me.feet = int(OS.get_environment("DTV_FEET"))
+		if OS.get_environment("DTV_TRK") != "": me.trk = int(OS.get_environment("DTV_TRK"))
+		if OS.get_environment("DTV_BLESSED") != "": me.body = D.blessed_of(D.tier_item(22, "rune")); me.head = D.blessed_of(D.tier_item(19, "rune"))
 		if Rules.rk(me, D.B_FIRE) >= 5:
 			me.iron = 5; R.try_place(me, "firepot", me.x + 2.2, me.z - 1.5, 0.0)
 	if _frame == at - 40 and OS.get_environment("DTV_RIVER") != "" and me:   # for pictures: across the river, with the raft and the cave done

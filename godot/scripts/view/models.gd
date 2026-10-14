@@ -116,6 +116,13 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.09, 0.32, 0.09, 0, -0.32, 0, 0xffffff)
 		"dog_tail":
 			b.box(0.06, 0.06, 0.3, 0, 0, -0.12, 0xffffff, 0, 0.6, 0)
+		"boot":                                              # one boot, at the foot of a leg (version 7.18: boots walk with you)
+			b.box(0.24, 0.2, 0.34, 0, 0, 0.05, 0xffffff).box(0.25, 0.06, 0.36, 0, 0.0, 0.06, 0xcccccc).box(0.22, 0.1, 0.24, 0, 0.18, 0.0, 0xeeeeee)
+		"dog_collar":
+			b.box(0.34, 0.08, 0.1, 0, 0.5, 0.34, 0xffffff).box(0.08, 0.08, 0.06, 0, 0.44, 0.4, 0xf2c94c)
+		"lead":                                              # Saint Wilbur's Dog Lead: a coil of leather at the hip, with a brass clip
+			for k in 8: b.box(0.06, 0.06, 0.16, -0.48 + cos(k * TAU / 8) * 0.16, 0.62 + sin(k * TAU / 8) * 0.16, -0.06, 0xffffff, 0, k * TAU / 8)
+			b.box(0.05, 0.36, 0.05, -0.5, 0.3, -0.06, 0xffffff).box(0.08, 0.1, 0.06, -0.5, 0.22, -0.06, 0xf2c94c)
 		"boots":                                             # a pair of boots, pale and tinted per pair
 			for s in [-1, 1]: b.box(0.26, 0.2, 0.36, s * 0.17, 0, 0.04, 0xffffff).box(0.27, 0.06, 0.38, s * 0.17, 0.0, 0.05, 0xcccccc)
 		"bucket":

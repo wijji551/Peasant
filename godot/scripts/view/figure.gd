@@ -388,6 +388,7 @@ var _glow_light: OmniLight3D
 ## The colour a relic or a rune weapon glows: gold for most relics, silver for the silvered ones, violet for runes.
 static func glow_of(id: int) -> Color:
 	var I: Dictionary = D.IT[id]
+	if I.blessed: return Color(1.0, 0.88, 0.5, 0.6)                # blessed for good: holy gold
 	if I.tier == "rune": return Color(0.4, 0.66, 1.0, 0.55)      # rune glows blue; mithril purple
 	if I.runed: return Color(0.62, 0.42, 1.0, 0.55)
 	var t: Array = I.tint
@@ -434,6 +435,9 @@ func _set_gear(ids: Array) -> void:
 	if sig == _gear_sig: return
 	_gear_sig = sig
 	for c in _gear.get_children(): c.queue_free()
+	for b in _boots: b.queue_free()
+	_boots = []
+	_blessed = []
 	for id in ids:
 		if id < 0: continue
 		var t: Array = D.IT[id].tint
@@ -443,8 +447,27 @@ func _set_gear(ids: Array) -> void:
 			gm.emission_enabled = true
 			gm.emission = Color(gc.r, gc.g, gc.b)
 			gm.emission_energy_multiplier = 0.7
+		if D.IT[id].blessed:                               # blessed for good: a holy light that breathes (see _process)
+			gm.emission_enabled = true
+			gm.emission = Color(1.0, 0.82, 0.4)
+			_blessed.append(gm)
+		if D.IT[id].s == "f":                              # boots go on the feet, one on each leg, and walk with them (version 7.18)
+			for leg in [_leg_l, _leg_r]:
+				var bm := _mi(leg, "boot", gm)
+				bm.position = Vector3(0, -0.46, 0.0)
+				_boots.append(bm)
+			continue
 		var mi := _mi(_gear, Models.gear_pool(id), gm)
 		mi.set_meta("slot", D.IT[id].s)
+	if _blessed.size() and _holy_halo == null:             # and a soft halo of holy light about whoever wears it
+		_holy_halo = halo(Color(1.0, 0.86, 0.45, 0.32), 2.2)
+		_holy_halo.position = Vector3(0, 1.1, 0)
+		_model.add_child(_holy_halo)
+		_holy_light = OmniLight3D.new(); _holy_light.light_color = Color(1.0, 0.9, 0.6); _holy_light.omni_range = 4.0
+		_holy_light.position = Vector3(0, 1.4, 0); _model.add_child(_holy_light)
+	if _holy_halo:
+		_holy_halo.visible = _blessed.size() > 0
+		_holy_light.visible = _blessed.size() > 0
 
 
 func _set_carry(n: int, blessed: int) -> void:   # bodies carried on the back, the blessed ones paler
@@ -485,6 +508,12 @@ var _sheep: Node3D                   # a sheep, trotting after its player
 var _mount: Node3D                   # the sheep a player is riding
 var _patch: Node3D                   # a stray's patches
 var _jhat: MeshInstance3D            # a jester's cap and bells
+var _boots: Array = []               # the boots, one on each leg
+var _blessed: Array = []             # the materials of blessed armour worn, which glow and breathe
+var _holy_halo: MeshInstance3D
+var _holy_light: OmniLight3D
+var _collar: MeshInstance3D          # a dog's collar, and its material
+var _collar_mat: StandardMaterial3D
 
 ## A sheep: fleece, a dark face and four dark legs (the legs are kept in its "legs" meta, to walk).
 func _sheep_node(parent: Node3D, ni: int) -> Node3D:
@@ -528,7 +557,14 @@ func _dog_show(q: E.Peasant, own: E.Player) -> void:
 		_dog_tail = Node3D.new(); _dog_tail.position = Vector3(0, 0.55, -0.38); _dog.add_child(_dog_tail)
 		_mi(_dog_tail, "dog_tail", coat)
 	_place(q.x, q.z, q.r, false)
-	_dog.rotation.y = _r
+	_dog.rotation.y = 0.0                              # (the figure itself turns to face where the dog faces: version 7.18)
+	if _collar == null:                                # a collar, red; gold and glowing on a dog led by Saint Wilbur's Dog Lead
+		_collar_mat = _mat(Color(0.7, 0.16, 0.14))
+		_collar = _mi(_dog, "dog_collar", _collar_mat)
+	var led: bool = own != null and own.trk == D.I_LEAD
+	_collar_mat.albedo_color = Color(1.3, 1.05, 0.45) if led else Color(0.7, 0.16, 0.14)
+	_collar_mat.emission_enabled = led
+	if led: _collar_mat.emission = Color(1.0, 0.8, 0.35); _collar_mat.emission_energy_multiplier = 0.9
 	var down := q.state == "down"
 	_dog.rotation.z = lerpf(_dog.rotation.z, 1.4 if down else 0.0, 0.2)
 	for i in _dog_legs.size():
@@ -582,6 +618,15 @@ func _process(delta: float) -> void:
 	else:
 		_hand.position = Vector3(0.42, 0.6, 0.14 + s2 * (0.25 if _held_swing else 0.55))
 		_hand.rotation = Vector3(0.12 + s2 * (1.7 if _held_swing else 1.4), -s2 * 0.9 if _held_swing else 0.0, 0)
+	if _blessed.size():                                  # blessed armour: a holy glow that swells and fades, and motes of light rising
+		var hp_ := 0.5 + 0.5 * sin(now * 2.4 + get_instance_id() % 5)
+		for m in _blessed: m.emission_energy_multiplier = (0.12 + 0.5 * hp_) * (1.0 - 0.45 * dark)
+		if _holy_halo:
+			_holy_halo.scale = Vector3.ONE * (0.8 + 0.35 * hp_)
+			_holy_halo.visible = not _down
+			_holy_light.light_energy = (0.25 + 0.55 * dark) * (0.5 + 0.5 * hp_)
+		if fx and not _down and randf() < delta * 6.0:
+			fx.puff(global_position.x + randf_range(-0.5, 0.5), randf_range(0.6, 2.2), global_position.z + randf_range(-0.5, 0.5), 1, fx.C_HOLY, 0.5)
 	if _glow_col.a > 0.0 and _halo:                      # the glow breathes
 		var pulse := 0.75 + 0.25 * sin(now * 3.2 + get_instance_id() % 7)
 		_held_mat.emission_energy_multiplier = 0.9 + 0.9 * pulse

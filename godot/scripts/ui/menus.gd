@@ -39,6 +39,12 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.18: mends to boots, dogs and the blessed", [
+		"Boots now stay on your feet. Before, they stood still where they were while your legs walked off without them.",
+		"The dog no longer walks backwards. It was being turned round twice, which is once too many for a dog. It also waits until its place at your side is a little way off before it trots over, so it no longer goes round in circles every time you turn; and with two dogs, each keeps to its own side.",
+		"Saint Wilbur’s Dog Lead now looks like a dog lead: a coil of leather at your hip, a strap from your hand to each dog’s collar, and the dogs’ collars turned gold. Every dog has a collar now.",
+		"Blessed rune armour now looks blessed: a golden holy light that swells and fades about whoever wears it, and motes of light rising off it.",
+	]],
 	["Version 7.17: fish, and the cook", [
 		"Fish are now their own catch, apart from the farm's food. Eating one, from the action bar, puts you back to full health at once, with a wait of twenty seconds before the next. Farm food is what everything else uses.",
 		"Field, Hook and Pot has been rethought. From its first rank you are the posse's cook: at night, any of your posse who is badly hurt eats one of your food and mends. Its ranks now also bring more of the river's lost things, fish that sell for more, prize fish worth a shilling on the spot, fish you can eat sooner, and at rank 10 a fish that heals everyone near you.",

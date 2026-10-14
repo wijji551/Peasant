@@ -311,7 +311,7 @@ static func _more_tiers() -> Array:
 	for b in ARMOUR:                                                             # 82-84: rune armour, blessed for good
 		var o := _tier_of(_IT[b], b, "rune")
 		o.n = "blessed " + o.n; o.blessed = true; o.cost = {}
-		o.tint = [0.85, 1.05, 1.7]
+		o.tint = [0.95, 1.05, 1.45]                      # (version 7.18: still blue, a little paler, with a golden light of its own)
 		o.note = "Rune, blessed for good by the priest. The dead that strike you are scorched, and wraiths do half their harm"
 		out.append(o)
 	for t in ["crude", "forged", "steel"]:                                       # 85-90: posse kits, a ranger and a watchman in each
@@ -329,7 +329,7 @@ const _V79 := [
 	{"n": "the Everlasting Match", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.4, 0.75, 0.3], "note": "It will not go out. Fire sticks come round twice as fast"},
 	{"n": "the Unblinking Lantern", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.35, 1.15, 0.55], "note": "You see through fog and the dark as if it were day, and so does everyone near you"},
 	{"n": "Saint Wilbur’s Pot Lid", "s": "o", "tier": "relic", "cut": 0.2, "arrow": 0.6, "pool": "shield", "tint": [1.25, 1.1, 0.6], "note": "Arrows that hit it go back the way they came"},
-	{"n": "Saint Wilbur’s Dog Lead", "s": "t", "tier": "relic", "pool": "bucket", "tint": [1.2, 0.95, 0.55], "note": "It brings your dog’s budding friend: a second dog. One holds while the other bites"},
+	{"n": "Saint Wilbur’s Dog Lead", "s": "t", "tier": "relic", "pool": "lead", "tint": [1.2, 0.95, 0.55], "note": "It brings your dog’s budding friend: a second dog. One holds while the other bites"},
 	{"n": "Somebody Else’s Turnshoes", "s": "f", "tier": "found", "pool": "boots", "spd": 0.05, "tint": [0.72, 0.55, 0.38], "note": "Low, soft and not yours. You walk a little faster"},
 	{"n": "hobnailed boots", "s": "f", "tier": "forged", "pool": "boots", "spd": 0.1, "cost": {"iron": 3, "wood": 1}, "tint": [0.55, 0.42, 0.3], "note": "You walk a tenth faster, and everyone hears you coming"},
 	{"n": "sabatons (two left feet)", "s": "f", "tier": "steel", "pool": "boots", "spd": 0.1, "cut": 0.05, "cost": {"steel": 4}, "tint": [1.12, 1.18, 1.3], "note": "Steel boots: a tenth faster, and a twentieth off every blow. Both of them are left feet"},

@@ -851,13 +851,23 @@ func dog_step(q: E.Peasant, dt: float) -> void:
 				q.carry = dr_.it; drops.erase(dr_); q.fetch = 0
 			collide_friend(q, 0.3)
 			return
-	# otherwise at their side, a little behind
-	var side := -1.0 if peasants.find(q) % 2 == 0 else 1.0
-	var tx: float = Ld.x + cos(Ld.r) * 1.1 * side - sin(Ld.r) * 0.6
-	var tz: float = Ld.z - sin(Ld.r) * 1.1 * side - cos(Ld.r) * 0.6
+	# otherwise at their side, a little behind. (Version 7.18: each dog keeps to its own side, by the order its player got
+	# them, not by where it happens to be in the list; and it waits until its place is a little way off before it moves, so
+	# it no longer walks round in circles every time its player turns. Standing, it faces the way its player faces.)
+	var mine := peasants.filter(func(o): return o.kind == 3 and o.owner == q.owner)
+	mine.sort_custom(func(a, b): return a.id < b.id)
+	var side := -1.0 if mine.find(q) == 0 else 1.0
+	var tx: float = Ld.x + cos(Ld.r) * 1.2 * side - sin(Ld.r) * 0.8
+	var tz: float = Ld.z - sin(Ld.r) * 1.2 * side - cos(Ld.r) * 0.8
 	var dd := Vector2(tx - q.x, tz - q.z).length()
-	if dd > 40: q.x = tx; q.z = tz
-	elif dd > 0.4: step_to(q, tx, tz, D.DOG.spd * (1.4 if dd > 8 else 1.0) if dd > 3 else 5.0, dt, 0.2)
+	if dd > 40:
+		q.x = tx; q.z = tz
+	elif dd > (0.35 if q.dmv else 1.6):
+		q.dmv = true
+		step_to(q, tx, tz, D.DOG.spd * (1.4 if dd > 8 else 1.0) if dd > 3 else maxf(3.0, dd * 3.0), dt, 0.3)
+	else:
+		q.dmv = false
+		q.r = D.ang_lerp(q.r, Ld.r, minf(1.0, dt * 4.0))
 	collide_friend(q, 0.3)
 
 # ---------------------------------------------------------------- the Riverside (version 7.12)

@@ -235,6 +235,7 @@ class Peasant:
 	var carry := -1         # a dog: what it has in its mouth (an item id), or -1
 	var downT := 0.0        # a dog, knocked down: until it is back on its feet
 	var drag := 0           # a dog: the fallen player it is dragging out of the fight (an id), or 0
+	var dmv := false        # a dog: on its way to its place at its player's side (it waits until it is a little way off)
 	var stray := false      # a stray (version 7.10): weaker, over the posse's usual size, and apt to run off in the night
 	var errand := false     # carrying food from the offering plate out to the windmill
 	var ate := 0.0          # until this peasant will eat from its leader's food again (the posse's cook, version 7.17)
