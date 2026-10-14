@@ -237,6 +237,34 @@ func _init() -> void:
 	ok("one piece of ore in the cave, a day, for whoever gets there first", m.rune + m.mith == 1 and R.tore_day == R.day)
 	put(f, D.TITHE_ORE.x, D.TITHE_ORE.z); f.room = "riverside"
 	ok("and only one", not R.find_interact(f).ok)
+	# ---------------------------------------------------------------- the layout (version 7.14): everything can be walked to
+	var free := func(x: float, z: float) -> bool:
+		if absf(x - M.x) > M.hw - 0.5 or z < M.z - M.hd + 1.7 or z > M.z + M.hd - 0.5: return false
+		for b in M.box:
+			if absf(x - b[0]) < b[2] + 0.45 and absf(z - b[1]) < b[3] + 0.45: return false
+		return true
+	var seen := {}
+	var todo := [Vector2i(roundi((M.at[0] - (M.x - M.hw)) * 2), roundi((M.at[1] + 2.6 - (M.z - M.hd)) * 2))]
+	while todo.size():
+		var c: Vector2i = todo.pop_back()
+		if seen.has(c): continue
+		var wx: float = M.x - M.hw + c.x * 0.5
+		var wz: float = M.z - M.hd + c.y * 0.5
+		if not free.call(wx, wz): continue
+		seen[c] = true
+		for dv in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]: todo.append(c + dv)
+	var reach := func(x: float, z: float, r: float) -> bool:   # some free spot within r of it can be walked to from the landing
+		for c in seen:
+			if D.d2(M.x - M.hw + c.x * 0.5, M.z - M.hd + c.y * 0.5, x, z) < r * r: return true
+		return false
+	var places := []
+	for st in D.STATIONS:
+		if st.get("room", "") == "riverside": places.append([st.id, st.x, st.z, st.r * 0.8])
+	for kk in D.RIVER_SPOTS.size(): places.append(["heap %d" % kk, D.RIVER_SPOTS[kk][0], D.RIVER_SPOTS[kk][1], 1.8])
+	for kk in D.RUNE_SEAMS.size(): places.append(["seam %d" % kk, D.RUNE_SEAMS[kk][0], D.RUNE_SEAMS[kk][1], 1.6])
+	places.append(["the rubble", D.TITHE_RUBBLE.x, D.TITHE_RUBBLE.z, 2.0]); places.append(["the ore", D.TITHE_ORE.x, D.TITHE_ORE.z, 2.4]); places.append(["the bonfire", D.CAMPFIRE.x, D.CAMPFIRE.z, 2.1])
+	var lost := places.filter(func(pl): return not reach.call(pl[1], pl[2], pl[3])).map(func(pl): return pl[0])
+	ok("from the landing, through the gates, everything at the Riverside can be walked to", lost.is_empty(), lost)
 	# ---------------------------------------------------------------- kept and sent
 	var sv := R.save_data()
 	var R2 := Rules.new()

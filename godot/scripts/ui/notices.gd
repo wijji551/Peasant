@@ -305,6 +305,21 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 					o.append({"label": "Buy the recipe for %s (%s)" % [P.n, D.coins(D.POT.recipe)], "sub": ("%s. The recipe is a list of what to bring him; he does the rest, and will not say how." % (P.d[0].to_upper() + P.d.substr(1))) if granny else "He only sells recipes to readers of Granny’s Remedies. Granny was very firm about it.", "ok": granny and p.coin >= D.POT.recipe, "a": "recipe", "arg": k})
 			o.append({"text": "What he asks for changes every morning, and is the same for everybody. Fire rocks come out of the campfire. Potions go in your backpack; drink one from the action bar. One of each kind works at a time."})
 			return {"title": "The druid", "intro": "A man in a robe the colour of moss, who knows how Granny’s potions are made and is not going to tell a peasant. Did anybody honestly believe we would be taught the secret art of alchemy?", "o": o}
+		"hv0", "hv1":                                 # the folk of the Riverside
+			var hi := int(id.substr(2))
+			var F: Dictionary = D.HAMLET_FOLK[hi]
+			var topic := int(page.substr(1)) if page.begins_with("t") else -1
+			var intro: String = "%s: %s." % [F.name, F.what]
+			if topic >= 0 and topic < F.say.size():
+				var ls: Array = F.say[topic]
+				intro = "“%s”" % ls[(R.day + hi) % ls.size()]
+			o.append({"head": "Ask about"})
+			for t in F.ask.size():
+				o.append({"label": F.ask[t][0].to_upper() + F.ask[t].substr(1), "sub": "", "ok": true, "page": "t%d" % t})
+			return {"title": F.name, "intro": intro, "o": o}
+		"hsign":
+			o.append({"text": D.HALLOWSHIRE_SIGN})
+			return {"title": "A signpost", "intro": "", "o": o}
 		"keeper":
 			var fee := R.tithe_fee()
 			if p.tithe:
@@ -312,7 +327,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			else:
 				o.append({"label": "Pay for a search of the rubble (%s)" % D.coins(fee), "sub": "Paid: go and search. It takes a whole minute." if p.tpaid else "One search, of one minute. Not every search finds it. It is said to be easier to find after dark, when the raft has stopped.", "ok": not p.tpaid and p.coin >= fee, "a": "tpay"})
 			o.append({"text": "There is a single piece of ore in there as well: rune or mithril, for whoever gets to it first today. He does not charge for that, because he has not noticed it."})
-			return {"title": "The man who owns the cave", "intro": "An unscrupulous villager, who knows perfectly well how desperate Thornhallow is. In a chest, under the rubble in his cave, he says, is the best weapon there is. He charges by the search, and his price goes up every week. It is %s today." % D.coins(fee), "o": o}
+			return {"title": "Garrick’s Cave", "intro": "Garrick: an unscrupulous villager, who knows perfectly well how desperate Thornhallow is. In a chest, under the rubble in his cave, he says, is the best weapon there is. He charges by the search, and his price goes up every week. It is %s today." % D.coins(fee), "o": o}
 		"rcave":
 			if R.rcave:
 				o.append({"text": "It is fit to explore now, more or less. Three seams of runes glow blue at the back: two to a seam each day. Stand beside one and hold the interact key."})

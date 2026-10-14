@@ -439,19 +439,26 @@ const ROOMS := {
 		"box": [[60.0, 235.3, 4.6, 0.55], [55.4, 240.9, 0.85, 0.85], [64.4, 241.2, 0.85, 0.85], [66.6, 236.6, 0.9, 0.7], [52.35, 239.3, 0.35, 1.2], [52.5, 235.0, 0.9, 0.5], [53.4, 244.6, 0.4, 0.4]]},
 	# the far bank of the river (version 7.12): out of doors, a long way off the map like the inn and the mine. "open": it has
 	# the sky over it, and the posse comes across on the raft. The river is along its north edge; the door is the raft.
-	"riverside": {"name": "the Riverside", "x": -160.0, "z": 320.0, "hw": 36.0, "hd": 24.0, "at": [-160.0, 297.5], "door": [-30.0, 51.0], "open": true,
+	"riverside": {"name": "the Riverside", "x": -160.0, "z": 320.0, "hw": 50.0, "hd": 36.0, "at": [-160.0, 285.5], "door": [-30.0, 51.0], "open": true,
 		"in": "take the raft across to the Riverside", "out": "take the raft back to Thornhallow",
-		"box": [[-186.0, 312.0, 3.0, 2.4], [-184.0, 324.0, 2.6, 2.2], [-171.0, 331.0, 3.0, 2.4], [-140.0, 306.0, 2.6, 2.2], [-125.4, 331.0, 1.0, 5.6], [-130.0, 325.8, 3.6, 0.8], [-130.0, 336.2, 3.6, 0.8], [-148.0, 341.5, 4.0, 2.6], [-174.0, 303.6, 1.6, 0.6], [-164.0, 303.6, 1.4, 0.8]]},
+		# (version 7.14) a small hamlet inside a fence, with four gates: north to the landing, south to the road to Hallowshire Town,
+		# west to Garrick's cave and east to the Rune Cave, each cave in a hill of its own; the far ruin out in the fields to the south-west
+		"box": [[-196.0, 308.0, 9.0, 9.0], [-124.0, 308.0, 9.0, 9.0],                                     # the two hills
+			[-178.0, 301.0, 0.25, 5.0], [-178.0, 318.0, 0.25, 8.0], [-142.0, 301.0, 0.25, 5.0], [-142.0, 318.0, 0.25, 8.0],   # the fence, west and east (gates at z 306 to 310)
+			[-170.0, 296.0, 8.0, 0.25], [-150.0, 296.0, 8.0, 0.25], [-170.0, 326.0, 8.0, 0.25], [-150.0, 326.0, 8.0, 0.25],   # north and south (gates at x -162 to -158)
+			[-168.0, 303.0, 1.6, 0.6], [-152.0, 303.0, 1.4, 0.8], [-168.6, 316.5, 0.55, 1.5],             # the stall, the cart, the druid's table
+			[-174.0, 316.5, 3.0, 3.0], [-174.5, 300.0, 2.0, 1.8], [-149.0, 322.6, 2.6, 2.2], [-145.5, 299.4, 2.4, 2.0],   # the druid's cottage, three houses
+			[-147.5, 314.0, 4.5, 3.4], [-160.0, 310.0, 1.2, 1.2], [-155.0, 316.0, 0.9, 0.9], [-155.5, 333.0, 1.7, 1.0]]},   # the pen, the bonfire, the well, the broken cart
 }
 ## The Riverside (version 7.12). The raft is built once, for everyone, from 100 wood; it crosses by day. Swimming, once
 ## there is a raft, is how anyone gets across after dusk: twenty seconds, half your health, and forty-five tired seconds after.
 const RAFT := {"wood": 100, "swim": 20.0, "tired": 45.0, "tired_mul": 0.75, "tired_spd": 0.6}
-const RIVER_SPOTS := [[-188.0, 334.0], [-183.0, 337.0], [-178.0, 333.0], [-190.0, 340.0], [-185.0, 342.0], [-179.0, 340.0], [-174.0, 337.5], [-192.0, 328.0], [-176.0, 342.5], [-170.0, 340.0]]   # the far ruin: ten heaps, and nothing in it bites
-const RUNE_SEAMS := [[-127.6, 328.0], [-127.6, 331.0], [-127.6, 334.0]]   # in the Rune Cave, once it has been made fit to explore
+const RIVER_SPOTS := [[-196.0, 338.0], [-191.0, 341.0], [-186.0, 337.0], [-198.0, 345.0], [-193.0, 348.0], [-187.0, 344.0], [-181.0, 341.0], [-202.0, 340.5], [-182.0, 348.0], [-177.0, 337.5]]   # the far ruin: ten heaps, and nothing in it bites
+const RUNE_SEAMS := [[-134.2, 305.0], [-134.2, 308.0], [-134.2, 311.0]]   # in the mouth of the cave in the east hill   # in the Rune Cave, once it has been made fit to explore
 const RUNE_PER_SEAM := 2
-const CAMPFIRE := {"x": -150.0, "z": 314.0, "rock": 0.4}             # the hamlet's campfire, where fire rocks are raked out (four times in ten)
-const TITHE_RUBBLE := {"x": -146.0, "z": 337.0, "time": 60.0, "day": 1.0 / 20.0, "night": 1.0 / 8.0}   # the coveted relic, under it, somewhere
-const TITHE_ORE := {"x": -151.5, "z": 338.6}                          # one piece of ore a day, for whoever gets to it first
+const CAMPFIRE := {"x": -160.0, "z": 310.0, "rock": 0.4}             # the bonfire in the hamlet's market, where fire rocks are raked out (four times in ten)
+const TITHE_RUBBLE := {"x": -185.8, "z": 306.4, "time": 60.0, "day": 1.0 / 20.0, "night": 1.0 / 8.0}   # the coveted relic, under it, somewhere
+const TITHE_ORE := {"x": -185.8, "z": 311.6}                          # one piece of ore a day, for whoever gets to it first
 const TITHE_FEE := 12                                                 # what the cave's owner charges a search, a shilling more each week
 const RCAVE_WOOD := 20
 const RESIDENT := {"wood": 30, "stone": 30, "iron": 30, "food": 30, "steel": 45, "mith": 60, "rune": 120, "weapon": 480, "armour": 360}   # five of a material (one of mithril or runes), or a rune weapon or piece of armour
@@ -464,6 +471,18 @@ const POTIONS := [
 	{"k": "pot_i", "n": "Granny’s Last Warning", "short": "Last Warning", "d": "for fifteen to twenty seconds you are wreathed in flame, and the dead near you catch fire. It does not burn you"},
 ]
 const POT := {"t": 120.0, "atk": 1.25, "spd": 1.2, "def": 0.75, "imm": [15.0, 20.0], "reach": 2.6, "recipe": 60}
+## The folk of the Riverside (version 7.14): [what they are, and what they say about three things].
+const HAMLET_FOLK := [
+	{"name": "Widow Thrupp", "what": "a small, sharp woman who has been drawing water from the same well for sixty years", "ask": ["the Riverside", "the druid", "the dead"],
+		"say": [["Nobody comes over the river but Thornhallow folk and trouble, and I can never tell the two apart.", "We have a market. It is three stalls and a fire, but we call it a market and it does not argue."],
+			["He talks to the tree. The tree, I am told, talks back. I have not asked what about.", "Do not buy anything from the druid that he will not drink himself. He drinks all of it, so that is no help."],
+			["They have never once crossed the river. The druid says it is the running water. I say it is that they have met me."]]},
+	{"name": "Young Ned", "what": "a boy of about forty, who minds the cow, the donkey and the chickens, in that order of respect", "ask": ["the animals", "the caves", "the road south"],
+		"say": [["The cow is called Dorothy. The donkey is called the Donkey. He knows what he did.", "The chickens do not have names. They have ranks. The brown one is in charge."],
+			["The Rune Cave was dug by a man who wanted to be rich. He is now a seam of blue stuff at the back. I am joking. Probably.", "The other cave belongs to Garrick. He will charge you to look at it. He charged me to tell you that."],
+			["That is the road to Hallowshire Town. Nobody has come up it in a month, except the cart, and the cart did not get far.", "Hallowshire is where the Lord’s family keep their money. And their relatives. Mostly their relatives."]]},
+]
+const HALLOWSHIRE_SIGN := "HALLOWSHIRE TOWN, it says, with an arrow pointing south. Underneath, somebody has carved: ROAD CLOSED. And under that, in another hand: BY WHOM? Nobody has answered."
 const DRUID_LINES := ["The druid says the recipe is a family secret, and that you are not family.", "The druid says the trick is in the stirring, and will not say which way.", "The druid is humming. He says it is part of it.", "The druid says Granny learned it from him. Granny, if asked, says the opposite."]
 ## The chest that never arrived: who sent it, and the note inside.
 const CHEST_FROM := [
@@ -847,11 +866,14 @@ const STATIONS := [
 	{"id": "gambler", "x": 65.6, "z": 237.9, "r": 1.7, "room": "inn", "name": "the gambler", "verb": "sit down with the gambler"},
 	{"id": "shelf", "x": 53.1, "z": 239.3, "r": 1.4, "room": "inn", "name": "the inn’s bookshelf", "verb": "look at the inn’s bookshelf"},
 	{"id": "prospero", "x": 54.4, "z": 244.6, "r": 1.4, "room": "inn", "name": "Prospero", "verb": "talk to Prospero, on the stool by the fire"},
-	{"id": "rmerch", "x": -174.0, "z": 306.0, "r": 2.6, "room": "riverside", "name": "the merchant who never leaves", "verb": "see what the merchant who never leaves has"},
-	{"id": "tmerch", "x": -164.0, "z": 306.0, "r": 2.6, "room": "riverside", "name": "the travelling merchant", "verb": "see what the travelling merchant has"},
-	{"id": "druid", "x": -143.0, "z": 310.0, "r": 2.4, "room": "riverside", "name": "the druid", "verb": "speak to the druid"},
-	{"id": "rcave", "x": -134.0, "z": 331.0, "r": 2.6, "room": "riverside", "name": "the Rune Cave", "verb": "look at the Rune Cave"},
-	{"id": "keeper", "x": -153.0, "z": 335.0, "r": 2.2, "room": "riverside", "name": "the cave’s owner", "verb": "speak to the man who owns the cave"},
+	{"id": "rmerch", "x": -168.0, "z": 305.6, "r": 2.4, "room": "riverside", "name": "the merchant who never leaves", "verb": "see what the merchant who never leaves has"},
+	{"id": "tmerch", "x": -152.0, "z": 305.8, "r": 2.4, "room": "riverside", "name": "the travelling merchant", "verb": "see what the travelling merchant has"},
+	{"id": "druid", "x": -166.0, "z": 316.5, "r": 2.4, "room": "riverside", "name": "the druid", "verb": "speak to the druid"},
+	{"id": "rcave", "x": -139.0, "z": 308.0, "r": 2.4, "room": "riverside", "name": "the Rune Cave", "verb": "look at the Rune Cave"},
+	{"id": "keeper", "x": -182.0, "z": 302.6, "r": 2.2, "room": "riverside", "name": "Garrick, who owns the cave", "verb": "speak to Garrick, who owns this cave"},
+	{"id": "hv0", "x": -155.0, "z": 318.4, "r": 1.9, "room": "riverside", "name": "Widow Thrupp", "verb": "talk to Widow Thrupp, by the well"},
+	{"id": "hv1", "x": -150.6, "z": 319.2, "r": 1.9, "room": "riverside", "name": "Young Ned", "verb": "talk to Young Ned, who minds the animals"},
+	{"id": "hsign", "x": -163.6, "z": 331.6, "r": 1.8, "room": "riverside", "name": "the signpost", "verb": "read the signpost"},
 	{"id": "mill", "x": 101.0, "z": 30.0, "r": 2.6, "name": "the windmill", "verb": "see the miller about a banquet"},
 	{"id": "plate", "x": 24.6, "z": 5.4, "r": 1.9, "name": "the offering plate", "verb": "look at the offering plate"},
 	{"id": "herder", "x": 98.6, "z": 39.6, "r": 2.4, "name": "the Herder", "verb": "talk to the Herder"},

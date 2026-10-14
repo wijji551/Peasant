@@ -337,6 +337,29 @@ def sfx():
     f = 330 * (1.0 + 0.06 * np.sin(2 * np.pi * 9 * t)) * (1.0 - 0.12 * t)
     bl = (osc(f, "sawtooth") * 0.7 + osc(f * 2, "sine") * 0.3) * np.minimum(1, t / 0.04) * np.clip((0.75 - t) / 0.35, 0, 1)
     S["baa"] = reverb(bandpass(bl, 400, 2600) * V * 0.75, 0.4, 0.12)
+    # a cow: a long low moo that rises, then falls away
+    n = int(SR * 1.5)
+    t = np.arange(n) / SR
+    f = 120 + 40 * np.sin(np.pi * np.clip(t / 1.3, 0, 1)) - 15 * t
+    mo = (osc(f, "sawtooth") * 0.55 + osc(f * 2, "sine") * 0.25 + lowpass(rng.standard_normal(n), 400) * 0.15) * np.minimum(1, t / 0.15) * np.clip((1.5 - t) / 0.5, 0, 1)
+    S["moo"] = reverb(lowpass(mo, 1400) * V * 0.9, 0.45, 0.15)
+    # a donkey: hee-haw, twice, the "hee" a high rasp in, the "haw" a low one out
+    br = buf(1.7)
+    for at, f0, f1, ln in ((0.0, 700, 900, 0.32), (0.34, 260, 200, 0.42), (0.85, 680, 880, 0.3), (1.17, 250, 190, 0.45)):
+        k = int(SR * ln)
+        tt = np.arange(k) / SR
+        ff = f0 + (f1 - f0) * tt / ln
+        v = (osc(ff, "sawtooth") * 0.6 + lowpass(rng.standard_normal(k), 2400) * 0.35) * np.minimum(1, tt / 0.03) * np.clip((ln - tt) / 0.1, 0, 1)
+        add(br, bandpass(v, 180, 3200), at)
+    S["bray"] = reverb(br * V * 0.75, 0.4, 0.12)
+    # a hen: three quick clucks
+    ck = buf(0.5)
+    for at in (0.0, 0.13, 0.27):
+        k = int(SR * 0.07)
+        tt = np.arange(k) / SR
+        v = (osc(880 - 2400 * tt, "sawtooth") * 0.5 + lowpass(rng.standard_normal(k), 3000) * 0.5) * np.minimum(1, tt / 0.004) * np.clip((0.07 - tt) / 0.04, 0, 1)
+        add(ck, bandpass(v, 500, 4000), at)
+    S["cluck"] = reverb(ck * V * 0.55, 0.3, 0.1)
     for k, x in S.items():
         if not ONLY or k in ONLY:
             save("sfx_" + k, x)

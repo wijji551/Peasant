@@ -59,6 +59,13 @@ var _raft_pile: Node3D                    # and the wood stacked for it until th
 var _raft_far: Node3D                     # the raft, tied up at the Riverside
 var _rcave_props: Node3D                  # the Rune Cave's props, once it has been made fit to explore
 var _seams: Array = []                    # its seams of runes: [node, material]
+var _chickens: Array = []                 # the Riverside's hens: [node, where it is, where it is going, until the next peck]
+var _cow: Node3D
+var _donkey: Node3D
+var _torch_flames: Array = []             # the hamlet's torches, lit at dusk
+var _bonfire_flames: Array = []
+var _bonfire_light: OmniLight3D
+var _beast_t := [6.0, 11.0, 2.0]          # until the next moo, bray and cluck
 var _evil: Array[Node3D] = []             # the castle's worse and worse looks, one set a week
 var _evil_now := -1
 var _castle_lit: StandardMaterial3D       # the one window that is always lit
@@ -736,40 +743,7 @@ func _river() -> void:
 		var x := rr(-205, 205)
 		Build.box(self, Vector3(rr(2, 6), 0.035, rr(0.8, 2.2)), Vector3(x, 0, rr(54.2, 55.2)), C.sand if i % 3 else C.grass3, rr(-0.2, 0.2))
 	Build.box(self, Vector3(420, 0.03, 3.4), Vector3(0, 0, 73.4), C.sand)          # the far bank
-	var water := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(420, 15.6)
-	water.mesh = pm
-	water.position = Vector3(0, 0.05, 65)
-	var sh := Shader.new()
-	sh.code = """
-shader_type spatial;
-render_mode specular_schlick_ggx;
-uniform vec3 shallow : source_color = vec3(0.56, 0.80, 0.85);
-uniform vec3 deep : source_color = vec3(0.26, 0.55, 0.68);
-uniform vec3 foam : source_color = vec3(0.93, 0.97, 0.98);
-varying vec3 wp;
-void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
-float wave(vec2 p, float t) {
-	return sin(p.x * 0.42 + t * 1.1 + sin(p.y * 0.9 + t * 0.4) * 1.6) * 0.5 + sin(p.x * 0.13 - p.y * 0.7 + t * 0.7) * 0.5;
-}
-void fragment() {
-	float across = clamp(abs(wp.z - 65.0) / 7.8, 0.0, 1.0);
-	vec3 c = mix(deep, shallow, across * across);
-	vec2 p = vec2(wp.x + TIME * 1.6, wp.z);                 // the current runs west
-	float r = wave(p, TIME);
-	float streak = smoothstep(0.80, 0.97, r) * (1.0 - across * 0.6);
-	float edge = smoothstep(0.86, 1.0, across) * (0.6 + 0.4 * sin(wp.x * 0.8 + TIME * 2.0));
-	c = mix(c, foam, clamp(streak * 0.5 + edge * 0.45, 0.0, 1.0));
-	ALBEDO = c;
-	ROUGHNESS = 0.16;
-	METALLIC = 0.12;
-	SPECULAR = 0.6;
-}
-"""
-	var wm := ShaderMaterial.new()
-	wm.shader = sh
-	water.material_override = wm
+	var water := _water(Vector3(0, 0.05, 65), Vector2(420, 15.6), 65.0, 7.8)
 	add_child(water)
 	# reeds in clumps on both banks, lily pads in the slack water, and a few stones
 	var reed := BoxMesh.new()
@@ -803,6 +777,50 @@ void fragment() {
 	for i in 60:                                    # bushes along the far side, which nobody has ever been to
 		var x := rr(-200, 200)
 		Build.cone(self, rr(1.2, 2.2), rr(1.6, 3.2), Vector3(x, 0, rr(75.5, 82)), [C.leaf, C.leaf2, C.hedge3][i % 3], 6, rr(0, 3))
+
+
+## Running water (the village's river, and the Riverside's): deep in the middle, shallow and foaming at the edges, with
+## streaks drifting west. cz and half: where its middle is, and how far it is from the middle to each bank.
+func _water(pos: Vector3, size: Vector2, cz: float, half: float) -> MeshInstance3D:
+	var water := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = size
+	water.mesh = pm
+	water.position = pos
+	var sh := Shader.new()
+	sh.code = """
+shader_type spatial;
+render_mode specular_schlick_ggx;
+uniform vec3 shallow : source_color = vec3(0.56, 0.80, 0.85);
+uniform vec3 deep : source_color = vec3(0.26, 0.55, 0.68);
+uniform vec3 foam : source_color = vec3(0.93, 0.97, 0.98);
+uniform float cz = 65.0;
+uniform float half = 7.8;
+varying vec3 wp;
+void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+float wave(vec2 p, float t) {
+	return sin(p.x * 0.42 + t * 1.1 + sin(p.y * 0.9 + t * 0.4) * 1.6) * 0.5 + sin(p.x * 0.13 - p.y * 0.7 + t * 0.7) * 0.5;
+}
+void fragment() {
+	float across = clamp(abs(wp.z - cz) / half, 0.0, 1.0);
+	vec3 c = mix(deep, shallow, across * across);
+	vec2 p = vec2(wp.x + TIME * 1.6, wp.z);                 // the current runs west
+	float r = wave(p, TIME);
+	float streak = smoothstep(0.80, 0.97, r) * (1.0 - across * 0.6);
+	float edge = smoothstep(0.86, 1.0, across) * (0.6 + 0.4 * sin(wp.x * 0.8 + TIME * 2.0));
+	c = mix(c, foam, clamp(streak * 0.5 + edge * 0.45, 0.0, 1.0));
+	ALBEDO = c;
+	ROUGHNESS = 0.16;
+	METALLIC = 0.12;
+	SPECULAR = 0.6;
+}
+"""
+	var wm := ShaderMaterial.new()
+	wm.shader = sh
+	wm.set_shader_parameter("cz", cz)
+	wm.set_shader_parameter("half", half)
+	water.material_override = wm
+	return water
 
 
 ## The village green, north of the keep: grass, a maypole, the well, the stocks and a duck pond.
@@ -1183,90 +1201,486 @@ func _inn_room() -> void:
 		n.add_child(l)
 
 
-## The far bank (version 7.12): the Riverside, a long way off the map like the inn and the mine, with the river along its
-## north side. The hamlet's three houses, the two merchants, the druid's hut and the campfire, the far ruin, the Rune
-## Cave and the cave with the coveted relic in it. And on the village bank, the raft (or the wood for it).
+## The far bank (version 7.12; redrawn in 7.14): the Riverside, a long way off the map like the inn and the mine. A small
+## hamlet inside a fence with four gates, its market round a bonfire, the druid's cottage with a tree growing out of it, a
+## pen with a cow and a donkey, chickens, a well and two of the hamlet's folk. Outside: the two caves, each in a hill of
+## its own and signed, the far ruin in the fields, the road south to Hallowshire Town with a broken cart at the start of it,
+## and the river along the north, running as the village's does. And on the village bank, the raft (or the wood for it).
 func _riverside() -> void:
 	var M: Dictionary = D.ROOMS.riverside
 	var c0 := Vector3(M.x, 0, M.z)
 	var rg := RandomNumberGenerator.new()
-	rg.seed = 7120
-	Build.box(self, Vector3(M.hw * 2 + 30, 0.1, M.hd * 2 + 30), c0 + Vector3(0, -0.02, 6), C.grass2)
-	Build.box(self, Vector3(M.hw * 2, 0.1, M.hd * 2), c0 + Vector3(0, 0.02, 0), C.grass)
-	Build.box(self, Vector3(M.hw * 2 + 30, 0.12, 14.0), c0 + Vector3(0, 0.03, -M.hd - 6.5), C.water)      # the river, along the north
-	Build.box(self, Vector3(M.hw * 2 + 30, 0.13, 1.4), c0 + Vector3(0, 0.03, -M.hd + 0.2), C.sand)
-	for i in 20:                                                                                         # a few ripples
-		Build.box(self, Vector3(rg.randf_range(1.5, 4.0), 0.14, 0.18), c0 + Vector3(rg.randf_range(-M.hw - 10, M.hw + 10), 0.04, -M.hd - rg.randf_range(1.5, 12.0)), C.water2)
-	for i in 34:                                                                                         # trees round the edge
+	rg.seed = 7140
+	var r := func(a: float, b: float) -> float: return rg.randf_range(a, b)
+	# --- the ground: fields and hedgerows round the hamlet, and the grass inside its fence
+	Build.box(self, Vector3(M.hw * 2 + 60, 0.1, M.hd * 2 + 50), c0 + Vector3(0, -0.02, 10), Color("86a85a"))
+	Build.box(self, Vector3(M.hw * 2, 0.1, M.hd * 2), c0 + Vector3(0, 0.0, 0), Color("8fb062"))
+	for i in 160:                                                                        # the grass is not a carpet: tufts and patches
+		Build.box(self, Vector3(r.call(1.0, 4.0), 0.03, r.call(1.0, 3.0)), Vector3(r.call(M.x - M.hw, M.x + M.hw), 0.03, r.call(M.z - M.hd + 3, M.z + M.hd)), [C.grass2, C.grass3, Color("7f9f52"), Color("98b86a")][i % 4], r.call(0, 3))
+	var fields := [[-128.0, 338.0, 22.0, 18.0, C.field1], [-128.0, 352.0, 22.0, 9.0, C.field3], [-206.0, 326.0, 8.0, 12.0, C.field3], [-120.0, 322.0, 14.0, 7.0, C.field2]]
+	for fd in fields:
+		Build.box(self, Vector3(fd[2], 0.04, fd[3]), Vector3(fd[0], 0.02, fd[1]), fd[4])
+		for k in int(fd[3] / 1.2):                                                       # furrows
+			Build.box(self, Vector3(fd[2] - 0.6, 0.05, 0.16), Vector3(fd[0], 0.03, fd[1] - fd[3] / 2 + 0.6 + k * 1.2), Color(fd[4]).darkened(0.12))
+	for h in [[-140.0, 330.0, 26.0, 0.0], [-117.0, 338.0, 18.0, PI / 2], [-200.0, 333.0, 14.0, 0.0], [-210.0, 318.0, 18.0, PI / 2]]:   # hedgerows
+		var hd := Vector3(h[0], 0, h[1])
+		for k in int(h[2] / 1.4):
+			var off := Vector3(-h[2] / 2 + k * 1.4, 0, 0).rotated(Vector3.UP, h[3])
+			Build.cone(self, r.call(0.9, 1.2), r.call(1.4, 1.9), hd + off, [C.hedge, C.hedge2, C.hedge3][k % 3], 6, r.call(0, 3))
+	Build.box(self, Vector3(35.0, 0.06, 29.0), Vector3(-160, 0.03, 311), Color("a3b86e"))   # the hamlet's own green, inside the fence, worn
+	for i in 40:                                                                         # trees, round the edge of the countryside
 		var a := rg.randf() * TAU
-		var e := Vector3(cos(a) * (M.hw + rg.randf_range(2, 8)), 0, sin(a) * (M.hd + rg.randf_range(2, 8)))
-		if e.z < -M.hd: continue
-		Build.cyl(self, 0.22, 0.3, 1.6, c0 + e, C.trunk, 6)
-		Build.cone(self, 1.6, 3.2, c0 + e + Vector3(0, 1.4, 0), C.leaf if i % 2 else C.leaf2, 7)
-	var lp := Vector3(M.at[0], 0, M.at[1])                                                               # the landing
-	Build.box(self, Vector3(5.0, 0.3, 3.0), lp + Vector3(0, 0, -1.8), C.wood2)
-	for sx in [-2.3, 2.3]: Build.box(self, Vector3(0.25, 1.1, 0.25), lp + Vector3(sx, 0, -3.1), C.timber)
-	_raft_far = _raft_node(lp + Vector3(0, 0, -5.2))
-	# the hamlet: three houses, and a path
-	house(-186.0, 312.0, 0.0, 6.0, 4.8, 2.6, C.cream2, C.thatch, false, true)
-	house(-184.0, 324.0, PI / 2, 4.4, 5.2, 2.4, C.cream, C.roof3, false, true)
-	house(-171.0, 331.0, 0.0, 6.0, 4.8, 2.6, C.cream2, C.roof2, false, true)
-	for i in 22:
-		Build.box(self, Vector3(rg.randf_range(0.5, 1.0), 0.06, rg.randf_range(0.5, 1.0)), lp + Vector3(rg.randf_range(-1, 1) - i * 0.5, 0.04, 3.0 + i * 0.75), C.path2, rg.randf() * 3)
-	# the merchant who never leaves: a stall with a roof; the travelling merchant: his cart
-	var st := Vector3(-174, 0, 303.6)
+		var e := Vector3(cos(a) * (M.hw + r.call(-2, 10)), 0, sin(a) * (M.hd + r.call(-2, 10)))
+		if e.z < -M.hd + 4 or (absf(e.x) < 5 and e.z > 0): continue                      # (not in the river, nor across the road)
+		_tree(c0 + e, r.call(0.9, 1.4), i)
+	for t in [Vector3(-206, 0, 296), Vector3(-114, 0, 296), Vector3(-200, 0, 352), Vector3(-136, 0, 350), Vector3(-174, 0, 354), Vector3(-115, 0, 326)]:
+		_tree(t, r.call(1.1, 1.5), int(t.x))
+	for i in 10:                                                                         # hay bales in the fields
+		Build.cyl(self, 0.6, 0.6, 1.1, Vector3(r.call(-138, -118), 0.6, r.call(331, 356)), C.straw, 10, r.call(0, 3), 0, PI / 2)
+	# --- the river along the north, as the village's runs, with its banks, reeds and lily pads
+	var rz: float = M.z - M.hd - 8.5
+	add_child(_water(Vector3(M.x, 0.05, rz), Vector2(M.hw * 2 + 80, 16.0), rz, 8.0))
+	Build.box(self, Vector3(M.hw * 2 + 80, 0.05, 2.6), Vector3(M.x, 0.0, M.z - M.hd + 0.4), C.sand)
+	Build.box(self, Vector3(M.hw * 2 + 80, 0.05, 2.4), Vector3(M.x, 0.0, rz - 8.6), C.sand)
+	for i in 50:
+		Build.box(self, Vector3(r.call(2, 5), 0.055, r.call(0.6, 1.6)), Vector3(r.call(M.x - M.hw - 30, M.x + M.hw + 30), 0, M.z - M.hd + r.call(1.0, 2.0)), C.sand if i % 3 else C.grass3, r.call(-0.2, 0.2))
+	var reed := BoxMesh.new(); reed.size = Vector3(0.06, 1.0, 0.06)
+	var xf: Array[Transform3D] = []
+	var cols: Array[Color] = []
+	for i in 46:
+		var cx: float = r.call(M.x - M.hw - 25, M.x + M.hw + 25)
+		if absf(cx - M.x) < 4: continue                                                  # (not across the landing)
+		var cz: float = (M.z - M.hd - r.call(0.6, 1.6)) if i % 3 else (rz - 7.2 + r.call(0, 1))
+		for j in 7:
+			var hh: float = r.call(0.7, 1.6)
+			xf.append(Transform3D(Basis.from_euler(Vector3(r.call(-0.18, 0.18), 0, r.call(-0.18, 0.18))).scaled(Vector3(1, hh, 1)), Vector3(cx + r.call(-0.6, 0.6), hh * 0.5 - 0.05, cz + r.call(-0.4, 0.4))))
+			cols.append([Color("6f8f3f"), Color("86a24a"), Color("a39352")][j % 3])
+	_multi(reed, xf, cols)
+	var pad := CylinderMesh.new(); pad.top_radius = 0.42; pad.bottom_radius = 0.42; pad.height = 0.03; pad.radial_segments = 9
+	var pxf: Array[Transform3D] = []
+	var pcol: Array[Color] = []
+	for i in 46:
+		var s: float = r.call(0.6, 1.3)
+		pxf.append(Transform3D(Basis.from_euler(Vector3(0, r.call(0, 6), 0)).scaled(Vector3(s, 1, s)), Vector3(r.call(M.x - M.hw - 25, M.x + M.hw + 25), 0.075, M.z - M.hd - r.call(2.2, 3.6) if i % 2 else rz - r.call(4.5, 6.5))))
+		pcol.append(Color("5b8a3c") if i % 5 else Color("e8d6e4"))
+	_multi(pad, pxf, pcol)
+	for i in 30:                                                                         # bushes on the far side
+		Build.cone(self, r.call(1.2, 2.2), r.call(1.6, 3.2), Vector3(r.call(M.x - M.hw - 30, M.x + M.hw + 30), 0, rz - r.call(10, 16)), [C.leaf, C.leaf2, C.hedge3][i % 3], 6, r.call(0, 3))
+	# --- the landing: a jetty out into the river, and the raft tied up at it
+	var lp := Vector3(M.at[0], 0, M.at[1])
+	for k in 6: Build.box(self, Vector3(3.2, 0.18, 0.9), lp + Vector3(0, 0.12, -1.0 - k * 0.95), C.wood2 if k % 2 else C.wood3)
+	for sx in [-1.7, 1.7]:
+		for k in 3: Build.box(self, Vector3(0.24, 1.0, 0.24), lp + Vector3(sx, -0.3, -0.6 - k * 2.2), C.timber)
+	_raft_far = _raft_node(lp + Vector3(0, 0, -7.4))
+	# --- paths: from the north gate to the market, and on to the south gate and the road; and to the east and west gates
+	var path := func(a: Vector3, b: Vector3, n: int, w: float) -> void:
+		for k in n:
+			var t := k / float(maxi(1, n - 1))
+			var at := a.lerp(b, t)
+			Build.box(self, Vector3(r.call(w * 0.6, w), 0.07, r.call(0.6, 1.0)), at + Vector3(r.call(-0.5, 0.5), 0.02, r.call(-0.3, 0.3)), C.path2 if k % 3 else C.path, r.call(-0.3, 0.3))
+	path.call(lp + Vector3(0, 0, 0.5), Vector3(-160, 0, 302), 14, 2.6)
+	path.call(Vector3(-160, 0, 318), Vector3(-160, 0, 362), 34, 3.2)                    # and on, as the road south
+	path.call(Vector3(-166, 0, 308), Vector3(-186, 0, 308), 14, 2.0)
+	path.call(Vector3(-154, 0, 308), Vector3(-134, 0, 308), 14, 2.0)
+	path.call(Vector3(-178, 0, 329), Vector3(-190, 0, 340), 10, 1.6)                    # to the far ruin
+	for k in 26:                                                                         # the road's two ruts
+		for sx in [-0.9, 0.9]: Build.box(self, Vector3(0.3, 0.075, 0.9), Vector3(-160 + sx, 0.03, 328 + k * 1.3), Color("b49a62"))
+	# --- the market: cobbles round the bonfire
+	for i in 70:
+		var a := rg.randf() * TAU
+		var d: float = r.call(1.8, 6.4)
+		Build.box(self, Vector3(r.call(0.4, 0.7), 0.06, r.call(0.4, 0.7)), Vector3(-160 + cos(a) * d, 0.03, 309 + sin(a) * d * 0.9), C.stone if i % 2 else C.stone2, r.call(0, 3))
+	_bonfire(Vector3(D.CAMPFIRE.x, 0, D.CAMPFIRE.z))
+	# the merchant who never leaves: a stall with a striped awning
+	var st := Vector3(-168, 0, 303)
 	Build.box(self, Vector3(3.2, 1.0, 1.2), st, C.wood2)
 	for sx in [-1.5, 1.5]: Build.box(self, Vector3(0.14, 2.4, 0.14), st + Vector3(sx, 0, 0.5), C.timber)
-	Build.box(self, Vector3(3.6, 0.12, 1.8), st + Vector3(0, 2.4, 0.2), Color("3f6b8f"))
-	for i in 4: Build.box(self, Vector3(0.4, 0.3, 0.3), st + Vector3(-1.2 + i * 0.8, 1.0, 0), [C.wood, C.stone, C.iron, Color("3f7ed8")][i])
-	_npc(self, st + Vector3(0, 0, -1.0), 0.0, Color("4b5a3a"), "cap", false)
-	var ct := Vector3(-164, 0, 303.6)
+	for k in 6: Build.box(self, Vector3(0.6, 0.1, 1.9), st + Vector3(-1.5 + k * 0.6, 2.4, 0.2), Color("3f6b8f") if k % 2 else Color("efe6cf"))
+	for i in 4: Build.box(self, Vector3(0.45, 0.3, 0.32), st + Vector3(-1.1 + i * 0.75, 1.0, 0), [C.wood, C.stone, C.iron, Color("3f7ed8")][i])
+	Build.box(self, Vector3(0.6, 0.5, 0.6), st + Vector3(2.2, 0, -0.2), C.wood3)
+	_npc(self, st + Vector3(0, 0, -0.9), 0.0, Color("4b5a3a"), "cap", false)
+	# the travelling merchant: his cart, with a canvas cover
+	var ct := Vector3(-152, 0, 303)
 	Build.box(self, Vector3(2.6, 0.9, 1.4), ct + Vector3(0, 0.6, 0), C.wood)
-	for sx in [-1.2, 1.2]: Build.cyl(self, 0.6, 0.6, 0.18, ct + Vector3(sx, 0.6, 0), C.timber, 10, 0, 0, PI / 2)
-	Build.box(self, Vector3(2.4, 0.9, 1.2), ct + Vector3(0, 1.5, 0), Color("a0523a"))
-	_npc(self, ct + Vector3(1.8, 0, 1.0), -PI / 2, Color("6a4a7a"), "hood", false)
-	# the druid's hut, and the campfire
-	house(-140.0, 306.0, 0.0, 5.2, 4.4, 2.2, C.wood3, C.leaf, true)
-	_npc(self, Vector3(-143.0, 0, 309.0), PI * 0.8, Color("4f6b3a"), "hood", false)
-	var cf := Vector3(D.CAMPFIRE.x, 0, D.CAMPFIRE.z)
-	for i in 7: Build.box(self, Vector3(0.4, 0.3, 0.4), cf + Vector3(cos(i * TAU / 7) * 0.9, 0, sin(i * TAU / 7) * 0.9), C.stone3, i)
-	var flame := Build.mat(Color(1.0, 0.6, 0.2), 2.0)
-	for i in 3: Build.cone(self, 0.3 - i * 0.06, 0.8 + i * 0.2, cf + Vector3(rg.randf_range(-0.2, 0.2), 0.1, rg.randf_range(-0.2, 0.2)), Color.WHITE, 5).material_override = flame
-	var fl := OmniLight3D.new(); fl.light_color = Color(1.0, 0.62, 0.3); fl.omni_range = 9.0; fl.light_energy = 1.4; fl.position = cf + Vector3(0, 1.2, 0); add_child(fl)
-	lanterns.append(fl)
-	# the far ruin: broken walls and heaps of rubble
-	for i in 9:
-		Build.box(self, Vector3(rg.randf_range(1.0, 3.0), rg.randf_range(0.6, 2.2), 0.6), Vector3(rg.randf_range(-194, -168), 0, rg.randf_range(327, 344)), C.stone2 if i % 2 else C.stone3, rg.randf() * 3)
-	for sp in D.RIVER_SPOTS:
-		for j in 4: Build.box(self, Vector3(rg.randf_range(0.5, 1.1), rg.randf_range(0.3, 0.6), rg.randf_range(0.5, 1.0)), Vector3(sp[0] + rg.randf_range(-0.7, 0.7), 0, sp[1] + rg.randf_range(-0.7, 0.7)), C.stone if j % 2 else C.stone2, rg.randf() * 3)
-	# the Rune Cave: a hollow of rock, open to the west, with three blue seams at the back
-	var rock := Color("6e6878")
-	Build.box(self, Vector3(2.0, 4.0, 11.2), Vector3(-125.4, 0, 331.0), rock)
-	Build.box(self, Vector3(7.2, 3.4, 1.6), Vector3(-130.0, 0, 325.8), rock)
-	Build.box(self, Vector3(7.2, 3.4, 1.6), Vector3(-130.0, 0, 336.2), rock)
-	Build.box(self, Vector3(7.6, 0.8, 11.6), Vector3(-129.4, 3.4, 331.0), Color("5f5a69"))
+	for sx in [-1.2, 1.2]: Build.cyl(self, 0.6, 0.6, 0.18, ct + Vector3(sx, 0.6, 0.78), C.timber, 10, 0, PI / 2)
+	Build.cyl(self, 0.75, 0.75, 2.4, ct + Vector3(0, 1.5, 0), Color("cdb98f"), 10, PI / 2, 0, PI / 2)
+	_npc(self, ct + Vector3(1.8, 0, 0.6), -PI / 2, Color("6a4a7a"), "hood", false)
+	# --- the druid: his cottage, with a tree growing out of it, flowers and mushrooms round it, and his table of potions
+	_druid_cottage(Vector3(-174, 0, 316.5))
+	# --- three houses, with window boxes, gardens and smoke
+	house(-174.5, 300.0, 0.0, 4.0, 3.6, 2.2, C.cream2, C.thatch, false, true)
+	house(-149.0, 322.6, 0.0, 5.2, 4.4, 2.3, C.cream, C.roof3, false, true)
+	house(-145.5, 299.4, 0.0, 4.8, 4.0, 2.2, C.cream2, C.roof2, false, true)
+	for hp in [Vector3(-174.5, 0, 302.0), Vector3(-149, 0, 320.2), Vector3(-145.5, 0, 301.6)]:
+		for sx in [-1.2, 1.2]:                                                           # window boxes, full of flowers
+			Build.box(self, Vector3(0.9, 0.22, 0.3), hp + Vector3(sx, 1.0, -0.05), C.wood2)
+			for f in 4: Build.box(self, Vector3(0.14, 0.14, 0.14), hp + Vector3(sx - 0.33 + f * 0.22, 1.22, -0.05), [Color("e05a7a"), Color("f2c94c"), Color("f0f0ff"), Color("b36ad8")][f])
+	for i in 3: Build.cyl(self, 0.32, 0.36, 0.8, Vector3(-166.6 + i * 0.75, 0, 325.4), C.wood, 8)   # barrels
+	_washing(Vector3(-153, 0, 325), Vector3(-145, 0, 325))
+	# --- the well, and the two folk of the hamlet
+	var wl := Vector3(-155, 0, 316)
+	Build.cyl(self, 0.9, 0.95, 0.8, wl, C.stone2, 10)
+	Build.cyl(self, 0.7, 0.7, 0.05, wl + Vector3(0, 0.75, 0), Color("2c4a5a"), 10)
+	for sx in [-0.8, 0.8]: Build.box(self, Vector3(0.14, 1.9, 0.14), wl + Vector3(sx, 0, 0), C.timber)
+	Build.roof(self, 2.2, 0.7, 1.4, wl + Vector3(0, 1.9, 0), C.roof2, PI / 2)
+	Build.cyl(self, 0.18, 0.15, 0.3, wl + Vector3(0.3, 1.0, 0), C.wood, 7)
+	_npc(self, Vector3(-155.0, 0, 317.5), PI, Color("4a3f5a"), "bonnet", false)          # Widow Thrupp
+	_npc(self, Vector3(-150.6, 0, 318.0), PI, Color("8a6a3a"), "cap", false)             # Young Ned
+	# --- the pen, with Dorothy the cow and the Donkey in it, and the chickens loose about the market
+	_pen(Vector3(-147.5, 0, 314))
+	for i in 7:
+		var ch := _chicken(i)
+		var at := Vector3(r.call(-166, -153), 0, r.call(306, 321))
+		ch.position = at
+		_chickens.append([ch, at, at, r.call(0, 2)])
+	# --- the fence round the hamlet, with its four gates, and torches at them and round the market
+	_hamlet_fence()
+	for tp in [Vector3(-162.4, 0, 295.6), Vector3(-157.6, 0, 295.6), Vector3(-162.4, 0, 326.4), Vector3(-157.6, 0, 326.4), Vector3(-178.4, 0, 305.6), Vector3(-178.4, 0, 310.4),
+			Vector3(-141.6, 0, 305.6), Vector3(-141.6, 0, 310.4), Vector3(-166.5, 0, 312.5), Vector3(-153.5, 0, 312.5), Vector3(-166.5, 0, 306.0), Vector3(-153.5, 0, 306.0), Vector3(-187.0, 0, 303.0), Vector3(-133.0, 0, 303.0)]:
+		_torch(tp)
+	# --- the two caves, each in a hill of its own, and signed
+	_hill(Vector3(-196, 0, 308), 9.0, true)                                              # Garrick's cave, to the west
+	_hill(Vector3(-124, 0, 308), 9.0, false)                                             # the Rune Cave, to the east
+	for j in 9: Build.box(self, Vector3(r.call(0.6, 1.3), r.call(0.4, 0.9), r.call(0.6, 1.2)), Vector3(D.TITHE_RUBBLE.x + r.call(-1.0, 0.6), 0, D.TITHE_RUBBLE.z + r.call(-1.0, 1.0)), C.stone2 if j % 2 else C.stone3, r.call(0, 3))
+	Build.box(self, Vector3(0.4, 0.3, 0.4), Vector3(D.TITHE_ORE.x, 0, D.TITHE_ORE.z), Color("7d5fb3"), 0.4)
+	_npc(self, Vector3(-182.0, 0, 301.4), PI * 0.6, Color("7a3a2a"), "bald", false)      # Garrick
 	for v in D.RUNE_SEAMS:
 		var m := Build.mat(Color("3f7ed8"), 1.6)
-		var b := Build.box(self, Vector3(0.3, 1.2, 0.9), Vector3(v[0] + 1.5, 0.6, v[1]), Color("3f7ed8"))
+		var b := Build.box(self, Vector3(0.3, 1.2, 0.9), Vector3(v[0] + 1.0, 0.5, v[1]), Color("3f7ed8"))
 		b.material_override = m
 		_seams.append([b, m])
 	_rcave_props = Node3D.new(); add_child(_rcave_props)
-	for z in [327.0, 331.0, 335.0]:
-		Build.box(_rcave_props, Vector3(0.22, 3.2, 0.22), Vector3(-132.5, 0, z), C.timber)
-		Build.box(_rcave_props, Vector3(0.22, 0.22, 2.2), Vector3(-132.5, 3.1, z), C.timber)
-	Build.box(_rcave_props, Vector3(3.0, 0.08, 1.2), Vector3(-133.5, 0.05, 331.0), C.wood3)
-	# the cave of the coveted relic, its owner, the rubble and the ore
-	Build.box(self, Vector3(8.0, 3.6, 5.2), Vector3(-148.0, 0, 341.5), Color("5d5866"))
-	Build.box(self, Vector3(2.4, 2.2, 0.4), Vector3(-148.0, 0, 338.8), Color("14111a"))
-	_npc(self, Vector3(-153.0, 0, 334.0), PI * 0.2, Color("7a3a2a"), "bald", false)
-	for j in 9: Build.box(self, Vector3(rg.randf_range(0.6, 1.3), rg.randf_range(0.4, 0.9), rg.randf_range(0.6, 1.2)), Vector3(D.TITHE_RUBBLE.x + rg.randf_range(-1.2, 1.2), 0, D.TITHE_RUBBLE.z + rg.randf_range(-0.8, 0.8)), C.stone2 if j % 2 else C.stone3, rg.randf() * 3)
-	Build.box(self, Vector3(0.4, 0.3, 0.4), Vector3(D.TITHE_ORE.x, 0, D.TITHE_ORE.z), Color("7d5fb3"), 0.4)
-	# and on the village bank: the raft, or what there is of it so far
+	for z in [304.0, 308.0, 312.0]:                                                      # props and planks, once it is made fit
+		Build.box(_rcave_props, Vector3(0.22, 3.0, 0.22), Vector3(-135.0, 0, z), C.timber)
+	Build.box(_rcave_props, Vector3(0.22, 0.22, 8.4), Vector3(-135.0, 2.9, 308), C.timber)
+	Build.box(_rcave_props, Vector3(2.4, 0.08, 1.2), Vector3(-136.5, 0.05, 308), C.wood3)
+	# --- the far ruin, out in the fields to the south-west: nothing in it bites
+	for i in 9:
+		Build.box(self, Vector3(r.call(1.0, 3.0), r.call(0.6, 2.2), 0.6), Vector3(r.call(-204, -176), 0, r.call(335, 351)), C.stone2 if i % 2 else C.stone3, r.call(0, 3))
+	for sp in D.RIVER_SPOTS:
+		for j in 4: Build.box(self, Vector3(r.call(0.5, 1.1), r.call(0.3, 0.6), r.call(0.5, 1.0)), Vector3(sp[0] + r.call(-0.7, 0.7), 0, sp[1] + r.call(-0.7, 0.7)), C.stone if j % 2 else C.stone2, r.call(0, 3))
+	# --- the road to Hallowshire Town: a signpost, and a broken cart at the start of it
+	var sg := Vector3(-163.6, 0, 331.0)
+	Build.box(self, Vector3(0.16, 2.2, 0.16), sg, C.timber)
+	Build.box(self, Vector3(1.6, 0.36, 0.08), sg + Vector3(0.5, 1.7, 0), C.wood3, 0, 0, -0.06)
+	Build.box(self, Vector3(0.3, 0.3, 0.08), sg + Vector3(1.4, 1.73, 0), C.wood3, 0, 0, PI / 4)
+	var bc := Vector3(-155.5, 0, 333.0)                                                  # the cart: down on one side, a wheel off, its load spilt
+	Build.box(self, Vector3(3.0, 0.8, 1.6), bc + Vector3(0, 0.25, 0), C.wood2, 0.25, 0, 0.18)
+	Build.cyl(self, 0.62, 0.62, 0.16, bc + Vector3(0.5, 0.62, 0.95), C.timber, 10, 0.25, PI / 2)
+	Build.cyl(self, 0.62, 0.62, 0.16, bc + Vector3(1.9, 0.08, 1.9), C.timber, 10, 0.6, 0, 0)  # the one that came off
+	Build.box(self, Vector3(0.12, 0.12, 2.6), bc + Vector3(-1.8, 0.1, -0.6), C.timber, 0.5)
+	for k in 3: Build.box(self, Vector3(0.6, 0.5, 0.6), bc + Vector3(-0.4 + k * 0.8, 0, -1.4 - (k % 2) * 0.5), C.wood3, k * 0.6)
+	Build.cyl(self, 0.32, 0.36, 0.8, bc + Vector3(1.6, 0, -1.1), C.wood, 8, 0, PI / 2)
+	# --- and on the village bank: the raft, or what there is of it so far
 	var dr := Vector3(M.door[0], 0, M.door[1])
 	_raft = _raft_node(dr + Vector3(0, 0, 3.2))
 	_raft_pile = Node3D.new(); add_child(_raft_pile)
 	for i in 6: Build.cyl(_raft_pile, 0.25, 0.25, 3.2, dr + Vector3(-1.5 + (i % 3) * 0.55, 0.25 + floorf(i / 3.0) * 0.45, 0), C.wood, 7, PI / 2, 0, PI / 2)
 	Build.box(self, Vector3(0.18, 1.2, 0.18), dr + Vector3(2.2, 0, 1.2), C.timber)
+
+
+## A low-poly tree: a trunk and two or three layers of leaves.
+func _tree(at: Vector3, s: float, i: int) -> void:
+	Build.cyl(self, 0.22 * s, 0.32 * s, 1.6 * s, at, C.trunk, 6)
+	if i % 3 == 0:
+		Build.cone(self, 1.7 * s, 2.6 * s, at + Vector3(0, 1.2 * s, 0), C.hedge3, 7)
+		Build.cone(self, 1.2 * s, 2.2 * s, at + Vector3(0, 2.6 * s, 0), C.leaf, 7)
+	else:
+		var m := Build.cyl(self, 1.3 * s, 1.5 * s, 1.6 * s, at + Vector3(0, 1.4 * s, 0), C.leaf if i % 2 else C.leaf2, 7)
+		m.rotation.y = i
+		Build.cyl(self, 0.7 * s, 1.2 * s, 0.9 * s, at + Vector3(0, 3.0 * s, 0), C.leaf2 if i % 2 else C.leaf, 7)
+
+
+## The bonfire in the market: a ring of stones, logs stacked in a cone, and big flames that dance (see _process).
+func _bonfire(at: Vector3) -> void:
+	for i in 10: Build.box(self, Vector3(0.45, 0.32, 0.45), at + Vector3(cos(i * TAU / 10) * 1.2, 0, sin(i * TAU / 10) * 1.2), C.stone3, i)
+	for i in 7: Build.box(self, Vector3(0.2, 1.9, 0.2), at + Vector3(cos(i * TAU / 7) * 0.65, 0, sin(i * TAU / 7) * 0.65), C.trunk, -i * TAU / 7, 0, 0.38).rotation = Vector3(0.38 * sin(i * TAU / 7), 0, -0.38 * cos(i * TAU / 7))
+	Build.box(self, Vector3(1.3, 0.06, 1.3), at + Vector3(0, 0.02, 0), Color("2a1d14"))
+	var flame := Build.mat(Color(1.0, 0.55, 0.15), 2.4)
+	var flame2 := Build.mat(Color(1.0, 0.85, 0.35), 2.8)
+	for i in 5:
+		var f := Build.cone(self, 0.55 - i * 0.07, 1.4 + i * 0.25, at + Vector3(cos(i * 2.4) * 0.25, 0.15, sin(i * 2.4) * 0.25), Color.WHITE, 5, i)
+		f.material_override = flame if i % 2 else flame2
+		_bonfire_flames.append(f)
+	_bonfire_light = OmniLight3D.new(); _bonfire_light.light_color = Color(1.0, 0.62, 0.3); _bonfire_light.omni_range = 14.0; _bonfire_light.light_energy = 1.8
+	_bonfire_light.position = at + Vector3(0, 1.6, 0); add_child(_bonfire_light)
+
+
+## A torch on a post: it is lit at dusk, and its light is one of the village's lanterns (see main.gd).
+func _torch(at: Vector3) -> void:
+	Build.box(self, Vector3(0.14, 1.7, 0.14), at, C.timber)
+	Build.cyl(self, 0.16, 0.1, 0.18, at + Vector3(0, 1.7, 0), C.iron, 6)
+	var f := Build.cone(self, 0.14, 0.42, at + Vector3(0, 1.86, 0), Color.WHITE, 5)
+	f.material_override = Build.mat(Color(1.0, 0.7, 0.25), 2.6)
+	_torch_flames.append(f)
+	var l := OmniLight3D.new(); l.light_color = Color(1.0, 0.68, 0.34); l.omni_range = 7.5; l.light_energy = 0.0
+	l.position = at + Vector3(0, 2.1, 0); add_child(l)
+	lanterns.append(l)
+
+
+## The fence round the hamlet: posts and two rails, with an open gate in each side.
+func _hamlet_fence() -> void:
+	var x0 := -178.0
+	var x1 := -142.0
+	var z0 := 296.0
+	var z1 := 326.0
+	var run := func(a: Vector3, b: Vector3) -> void:
+		var n := int(a.distance_to(b) / 1.6)
+		var dirv := (b - a).normalized()
+		var ang := atan2(dirv.x, dirv.z)
+		for k in n + 1:
+			Build.box(self, Vector3(0.18, 1.1, 0.18), a + dirv * (k * a.distance_to(b) / maxf(1, n)), C.timber)
+		for y in [0.45, 0.85]:
+			Build.box(self, Vector3(0.08, 0.12, a.distance_to(b)), (a + b) / 2 + Vector3(0, y, 0), C.wood2, ang)
+	run.call(Vector3(x0, 0, z0), Vector3(-162, 0, z0)); run.call(Vector3(-158, 0, z0), Vector3(x1, 0, z0))
+	run.call(Vector3(x0, 0, z1), Vector3(-162, 0, z1)); run.call(Vector3(-158, 0, z1), Vector3(x1, 0, z1))
+	run.call(Vector3(x0, 0, z0), Vector3(x0, 0, 306)); run.call(Vector3(x0, 0, 310), Vector3(x0, 0, z1))
+	run.call(Vector3(x1, 0, z0), Vector3(x1, 0, 306)); run.call(Vector3(x1, 0, 310), Vector3(x1, 0, z1))
+	for g in [[Vector3(-162, 0, z0), 0.0, 1], [Vector3(-162, 0, z1), 0.0, -1], [Vector3(x0, 0, 306), PI / 2, 1], [Vector3(x1, 0, 306), PI / 2, -1]]:   # the gates, standing open
+		var gn := Node3D.new(); gn.position = g[0]; gn.rotation.y = g[1]; add_child(gn)
+		for leaf in [0, 1]:
+			var hinge := Vector3(0, 0, 0) if leaf == 0 else Vector3(4, 0, 0)
+			var lf := Node3D.new(); lf.position = hinge; lf.rotation.y = (1.2 if leaf == 0 else PI - 1.2) * g[2]; gn.add_child(lf)
+			for y in [0.4, 0.8]: Build.box(lf, Vector3(1.9, 0.12, 0.08), Vector3(0.95, y, 0), C.wood3)
+			Build.box(lf, Vector3(0.1, 1.0, 0.08), Vector3(1.85, 0, 0), C.wood3)
+			Build.box(lf, Vector3(2.0, 0.1, 0.08), Vector3(0.95, 0.4, 0), C.wood3, 0, 0, 0.36)
+
+
+## A small hill with a cave in its side. The west one is Garrick's (a chest-shaped heap, a money box on a post and a
+## sign that says so); the east one is the Rune Cave (blue light at the back, and a sign with a rune on it).
+func _hill(at: Vector3, rad: float, garrick: bool) -> void:
+	var g := Node3D.new(); g.position = at; add_child(g)
+	var face := 1.0 if garrick else -1.0                                                # which way the mouth faces: into the hamlet
+	Build.cyl(g, rad * 0.98, rad * 1.12, 2.2, Vector3.ZERO, Color("7f9f52"), 10)          # a rounded hill: turf in layers, lumpy
+	Build.cyl(g, rad * 0.8, rad * 0.98, 2.2, Vector3(-face * 0.4, 2.2, 0.3), Color("8aa85a"), 9, 0.3)
+	Build.cyl(g, rad * 0.55, rad * 0.8, 2.0, Vector3(-face * 0.9, 4.4, -0.4), Color("93b062"), 9, 0.6)
+	Build.cyl(g, rad * 0.25, rad * 0.55, 1.4, Vector3(-face * 1.3, 6.4, 0.2), Color("9cb86c"), 8, 0.9)
+	for k in 5:                                                                          # shoulders, so it is not a cake
+		var a := k * 1.3 + (0.2 if garrick else 0.9)
+		if cos(a) * face > 0.3: continue                                                 # (none in front of the mouth)
+		Build.cyl(g, rad * 0.32, rad * 0.45, 2.6, Vector3(cos(a) * rad * 0.62, 0, sin(a) * rad * 0.62), Color("86a656"), 8, a)
+	var rock := Color("6e6878") if not garrick else Color("7a6f62")
+	for i in 7:                                                                          # rocks showing through the turf
+		var a := i * 0.9 + (0.4 if garrick else 1.1)
+		Build.box(g, Vector3(1.6, 1.2, 1.3), Vector3(cos(a) * rad * 0.85, 0.4 + (i % 3) * 1.4, sin(a) * rad * 0.85), rock, a, 0.2, 0.15)
+	for k in 3: _tree(at + Vector3(-face * (2.5 + k * 2.0), 4.2 + k * 0.9, -3.4 + k * 3.2), 0.7, k + (1 if garrick else 0))
+	# the mouth, on the side towards the hamlet: a dark opening in a frame of rock and timber
+	var m := Vector3(face * rad * 1.0, 0, 0)
+	Build.box(g, Vector3(1.4, 3.0, 4.2), m + Vector3(-face * 0.55, 0, 0), Color("1a1620"))     # the dark of the cave
+	Build.box(g, Vector3(2.4, 1.2, 5.8), m + Vector3(-face * 0.6, 3.0, 0), rock)
+	Build.box(g, Vector3(2.4, 0.5, 4.8), m + Vector3(-face * 0.7, 4.2, 0), Color("7f9f52"))
+	for sz in [-2.3, 2.3]:
+		Build.box(g, Vector3(1.4, 3.4, 1.0), m + Vector3(-face * 0.3, 0, sz), rock, 0.2 * sz)
+		Build.box(g, Vector3(0.22, 2.8, 0.22), m + Vector3(face * 0.3, 0, sz * 0.82), C.timber)
+	Build.box(g, Vector3(0.22, 0.22, 4.2), m + Vector3(face * 0.3, 2.75, 0), C.timber)
+	var sign_ := m + Vector3(face * 1.8, 0, 3.4)                                        # the sign, beside the mouth
+	Build.box(g, Vector3(0.14, 1.9, 0.14), sign_, C.timber)
+	Build.box(g, Vector3(0.08, 0.7, 1.4), sign_ + Vector3(face * 0.1, 1.3, 0), C.wood3)
+	if garrick:
+		Build.box(g, Vector3(0.1, 0.24, 0.8), sign_ + Vector3(face * 0.16, 1.55, 0), Color("a8362c"))     # (it says PAY HERE, in red)
+		Build.box(g, Vector3(0.14, 1.1, 0.14), m + Vector3(face * 3.0, 0, -2.2), C.timber)                 # the money box
+		Build.box(g, Vector3(0.5, 0.4, 0.4), m + Vector3(face * 3.0, 1.1, -2.2), Color("5b4130"))
+		Build.box(g, Vector3(0.3, 0.06, 0.06), m + Vector3(face * 3.0, 1.52, -2.2), Color("f2c94c"))
+	else:
+		var rn := Build.box(g, Vector3(0.1, 0.4, 0.4), sign_ + Vector3(face * 0.16, 1.45, 0), Color("3f7ed8"))   # a rune, painted on
+		rn.material_override = Build.mat(Color("3f7ed8"), 1.2)
+		var gl := OmniLight3D.new(); gl.light_color = Color(0.4, 0.62, 1.0); gl.omni_range = 6.0; gl.light_energy = 1.2
+		gl.position = m + Vector3(face * 0.8, 1.2, 0); g.add_child(gl)
+
+
+## Dorothy and the Donkey, in a pen with a hay rack and a water trough.
+func _pen(at: Vector3) -> void:
+	var hw := 4.3
+	var hd := 3.2
+	for k in 12:
+		var t := k / 11.0
+		for e in [[Vector3(-hw + t * hw * 2, 0, -hd)], [Vector3(-hw + t * hw * 2, 0, hd)], [Vector3(-hw, 0, -hd + t * hd * 2)], [Vector3(hw, 0, -hd + t * hd * 2)]]:
+			Build.box(self, Vector3(0.14, 1.0, 0.14), at + e[0], C.timber)
+	for y in [0.4, 0.8]:
+		Build.box(self, Vector3(hw * 2, 0.1, 0.07), at + Vector3(0, y, -hd), C.wood2)
+		Build.box(self, Vector3(hw * 2, 0.1, 0.07), at + Vector3(0, y, hd), C.wood2)
+		Build.box(self, Vector3(0.07, 0.1, hd * 2), at + Vector3(-hw, y, 0), C.wood2)
+		Build.box(self, Vector3(0.07, 0.1, hd * 2), at + Vector3(hw, y, 0), C.wood2)
+	Build.box(self, Vector3(8.4, 0.04, 6.2), at + Vector3(0, 0.03, 0), Color("a08a5a"))
+	Build.box(self, Vector3(1.8, 0.5, 0.6), at + Vector3(2.6, 0, -2.4), C.wood2)                  # the trough
+	Build.box(self, Vector3(1.6, 0.06, 0.4), at + Vector3(2.6, 0.48, -2.4), C.water)
+	Build.box(self, Vector3(1.0, 0.9, 1.0), at + Vector3(-3.2, 0, -2.2), C.straw)                 # the hay
+	_cow = _beast(at + Vector3(-1.2, 0, 0.4), false)
+	_donkey = _beast(at + Vector3(1.8, 0, 0.9), true)
+
+
+## A cow (black and white, with horns) or a donkey (grey-brown, with long ears). Its head and tail move (see _process).
+func _beast(at: Vector3, donkey: bool) -> Node3D:
+	var n := Node3D.new(); n.position = at; n.rotation.y = 0.7 if donkey else -0.5; add_child(n)
+	var hide := Color("8a7c6c") if donkey else Color("f1ede2")
+	var dark := Color("4a3f36") if donkey else Color("2f2a26")
+	var s := 0.85 if donkey else 1.0
+	Build.box(n, Vector3(0.8, 0.7, 1.6) * s, Vector3(0, 0.7 * s, 0), hide)
+	if not donkey:
+		Build.box(n, Vector3(0.82, 0.4, 0.5), Vector3(0, 0.9, 0.2), dark)                        # the patches
+		Build.box(n, Vector3(0.82, 0.3, 0.4), Vector3(0, 0.8, -0.5), dark)
+		Build.box(n, Vector3(0.3, 0.14, 0.24), Vector3(0, 0.55, -0.4), Color("f0b0b8"))          # (and her udder)
+	for lx in [-0.28, 0.28]:
+		for lz in [-0.6, 0.6]: Build.box(n, Vector3(0.18, 0.7, 0.18) * s, Vector3(lx * s, 0, lz * s), dark)
+	var head := Node3D.new(); head.position = Vector3(0, 1.15 * s, 0.85 * s); n.add_child(head)
+	Build.box(head, Vector3(0.44, 0.44, 0.6) * s, Vector3(0, -0.2, 0.2), hide)
+	Build.box(head, Vector3(0.46, 0.22, 0.24) * s, Vector3(0, -0.28, 0.52 * s), Color("d9b0a0") if not donkey else Color("cfc6b8"))
+	if donkey:
+		for ex in [-0.13, 0.13]: Build.box(head, Vector3(0.1, 0.5, 0.1), Vector3(ex, 0.12, 0.05), hide, 0, -0.2, ex * 1.6)
+		Build.box(head, Vector3(0.08, 0.3, 0.7), Vector3(0, -0.05, -0.4), dark)                   # the mane
+	else:
+		for ex in [-0.3, 0.3]: Build.box(head, Vector3(0.08, 0.08, 0.24), Vector3(ex, 0.1, 0.0), Color("efe6cf"), 0, 0, ex * 2)
+	var tail := Node3D.new(); tail.position = Vector3(0, 1.2 * s, -0.8 * s); n.add_child(tail)
+	Build.box(tail, Vector3(0.07, 0.6, 0.07), Vector3(0, -0.6, 0), dark)
+	n.set_meta("head", head); n.set_meta("tail", tail)
+	return n
+
+
+## A hen: white or brown, with a red comb. Its head goes down to peck (see _process).
+func _chicken(i: int) -> Node3D:
+	var n := Node3D.new(); add_child(n)
+	var col: Color = [Color("f6f2e8"), Color("a2643a"), Color("f6f2e8"), Color("d9a560")][i % 4]
+	Build.box(n, Vector3(0.28, 0.24, 0.36), Vector3(0, 0.16, 0), col)
+	Build.box(n, Vector3(0.18, 0.2, 0.08), Vector3(0, 0.26, -0.2), col, 0, -0.4)                      # the tail
+	for lx in [-0.06, 0.06]: Build.box(n, Vector3(0.03, 0.16, 0.03), Vector3(lx, 0, 0), Color("e0a030"))
+	var head := Node3D.new(); head.position = Vector3(0, 0.36, 0.16); n.add_child(head)
+	Build.box(head, Vector3(0.14, 0.16, 0.14), Vector3(0, -0.04, 0), col)
+	Build.box(head, Vector3(0.04, 0.08, 0.1), Vector3(0, 0.12, 0), Color("d0302c"))
+	Build.box(head, Vector3(0.05, 0.04, 0.08), Vector3(0, 0.0, 0.1), Color("e0a030"))
+	n.set_meta("head", head)
+	return n
+
+
+## The druid's cottage: low stone walls under a turf roof, with a great tree growing up through the middle of it, ivy,
+## flowers and toadstools round about, herbs drying under the eaves, a lit window, and his table of potions in front.
+func _druid_cottage(at: Vector3) -> void:
+	var n := Node3D.new(); n.position = at; add_child(n)
+	Build.box(n, Vector3(6.4, 0.4, 6.4), Vector3.ZERO, C.stone2)
+	Build.box(n, Vector3(6.0, 2.2, 6.0), Vector3(0, 0.4, 0), Color("b0a48c"))
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]: Build.box(n, Vector3(0.36, 2.2, 0.36), Vector3(sx * 2.92, 0.4, sz * 2.92), C.timber)
+	Build.roof(n, 6.8, 1.6, 6.8, Vector3(0, 2.6, 0), Color("3e5a3a"))                                       # a turf roof
+	Build.box(n, Vector3(0.12, 1.6, 1.0), Vector3(3.02, 0.4, 0.0), C.timber)                                 # the door, towards his table
+	var win := Build.box(n, Vector3(0.1, 0.7, 0.7), Vector3(3.02, 1.2, -1.7), Color("ffd98a"))
+	win.material_override = window_mat
+	# the tree, growing up through the roof, with roots over the walls
+	Build.cyl(n, 0.55, 0.9, 6.4, Vector3(-0.6, 0, 0.4), C.trunk, 8)
+	for a in [0.4, 2.1, 3.9, 5.2]:
+		Build.box(n, Vector3(0.4, 0.4, 2.6), Vector3(-0.6 + cos(a) * 1.4, 0.0, 0.4 + sin(a) * 1.4), C.trunk, a, 0.3)
+	for b in [[1.5, 5.6, 0.0, 0.6], [-1.6, 5.4, 1.2, -0.7], [0.3, 6.0, -1.4, 0.5]]:
+		Build.box(n, Vector3(0.3, 2.4, 0.3), Vector3(-0.6 + b[0] * 0.3, b[1] - 1.2, 0.4 + b[2] * 0.3), C.trunk, 0, b[3] * 0.6, b[3])
+	for c in [[0.0, 6.4, 0.4, 3.2], [1.8, 6.0, -1.0, 2.2], [-2.2, 6.2, 1.6, 2.4], [-0.6, 7.6, 0.4, 2.4], [1.2, 7.0, 2.0, 1.8]]:
+		Build.cyl(n, c[3] * 0.7, c[3], c[3] * 0.9, Vector3(-0.6 + c[0], c[1], 0.4 + c[2]), C.leaf if int(c[1]) % 2 else C.leaf2, 8, c[0])
+	for i in 18:                                                                                            # ivy, and its flowers
+		var y := 0.6 + (i % 6) * 0.3
+		var z := -2.6 + (i / 6) * 2.4
+		Build.box(n, Vector3(0.08, 0.5, 0.5), Vector3(3.04, y, z + 0.3 * sin(i)), C.leaf if i % 2 else C.hedge3)
+		if i % 3 == 0: Build.box(n, Vector3(0.1, 0.12, 0.12), Vector3(3.08, y + 0.2, z), Color("f6f0ff"))
+	# flowers and toadstools round the cottage
+	var fr := RandomNumberGenerator.new(); fr.seed = 4401
+	for i in 40:
+		var a := fr.randf() * TAU
+		var d := fr.randf_range(3.6, 5.0)
+		var p := Vector3(cos(a) * d, 0, sin(a) * d)
+		if p.x > 2.6 and absf(p.z) < 2.4: continue                                                           # (not on his doorstep)
+		Build.box(n, Vector3(0.06, 0.3, 0.06), p, C.leaf)
+		Build.box(n, Vector3(0.16, 0.14, 0.16), p + Vector3(0, 0.3, 0), [Color("e05a7a"), Color("f2c94c"), Color("f0f0ff"), Color("b36ad8"), Color("6aa8f0")][i % 5])
+	for t in [Vector3(-3.6, 0, 3.2), Vector3(-4.2, 0, 2.4), Vector3(3.8, 0, 3.6), Vector3(-3.4, 0, -3.8), Vector3(4.2, 0, -3.4)]:
+		Build.cyl(n, 0.06, 0.08, 0.35, t, Color("efe6cf"), 6)
+		Build.cyl(n, 0.08, 0.32, 0.22, t + Vector3(0, 0.34, 0), Color("c0262e"), 8)
+		Build.box(n, Vector3(0.06, 0.04, 0.06), t + Vector3(0.12, 0.5, 0.05), Color("ffffff"))
+	# herbs drying under the eaves, and a lantern by the door
+	for i in 5: Build.cone(n, 0.14, 0.5, Vector3(3.3, 1.6, -1.0 + i * 0.5), [C.leaf, Color("8a6ab0"), C.leaf2, Color("c0a040"), C.leaf][i], 5)
+	Build.box(n, Vector3(0.24, 0.32, 0.24), Vector3(3.3, 1.9, 0.8), Color("ffd98a")).material_override = Build.mat(Color("ffd98a"), 2.0)
+	# his table, in the market, with potions glowing on it, and the druid himself behind it
+	var tb := Vector3(5.4, 0, 0)
+	Build.box(n, Vector3(1.0, 0.9, 3.0), tb, C.wood2)
+	Build.box(n, Vector3(1.2, 0.08, 3.2), tb + Vector3(0, 0.9, 0), C.wood3)
+	for i in 6:
+		var pc: Color = [Color("e04040"), Color("4080e0"), Color("40c060"), Color("e0a030"), Color("b050d0"), Color("40c060")][i]
+		Build.cyl(n, 0.1, 0.13, 0.3, tb + Vector3(fr.randf_range(-0.3, 0.3), 0.98, -1.2 + i * 0.48), pc, 7).material_override = Build.mat(pc, 1.2)
+	for i in 3: Build.box(n, Vector3(0.3, 0.16, 0.3), tb + Vector3(0.2, 0.98, -0.8 + i * 0.8), C.leaf if i % 2 else Color("8a6ab0"))
+	_druid(n, tb + Vector3(-1.6, 0, 0))
+
+
+## The druid: a long green robe and hood, a white beard to his belt, a crown of antlers, and a staff with a glowing stone.
+func _druid(parent: Node3D, at: Vector3) -> void:
+	var g := Node3D.new(); g.position = at; g.rotation.y = PI / 2; parent.add_child(g)
+	var robe := Color("3f5f34")
+	Build.cyl(g, 0.34, 0.5, 1.2, Vector3.ZERO, robe, 8)
+	Build.box(g, Vector3(0.62, 0.6, 0.42), Vector3(0, 1.1, 0), robe)
+	for sx in [-0.38, 0.38]: Build.box(g, Vector3(0.18, 0.62, 0.2), Vector3(sx, 0.95, 0.08), robe, 0, -0.4)
+	Build.box(g, Vector3(0.36, 0.38, 0.36), Vector3(0, 1.66, 0.02), Color("d9b48c"))
+	Build.box(g, Vector3(0.46, 0.5, 0.46), Vector3(0, 1.64, -0.06), robe.darkened(0.2))                         # the hood
+	Build.box(g, Vector3(0.3, 0.6, 0.12), Vector3(0, 1.22, 0.22), Color("f0eee8"))                               # the beard
+	for sx in [-1.0, 1.0]:                                                                                   # the antlers
+		Build.box(g, Vector3(0.06, 0.4, 0.06), Vector3(sx * 0.16, 2.0, 0), Color("d8c8a0"), 0, 0, -sx * 0.4)
+		Build.box(g, Vector3(0.05, 0.28, 0.05), Vector3(sx * 0.3, 2.26, 0), Color("d8c8a0"), 0, 0, -sx * 0.9)
+		Build.box(g, Vector3(0.05, 0.24, 0.05), Vector3(sx * 0.24, 2.34, 0.06), Color("d8c8a0"), 0, 0.5, -sx * 0.2)
+	Build.box(g, Vector3(0.07, 2.2, 0.07), Vector3(0.5, 0, 0.18), C.timber)                                     # his staff
+	var orb := Build.box(g, Vector3(0.16, 0.16, 0.16), Vector3(0.5, 2.2, 0.18), Color("80f0a0"))
+	orb.material_override = Build.mat(Color("80f0a0"), 2.0)
+
+
+## A washing line between two posts, with the hamlet's washing on it.
+func _washing(a: Vector3, b: Vector3) -> void:
+	for p in [a, b]: Build.box(self, Vector3(0.12, 2.0, 0.12), p, C.timber)
+	Build.box(self, Vector3(a.distance_to(b), 0.03, 0.03), (a + b) / 2 + Vector3(0, 1.9, 0), Color("efe6cf"))
+	for k in 5:
+		var t := (k + 0.5) / 5.0
+		Build.box(self, Vector3(0.7, 0.6, 0.04), a.lerp(b, t) + Vector3(0, 1.28, 0), [Color("c0503c"), Color("efe6cf"), Color("5a7ab0"), Color("e0c060"), Color("efe6cf")][k])
+
+
+## The Riverside, alive: the bonfire dances, the torches are lit after dusk, the hens wander and peck, the cow and the
+## donkey look about and swish their tails, and now and then one of them says so (heard only when you are near).
+func _hamlet_step(delta: float) -> void:
+	if _cow == null: return
+	var now := Time.get_ticks_msec() / 1000.0
+	for i in _bonfire_flames.size():
+		var f: MeshInstance3D = _bonfire_flames[i]
+		f.scale = Vector3(1.0 + 0.12 * sin(now * 7.0 + i), 0.85 + 0.25 * absf(sin(now * 5.3 + i * 1.7)), 1.0 + 0.12 * cos(now * 6.1 + i))
+	_bonfire_light.light_energy = (1.0 + 2.2 * night) * (0.85 + 0.15 * sin(now * 11.0) + 0.08 * sin(now * 29.0))
+	var lit := night > 0.25
+	for i in _torch_flames.size():
+		var f: MeshInstance3D = _torch_flames[i]
+		f.visible = lit
+		if lit: f.scale = Vector3.ONE * (0.9 + 0.15 * sin(now * 9.0 + i * 1.3))
+	for c in _chickens:
+		var n: Node3D = c[0]
+		var at: Vector3 = c[1]
+		var goal: Vector3 = c[2]
+		c[3] -= delta
+		var head: Node3D = n.get_meta("head")
+		if at.distance_to(goal) < 0.15:
+			head.rotation.x = 1.1 * maxf(0.0, sin(now * 14.0)) if c[3] > 0.0 and c[3] < 0.8 else 0.0   # peck, peck
+			if c[3] <= 0.0:
+				c[3] = randf_range(1.0, 3.0)
+				c[2] = Vector3(clampf(at.x + randf_range(-3, 3), -166.0, -153.0), 0, clampf(at.z + randf_range(-3, 3), 306.0, 321.0))
+				if absf(c[2].x + 160.0) < 2.0 and absf(c[2].z - 310.0) < 2.0: c[2] = at   # (not into the bonfire)
+		else:
+			var dv := (goal - at).normalized()
+			at += dv * minf(at.distance_to(goal), delta * 1.3)
+			c[1] = at
+			n.rotation.y = atan2(dv.x, dv.z)
+			head.rotation.x = 0.15 * sin(now * 18.0)
+		n.position = at + Vector3(0, absf(sin(now * 18.0)) * 0.04 if at.distance_to(goal) >= 0.15 else 0.0, 0)
+	for b in [_cow, _donkey]:
+		var h: Node3D = b.get_meta("head")
+		var t: Node3D = b.get_meta("tail")
+		var k := 0.0 if b == _cow else 2.0
+		h.rotation = Vector3(0.35 * maxf(0.0, sin(now * 0.4 + k)), 0.4 * sin(now * 0.23 + k), 0)   # grazing, and looking about
+		t.rotation.z = 0.35 * sin(now * 2.2 + k)
+	for i in 3:
+		_beast_t[i] -= delta
+		if _beast_t[i] <= 0:
+			match i:
+				0: _beast_t[i] = randf_range(14, 26); Sound.play("moo", 0.8, Vector2(_cow.position.x, _cow.position.z))
+				1: _beast_t[i] = randf_range(18, 34); Sound.play("bray", 0.8, Vector2(_donkey.position.x, _donkey.position.z))
+				2:
+					_beast_t[i] = randf_range(2.5, 6.0)
+					var c: Array = _chickens[randi() % _chickens.size()]
+					Sound.play("cluck", 0.5, Vector2(c[1].x, c[1].z))
+
 
 func _raft_node(at: Vector3) -> Node3D:
 	var r := Node3D.new(); r.position = at; add_child(r)
@@ -1369,4 +1783,5 @@ func _process(delta: float) -> void:
 		_storm_light.light_energy = (1.2 + night * 4.0) * (0.8 + 0.2 * sin(Time.get_ticks_msec() / 130.0))
 	if _inn_fire: _inn_fire.light_energy = 2.0 + 0.5 * sin(Time.get_ticks_msec() / 90.0) + 0.3 * sin(Time.get_ticks_msec() / 37.0)
 	if mill_sails: mill_sails.rotation.x += delta * 0.55
+	_hamlet_step(delta)
 	if maypole: maypole.rotation.y += delta * 0.12
