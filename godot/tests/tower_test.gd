@@ -90,11 +90,11 @@ func _init() -> void:
 	R.do_act(f, "tup", 1)
 	ok("a hired sword can be sent up too", merc.plat == t1.id)
 	merc.plat = 0; R.peasants.erase(merc)
-	ok("they set off for it straight away, even by day (version 7.22)", mine.all(func(q): return q.state == "post" or q.state == "follow"))
+	ok("by day they carry on with their leader", mine.all(func(q): return q.state != "post"))
 	# ---------- at night
 	R.dusk_falls()
 	fast(8.0, func(): return not mine.all(func(q): return q.state == "post"))
-	ok("and climb up", mine.all(func(q): return q.state == "post" and R.in_box(q.x, q.z, 0.0, t1)), mine.map(func(q): return [q.state, snappedf(q.x, 0.1), snappedf(q.z, 0.1)]))
+	ok("at dusk they climb up", mine.all(func(q): return q.state == "post" and R.in_box(q.x, q.z, 0.0, t1)), mine.map(func(q): return [q.state, snappedf(q.x, 0.1), snappedf(q.z, 0.1)]))
 	var spots := {}
 	for q in mine: spots[Vector2(snappedf(q.x, 0.01), snappedf(q.z, 0.01))] = true
 	ok("each in their own place on it", spots.size() == mine.size(), spots.size())

@@ -4615,7 +4615,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 		if ps == null:
 			q.plat = 0
 			if q.state == "post": q.state = "follow"
-		elif not ps.kept or (phase == "day" and ps.k == "platform"):   # up a tower nobody has seen to today: with their leader. (Version 7.22: a tower's crew goes straight up when sent, day or night)
+		elif phase == "day" or not ps.kept:            # by day, or up a tower nobody has seen to: with their leader (version 7.24: as it was again)
 			if q.state == "post": q.state = "follow"
 		else:
 			q.roof = ps.re; q.tree = null
