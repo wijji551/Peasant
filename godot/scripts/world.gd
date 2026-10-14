@@ -1070,6 +1070,11 @@ func _npc(parent: Node3D, pos: Vector3, rot_y: float, coat: Color, hat: String, 
 		"cap":
 			Build.box(g, Vector3(0.44, 0.14, 0.44), Vector3(0, y0 + 1.18, 0), Color("5b4130"))
 			Build.box(g, Vector3(0.3, 0.05, 0.2), Vector3(0, y0 + 1.18, 0.28), Color("5b4130"))
+		"jester":                                   # a soft cap, red and green halves, with its points drooping
+			Build.box(g, Vector3(0.22, 0.24, 0.44), Vector3(-0.11, y0 + 1.14, 0), Color("c0262e"))
+			Build.box(g, Vector3(0.22, 0.24, 0.44), Vector3(0.11, y0 + 1.14, 0), Color("2f8a46"))
+			Build.box(g, Vector3(0.14, 0.34, 0.14), Vector3(-0.3, y0 + 0.98, 0), Color("c0262e"), 0, 0, 0.5)
+			Build.box(g, Vector3(0.14, 0.34, 0.14), Vector3(0.3, y0 + 0.98, 0), Color("2f8a46"), 0, 0, -0.5)
 		"bald":
 			Build.box(g, Vector3(0.42, 0.1, 0.3), Vector3(0, y0 + 0.86, -0.14), Color("8a8478"))
 			Build.box(g, Vector3(0.3, 0.16, 0.06), Vector3(0, y0 + 0.86, 0.2), Color("8a8478"))       # and a moustache to make up for it
@@ -1155,8 +1160,12 @@ func _inn_room() -> void:
 	Build.box(n, Vector3(0.6, 2.6, 2.4), Vector3(-M.hw + 0.35, 0, -0.7), C.wood2)
 	for sy in [0.7, 1.4, 2.1]:
 		Build.box(n, Vector3(0.66, 0.08, 2.3), Vector3(-M.hw + 0.37, sy, -0.7), C.wood3)
-	Build.box(n, Vector3(0.5, 0.56, 0.9), Vector3(-M.hw + 0.42, 0.78, -0.7), Color("8e1f25"), 0, 0, 0.06)
-	Build.box(n, Vector3(0.52, 0.5, 0.08), Vector3(-M.hw + 0.42, 0.81, -0.7), Color("c9a13a"))
+	Build.box(n, Vector3(0.5, 0.02, 0.9), Vector3(-M.hw + 0.42, 0.78, -0.7), Color("a8916b"))         # where the book was (version 7.11: Prospero took it back)
+	# Prospero, the old jester, on a stool by the fire, with his cap and bells on the floor beside him
+	Build.cyl(n, 0.26, 0.26, 0.42, Vector3(-6.6, 0, 4.6), C.wood, 7)
+	_npc(n, Vector3(-6.6, 0, 4.6), PI * 0.62, Color("6b2a4a"), "jester")
+	Build.box(n, Vector3(0.3, 0.16, 0.3), Vector3(-5.9, 0.1, 5.2), Color("c0262e"), 0.4)
+	Build.box(n, Vector3(0.1, 0.1, 0.1), Vector3(-5.7, 0.12, 5.4), Color("f2c94c"))
 	# light: lanterns over the bar and the room, warm
 	for at in [Vector3(-3.2, 2.9, -3.2), Vector3(3.6, 2.9, -2.6), Vector3(1.0, 2.9, 2.6)]:
 		Build.box(n, Vector3(0.3, 0.36, 0.3), at, Color("ffd98a")).material_override = Build.mat(Color("ffd98a"), 2.2)

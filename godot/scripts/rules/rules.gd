@@ -22,6 +22,8 @@ var items: Array = []         # the arms rack in the storehouse
 var drops: Array = []         # E.Drop
 var lobs: Array = []          # the dead in the air, thrown: [the undead, where it lands x, z, seconds left]
 var holy_ground: Array = []   # Consecrate: [x, z, radius, seconds left]; the dead will not step into it
+var smokes: Array = []        # the Jester's lingering smoke (rank 5): [x, z, radius, seconds left]; the dead in it are slowed
+var jest_force := -1          # for the tests: the next trick's luck (0 fails, 1 works, 2 lucky, 3 the Big Finish), or -1 for the dice
 var fires: Array = []         # burning oil on the ground: [x, z, radius, seconds left, whose, tick]
 var hallows: Array = []       # the Sandals of the Extremely Devout: footprints, [x, z, seconds left, whose]
 var barkT := 0.0              # the dogs bark at an unwatched gate at most this often
@@ -302,6 +304,17 @@ static func class_of(p: E.Player) -> int:
 		if rk(p, D.CLASSES[i].book) > 0: return i
 	return -1
 
+## Has this player got their calling's power i? The priest's come with the ranks of his book, the jester's with Prospero's lessons.
+static func has_cpower(p: E.Player, c: int, i: int) -> bool:
+	if c < 0 or i < 0 or i >= D.CLASSES[c].powers.size(): return false
+	var pw: Dictionary = D.CLASSES[c].powers[i]
+	if pw.has("lesson"): return p.jl >= int(pw.lesson) and rk(p, D.CLASSES[c].book) >= 1
+	return rk(p, D.CLASSES[c].book) >= int(pw.rank)
+
+## The wait after a jester's trick (a third less from rank 4).
+static func trick_wait(p: E.Player, i: int) -> float:
+	return float(D.JEST.cd[i]) * (0.67 if rk(p, D.B_JEST) >= 4 else 1.0)
+
 static func is_class_book(b: int) -> bool:
 	return D.BOOKS[b].has("class")
 
@@ -347,6 +360,17 @@ func strays_of(p: E.Player) -> int:
 	for q in peasants:
 		if q.stray and q.owner == p.id and q.state != "body": n += 1
 	return n
+
+## Why Prospero will not give this player their next lesson just now ("" if he will).
+func jest_why(p: E.Player) -> String:
+	if class_of(p) == 0: return "“One calling to a peasant,” Prospero says. “You have the Holy Book. I have nothing to teach a priest but humility, and you would not take it.”"
+	if p.jl >= 3: return "He has taught you everything he knows, he says, and one or two things he does not."
+	if phase != "day": return "He does not teach after dark. The inn is otherwise engaged, and so is he."
+	if p.jlQ >= 0: return "He is waiting for an answer."
+	if p.jl == 0 and book_slots(p) <= 0: return "He looks at your books and says you have no room in your head for him. Come back when you can take up another book."
+	if p.jl > 0 and p.jhw < D.JEST.hw: return "Homework first. He will not give the next lesson until you have played your last trick on twenty of the dead (%d so far)." % p.jhw
+	if not p.jlPaid and ale < 1: return "The note did say to bring a drink, and the barrel is empty. Give the innkeeper some food first."
+	return ""
 
 ## Which week of the game it is, counting from nothing (for "one stray a week").
 func week_i() -> int:
@@ -592,7 +616,7 @@ func add_villagers(slot: int, n: int) -> void:
 		peasants.append(q)
 
 func clear_world() -> void:
-	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []; lobs = []; holy_ground = []; marked = null; fires = []; hallows = []
+	peasants = []; undead = []; structs = []; night = null; wave = 0; left = 0; boss = null; graves = []; fallen = []; ev = []; pools = []; lobs = []; holy_ground = []; marked = null; fires = []; hallows = []; smokes = []
 	keepHp = D.KEEP_HP; keepHc = 0; nf = 0; store = {"wood": 0, "stone": 0, "iron": 0, "food": 0, "steel": 0, "mith": 0, "rune": 0}; stats = {"kills": 0, "wood": 0, "built": 0, "lost": 0}
 	items = []; drops = []; relics = []; ale = 0; innHp = D.INN_HP; innIn = 0
 	letters = []; letter_new = false; seen = {}; chest = {}; tenant_day = 0
@@ -1237,7 +1261,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "herd", "sheep", "sheepFed", "strayW", "banq"]
+const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -2026,6 +2050,9 @@ func nerve_hit(q: E.Peasant, n: float) -> void:   # a fright. At no nerve left, 
 		q.nv = 0; q.state = "hide"; q.tree = null; say("%s has lost their nerve and run for the keep." % D.PNAMES[q.ni]); bark(q, D.BARK_RUN)
 
 func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> void:
+	if u and u.astray > 0 and randf() < 0.5:          # an insulted boss, too put out to aim (rank 9 of the Jester)
+		ev.append(["miss", r1(e.x), r1(e.z)])
+		return
 	if is_player:
 		if e.state != "ok":
 			return
@@ -2376,14 +2403,16 @@ func do_power(p: E.Player, i: int) -> void:
 		return
 	var C: Dictionary = D.CLASSES[c]
 	var r := rk(p, C.book)
-	if r < C.powers[i].rank or [p.p1Cd, p.p2Cd, p.p3Cd][i] > 0:
+	if not has_cpower(p, c, i) or [p.p1Cd, p.p2Cd, p.p3Cd][i] > 0:
 		return
-	if i == 0: p.p1Cd = power_wait(p, 0)
-	elif i == 1: p.p2Cd = power_wait(p, 1)
-	else: p.p3Cd = 45.0
+	var w: float = trick_wait(p, i) if c == 1 else power_wait(p, i) if i < 2 else 45.0
+	if i == 0: p.p1Cd = w
+	elif i == 1: p.p2Cd = w
+	else: p.p3Cd = w
 	p.ac += 1
 	match c:
 		0: priest_power(p, i, r)
+		1: jester_power(p, i, r)
 
 ## Is (x, z), give or take r, on consecrated ground?
 func on_holy(x: float, z: float, r: float) -> bool:
@@ -2566,6 +2595,81 @@ func book_power(p: E.Player, b: int) -> void:
 	p.ac += 1; add_xp(p, b, 1)
 	ev.append(["power", p.id, b, r1(p.x), r1(p.z)])
 	if lines_ != "": say(lines_ % p.dn)
+
+# ---------------------------------------------------------------- the Jester's tricks (version 7.11)
+## Every trick is a roll of the dice: 0 it fails, 1 it works, 2 luck takes a hand and it works twice as well, 3 the Big
+## Finish (rank 7), three times. A fail one time in six (one in twelve from rank 2); after a fail, the Encore (rank 10) and
+## Prospero's Marotte see to it that the next does not.
+func trick_luck(p: E.Player, r: int) -> int:
+	var out := 1
+	if jest_force >= 0:
+		out = jest_force; jest_force = -1
+	elif r >= 7 and randf() < 0.1:
+		out = 3
+	else:
+		var roll := randf()
+		if roll < (1.0 / 12.0 if r >= 2 else 1.0 / 6.0): out = 0
+		elif roll > 5.0 / 6.0: out = 2
+	if out == 0 and p.jfail and (r >= 10 or wearing(p, D.I_MAROTTE)): out = 1
+	p.jfail = out == 0
+	return out
+
+func jester_power(p: E.Player, i: int, r: int) -> void:
+	var luck := trick_luck(p, r)
+	var mul: float = [0.0, 1.0, 2.0, 3.0][luck] * (1.0 + 0.08 * (r - 1)) * hn(p, D.B_JEST)
+	var src := {"p": p, "ranged": true, "farm": false}
+	var hits := 0
+	var live_ := func(v: E.Undead) -> bool: return not v.dead and v.state != "rise" and v.state != "pile" and v.state != "dig"
+	match i:
+		0:                                           # Is This Your Card?: the nearest of the dead ahead, or the nearest
+			var tl := targets(p, D.JEST.reach, 0.3, true).filter(live_)
+			if tl.is_empty():
+				tl = undead.filter(func(v): return live_.call(v) and D.d2(v.x, v.z, p.x, p.z) < D.JEST.reach * D.JEST.reach)
+				tl.sort_custom(func(a, b): return D.d2(a.x, a.z, p.x, p.z) < D.d2(b.x, b.z, p.x, p.z))
+			if tl.is_empty():
+				ev.append(["card", r1(p.x), r1(p.z), r1(p.x + sin(p.r) * 8), r1(p.z + cos(p.r) * 8), luck, p.id])
+				return
+			var u: E.Undead = tl[0]
+			ev.append(["card", r1(p.x), r1(p.z), r1(u.x), r1(u.z), luck, p.id])
+			if luck > 0:
+				hit_u(u, 20.0 * mul, src); hits += 1
+				if r >= 3:                              # rank 3: through it, into the one behind
+					var du := D.d2(u.x, u.z, p.x, p.z)
+					var nx: E.Undead = null
+					var nd := 16.0
+					for v in undead:
+						if v != u and live_.call(v) and D.d2(v.x, v.z, p.x, p.z) > du and D.d2(v.x, v.z, u.x, u.z) < nd:
+							nd = D.d2(v.x, v.z, u.x, u.z); nx = v
+					if nx:
+						ev.append(["card", r1(u.x), r1(u.z), r1(nx.x), r1(nx.z), luck, 0])
+						hit_u(nx, 20.0 * mul, src); hits += 1
+			if r >= 8 and randf() < 1.0 / 3.0:          # rank 8: back in your hand
+				p.p1Cd = 0.0
+		1:                                           # Abracadabra, Roughly: a bang, and coloured smoke
+			var rad: float = D.JEST.bang_big if luck == 2 else D.JEST.bang
+			ev.append(["abra", r1(p.x), r1(p.z), rad, luck, p.id, D.JEST.smoke if r >= 5 else 0.0])
+			if r >= 5: smokes.append([p.x, p.z, rad, D.JEST.smoke])
+			if luck > 0:
+				var dm := 14.0 * (1.0 + 0.08 * (r - 1)) * hn(p, D.B_JEST) * (3.0 if luck == 3 else 1.0)
+				for v in undead.duplicate():
+					if live_.call(v) and D.d2(v.x, v.z, p.x, p.z) < rad * rad:
+						hit_u(v, dm, src); stun_u(v, 1.4); hits += 1
+		2:                                           # A Jape at Their Expense: the dead confused; bosses insulted
+			var t: float = (9.0 if r >= 6 else D.JEST.conf) * hn(p, D.B_JEST) * (1.33 if lore(p, D.I_MAROTTE) else 1.0) * (2.0 if luck == 2 else 3.0 if luck == 3 else 1.0)
+			ev.append(["jape", r1(p.x), r1(p.z), D.JEST.jape, luck, p.id])
+			if luck > 0:
+				for v in undead:
+					if not live_.call(v) or D.d2(v.x, v.z, p.x, p.z) > D.JEST.jape * D.JEST.jape: continue
+					if D.UN[v.k].boss:
+						v.taunt = p.id; v.tauntT = maxf(v.tauntT, t)
+						if r >= 9: v.astray = maxf(v.astray, t)
+					else:
+						v.conf = maxf(v.conf, t); v.confH = r >= 6; v.cw = 0.0
+					hits += 1
+	note("jape")
+	if hits:
+		add_xp(p, D.B_JEST, hits)
+		if i == p.jl - 1: p.jhw += hits              # homework: the newest trick, played on the dead
 
 func priest_power(p: E.Player, i: int, r: int) -> void:
 	if i == 2:                                       # Consecrate: ground the dead will not cross
@@ -3008,6 +3112,11 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 						if rk(p, 3) < 3: break
 				if n: spark.call("forge")
 		"book":
+			if ia == D.B_JEST:                          # Jester the Faux Magician: withdrawn by its author. There is a note in its place
+				if near_station(p, "library") and not p.jnote and p.books[ia] == 0:
+					p.jnote = true; gain_or_drop(p, D.I_NOTE)
+					ev.append(["found", p.id, "a note, where the book should be: “%s”" % D.JEST_NOTE, r1(p.x), r1(p.z), 0, 1])
+				return
 			if near_station(p, "library") and ia >= 0 and ia < D.BOOKS.size() and not p.books[ia] and book_slots(p) > 0 and not (is_class_book(ia) and class_of(p) >= 0):
 				var t0 := title_of(p)
 				p.books[ia] = 1; say("%s has taken up %s." % [p.dn, D.book_title(ia)])
@@ -3176,6 +3285,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				p.card_rank = maxi(1, p.books[ia] - 1)
 				say("%s has handed in a library card and given up %s (rank %d). The librarian has stamped something." % [p.dn, D.BOOKS[ia].name, p.books[ia]])
 				p.books[ia] = 0; p.xp[ia] = 0.0
+				if ia == D.B_JEST: p.jl = 0; p.jhw = 0; p.jlT = 0; p.jlQ = -1; p.jlPaid = false   # (the lessons go with it)
 				retitle(p, t0); spark.call("page")
 		"treat":                                    # a drink for one of the locals in the Rose: one good turn each, a day
 			if ia >= 0 and ia < D.LOCALS.size() and p.room == "inn" and near_station(p, "local%d" % ia) and p.coin >= D.TREAT and not (p.treated & (1 << ia)):
@@ -3217,6 +3327,33 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				if by == null: return
 				pay(p, D.BANQUET.plate); by.errand = true; by.state = "follow"; by.tree = null; p.banqP = true; spark.call("coin")
 				say("%s has left food and money on the offering plate, and %s has picked it up and set off for the windmill with it." % [p.dn, D.qname(by)])
+		"jlisten":                                      # one of Prospero's lessons: a tankard first, then stand and listen
+			var why := jest_why(p)
+			if why != "" or not near_station(p, "prospero"): return
+			if not p.jlPaid:
+				ale -= 1; p.jlPaid = true
+				say("%s has bought Prospero a drink. He says it is for his voice." % p.dn)
+			p.jlL = not p.jlL
+		"jans":                                         # an answer to one of his questions (arg: which, as he wrote them)
+			if not near_station(p, "prospero") or p.jlQ < 0 or p.jl >= 3 or ia < 0: return
+			var L: Dictionary = D.JEST_LESSONS[p.jl]
+			if ia == 0:
+				p.jlQ += 1; p.jlW = -1
+				if p.jlQ >= L.q.size():
+					p.jlQ = -1; p.jlT = 0.0; p.jlPaid = false; p.jhw = 0; p.jl += 1
+					var t0 := title_of(p)
+					if p.books[D.B_JEST] == 0:
+						p.books[D.B_JEST] = 1
+						if p.card_rank > 1:
+							p.books[D.B_JEST] = mini(7, p.card_rank); p.xp[D.B_JEST] = need_xp(D.B_JEST, p.books[D.B_JEST] - 1)
+						p.card_rank = 0
+						p.inv.erase(D.I_NOTE)
+						say("%s is training as a Jester. Prospero says there is no hope, and that this is the best way to start." % p.dn)
+					retitle(p, t0)
+					ev.append(["motley", p.id, r1(p.x), r1(p.z), L.gives])
+					say("%s has learned %s from Prospero: %s." % [p.dn, L.n, L.gives])
+			else:
+				p.jlW = p.jlQ
 		"hlisten":                                      # the Herder's lesson in sheep herding
 			if near_station(p, "herder") and not p.herd and p.herdQ < 0 and not p.ride:
 				p.herdL = not p.herdL
@@ -3573,7 +3710,7 @@ func grow_trees() -> void:   # dawn in the forest: saplings that are old enough 
 
 func end_night() -> void:   # dawn: count the cost, bring people home, start the next day
 	var N: Dictionary = night
-	pools = []; lobs = []; holy_ground = []; marked = null; fires = []; hallows = []
+	pools = []; lobs = []; holy_ground = []; marked = null; fires = []; hallows = []; smokes = []
 	for s in structs: s.fire = 0.0
 	for p in players:
 		p.frozen = 0; p.many = 0; p.whet = 0; p.mist = 0; p.cry = 0; p.dark = 0; p.braced = 0
@@ -3777,6 +3914,13 @@ func player_step(p: E.Player, dt: float) -> void:
 			if p.holyT >= D.HOLY_TIME:
 				p.holyT = 0; p.holy += 1; p.study = false; ev.append(["holy", r1(p.x), r1(p.z)])
 				say(("%s has sat through a class in holy studies, and can now bless a weapon or a bucket." if p.holy == 1 else "%s has finished holy studies, and can now bless the departed.") % p.dn)
+	if p.jlL:                                      # one of Prospero's lessons: stay by his stool until he has said it all
+		if p.state != "ok" or p.room != "inn" or phase != "day" or not near_station(p, "prospero"):
+			p.jlL = false
+		else:
+			p.jlT += dt
+			if p.jlT >= D.JEST.time:
+				p.jlT = D.JEST.time; p.jlL = false; p.jlQ = 0; p.jlW = -1
 	if p.herdL:                                    # the Herder's lesson: stand beside him until he has said it all
 		if p.state != "ok" or p.herd or D.d2(p.x, p.z, D.HERDER.x, D.HERDER.z) > pow(D.station("herder").r + 1.5, 2):
 			p.herdL = false
@@ -4587,6 +4731,8 @@ func undead_step(dt: float) -> void:
 	pool_step(dt)
 	fire_step(dt)
 	dogs_step(dt)
+	for sm in smokes: sm[3] -= dt                    # the jester's smoke drifts off
+	smokes = smokes.filter(func(sm): return sm[3] > 0)
 	for g in holy_ground: g[3] -= dt               # consecrated ground wears off
 	holy_ground = holy_ground.filter(func(g): return g[3] > 0)
 	if marked and (marked.dead or marked.mark <= 0): marked = null
@@ -4602,6 +4748,7 @@ func undead_step(dt: float) -> void:
 		var U: Dictionary = D.UN[u.k]
 		u.cd = maxf(0, u.cd - dt * (D.CENSER.strike if u.smoke > 0 else 1.0)); u.t -= dt; u.slow = maxf(0, u.slow - dt); u.smoke = maxf(0, u.smoke - dt)
 		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.mark = maxf(0, u.mark - dt); u.held = maxf(0, u.held - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
+		u.conf = maxf(0, u.conf - dt); u.astray = maxf(0, u.astray - dt)
 		if u.dead: continue
 		if mending and u.hp < u.mhp and u.burn <= 0 and u.state != "pile" and u.state != "rise":     # the harvest moon: they mend, slowly (not while alight)
 			u.hp = minf(u.mhp, u.hp + u.mhp * D.HARVEST_MEND * dt)
@@ -4642,6 +4789,8 @@ func undead_step(dt: float) -> void:
 				u.slow = maxf(u.slow, 0.3)
 				if not U.boss: u.smoke = 0.3              # a boss is slowed on his feet, as he always was, but not in his blows
 				if lore(p, 27) and randf() < dt: hit_u(u, 3, {"holy": 1.5})   # smouldering
+		for sm in smokes:
+			if D.d2(u.x, u.z, sm[0], sm[1]) < sm[2] * sm[2]: u.slow = maxf(u.slow, 0.3)
 		var sp: float = U.spd * (0.5 if u.slow > 0 else 1.0) * ws
 		if U.lord and u.stage == 2: sp *= 1.6
 		if u.fear > 0:                            # running from the smell
@@ -4654,6 +4803,26 @@ func undead_step(dt: float) -> void:
 				u.x += dx / d * sp * 1.5 * dt
 				for c in near_colliders(u.x, u.z): push_out(u, U.r, c, 0)
 				u.z += dz / d * sp * 1.5 * dt
+				for c in near_colliders(u.x, u.z): push_out(u, U.r, c, 1)
+				u.z = maxf(u.z, D.SPAWN_Z - 6)
+			continue
+		if u.conf > 0 and not U.boss:             # japed: wandering about, and now and then hitting whoever is next to it
+			u.state = "walk"; u.cw -= dt
+			if u.cw <= 0:
+				u.cw = rnd2(0.8, 1.6); u.cr = randf() * TAU
+			var nb: E.Undead = null
+			var nbd := 3.2
+			for v in undead:
+				if v != u and not v.dead and v.state != "rise" and v.state != "pile" and D.d2(u.x, u.z, v.x, v.z) < nbd:
+					nbd = D.d2(u.x, u.z, v.x, v.z); nb = v
+			if nb and u.cd <= 0:
+				u.cd = U.cd * 1.5; u.ac += 1; u.r = atan2(nb.x - u.x, nb.z - u.z)
+				hit_u(nb, U.dmg * dmul * (1.6 if u.confH else 1.0), {"farm": false, "dot": true})
+			elif u.pin <= 0:
+				u.r = D.ang_lerp(u.r, u.cr, minf(1, dt * 6))
+				u.x += sin(u.cr) * sp * 0.35 * dt
+				for c in near_colliders(u.x, u.z): push_out(u, U.r, c, 0)
+				u.z += cos(u.cr) * sp * 0.35 * dt
 				for c in near_colliders(u.x, u.z): push_out(u, U.r, c, 1)
 				u.z = maxf(u.z, D.SPAWN_Z - 6)
 			continue

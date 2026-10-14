@@ -37,7 +37,7 @@ func _init() -> void:
 	R.new_game([{"id": 1, "name": "Matt", "col": 0}, {"id": 2, "name": "Wat", "col": 1}])
 	m = R.players[0]
 	o = R.players[1]
-	ok("fifteen books, the Holy Book the eleventh", D.BOOKS.size() == 15 and D.BOOKS[10].name.begins_with("The Holy Book") and m.books.size() == 15)
+	ok("sixteen books, the Holy Book the eleventh", D.BOOKS.size() == 16 and D.BOOKS[10].name.begins_with("The Holy Book") and m.books.size() == 16)
 	ok("a peasant with no book has no calling, and is the Unread", Rules.class_of(m) == -1 and Rules.title_of(m) == "the Unread")
 
 	# ---------- taking up the Holy Book
@@ -181,7 +181,7 @@ func _init() -> void:
 		pp.books = pp.books.slice(0, 10); pp.xp = pp.xp.slice(0, 10); pp.erase("xslot")
 	var R2 := Rules.new()
 	R2.load_game(JSON.parse_string(JSON.stringify(sv)), [{"id": 1, "name": "Matt", "col": 0}])
-	ok("an older save gets the books it had not heard of", R2.players[0].books.size() == 15 and R2.players[0].xp.size() == 15)
+	ok("an older save gets the books it had not heard of", R2.players[0].books.size() == 16 and R2.players[0].xp.size() == 16)
 
 	var fails := lines.filter(func(l): return l.begins_with("FAIL")).size()
 	for l in lines: print(l)

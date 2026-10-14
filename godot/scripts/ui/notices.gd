@@ -157,10 +157,13 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				var B: Dictionary = D.BOOKS[b]
 				var r: int = Rules.rk(p, b)
 				var other_call: bool = Rules.is_class_book(b) and not r and Rules.class_of(p) >= 0
+				if b == D.B_JEST and not r:                   # the Jester: withdrawn by its author, and a note in its place
+					o.append({"label": D.book_title(b), "sub": "One calling at a time." if other_call else "You have the note that was in its place. Prospero, at the Thorny Rose, by the fire." if p.jnote else "Withdrawn by its author, it says on the spine. Take it, and see.", "ok": not other_call and not p.jnote, "a": "book", "arg": b})
+					continue
 				var sub := "One calling at a time." if other_call else ("%s." % Keys.fill(B.ranks[0])) if not r else ("Latest: %s." % lower(B.ranks[r - 1])) + ((" Next: %s (%d of %d, by %s)." % [lower(B.ranks[r]), floori(p.xp[b]), Rules.need_xp(b, r), B.by]) if r < D.MAX_RANK else " You have finished it.")
 				o.append({"label": D.book_title(b) + (" · rank %d of %d" % [r, D.MAX_RANK] if r else ""), "sub": sub, "ok": not r and slots > 0 and not other_call, "a": "book", "arg": b})
 			var most := 5 if p.xslot else 4
-			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of fifteen books, with ten ranks in each. Choose your first. The Holy Book makes you an apprentice priest; the four at the end of the shelf are new, and one of them comes with a dog.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four", "five"][most] if owned >= most else "Reach rank 2 in a book to take up a second, rank 3 in two books to take up a third, and rank 4 in three to take up a fourth." + (" Your Index of Further Reading allows a fifth." if p.xslot else " A fifth needs An Index of Further Reading, which turns up in the ruins."))
+			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of sixteen books, with ten ranks in each. Choose your first. The Holy Book makes you an apprentice priest; one of them comes with a dog; and the last is not there at all.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four", "five"][most] if owned >= most else "Reach rank 2 in a book to take up a second, rank 3 in two books to take up a third, and rank 4 in three to take up a fourth." + (" Your Index of Further Reading allows a fifth." if p.xslot else " A fifth needs An Index of Further Reading, which turns up in the ruins."))
 			if p.card_rank > 1: intro += " Your card has been stamped: the next book you take up starts at rank %d." % p.card_rank
 			return {"title": "The library", "intro": intro + (" Cowards learn at half speed today." if p.coward else ""), "o": o}
 		"slum":
@@ -181,7 +184,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			o.append({"label": "Hire a mercenary until dawn", "sub": "You have one already. One is plenty." if p.merc else "%s. A hired fighter for your posse: stronger than a guard, and not to be trusted. About one in seven turns on his employer at dawn for two shillings more." % D.coins(D.MERC_FEE), "ok": not p.merc and p.coin >= D.MERC_FEE, "a": "merc"})
 			o.append({"label": "Give the innkeeper 5 food", "sub": "He turns each piece into a tankard for tonight. %d in the barrel. You carry %d." % [R.ale, p.food], "ok": p.food > 0, "a": "ale"})
 			o.append({"label": "Sit down to drink, and have the door barred", "sub": "He only pours for Dutch courage after dark." if is_day else "The door is in pieces until morning." if R.innHp <= 0 else "Your posse comes in with you. The dead will try the door.", "ok": not is_day and R.innHp > 0, "a": "innin"})
-			return {"title": "The bar of the Thorny Rose", "intro": "Dutch courage: %d%%. Drink here at night until you are brave enough to charge. The innkeeper only has as much ale as the village brings him food that day. There are people to talk to, a gambler in the corner, and a bookshelf with one book on it." % p.cg, "o": o}
+			return {"title": "The bar of the Thorny Rose", "intro": "Dutch courage: %d%%. Drink here at night until you are brave enough to charge. The innkeeper only has as much ale as the village brings him food that day. There are people to talk to, a gambler in the corner, an empty bookshelf, and an old jester by the fire." % p.cg, "o": o}
 		"local0", "local1", "local2":
 			var li := int(id.substr(5))
 			var Lc: Dictionary = D.LOCALS[li]
@@ -200,11 +203,35 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				"ok": not done and p.coin >= D.TREAT, "a": "treat", "arg": li})
 			return {"title": nm, "intro": intro, "o": o}
 		"shelf":
-			o.append({"text": "It has one book on it, and the shelf has bent."})
-			o.append({"text": "JESTER: The Faux Magician. His Art, his Mystery, and his Excuses. Being a Complete Course in the Appearance of Magic, with Some Remarks on What to Do when it Works."})
-			o.append({"text": "It is the size of a paving stone. You open it at random and understand one word in five. The innkeeper says nobody has ever finished it, and that it would take a peasant three days at the least to get through, several times over."})
-			o.append({"text": "Not today. (The Jester’s calling comes with the next big update.)"})
+			o.append({"text": "It is empty. There is a clean patch in the dust the size of a paving stone, where a book used to be."})
+			o.append({"text": "“That was mine,” says Prospero, from the stool by the fire. “Jester: the Faux Magician. Volume one. I never got round to the others, and I took the first one back, because nobody was reading it properly. If you want it, you will have to have it from me, out loud.”"})
 			return {"title": "The inn’s bookshelf", "intro": "", "o": o}
+		"prospero":
+			var why := R.jest_why(p)
+			var jl: int = p.jl
+			if p.jlQ >= 0 and jl < 3:                    # his questions
+				var L: Dictionary = D.JEST_LESSONS[jl]
+				var Q: Dictionary = L.q[p.jlQ]
+				var rot: int = (p.id + p.jlQ + jl) % Q.a.size()
+				o.append({"head": "Question %d of %d" % [p.jlQ + 1, L.q.size()]})
+				for k in Q.a.size():
+					var ai: int = (k + rot) % Q.a.size()
+					o.append({"label": Q.a[ai], "sub": "", "ok": true, "a": "jans", "arg": ai})
+				return {"title": "Prospero asks", "intro": ("“%s” Try again. %s" % [L.q[p.jlW].no, Q.q]) if p.jlW >= 0 else Q.q, "o": o}
+			if jl >= 3:
+				o.append({"text": "“You have had everything I know,” Prospero says, “and one or two things I do not. Go and be insufferable. It is a calling.”"})
+				return {"title": "Prospero", "intro": "The old jester, on the stool by the fire, with his cap and bells beside him. He is asleep, or pretending.", "o": o}
+			var L: Dictionary = D.JEST_LESSONS[jl]
+			if p.jlL or p.jlT > 0:
+				var said := mini(L.talk.size(), floori(p.jlT / D.JEST.time * L.talk.size()) + 1)
+				for k in said: o.append({"text": L.talk[k]})
+			o.append({"head": "Lesson %d of 3: %s" % [jl + 1, L.n]})
+			var lab := ("Listening: %d of %d seconds" % [floori(p.jlT), D.JEST.time]) if p.jlL else ("Listen to the rest of the lesson" if p.jlT > 0 else "Buy him a drink, and take the lesson" if not p.jlPaid else "Take the lesson")
+			var sub := why if why != "" else "Stay by his stool. Press again to walk off; he will remember where he got to." if p.jlL else "About %d seconds of Prospero, and then a question or two. It costs a tankard from the barrel (%d in it). It teaches %s." % [D.JEST.time, R.ale, L.gives]
+			o.append({"label": lab, "sub": sub, "ok": why == "" or p.jlL, "a": "jlisten"})
+			if jl > 0: o.append({"text": "Homework: your newest trick played on %d of the %d dead he asks for." % [mini(p.jhw, D.JEST.hw), D.JEST.hw]})
+			var intro := "An old jester, on the stool by the fire, with his cap and bells on the floor beside him. “Ah,” he says. “The note. Nobody reads the book, so I teach it myself. Three lessons. Each costs a drink.”" if jl == 0 else "Prospero looks up. “Back again. Did they laugh?”"
+			return {"title": "Prospero", "intro": intro, "o": o}
 		"cart":
 			if R.merchant < 0:
 				return {"title": "An empty spot", "intro": "No merchant today.", "o": o}

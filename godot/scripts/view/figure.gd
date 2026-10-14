@@ -155,13 +155,17 @@ func player(p: E.Player, is_me: bool) -> void:
 		_torch.light_energy = (4.2 if p.room == "mine" else 0.5 + 2.1 * dark) * (0.9 + 0.1 * sin(Time.get_ticks_msec() / 70.0 + p.id))
 		if lit and fx and randf() < get_process_delta_time() * 9: fx.puff(p.x + sin(p.r) * 0.5, 2.3, p.z + cos(p.r) * 0.5, 1, fx.C_FIRE, 0.8)
 	_set_gear([p.head, p.body, p.off, p.trk, p.feet])
+	var jest: bool = Rules.class_of(p) == 1 and p.head < 0          # a jester wears the cap and bells, unless there is a helm in the way
+	if jest and _jhat == null:
+		_jhat = _mi(_model, "jhat", _mat(Color.WHITE))
+	if _jhat: _jhat.visible = jest
 	_set_carry(p.bodies, p.bbod)
 	if fx:
 		var dt := get_process_delta_time()
 		if p.charge > 0 and randf() < dt * 30: fx.puff(p.x, 0.3, p.z, 1, fx.C_ALE, 1.5)
 		if ((p.bless & 1) or D.IT[p.wpn].holy) and p.state == "ok" and randf() < dt * 3: fx.puff(p.x + sin(p.r) * 0.6, 1.9, p.z + cos(p.r) * 0.6, 1, fx.C_HOLY, 0.4)
 		if p.prot > 0 and randf() < dt * 10: fx.puff(p.x + randf_range(-0.5, 0.5), 0.4, p.z + randf_range(-0.5, 0.5), 1, fx.C_GLAD, 0.6)   # prayed over
-		if Rules.class_of(p) >= 0 and p.state == "ok" and randf() < dt * 1.5: fx.puff(p.x, 2.1, p.z, 1, fx.C_HOLY, 0.2)   # an apprentice priest, faintly glowing
+		if Rules.class_of(p) == 0 and p.state == "ok" and randf() < dt * 1.5: fx.puff(p.x, 2.1, p.z, 1, fx.C_HOLY, 0.2)   # an apprentice priest, faintly glowing
 		if p.parry > 0 and randf() < dt * 14: fx.puff(p.x + sin(p.r) * 0.7, 1.2, p.z + cos(p.r) * 0.7, 1, fx.C_SPARK, 0.8)
 	var mx := Rules.max_hp(p)
 	if p.state == "down":
@@ -476,6 +480,7 @@ var _dog_seen := [-1, -1]
 var _sheep: Node3D                   # a sheep, trotting after its player
 var _mount: Node3D                   # the sheep a player is riding
 var _patch: Node3D                   # a stray's patches
+var _jhat: MeshInstance3D            # a jester's cap and bells
 
 ## A sheep: fleece, a dark face and four dark legs (the legs are kept in its "legs" meta, to walk).
 func _sheep_node(parent: Node3D, ni: int) -> Node3D:

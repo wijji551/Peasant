@@ -25,6 +25,7 @@ const C_ALE := [Color(0.9, 0.7, 0.25), Color(1, 0.95, 0.8)]
 const C_DUST := [Color(0.8, 0.76, 0.66), Color(0.66, 0.62, 0.55)]
 const C_BLOOD := [Color(0.8, 0.2, 0.2)]
 const C_GLAD := [Color(1, 0.93, 0.6)]
+const C_MOTLEY := [Color(0.95, 0.3, 0.55), Color(0.4, 0.75, 1.0), Color(1.0, 0.85, 0.3), Color(0.55, 0.95, 0.5)]   # the jester's colours
 const C_STEWARD := [Color(0.15, 0.13, 0.18), Color(0.8, 0.84, 0.78)]
 
 var _bits := []            # [pos, vel, life, colour, size]
@@ -380,6 +381,7 @@ func fly(x1: float, z1: float, x2: float, z2: float, kind: int) -> void:
 		1: n.mesh = Models.get_mesh("bit"); n.scale = Vector3.ONE * 0.9; n.material_override = _tint(Color(0.62, 0.6, 0.56))
 		3: n.mesh = Models.get_mesh("bit"); n.scale = Vector3.ONE * 1.3; n.material_override = _tint(Color(0.4, 0.29, 0.15))
 		4: n.mesh = Models.get_mesh("bucket"); n.material_override = _tint(Color(0.6, 0.48, 0.3))
+		5: n.mesh = Models.get_mesh("pcard"); n.scale = Vector3.ONE * 1.6
 		_: n.mesh = Models.get_mesh("arrow")
 	n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(n)
@@ -492,6 +494,7 @@ func _process(delta: float) -> void:
 			1: n.position = pos + Vector3(0, 0.2, 0); n.rotation = Vector3(t * 14, t * 20, 0)
 			3: n.position = pos + Vector3(0, 0.6, 0); n.rotation = Vector3(t * 22, t * 16, 0)
 			4: n.position = pos + Vector3(0.5, 0.6, 0); n.rotation = Vector3(t * 12, t * 9, 0)
+			5: n.position = Vector3(pos.x, 1.2 + sin(t * PI) * 0.3, pos.z); n.rotation = Vector3(0, t * 30, 0)   # a card, spinning flat
 			_:
 				n.position = pos
 				var span := maxf(0.01, from.distance_to(to))

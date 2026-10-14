@@ -545,7 +545,7 @@ func bar_all() -> Array:
 	var c := Rules.class_of(p)
 	if c >= 0:
 		for i in D.CLASSES[c].powers.size():
-			if Rules.rk(p, D.CLASSES[c].book) >= D.CLASSES[c].powers[i].rank: out.append("c%d" % i)
+			if Rules.has_cpower(p, c, i): out.append("c%d" % i)
 	if p.trk == 26 or p.trk == 28: out.append("carry")
 	if Rules.rk(p, 6) >= 1: out.append("orders")
 	if p.posse > 0: out.append("toilet")
@@ -634,7 +634,7 @@ func bar_do(id: String) -> void:
 				if c < 0 or i >= D.CLASSES[c].powers.size(): return
 				var pw: Dictionary = D.CLASSES[c].powers[i]
 				var cd: float = [p.p1Cd, p.p2Cd, p.p3Cd][i]
-				if Rules.rk(p, D.CLASSES[c].book) < pw.rank: Sound.play("no"); hud.banner("Not yet", "%s comes at rank %d of %s." % [pw.full, pw.rank, D.book_title(D.CLASSES[c].book)], 1.8)
+				if not Rules.has_cpower(p, c, i): Sound.play("no"); hud.banner("Not yet", ("%s comes with one of Prospero’s lessons." % pw.full) if pw.has("lesson") else "%s comes at rank %d of %s." % [pw.full, pw.rank, D.book_title(D.CLASSES[c].book)], 1.8)
 				elif cd > 0: Sound.play("no"); hud.banner("Not yet", "%s is ready again in %d seconds." % [pw.n, ceili(cd)], 1.2)
 				else:
 					if i == 0: R.aim_assist(p)
@@ -664,6 +664,16 @@ func _wheel_step(delta: float) -> void:
 
 var _marked := [0, 0.0]              # The Marked Man: [which of the dead, seconds left]
 var _mark_node: MeshInstance3D
+
+var _smokes: Array = []              # the jester's lingering smoke, for the view: [x, z, radius, seconds left]
+
+func _smoke_step(delta: float) -> void:
+	var F = _fx
+	for sm in _smokes:
+		sm[3] -= delta
+		if F and randf() < delta * 10: F.puff(sm[0] + randf_range(-sm[2], sm[2]) * 0.7, 0.6, sm[1] + randf_range(-sm[2], sm[2]) * 0.7, 1, F.C_MOTLEY, 0.5)
+	_smokes = _smokes.filter(func(sm): return sm[3] > 0)
+
 
 func _mark_step(delta: float) -> void:
 	_marked[1] -= delta
@@ -844,7 +854,7 @@ func _process(delta: float) -> void:
 	_draw(delta)
 	_hud_update(delta)
 	_wheel_step(delta)
-	if R: _mark_step(delta)
+	if R: _mark_step(delta); _smoke_step(delta)
 	_test_hook()
 
 
@@ -1066,6 +1076,21 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"fetched": if ev[1] == me.id: hud.banner("Fetched", "The dog has brought you %s." % ev[2], 1.8)
 		"no": if ev[1] == me.id: Sound.play("no"); hud.banner(ev[3] if ev.size() > 3 else "Not here", ev[2], 1.6 if ev.size() < 4 else 2.4)
 		"baa": Sound.play("baa", 0.8, Vector2(ev[1], ev[2]))
+		"card":                                           # Is This Your Card?
+			F.fly(ev[1], ev[2], ev[3], ev[4], 5); Sound.play("whoosh", 0.6, Vector2(ev[1], ev[2]))
+			if int(ev[5]) > 0: F.puff(ev[3], 1.2, ev[4], 6 * int(ev[5]), F.C_MOTLEY, 2.5)
+			if ev[6] == me.id: hud.banner(["It is only a card", "Is this your card?", "It is the right card!", "The Big Finish!"][int(ev[5])], ["The dead look at it with polite interest.", "", "Twice as hard.", "Three times as well as it has any right to."][int(ev[5])], 1.4)
+		"abra":                                           # Abracadabra, Roughly
+			F.shock(ev[1], ev[2], ev[3], Color(1.0, 0.6, 0.95, 0.85), 0.5); F.puff(ev[1], 1.0, ev[2], 30 if int(ev[4]) == 2 else 18, F.C_MOTLEY, 4.0)
+			Sound.play("thump" if int(ev[4]) > 0 else "pop", 1.0, Vector2(ev[1], ev[2]))
+			if float(ev[6]) > 0: _smokes.append([ev[1], ev[2], ev[3], float(ev[6])])
+			if ev[5] == me.id: hud.banner(["Only smoke", "Abracadabra, roughly", "Twice the size!", "The Big Finish!"][int(ev[4])], ["Very good smoke, though.", "", "Even Prospero would have stepped back.", "Three times as hard."][int(ev[4])], 1.4)
+		"jape":                                           # A Jape at Their Expense
+			F.ring(ev[1], ev[2], ev[3], 30, F.C_MOTLEY); Sound.play("cheer" if int(ev[4]) > 0 else "no", 0.8, Vector2(ev[1], ev[2]))
+			if ev[5] == me.id: hud.banner(["They do not get the joke", "A jape at their expense", "It brings the house down!", "The Big Finish!"][int(ev[4])], ["", "", "Twice as long.", "Three times as long."][int(ev[4])], 1.4)
+		"motley":                                         # a lesson learned from Prospero
+			F.puff(ev[2], 1.6, ev[3], 20, F.C_MOTLEY, 3.0); Sound.play("ring", 0.8, Vector2(ev[2], ev[3]))
+			if ev[1] == me.id: hud.banner("A new trick: " + str(ev[4]), "It is on your action bar.", 3.0)
 		"deserted": if ev[1] == me.id: Sound.play("no"); hud.banner("A stray has run off", "%s has gone into the dusk, and has helped himself to your coin on the way." % ev[2], 3.0)
 		"mark": _marked = [int(ev[1]), float(ev[2])]        # The Marked Man: a red mark over it, while it lasts
 		"hone":
@@ -1670,6 +1695,8 @@ func _test_hook() -> void:
 		elif o.begins_with("notice:"):
 			var st := D.station(o.substr(7))
 			me.x = st.x; me.z = st.z
+			if st.has("room"): me.room = st.room; me.tx = me.x; me.tz = me.z
+			if OS.get_environment("DTV_JEST") != "": R.ale = 3; me.jnote = true; R.do_act(me, "jlisten"); me.jlT = 30.0; me.books[D.B_JEST] = 1; me.jl = 1; me.jhw = 20
 			_panel = st.id
 	if _frame == at + 30:
 		get_viewport().get_texture().get_image().save_png(shot)

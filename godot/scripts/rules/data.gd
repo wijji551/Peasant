@@ -347,7 +347,14 @@ const I_FLEET := 98
 const I_SANDALS := 99
 const I_HOTFOOT := 100
 const BOOT_RELICS := [98, 99, 100]   # the relic boots: every player may find one of each, whatever they have read
-static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers() + _V79, _IT_DEF)
+## Version 7.11: the library's note about the Jester, and Prospero's Marotte.
+const _V711 := [
+	{"n": "a note from the library", "s": "c", "tier": "paper", "pool": "card", "note": JEST_NOTE},
+	{"n": "Prospero’s Marotte", "s": "t", "tier": "relic", "pool": "marotte", "tint": [1.35, 0.8, 1.2], "note": "A stick with a small head on it, which answers back. Your tricks never fail twice running"},
+]
+const I_NOTE := 101
+const I_MAROTTE := 102
+static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers() + _V79 + _V711, _IT_DEF)
 const I_CARD := 47
 const I_TORCH := 48
 const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
@@ -425,7 +432,7 @@ const ROOMS := {
 		"box": [[-3.4, 243.0, 0.5, 0.5], [3.4, 243.0, 0.5, 0.5], [-3.4, 236.0, 0.5, 0.5], [3.4, 236.0, 0.5, 0.5], [1.6, 232.4, 1.0, 0.7]]},
 	"inn": {"name": "the Thorny Rose Inn", "x": 60.0, "z": 240.0, "hw": 8.0, "hd": 6.0, "at": [60.0, 245.3], "door": [-13.2, -4.7],
 		"in": "go into the Thorny Rose", "out": "go back out into the square",
-		"box": [[60.0, 235.3, 4.6, 0.55], [55.4, 240.9, 0.85, 0.85], [64.4, 241.2, 0.85, 0.85], [66.6, 236.6, 0.9, 0.7], [52.35, 239.3, 0.35, 1.2], [52.5, 235.0, 0.9, 0.5]]},
+		"box": [[60.0, 235.3, 4.6, 0.55], [55.4, 240.9, 0.85, 0.85], [64.4, 241.2, 0.85, 0.85], [66.6, 236.6, 0.9, 0.7], [52.35, 239.3, 0.35, 1.2], [52.5, 235.0, 0.9, 0.5], [53.4, 244.6, 0.4, 0.4]]},
 }
 ## The chest that never arrived: who sent it, and the note inside.
 const CHEST_FROM := [
@@ -474,7 +481,7 @@ const I_BOW := 54                    # the Thunderer's Crossbow (a bow until ver
 const I_SCYTHE := 55                 # Saint Walstan's Scythe
 const I_TROWEL := 56                 # the Mason's Blessed Trowel
 const I_TONGS := 57                  # Saint Dunstan's Tongs
-const RELICS := [15, 16, 17, 20, 23, 26, 27, 54, 55, 56, 57, 91, 92, 93, 94]     # one for every book (and from version 7.9, one copy for every player who holds that book)
+const RELICS := [15, 16, 17, 20, 23, 26, 27, 54, 55, 56, 57, 91, 92, 93, 94, 102]     # one for every book (and from version 7.9, one copy for every player who holds that book)
 const CHAIN_REACH := 4.5             # how far the Thunderer's lightning jumps (half as far again with its book)
 const TROWEL_REACH := 9.0
 const TROWEL_MEND := 3.0             # health a second it puts back into each defence near you (twice that with its book)
@@ -588,11 +595,51 @@ const BOOKS := [
 		"It sniffs out rubble that still hides something",
 		"It holds for six seconds, and will hold a boss for two",
 		"The dog cannot be killed, only discouraged"]},
+	# --- the second calling (version 7.11). The volume on the shelf is a note; Prospero, at the Thorny Rose, teaches it in person
+	{"name": "Jester the Faux Magician", "what": "Pretend magic: the jester", "base": 30, "by": "playing tricks on the dead", "class": 1, "ranks": [
+		"Your tricks hit harder (and harder again with every rank). Prospero’s lessons give the tricks themselves",
+		"Your tricks fail half as often",
+		"The card goes through the first of the dead and hits the one behind",
+		"Your tricks come round a third sooner",
+		"The smoke lingers, and the dead inside it are slowed",
+		"The jape lasts nine seconds, and the confused hit each other harder",
+		"The Big Finish: one trick in ten works three times as well as it has any right to",
+		"One card in three comes back to your hand",
+		"The bosses you insult are so put out that half their blows go astray",
+		"The Encore: after a trick fails, the next one cannot"]},
 ]
 const B_FIRE := 11
 const B_WATCH := 12
 const B_SHIELD := 13
 const B_DOG := 14
+const B_JEST := 15
+## The Jester (version 7.11): Prospero's three lessons, each a trick, with a question or two after his talk. A lesson costs a
+## tankard from the barrel, is given by day only, and the next waits until the last trick has been played on twenty of the dead.
+const JEST := {"time": 45.0, "hw": 20, "cd": [6.0, 20.0, 40.0], "reach": 14.0, "bang": 4.5, "bang_big": 7.0, "jape": 9.0, "conf": 6.0, "smoke": 6.0}
+const JEST_LESSONS := [
+	{"n": "Sleight of Hand", "gives": "Is This Your Card?", "talk": [
+		"Prospero takes a card from behind your ear, looks at it, and puts it back. “That is the whole of the art,” he says. “The rest is detail.”",
+		"“The audience watches the hand that moves. So you move one hand, and work with the other. Nobody has ever watched the working hand. That is why we are still in business.”",
+		"“A palmed card is not for keeping. It is for throwing, hard, at the face of whoever is not paying attention. The dead never pay attention.”",
+		"“It will not always work. Now and then it is only a card. Now and then it is exactly the right card, and that is when you take a bow.”"],
+		"q": [{"q": "Where does the audience look?", "a": ["At the hand that is moving.", "At the hand doing the work.", "At the door."], "no": "If they watched the working hand we should all be out of a job."},
+			{"q": "And what does a jester do with a card he has palmed?", "a": ["Throws it, hard.", "Loses it.", "Hands it back."], "no": "We are not running a lost property office."}]},
+	{"n": "Flash Powder and the Slapstick", "gives": "Abracadabra, Roughly", "talk": [
+		"Prospero produces a small paper twist and holds it at arm’s length. “Flash powder. A pinch of this, a word of something foreign, and stand well back.”",
+		"“The word does nothing. The powder does everything. The standing back is what keeps you in eyebrows.”",
+		"“And this is a slapstick: two slats of wood that clap together. A great noise and no harm at all. The noise is the point. The harm is the powder’s department.”",
+		"“Some days it is only smoke. Some days it is rather more than you bargained for. I came to this inn after one of those.”"],
+		"q": [{"q": "How much flash powder is enough?", "a": ["A pinch.", "A handful.", "All of it."], "no": "That is how I came to be at this inn and not the last one."},
+			{"q": "What is a slapstick for?", "a": ["A great noise and no harm at all.", "Hitting people.", "Stirring the soup."], "no": "You are thinking of a stick."}]},
+	{"n": "Patter, and the Cap and Bells", "gives": "A Jape at Their Expense", "talk": [
+		"Prospero puts on his cap, and the bells on it ring sadly. “Patter,” he says, “is talking until the crowd forgets what it came for.”",
+		"“A crowd that has forgotten what it came for wanders about, and bumps into itself, and sometimes, if you are lucky, starts a fight.”",
+		"“The biggest one will not forget. He will be insulted. Insult him from a distance, and let him come for you. That is the job.”",
+		"“You may mock anybody. The Lord of Ashhollow included. Especially the Lord of Ashhollow. It is the whole of the job, and the only pension.”"],
+		"q": [{"q": "The crowd has turned ugly. What do you do?", "a": ["Insult the biggest one, from a distance.", "Apologise.", "Juggle."], "no": "Apologise? To an audience? I see I have taught you nothing."},
+			{"q": "Whom may a jester mock?", "a": ["Everybody, the Lord included; it is the whole of the job.", "Nobody.", "Only the dead."], "no": "Then what, exactly, would you say we are for?"}]},
+]
+const JEST_NOTE := "This volume has been withdrawn by its author, who says nobody was reading it properly. Enquiries to Prospero, at the Thorny Rose, on the stool by the fire. Bring an open mind or, failing that, a drink."
 ## Callings: a book that makes you something more than a peasant, with two powers on their own keys. One calling at a
 ## time. The Holy Book is the first; more can follow (each needs its book, and its two powers in rules.gd).
 const CLASSES := [
@@ -600,6 +647,10 @@ const CLASSES := [
 		{"n": "Smite", "full": "Minor Smiting", "rank": 1, "icon": "smite", "d": "a bolt of holy light on the nearest of the dead"},
 		{"n": "Pray", "full": "A Word of Protection", "rank": 2, "icon": "pray", "d": "a third less harm for you and everyone near you, for ten seconds"},
 		{"n": "Consecrate", "full": "Consecrate", "rank": 10, "icon": "consecrate", "d": "a patch of ground round you that the dead will not cross, for eight seconds"}]},
+	{"name": "Jester", "book": 15, "powers": [
+		{"n": "Card", "full": "Is This Your Card?", "rank": 1, "lesson": 1, "icon": "pcard", "d": "a thrown card strikes the nearest of the dead, about as hard as a smite. Usually"},
+		{"n": "Abracadabra", "full": "Abracadabra, Roughly", "rank": 1, "lesson": 2, "icon": "abra", "d": "a bang and coloured smoke: every one of the dead around you is hurt and staggered. Mostly"},
+		{"n": "Jape", "full": "A Jape at Their Expense", "rank": 1, "lesson": 3, "icon": "jape", "d": "the dead near you are confused: they stop, wander and hit each other. Bosses are insulted instead, and come for you"}]},
 ]
 const B_HOLY := 10
 ## A power for every book (version 7.8), from its first rank, on the action bar. cd: seconds before it can be used again;
@@ -620,13 +671,14 @@ const POWERS := [
 	{"n": "Dark Lantern", "icon": "lantern", "cd": 40.0, "t": 6.0, "rank": 3, "d": "close the shutter: the dead lose sight of you for six seconds, or until you hit one"},
 	{"n": "Brace", "icon": "shield", "cd": 30.0, "t": 4.0, "rank": 3, "d": "plant your feet: nothing from the front harms you, and whatever hits you is shoved back"},
 	{"n": "That One", "icon": "dog", "cd": 25.0, "t": 4.0, "rank": 3, "d": "point at one of the dead, and the dog pulls it down and holds it there"},
+	{},
 ]
 ## A second power for a book (the fire-raiser's burning oil), at its rank.
 const POWERS2 := {11: {"n": "Burning Oil", "icon": "oil", "cd": 50.0, "t": 8.0, "rank": 6, "d": "poured over the dead at the wall, from a wall, a gate or a tower: that patch of ground burns"}}
 const POWER_NEAR := 8.0              # what "near you" is, for the powers that reach the people round you
 ## A title from the books you have read: the one you know best, and the next best.
-const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest", "Fire-Raiser", "Night Watchman", "Shield-Wall", "Dog-Walker"]
-const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy", "Singed", "Shifty", "Dented", "Muddy-Pawed"]
+const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest", "Fire-Raiser", "Night Watchman", "Shield-Wall", "Dog-Walker", "Jester"]
+const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy", "Singed", "Shifty", "Dented", "Muddy-Pawed", "Motley"]
 ## Each relic has a book it goes with. Carrying the relic with that book read does something more.
 const RELIC_LORE := {
 	15: [1, "Every Bury feeds you: 10 health"],
@@ -644,6 +696,7 @@ const RELIC_LORE := {
 	92: [12, "The dead do not notice you at all until you are close"],
 	93: [13, "Arrows it sends back hit twice as hard"],
 	94: [14, "The two dogs bite a quarter harder"],
+	102: [15, "It answers back: your japes last a third longer"],
 }
 # --- the dead. first: the night of the month they first come down. cost: how much of a night's horde one of them is
 # worth (a shambler is 1). Flags: bony (reassembles once), boss, climb (over barricades), dig (under the north wall),
@@ -761,6 +814,7 @@ const STATIONS := [
 	{"id": "local2", "x": 53.6, "z": 235.9, "r": 1.6, "room": "inn", "name": "the stranger in the corner", "verb": "talk to the stranger in the corner"},
 	{"id": "gambler", "x": 65.6, "z": 237.9, "r": 1.7, "room": "inn", "name": "the gambler", "verb": "sit down with the gambler"},
 	{"id": "shelf", "x": 53.1, "z": 239.3, "r": 1.4, "room": "inn", "name": "the inn’s bookshelf", "verb": "look at the inn’s bookshelf"},
+	{"id": "prospero", "x": 54.4, "z": 244.6, "r": 1.4, "room": "inn", "name": "Prospero", "verb": "talk to Prospero, on the stool by the fire"},
 	{"id": "mill", "x": 101.0, "z": 30.0, "r": 2.6, "name": "the windmill", "verb": "see the miller about a banquet"},
 	{"id": "plate", "x": 24.6, "z": 5.4, "r": 1.9, "name": "the offering plate", "verb": "look at the offering plate"},
 	{"id": "herder", "x": 98.6, "z": 39.6, "r": 2.4, "name": "the Herder", "verb": "talk to the Herder"},

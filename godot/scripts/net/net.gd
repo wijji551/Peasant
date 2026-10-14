@@ -31,7 +31,8 @@ const USTATE := ["rise", "walk", "atk", "pile", "stun", "dig"]
 const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel", "fought", "coin", "bodies", "bbod", "wpn", "head", "body", "off", "trk", "feet",
 	"bless", "holy", "holyT", "study", "gab", "spare", "xslot", "card_rank", "room", "rune", "mith", "game", "gwon", "treated", "p1Cd", "p2Cd", "prot", "hb", "cogs", "job", "jobT", "merc", "drill", "coward", "deaths", "cg", "charge", "hang", "drinkT", "abCd", "useCd", "tbCd",
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t", "fs", "fsT", "oilCd", "dark", "braced",
-	"banq", "banqP", "herd", "herdT", "herdL", "herdQ", "herdW", "sheep", "sheepFed", "ride", "strayW"]
+	"banq", "banqP", "herd", "herdT", "herdL", "herdQ", "herdW", "sheep", "sheepFed", "ride", "strayW",
+	"jl", "jhw", "jlT", "jlL", "jlQ", "jlW", "jlPaid", "jnote", "jfail"]
 
 static var me: Net
 
@@ -586,7 +587,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 	if with_undead:
 		var un := PackedFloat32Array()
 		for u in R.undead:
-			var fl: int = (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0) | (16 * u.stage) | (64 if u.march else 0) | (128 if u.burn > 0 else 0) | (256 if u.smoke > 0 else 0)
+			var fl: int = (1 if u.stun > 0 else 0) | (2 if u.pin > 0 else 0) | (4 if u.fear > 0 else 0) | (8 if u.vuln > 0 else 0) | (16 * u.stage) | (64 if u.march else 0) | (128 if u.burn > 0 else 0) | (256 if u.smoke > 0 else 0) | (512 if u.conf > 0 or u.tauntT > 0 else 0)
 			un.append_array([u.id, u.k, u.x, u.z, u.r, u.hp, u.mhp, USTATE.find(u.state), u.ac, u.hc, fl])
 		o.un = un
 	return o
@@ -745,7 +746,7 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 			u.state = USTATE[int(un[i + 7])]; u.ac = int(un[i + 8]); u.hc = int(un[i + 9])
 			var fl := int(un[i + 10])
 			u.stun = 1.0 if fl & 1 else 0.0; u.pin = 1.0 if fl & 2 else 0.0; u.fear = 1.0 if fl & 4 else 0.0; u.vuln = 1.0 if fl & 8 else 0.0
-			u.stage = (fl >> 4) & 3; u.march = (fl & 64) != 0; u.burn = 1.0 if fl & 128 else 0.0; u.smoke = 1.0 if fl & 256 else 0.0
+			u.stage = (fl >> 4) & 3; u.march = (fl & 64) != 0; u.burn = 1.0 if fl & 128 else 0.0; u.smoke = 1.0 if fl & 256 else 0.0; u.conf = 1.0 if fl & 512 else 0.0
 			uo.append(u)
 		R.undead = uo
 		R.boss = null

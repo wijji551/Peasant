@@ -383,6 +383,15 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.34, 0.2, 0.9, 0, 0.0, 0, 0x3b5a7a).box(0.3, 0.18, 0.5, 0, 0.0, -0.66, 0x5b4634).box(0.3, 0.26, 0.3, 0, 0.02, 0.62, 0xe9e4cf)
 			b.box(0.12, 0.1, 0.5, -0.32, 0.0, 0.2, 0xe9e4cf, 0.5).box(0.12, 0.1, 0.5, 0.32, 0.0, 0.3, 0xe9e4cf, -0.4)
 			b.box(0.4, 0.28, 0.3, 0.6, 0.0, -0.2, 0x7a4a2a).box(0.36, 0.05, 0.3, 0.3, 0.3, 0.6, 0x9b2c2c).cone(0.06, 0.4, 4, 0.36, 0.34, 0.6, 0xefe6cf)   # satchel; hat with a feather
+		"pcard":                                             # a playing card, thrown: white, with a red pip
+			b.box(0.24, 0.02, 0.34, 0, 0, 0, 0xfaf6ea).box(0.08, 0.025, 0.08, 0, 0, 0, 0xc0262e).box(0.04, 0.025, 0.04, -0.07, 0, 0.12, 0xc0262e).box(0.04, 0.025, 0.04, 0.07, 0, -0.12, 0xc0262e)
+		"marotte":                                           # Prospero's Marotte: a stick with a small jester's head on it, carried at the side
+			b.box(0.05, 0.9, 0.05, -0.48, 0.4, -0.12, 0x5b4130).box(0.2, 0.2, 0.2, -0.48, 1.36, -0.12, 0xe8b98f).box(0.26, 0.08, 0.26, -0.48, 1.5, -0.12, 0xffffff)
+			b.cone(0.07, 0.22, 4, -0.58, 1.56, -0.12, 0xffffff).cone(0.07, 0.22, 4, -0.38, 1.56, -0.12, 0xdddddd)
+		"jhat":                                              # a jester's cap and bells: two floppy points, red and green, with bells
+			b.box(0.24, 0.38, 0.46, -0.12, 1.4, 0, 0xc0262e).box(0.24, 0.38, 0.46, 0.12, 1.4, 0, 0x2f8a46)
+			b.box(0.18, 0.4, 0.18, -0.3, 1.6, 0, 0xc0262e, 0, 0, 0.9).box(0.18, 0.4, 0.18, 0.3, 1.6, 0, 0x2f8a46, 0, 0, -0.9)
+			b.box(0.11, 0.11, 0.11, -0.56, 1.8, 0, 0xf2c94c).box(0.11, 0.11, 0.11, 0.56, 1.8, 0, 0xf2c94c)
 		"card":                                              # a library card, lying about
 			b.box(0.36, 0.03, 0.26, -0.5, 0.42, 0, 0xf3ead2).box(0.24, 0.035, 0.03, -0.5, 0.42, 0.06, 0x3b3340).box(0.2, 0.035, 0.03, -0.52, 0.42, -0.04, 0x3b3340)
 		"shamb_eyes":

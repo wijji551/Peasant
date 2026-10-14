@@ -66,7 +66,7 @@ func _init() -> void:
 	ok("a drink for the stranger: how to deal with the next of the household", R.ev.any(func(e): return e[0] == "tip" and "Steward" in str(e[3])), R.ev)
 	R.ev.clear()
 	d = Notices.data(R, "shelf", m, "")
-	ok("the bookshelf has the Jester's book, for later", d.o.any(func(o): return "JESTER" in str(o.get("text", ""))))
+	ok("the bookshelf is empty: Prospero took his book back (version 7.11)", d.o.any(func(o): return "Prospero" in str(o.get("text", ""))))
 	# ---------- the gambler
 	at("gambler")
 	m.coin = 100
