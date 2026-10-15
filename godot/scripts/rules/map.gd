@@ -100,6 +100,15 @@ static func trees() -> Array:
 			out.append(t)
 	place.call(-118.0, -34.0, -50.0, 17.0, 600, 2.5)
 	place.call(-165.0, 165.0, -95.0, 53.0, 760, 3.4)
+	# (version 7.31) the west and east roads go on out to the hedge (since 7.27), and the trees stood in them. Each one in
+	# the road is moved to its verge, the side it was nearer: the same trees, in the same order, so saved games keep theirs.
+	for t in out:
+		var off: float = t.oz - D.GATE_Z
+		if absf(off) < 4.6 and absf(t.ox) >= 50:
+			var sd := 1.0 if off >= 0.0 else -1.0
+			t.oz = D.GATE_Z + sd * (4.8 + absf(off) * 0.5); t.z = t.oz
+		if absf(t.oz + t.dz - D.GATE_Z) < 4.6: t.dz = -t.dz      # and its sapling comes up on the verge, not in the road
+		if absf(t.oz + t.dz - D.GATE_Z) < 4.6: t.dx = 0.0; t.dz = 0.0
 	return out
 
 

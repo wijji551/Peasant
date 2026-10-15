@@ -126,7 +126,7 @@ func _ready() -> void:
 	_fx = Fx.new(); add_child(_fx)
 	atmos = Atmos.new(); add_child(atmos); atmos.setup(world)
 	add_child(SoundNode.new())
-	trees_view = TreesView.new(); trees_view.fx = _fx; add_child(trees_view)
+	trees_view = TreesView.new(); trees_view.fx = _fx; add_child(trees_view); trees_view.sway(world)
 	sites_view = SitesView.new(); add_child(sites_view)
 	defences_view = DefencesView.new(); defences_view.fx = _fx; add_child(defences_view)
 	dead_view = Dead.new(); dead_view.fx = _fx; add_child(dead_view)
@@ -1408,6 +1408,7 @@ func _draw(delta: float) -> void:
 	var near := 0
 	for u: E.Undead in R.undead:
 		if D.d2(u.x, u.z, _focus.x, _focus.z) < 22 * 22: near += 1
+	Sound.under = me != null and me.room in ["mine", "tcave", "rcave"]
 	Sound.me.update(delta, R.nf, _focus, atmos.weather, near, atmos.flash, R.live())
 	var ringing: bool = R.phase == "night" and R.bells()        # a night of the bells: they toll till dawn, and the dead see red
 	dead_view.enraged = ringing or (R.phase == "night" and R.moon() == "blood")

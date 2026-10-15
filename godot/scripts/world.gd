@@ -979,6 +979,15 @@ var _sway_mats: Array = []
 func set_wind(w: float) -> void:
 	for sm in _sway_mats: (sm as ShaderMaterial).set_shader_parameter("wind", w)
 
+## A material that sways in the wind (and follows set_wind), for anything else drawn as a multimesh: the village's own trees (version 7.31).
+func sway_mat(amount: float, base: float = 0.0) -> ShaderMaterial:
+	if _sway_shader == null:
+		_sway_shader = Shader.new(); _sway_shader.code = SWAY_SHADER
+	var sm := ShaderMaterial.new(); sm.shader = _sway_shader
+	sm.set_shader_parameter("amount", amount); sm.set_shader_parameter("base", base)
+	_sway_mats.append(sm)
+	return sm
+
 func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color], sway: float = 0.0, base: float = 0.0) -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -1606,27 +1615,60 @@ func _mine_room() -> void:
 		l.position = Vector3(0, 1.2, 0)
 		g.add_child(l)
 		_veins.append([g, gm, l])
-	# and, up top, the way down: a timber frame over a hole, by the mouth of the steel mine
+	# and, up top, the way down (version 7.31: it was a little roof on four posts, like a bus shelter): a shaft in a collar of
+	# stones, a headframe over it with a winding wheel and a bucket on its rope, the top of the ladder, a spoil heap, a cart
+	# of rubble with a purple lump in it, a lantern, and a warning
 	var dp := Vector3(M.door[0], 0, M.door[1])
-	Build.box(self, Vector3(1.9, 0.06, 1.9), dp + Vector3(0, 0.03, 0), Color("15120f"))
+	var rh := RandomNumberGenerator.new(); rh.seed = 731
+	Build.box(self, Vector3(4.6, 0.05, 4.2), dp + Vector3(0, 0.02, 0), Color("8a7a5c"))                # trodden earth round it
+	Build.cyl(self, 0.95, 0.95, 0.08, dp + Vector3(0, 0.04, 0), Color("15120f"), 14)                   # the hole
 	var hg := StandardMaterial3D.new()                                                        # (version 7.21) and down the hole, the faint purple of the mithril
 	hg.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	hg.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	hg.albedo_color = Color(0.56, 0.45, 1.0, 0.35)
-	Build.glow_box(self, Vector3(1.4, 0.02, 1.4), dp + Vector3(0, 0.07, 0), hg)
+	Build.cyl(self, 0.7, 0.7, 0.02, dp + Vector3(0, 0.1, 0), Color.WHITE, 14).material_override = hg
 	var hl := OmniLight3D.new(); hl.light_color = Color(0.6, 0.48, 1.0); hl.omni_range = 3.2; hl.light_energy = 0.9
 	hl.position = dp + Vector3(0, 0.5, 0); add_child(hl)
 	_mine_glow = [hg, hl]
+	for i in 12:                                                                              # the collar of stones
+		var a := i * TAU / 12.0
+		Build.box(self, Vector3(0.62, rh.randf_range(0.36, 0.5), 0.42), dp + Vector3(cos(a) * 1.18, 0, sin(a) * 1.18), C.stone3 if i % 2 else C.stone2, -a + PI / 2)
+	# the headframe: an A of timbers either side, a beam across the top, the winding wheel, and the rope with its bucket
 	for sx in [-1.0, 1.0]:
 		for sz in [-1.0, 1.0]:
-			Build.box(self, Vector3(0.22, 2.3, 0.22), dp + Vector3(sx * 1.0, 0, sz * 1.0), C.timber)
-	for sz in [-1.0, 1.0]:
-		Build.box(self, Vector3(2.4, 0.2, 0.24), dp + Vector3(0, 2.3, sz * 1.0), C.wood2)
-	Build.box(self, Vector3(2.2, 0.12, 2.2), dp + Vector3(0, 2.5, 0), C.wood3)
-	for sx in [-0.3, 0.3]:
-		Build.box(self, Vector3(0.1, 1.6, 0.1), dp + Vector3(sx, 0, 0.5), C.wood, 0, 0.2)
-	for i in 3:
-		Build.box(self, Vector3(0.6, 0.07, 0.1), dp + Vector3(0, 0.35 + i * 0.45, 0.5 - i * 0.09), C.wood3)
+			Build.box(self, Vector3(0.18, 3.5, 0.18), dp + Vector3(sx * 1.55, 0, sz * 0.62), C.timber, 0.0, -sz * 0.19, 0.0)
+		Build.box(self, Vector3(0.12, 0.12, 1.2), dp + Vector3(sx * 1.55, 1.4, 0), C.wood2)
+	Build.box(self, Vector3(3.5, 0.2, 0.22), dp + Vector3(0, 3.3, 0), C.timber)
+	Build.cyl(self, 0.62, 0.62, 0.1, dp + Vector3(0, 3.3, 0), C.wood3, 12, 0.0, 0.0, PI / 2).rotation = Vector3(PI / 2, 0, 0)
+	Build.cyl(self, 0.16, 0.16, 0.14, dp + Vector3(0, 3.3, 0), C.iron, 8).rotation = Vector3(PI / 2, 0, 0)
+	Build.box(self, Vector3(0.03, 1.9, 0.03), dp + Vector3(0.6, 1.5, 0.0), Color("a08562"))            # the rope, and the bucket on it
+	Build.cyl(self, 0.2, 0.16, 0.3, dp + Vector3(0.6, 1.25, 0.0), C.wood2, 8)
+	Build.box(self, Vector3(0.36, 0.04, 0.04), dp + Vector3(0.6, 1.56, 0.0), C.iron)
+	Build.box(self, Vector3(0.5, 0.08, 0.08), dp + Vector3(1.75, 1.0, 0.0), C.timber)                 # and the winch handle
+	for sx in [-0.28, 0.28]: Build.box(self, Vector3(0.08, 1.4, 0.08), dp + Vector3(sx - 0.3, -0.3, -0.55), C.wood, 0.0, -0.25)   # the top of the ladder
+	for i in 3: Build.box(self, Vector3(0.62, 0.06, 0.08), dp + Vector3(-0.3, 0.25 + i * 0.32, -0.6 - i * 0.08), C.wood3)
+	# the spoil heap, and a mcart of rubble on two rails, with a lump that glows purple
+	for i in 9: Build.box(self, Vector3(rh.randf_range(0.4, 0.9), rh.randf_range(0.3, 0.7), rh.randf_range(0.4, 0.9)), dp + Vector3(2.6 + rh.randf_range(-0.8, 0.8), 0, -1.6 + rh.randf_range(-0.8, 0.6)), C.stone3.darkened(0.15) if i % 2 else Color("6d5a50"), rh.randf() * 3)
+	for sz in [-0.35, 0.35]: Build.box(self, Vector3(3.4, 0.06, 0.08), dp + Vector3(-2.6, 0.04, 1.4 + sz), C.iron)
+	for i in 6: Build.box(self, Vector3(0.14, 0.05, 1.0), dp + Vector3(-4.0 + i * 0.6, 0.02, 1.4), C.timber)
+	var mcart := Vector3(-2.4, 0, 1.4)
+	Build.box(self, Vector3(1.0, 0.55, 0.75), dp + mcart + Vector3(0, 0.22, 0), C.wood2)
+	Build.box(self, Vector3(1.06, 0.08, 0.8), dp + mcart + Vector3(0, 0.74, 0), C.iron)
+	for sx in [-0.32, 0.32]:
+		for sz in [-0.38, 0.38]: Build.cyl(self, 0.14, 0.14, 0.06, dp + mcart + Vector3(sx, 0.14, sz), C.iron, 8).rotation = Vector3(PI / 2, 0, 0)
+	for i in 4: Build.box(self, Vector3(0.26, 0.2, 0.24), dp + mcart + Vector3(rh.randf_range(-0.3, 0.3), 0.76, rh.randf_range(-0.2, 0.2)), C.stone3, rh.randf() * 3)
+	var lump := Build.box(self, Vector3(0.2, 0.18, 0.2), dp + mcart + Vector3(0.15, 0.86, 0.05), Color.WHITE, 0.5)
+	lump.material_override = Build.mat(Color("8f7dff"), 1.6)
+	# a lantern on a post, lit at dusk, and a warning
+	Build.box(self, Vector3(0.14, 2.0, 0.14), dp + Vector3(1.9, 0, 1.5), C.timber)
+	Build.box(self, Vector3(0.5, 0.08, 0.08), dp + Vector3(1.7, 1.95, 1.5), C.timber)
+	Build.box(self, Vector3(0.24, 0.3, 0.24), dp + Vector3(1.5, 1.6, 1.5), Color("ffd98a")).material_override = Build.mat(Color("f0a050"), 1.2)
+	var ll := OmniLight3D.new(); ll.light_color = Color(1.0, 0.72, 0.4); ll.omni_range = 6.0; ll.light_energy = 0.0
+	ll.position = dp + Vector3(1.5, 1.8, 1.5); add_child(ll); lanterns.append(ll)
+	Build.box(self, Vector3(0.12, 1.2, 0.12), dp + Vector3(-1.6, 0, 2.0), C.timber)
+	Build.box(self, Vector3(0.9, 0.5, 0.06), dp + Vector3(-1.6, 0.8, 2.06), C.wood3, 0.0, 0.0, 0.08)
+	var wl := Label3D.new(); wl.text = "OLD MINE\nmind the hole"; wl.font_size = 40; wl.pixel_size = 0.0034; wl.modulate = Color("7a2224"); wl.double_sided = false
+	wl.position = dp + Vector3(-1.6, 1.05, 2.1); wl.rotation.z = 0.08; add_child(wl)
 
 
 ## A cave across the river, as a room (version 7.21): rock floor, lumpy walls, a low lip at the front so you can see in,

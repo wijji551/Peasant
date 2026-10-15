@@ -28,6 +28,13 @@ func _multi(mesh: String) -> MultiMesh:
 	return mm
 
 
+## The trees sway with the wind, like the woods beyond the hedge (version 7.31: they stood quite still). The stumps do not.
+func sway(world) -> void:
+	for c in get_children():
+		var mmi := c as MultiMeshInstance3D
+		if mmi and mmi.multimesh != _stump: mmi.material_override = world.sway_mat(0.03 if mmi.multimesh == _pine else 0.026)
+
+
 func shake_near(x: float, z: float) -> void:   # someone is chopping at the tree nearest here
 	var best := -1
 	var bd := 9.0

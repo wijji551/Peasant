@@ -40,6 +40,13 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.31: the road, the trees, the Old Mine", [
+		"The west and east roads out to the hedge are clear: the trees that stood in them have moved to the verges.",
+		"The village’s own trees, the ones you chop, now sway in the wind with the woods beyond the hedge, and bend over in a storm.",
+		"The way down the Old Mine looks like a mine: a shaft in a collar of stones, a headframe over it with a winding wheel and a bucket on its rope, the top of the ladder, a spoil heap, a cart of rubble on rails with a purple lump in it, a lantern for the night, and a sign.",
+		"You no longer show through trees and roofs as a pale shape. Turn the view, or carry a torch.",
+		"Down the Old Mine, and in the two caves across the river, there is no birdsong, wind, rain or thunder: water dripping, the hill creaking, and music of its own, slow and hollow.",
+	]],
 	["Version 7.30: the Knight’s Squire", [
 		"The library is a room now: go in by its door. The Peasants’ Section, a shelf on bricks with a sign asking you not to lick the books, is where you choose your books. The librarian is at her desk. The rest of the library is behind a red rope, for members of the nobility, and you can see all of it and have none of it. It shuts at nightfall.",
 		"Sir Aldous de Vere is in there, doing some research. He wants a sword, a particular one, and a different one from each of you. Bring him the right one, and he sends you down the lane past the west hedge, to his cabin in the woods, for his squire’s notebook. The squire has gone. Nobody knows where. The lock on his chest is in his paintings.",

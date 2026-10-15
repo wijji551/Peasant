@@ -150,10 +150,6 @@ func player(p: E.Player, is_me: bool) -> void:
 	var dt_ := get_process_delta_time()
 	if fx and p.state == "swim" and randf() < dt_ * 5.0: fx.puff(p.x + randf_range(-0.5, 0.5), 0.1, p.z + randf_range(-0.5, 0.5), 2, fx.C_SPLASH, 1.1)   # in the river: a splash or two (version 7.24)
 	if fx and p.state == "ok" and not p.ride and _mv > 0.7 and randf() < dt_ * 7.0: fx.puff(p.x - sin(p.r) * 0.3, 0.08, p.z - cos(p.r) * 0.3, 1, fx.C_DUST, 0.5)   # dust at your heels, running
-	_xray_t -= dt_
-	if _xray_t <= 0.0:                                # (version 7.24) behind a tree or a roof, a player still shows, as a pale shape
-		_xray_t = 0.5
-		_xray(_model)
 	_place(p.x, p.z, p.r, false)
 	_censer(p.trk == 27 and p.state == "ok" and p.room == "")
 	_frozen = p.frozen > 0                                          # frozen with fright: rooted, and trembling

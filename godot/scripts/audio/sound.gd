@@ -12,13 +12,14 @@ const EFFECTS := ["bell", "bone", "build", "caw0", "caw1", "cheer", "chop", "cla
 	"find", "forge", "groan0", "groan1", "groan2", "gulp", "hit", "holy", "hooves", "hurt", "iron", "jeer", "keep", "knock",
 	"lost", "nail", "no", "owl", "page", "pick", "pluck", "pop", "raise", "rally", "rattle", "relic", "ring", "splash", "splat",
 	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won", "thwack", "crit", "tink", "whoosh", "shout", "cockerel", "howl", "whip", "sermon", "bark", "growl", "baa", "moo", "bray", "cluck", "whistle"]
-const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "wind": "amb_wind", "castle": "amb_castle",
-	"music_day": "music_day", "music_night": "music_night", "music_boss": "music_boss"}
+const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "wind": "amb_wind", "castle": "amb_castle", "cave": "amb_cave",
+	"music_day": "music_day", "music_night": "music_night", "music_boss": "music_boss", "music_mine": "music_mine"}
 const VARY := ["chop", "hit", "bone", "swing", "stone", "pick", "build", "splash", "thump", "splat", "groan0", "groan1", "groan2", "rattle", "caw0", "caw1", "thwack", "tink", "whoosh"]
 const HEAR := 34.0               # further from the camera than this, an effect is not heard
 
 static var me: Sound
 static var boss_music := false
+static var under := false               # (version 7.31) down the Old Mine or in a cave: its own music, and no birds or weather (main.gd)
 static var wind := 1.0                   # how hard the wind blows (main.gd)         # the Lord is on the field: the organ
 var focus := Vector2.ZERO
 var _fx: Dictionary = {}          # name -> AudioStream
@@ -108,33 +109,37 @@ func update(delta: float, nf: float, focus_: Vector3, weather: String, undead_ne
 	focus = Vector2(focus_.x, focus_.z)
 	var night := smoothstep(0.3, 0.85, nf)
 	var castle := clampf(1.0 - (focus.y + 60.0) / 45.0, 0.0, 1.0)      # nearer the castle, louder its drone
-	_fade("day", (1.0 - night) * (0.75 if weather == "rain" else 1.0) * 0.7, delta)
-	_fade("night", night * 0.8, delta)
-	_fade("rain", 0.34 if weather == "rain" else 0.0, delta)      # (it was 0.8: at full volume the rain drowned the village)
-	_fade("wind", clampf((wind - 1.2) * 0.32, 0.0, 0.5), delta)   # (version 7.28) a storm's wind, gusting
-	_fade("castle", clampf(castle * 0.9 + night * 0.25, 0.0, 1.0) * 0.8, delta)
+	var up := 0.0 if under else 1.0                     # above ground (underground, all of it fades out, and the cave's own comes in)
+	var sp := delta * (3.0 if under else 1.0)
+	_fade("day", (1.0 - night) * (0.75 if weather == "rain" else 1.0) * 0.7 * up, sp)
+	_fade("night", night * 0.8 * up, sp)
+	_fade("rain", (0.34 if weather == "rain" else 0.0) * up, sp)      # (it was 0.8: at full volume the rain drowned the village)
+	_fade("wind", clampf((wind - 1.2) * 0.32, 0.0, 0.5) * up, sp)   # (version 7.28) a storm's wind, gusting
+	_fade("castle", clampf(castle * 0.9 + night * 0.25, 0.0, 1.0) * 0.8 * up, sp)
+	_fade("cave", 0.75 if under else 0.0, delta * 1.5)
 	var bm := 1.0 if boss_music else 0.0
-	_fade("music_day", (1.0 - night) * 0.6 * (1.0 - bm), delta * (2.0 if boss_music else 0.5))
-	_fade("music_night", night * 0.65 * (1.0 - bm), delta * (2.0 if boss_music else 0.5))
-	_fade("music_boss", bm * 0.8, delta * (1.5 if boss_music else 0.4))
+	_fade("music_day", (1.0 - night) * 0.6 * (1.0 - bm) * up, delta * (2.0 if boss_music or under else 0.5))
+	_fade("music_night", night * 0.65 * (1.0 - bm) * up, delta * (2.0 if boss_music or under else 0.5))
+	_fade("music_boss", bm * 0.8 * up, delta * (1.5 if boss_music else 0.4))
+	_fade("music_mine", 0.6 if under else 0.0, delta * 0.8)
 	if not playing:
 		return
 	# now and then: an owl at night, crows by the castle, the dead groaning when they are close
 	_owl_t -= delta
 	if _owl_t <= 0:
 		_owl_t = randf_range(25, 60)
-		if night > 0.6: play("owl", 0.5)
+		if night > 0.6 and not under: play("owl", 0.5)
 	_caw_t -= delta
 	if _caw_t <= 0:
 		_caw_t = randf_range(5, 14)
-		if castle > 0.3 or randf() < 0.2: play("caw%d" % (randi() % 2), 0.25 + castle * 0.5)
+		if (castle > 0.3 or randf() < 0.2) and not under: play("caw%d" % (randi() % 2), 0.25 + castle * 0.5)
 	_groan_t -= delta
 	if _groan_t <= 0:
 		_groan_t = randf_range(1.2, 3.5) / maxf(1.0, sqrt(undead_near))
 		if undead_near > 0:
 			play(["groan0", "groan1", "groan2", "rattle"][randi() % 4], minf(0.9, 0.35 + undead_near * 0.05))
 	# thunder follows the lightning, a little later
-	if flash >= 0.99 and _thunder < 0:
+	if flash >= 0.99 and _thunder < 0 and not under:
 		_thunder = randf_range(0.6, 2.0)
 	if _thunder >= 0:
 		_thunder -= delta

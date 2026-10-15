@@ -576,6 +576,76 @@ def storm_wind():
     save("amb_wind", seamless(roar + moan), 0.6)
 
 
+def underground():
+    # (version 7.31) down the Old Mine and in the caves: no birds, no wind. Water dripping somewhere, each drip with its
+    # echo; a low rumble of the hill sitting on top of you; a pebble now and then; and far off, a creak of old timber.
+    d = 26.0
+    n = int(d * SR)
+    t = np.arange(n) / SR
+    r = np.random.default_rng(731)
+    rumble = lowpass(brown(n), 90) * (0.7 + 0.3 * np.sin(2 * np.pi * t / 9.0)) * 0.55
+    air = bandpass(r.uniform(-1, 1, n), 180, 600) * 0.025 * (0.6 + 0.4 * np.sin(2 * np.pi * t / 6.5))
+    drips = np.zeros(n)
+    at = 0.4
+    while at < d - 1.0:                              # two or three drips in different places, each with its own note
+        f = r.choice([1450.0, 1780.0, 2150.0, 1250.0])
+        dur = 0.09
+        tt = np.arange(int(dur * SR)) / SR
+        drop = np.sin(2 * np.pi * f * (1 + 0.9 * tt / dur) * tt) * np.exp(-tt * 55) * r.uniform(0.14, 0.26)
+        add(drips, drop, at)
+        at += r.uniform(0.7, 2.6)
+    for _ in range(7):                               # a pebble skittering
+        p0 = r.uniform(0, d - 1)
+        for k in range(r.integers(2, 5)):
+            add(drips, noise(0.03, 0.08, 2500) * r.uniform(0.4, 1.0), p0 + k * r.uniform(0.06, 0.14))
+    for _ in range(3):                               # old timber, somewhere, taking the weight
+        c0 = r.uniform(1, d - 3)
+        dur = r.uniform(0.6, 1.1)
+        tt = np.arange(int(dur * SR)) / SR
+        creak = bandpass(r.uniform(-1, 1, len(tt)), 300, 900) * (np.sin(2 * np.pi * 23 * tt) > 0.3) * np.sin(np.pi * tt / dur) * 0.12
+        add(drips, creak, c0)
+    save("amb_cave", seamless(reverb(rumble + air + drips, 1.8, 0.45, 2500), 2.0), 0.5)
+
+    # the music, below: slow and hollow. A low drone in E, a glass-like bell picking out a few notes a long way apart,
+    # very soft bowed chords that come and go, and a pick tapping somewhere in the rock, which may or may not be ours.
+    bpm = 54
+    beat = 60 / bpm
+    chords = [["E2", "B2", "E3"], ["F2", "C3", "F3"], ["E2", "B2", "G3"], ["D2", "A2", "F3"],
+              ["E2", "B2", "E3"], ["C2", "G2", "E3"], ["F2", "C3", "A3"], ["E2", "B2", "E3"]]
+    bell = [("E5", 0), ("G5", 3), ("F5", 6), None, ("B4", 1.5), ("C5", 4), None, ("E5", 2), ("D5", 5.5), ("B4", 7), None, ("G4", 2.5)]
+    bars = len(chords) * 2
+    total = bars * 4 * beat
+    b = buf(total + 5)
+    tt = np.arange(len(b)) / SR
+    b += (np.sin(2 * np.pi * hz("E1") * tt) + 0.5 * np.sin(2 * np.pi * hz("B1") * 1.002 * tt)) * 0.1 * (0.8 + 0.2 * np.sin(2 * np.pi * tt / 5.3))
+    for i in range(bars):
+        ch = chords[i % len(chords)]
+        if i % 2 == 0:
+            dur = 8 * beat
+            m = int(dur * SR)
+            ts = np.arange(m) / SR
+            pad = sum(lowpass(osc(np.full(m, hz(note)), "sawtooth"), 500) for note in ch)
+            env = np.sin(np.pi * ts / dur) ** 2
+            add(b, pad * env * 0.035, i * 4 * beat)
+    for k, bn in enumerate(bell):
+        if bn is None: continue
+        note, off = bn
+        f = hz(note)
+        dur = 3.5
+        ts = np.arange(int(dur * SR)) / SR
+        v = (np.sin(2 * np.pi * f * ts) + 0.4 * np.sin(2 * np.pi * f * 2.76 * ts) + 0.2 * np.sin(2 * np.pi * f * 5.4 * ts)) * np.exp(-ts * 1.6) * 0.11
+        add(b, v, (k * 5.3 + off) * beat % (total - 4))
+    for i in range(bars):                            # the tapping: two or three, far off, not every bar
+        if i % 3 == 1:
+            for k in range(3):
+                add(b, bandpass(noise(0.04, 0.12, 4000), 1500, 4500) * 0.6, (i * 4 + 1 + k * 0.5) * beat)
+    loop_n = int(total * SR)
+    tail = b[loop_n:]
+    body = b[:loop_n].copy()
+    body[: len(tail)] += tail
+    save("music_mine", reverb(body, 2.4, 0.4)[:loop_n], 0.65)
+
+
 if __name__ == "__main__":
     sfx()
     if not ONLY:
@@ -587,4 +657,6 @@ if __name__ == "__main__":
         boss_music()
     if "amb_wind" in ONLY:
         storm_wind()
+    if not ONLY or "amb_cave" in ONLY:
+        underground()
     print("made", len(os.listdir(OUT)), "sounds in", os.path.abspath(OUT))
