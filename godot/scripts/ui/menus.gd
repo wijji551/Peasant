@@ -40,6 +40,11 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.33: the Lord, as he should look", [
+		"The Lord of Ashhollow has been redrawn from his portrait: a pale, square face with red eyes that glow and teeth he would rather you did not see, black hair, a tall black top hat with a gold band and a red ribbon, a great stand-up collar, red within, a black tailcoat over a red waistcoat with gold buttons, a white cravat and a gold jabot, and a cloak to the ground, black outside and red inside. His goblet stays upright in his hand whatever he is doing, and when he stands about he raises it to you.",
+		"He can be seen at the castle from the first day now: a small figure on a balcony in the one lit window, looking down on the village. In the last week he comes out on to the wall over the gate, and raises his goblet. The night he comes down in person, he is in neither.",
+		"His shadow has his shape: the hat, and the great collar.",
+	]],
 	["Version 7.32: the posse, the torch, the caves", [
 		"Sending your posse home now tells you so, in the middle of the screen: how many are on their way to your cottage. The posse’s card is drawn on top of everything else, so nothing can take the click, and it no longer pops up again by itself when the dawn notice or the handbook closes.",
 		"A burning torch has a real flame: tongues of fire that leap and lick and stand up straight whichever way you hold it.",

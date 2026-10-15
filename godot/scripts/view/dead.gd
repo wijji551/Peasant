@@ -59,16 +59,9 @@ func lord_pose(p: String, t: float) -> void:
 
 
 func _lord_build() -> void:
-	_lord = Node3D.new()
+	_lord = Models.lord_figure()                    # (version 7.33: the Lord from the asset sheet)
 	add_child(_lord)
-	var body := MeshInstance3D.new(); body.mesh = Models.get_mesh("lord_body"); _lord.add_child(body)
-	_cloak = Node3D.new(); _cloak.position = Vector3(0, 1.9, -0.3); _lord.add_child(_cloak)
-	var cm := MeshInstance3D.new(); cm.mesh = Models.get_mesh("lord_cloak"); _cloak.add_child(cm)
-	_arm_l = Node3D.new(); _arm_l.position = Vector3(-0.4, 1.7, 0); _lord.add_child(_arm_l)
-	var al := MeshInstance3D.new(); al.mesh = Models.get_mesh("lord_arm"); _arm_l.add_child(al)
-	_arm_r = Node3D.new(); _arm_r.position = Vector3(0.4, 1.7, 0.05); _lord.add_child(_arm_r)
-	var ar := MeshInstance3D.new(); ar.mesh = Models.get_mesh("lord_arm"); _arm_r.add_child(ar)
-	var gb := MeshInstance3D.new(); gb.mesh = Models.get_mesh("lord_goblet"); _arm_r.add_child(gb)
+	_cloak = _lord.get_node("Cloak"); _arm_l = _lord.get_node("ArmL"); _arm_r = _lord.get_node("ArmR")
 
 
 func _lord_show(u: E.Undead, xf: Transform3D, col: Color, delta: float, now: float, mv: float, did_atk: bool) -> void:
@@ -79,7 +72,8 @@ func _lord_show(u: E.Undead, xf: Transform3D, col: Color, delta: float, now: flo
 	if _pose_t <= 0: _pose = ""
 	var walk := sin(now * 4.0) * 0.5 * mv
 	# what each part wants to be doing: (cloak back-and-out, cloak width, left arm forward, right arm forward, arms out)
-	var want := Vector4(0.12 + sin(now * 1.3) * 0.05 + mv * 0.25, 1.0, walk, -walk)
+	var raise := pow(maxf(0.0, sin(now * 0.55)), 10.0) * (1.0 - mv)     # standing about, now and then he raises his goblet
+	var want := Vector4(0.12 + sin(now * 1.3) * 0.05 + mv * 0.25, 1.0, walk, -walk - (0.55 + 0.9 * raise) * (1.0 - mv))
 	var spread := 0.0
 	match _pose:
 		"sweep_up": want = Vector4(0.9, 1.35, 0.3, -2.4); spread = 0.4                 # the cloak gathered up, the arm drawn back
@@ -94,6 +88,7 @@ func _lord_show(u: E.Undead, xf: Transform3D, col: Color, delta: float, now: flo
 	_arm_r.rotation.x = lerpf(_arm_r.rotation.x, want.w, k)
 	_arm_l.rotation.z = lerpf(_arm_l.rotation.z, -spread, k)
 	_arm_r.rotation.z = lerpf(_arm_r.rotation.z, spread, k)
+	Models.keep_goblet(_lord)
 
 
 ## Every one of the dead that is not a boss: a mild, evil glow about the edges, which shows best at night.

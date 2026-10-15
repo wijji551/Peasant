@@ -1576,6 +1576,7 @@ func _camera(delta: float) -> void:
 	minimap.view = _cam_yaw
 	world.night = R.nf
 	world.set_evil(Rules.week_of(R.mday()) - 1)
+	world.set_lord_out(R.undead.any(func(u): return u.k == D.U_LORD and not u.dead))
 	atmos.evil = Rules.week_of(R.mday()) - 1
 
 

@@ -819,3 +819,11 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - **Torch flame** (`figure.gd`): the cones are gone from the `torch` model; a lit torch gets `_flame` on the hand, seven unshaded additive tongues (deep orange to near white) that each leap and die back on their own beat, sway, lean back as you move, and are kept upright.
 - **Trees in the caves**: the woods on the far side of the Riverside's river (`_wilds`) covered the cave rooms at -40 and -80, 240. `clear()` now keeps 14 paces round every room but the Riverside; the Riverside's own ring of woods checks it too.
 - All 34 suites and co-op pass.
+
+## Version 7.33: the Lord, as he should look (build counter 40)
+
+- From Matt's asset sheet ("The Lord: game asset reference"). `models.gd`: the Lord's parts are now static builders drawn at an offset (`lord_body`, `lord_cloak`, `lord_arm`, `lord_goblet`), so the whole (`lord`) and the pieces are the same. Pale square face, red glowing eyes (`lord_eyes`, unlit), frowning brows, a thin mouth and two teeth, black hair at the sides and back, top hat with gold band and red ribbon, a stand-up collar black outside and red inside wrapping round the head, black tailcoat with tails and lapels, red waistcoat with gold buttons, white cravat, gold jabot with a red stone, cuffs, pale hands, a cloak black outside and red inside that comes forward round his sides, and a gold goblet of something red.
+- `Models.lord_figure()`: a moving figure (body and eyes, and "Cloak", "ArmL", "ArmR" on pivots, the goblet on a "Goblet" node at the hand). `Models.keep_goblet` keeps the goblet upright however the arm swings. `dead.gd` uses it for the Lord on the field (idle: goblet held up, raised now and then).
+- The castle (`world.gd`): a small balcony under the one lit window, and the Lord on it (0.62 scale) from day one, turning a little; in the last week (evil level 3) a full-size Lord on the wall over the gate, behind the merlons, turning and raising his goblet. `world.set_lord_out` (main, from the undead list) hides both while he is on the field.
+- The Lord's shadow has his hat and collar.
+- All 34 suites and co-op pass.

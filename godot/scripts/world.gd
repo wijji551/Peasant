@@ -76,6 +76,9 @@ var _beast_t := [6.0, 11.0, 2.0]          # until the next moo, bray and cluck
 var _evil: Array[Node3D] = []             # the castle's worse and worse looks, one set a week
 var _evil_now := -1
 var _castle_lit: StandardMaterial3D       # the one window that is always lit
+var _lord_win: Node3D                     # (version 7.33) the Lord in that window
+var _lord_wall: Node3D                    # and, in the last week, on the wall over the gate
+var _lord_out := false                    # he is on the field tonight
 var storm: Node3D                         # the sky turning over the castle, in the last week
 var _storm_light: OmniLight3D
 var night := 0.0                          # how dark it is (main.gd keeps this up to date)
@@ -210,6 +213,13 @@ func _castle() -> void:
 	lit.emission_energy_multiplier = 3.0
 	Build.glow_box(n, Vector3(1.2, 1.9, 0.2), Vector3(0, 18.4, 2.56), lit)
 	_castle_lit = lit
+	# (version 7.33) and in it, small against the light, the Lord himself, looking down on the village. In the last week
+	# he comes out on to the wall over the gate, with his goblet. Both are gone the night he comes down in person.
+	Build.box(n, Vector3(1.9, 0.18, 0.8), Vector3(0, 18.22, 2.9), C.castle2)                     # a little balcony under the window
+	for bx in [-0.85, 0.85]: Build.box(n, Vector3(0.12, 0.5, 0.12), Vector3(bx, 18.4, 3.22), C.castle2)
+	Build.box(n, Vector3(1.9, 0.1, 0.12), Vector3(0, 18.85, 3.22), C.castle2)
+	_lord_win = Models.lord_figure(); _lord_win.scale = Vector3.ONE * 0.62; _lord_win.position = Vector3(0, 18.4, 2.86); n.add_child(_lord_win)
+	_lord_wall = Models.lord_figure(); _lord_wall.position = Vector3(0, 16.0, 6.05); _lord_wall.visible = false; n.add_child(_lord_wall)
 	_evil_build(n)
 	_hilltop()
 
@@ -412,11 +422,31 @@ func _evil_build(n: Node3D) -> void:
 	_evil[2].add_child(_storm_light)
 
 
+## The Lord has come down in person (main.gd): he is not at his window, nor on his wall.
+func set_lord_out(out: bool) -> void:
+	_lord_out = out
+	if _lord_win: _lord_win.visible = not out
+	if _lord_wall: _lord_wall.visible = not out and _evil_now >= 3
+
+func _lord_step(delta: float) -> void:                 # at the window he turns a little, now and then; on the wall he raises his goblet to you
+	if _lord_win and _lord_win.visible:
+		_lord_win.rotation.y = 0.25 * sin(Time.get_ticks_msec() / 1000.0 * 0.21)
+		(_lord_win.get_node("ArmR") as Node3D).rotation.x = -0.6; Models.keep_goblet(_lord_win)
+	if _lord_wall and _lord_wall.visible:
+		var t := Time.get_ticks_msec() / 1000.0
+		var raise := pow(maxf(0.0, sin(t * 0.45)), 8.0)
+		(_lord_wall.get_node("ArmR") as Node3D).rotation.x = -0.5 - 1.6 * raise
+		(_lord_wall.get_node("ArmL") as Node3D).rotation.x = -0.2 * sin(t * 0.3)
+		(_lord_wall.get_node("Cloak") as Node3D).rotation.x = 0.15 + 0.08 * sin(t * 1.1)
+		_lord_wall.rotation.y = 0.35 * sin(t * 0.13)
+		Models.keep_goblet(_lord_wall)
+
 ## How far gone the castle is: 0 in the first week, to 3 in the last.
 func set_evil(level: int) -> void:
 	if level == _evil_now: return
 	_evil_now = level
 	for i in _evil.size(): _evil[i].visible = level > i
+	if _lord_wall: _lord_wall.visible = not _lord_out and level >= 3
 	if haunt_mat: haunt_mat.emission = [Color("b45cff"), Color("b45cff"), Color("d0406a"), Color("ff2a2a")][clampi(level, 0, 3)]
 	if _castle_lit:
 		_castle_lit.albedo_color = Color("ff5a4a") if level >= 3 else Color("ffe9a8")
@@ -2560,6 +2590,7 @@ func hit_dummy(i: int) -> void:
 
 
 func _process(delta: float) -> void:
+	_lord_step(delta)
 	_crows_step(delta)
 	_haunts_step(delta)
 	if bell:

@@ -305,45 +305,26 @@ static func _build(name: String, b: Mesher) -> void:
 			b.box(0.08, 0.8, 0.6, -0.64, 0.5, 0.15, 0x4b4f58).box(0.1, 0.2, 0.2, -0.68, 0.8, 0.15, 0x6e1f27)   # a shield
 		"captain_eyes":
 			b.box(0.09, 0.04, 0.03, -0.09, 1.72, 0.25, 0xff6040).box(0.09, 0.04, 0.03, 0.09, 1.72, 0.25, 0xff6040)
-		"lord":                                              # the Lord of Ashhollow: tall, black, a high red-lined collar, a cloak to the ground
-			b.box(0.2, 0.8, 0.22, -0.14, 0, 0, 0x121016).box(0.2, 0.8, 0.22, 0.14, 0, 0, 0x121016)
-			b.box(0.62, 0.95, 0.4, 0, 0.78, 0, 0x1d1a24).box(0.18, 0.7, 0.05, 0, 0.95, 0.2, 0x7d1f27)
-			b.box(1.2, 1.9, 0.1, 0, 0.0, -0.3, 0x121016, 0, 0.1, 0).box(1.1, 1.8, 0.04, 0, 0.05, -0.24, 0x5a1520, 0, 0.1, 0)   # the cloak, red inside
-			b.box(0.15, 0.7, 0.17, -0.4, 1.0, 0, 0x1d1a24).box(0.15, 0.7, 0.17, 0.4, 1.0, 0.05, 0x1d1a24)
-			# as he is on the title picture: a white, beaked face under a tall black hat with a gold band and a spike
-			b.box(0.4, 0.46, 0.38, 0, 1.75, 0, 0xf1efe6).box(0.2, 0.16, 0.26, 0, 1.84, 0.3, 0xf0b62e).box(0.16, 0.07, 0.2, 0, 1.78, 0.28, 0xd9982a)
-			b.box(0.07, 0.06, 0.03, 0.2, 1.86, 0.1, 0xf2a7b0)                                 # a little colour in the cheek
-			b.box(0.9, 0.7, 0.08, -0.4, 1.55, -0.12, 0x5a1520, 0.6, 0, 0).box(0.9, 0.7, 0.08, 0.4, 1.55, -0.12, 0x5a1520, -0.6, 0, 0)   # the collar
-			b.box(0.56, 0.05, 0.54, 0, 2.2, 0, 0x0c0a0e).box(0.4, 0.3, 0.38, 0, 2.25, 0, 0x0c0a0e).box(0.42, 0.08, 0.4, 0, 2.27, 0, 0xc9a13a)   # the hat, and its band
-			b.box(0.05, 0.42, 0.05, 0, 2.55, 0, 0xe8dcb0)                                    # and its spike
-			b.box(0.12, 0.12, 0.05, 0, 1.52, 0.22, 0xc9a13a).box(0.1, 0.1, 0.05, 0, 1.36, 0.22, 0xc9a13a)   # a gold chain of office
-			b.box(0.06, 0.16, 0.06, 0.42, 1.02, 0.2, 0xc9a13a).box(0.16, 0.14, 0.16, 0.42, 1.18, 0.2, 0xd9b54a).box(0.12, 0.02, 0.12, 0.42, 1.25, 0.2, 0x8e1f1f)   # the goblet
+		"lord":                                              # the Lord of Ashhollow, whole (version 7.33, from the asset sheet): for the castle
+			lord_body(b, Vector3.ZERO)
+			lord_cloak(b, Vector3(0, LORD_SHOULDER, -0.28))
+			lord_arm(b, Vector3(-0.42, 1.62, 0)); lord_arm(b, Vector3(0.42, 1.62, 0.04))
+			lord_goblet(b, Vector3(0.42, 1.62 - LORD_GRIP.y, 0.04 + LORD_GRIP.z))
 		# the Lord in pieces, for when he is on the field and has to move properly (version 7.4): his body, his cloak
 		# (hung from the shoulders: its top is at the origin), and an arm (hung from the shoulder, the same)
-		"lord_body":
-			b.box(0.2, 0.8, 0.22, -0.14, 0, 0, 0x121016).box(0.2, 0.8, 0.22, 0.14, 0, 0, 0x121016)
-			b.box(0.62, 0.95, 0.4, 0, 0.78, 0, 0x1d1a24).box(0.18, 0.7, 0.05, 0, 0.95, 0.2, 0x7d1f27)
-			b.box(0.4, 0.46, 0.38, 0, 1.75, 0, 0xf1efe6).box(0.2, 0.16, 0.26, 0, 1.84, 0.3, 0xf0b62e).box(0.16, 0.07, 0.2, 0, 1.78, 0.28, 0xd9982a)
-			b.box(0.07, 0.06, 0.03, 0.2, 1.86, 0.1, 0xf2a7b0)
-			b.box(0.9, 0.7, 0.08, -0.4, 1.55, -0.12, 0x5a1520, 0.6, 0, 0).box(0.9, 0.7, 0.08, 0.4, 1.55, -0.12, 0x5a1520, -0.6, 0, 0)
-			b.box(0.56, 0.05, 0.54, 0, 2.2, 0, 0x0c0a0e).box(0.4, 0.3, 0.38, 0, 2.25, 0, 0x0c0a0e).box(0.42, 0.08, 0.4, 0, 2.27, 0, 0xc9a13a)
-			b.box(0.05, 0.42, 0.05, 0, 2.55, 0, 0xe8dcb0)
-			b.box(0.12, 0.12, 0.05, 0, 1.52, 0.22, 0xc9a13a).box(0.1, 0.1, 0.05, 0, 1.36, 0.22, 0xc9a13a)
-			b.box(0.07, 0.07, 0.03, -0.1, 1.9, 0.2, 0x1a1418).box(0.07, 0.07, 0.03, 0.1, 1.9, 0.2, 0x1a1418)
-		"lord_cloak":
-			b.box(1.2, 1.9, 0.1, 0, -1.9, 0, 0x121016).box(1.1, 1.8, 0.04, 0, -1.85, 0.06, 0x5a1520)
-		"lord_arm":
-			b.box(0.15, 0.7, 0.17, 0, -0.7, 0, 0x1d1a24).box(0.13, 0.12, 0.15, 0, -0.8, 0.02, 0xf1efe6)
-		"lord_goblet":
-			b.box(0.06, 0.16, 0.06, 0, -0.9, 0.12, 0xc9a13a).box(0.16, 0.14, 0.16, 0, -0.74, 0.12, 0xd9b54a).box(0.12, 0.02, 0.12, 0, -0.67, 0.12, 0x8e1f1f)
-		"shadow":                                            # the Lord's shadow: his shape, in smoke
-			b.box(0.62, 1.7, 0.4, 0, 0, 0, 0x14101a).box(1.3, 1.9, 0.1, 0, 0.1, -0.3, 0x0d0a12, 0, 0.1, 0)
-			b.box(0.4, 0.46, 0.38, 0, 1.7, 0, 0x1a1420).box(0.56, 0.05, 0.54, 0, 2.15, 0, 0x0c0a0e).box(0.4, 0.3, 0.38, 0, 2.2, 0, 0x0c0a0e)
-			b.box(0.9, 0.7, 0.08, -0.4, 1.5, -0.12, 0x2a0d14, 0.6, 0, 0).box(0.9, 0.7, 0.08, 0.4, 1.5, -0.12, 0x2a0d14, -0.6, 0, 0)
+		"lord_body": lord_body(b, Vector3.ZERO)
+		"lord_cloak": lord_cloak(b, Vector3.ZERO)
+		"lord_arm": lord_arm(b, Vector3.ZERO)
+		"lord_goblet": lord_goblet(b, Vector3.ZERO)
+		"shadow":                                            # the Lord's shadow: his shape, in smoke (the hat, the great collar, the cloak)
+			b.box(0.64, 1.75, 0.42, 0, 0, 0, 0x14101a).box(1.3, 1.6, 0.1, 0, 0.0, -0.3, 0x0d0a12, 0, 0.08, 0)
+			b.box(0.42, 0.48, 0.4, 0, 1.75, 0, 0x1a1420)
+			b.box(0.62, 0.05, 0.58, 0, 2.23, 0, 0x0c0a0e).box(0.44, 0.62, 0.42, 0, 2.27, 0, 0x0c0a0e)
+			b.box(1.0, 0.8, 0.06, 0, 1.45, -0.26, 0x2a0d14).box(0.07, 0.8, 0.42, -0.5, 1.45, -0.08, 0x2a0d14, 0.45).box(0.07, 0.8, 0.42, 0.5, 1.45, -0.08, 0x2a0d14, -0.45)
 		"shadow_eyes":
 			b.box(0.08, 0.06, 0.03, -0.1, 1.86, 0.2, 0xff4040).box(0.08, 0.06, 0.03, 0.1, 1.86, 0.2, 0xff4040)
-		"lord_eyes":
-			b.box(0.07, 0.07, 0.03, -0.1, 1.9, 0.2, 0x1a1418).box(0.07, 0.07, 0.03, 0.1, 1.9, 0.2, 0x1a1418)
+		"lord_eyes":                                         # (version 7.33) red, and they glow
+			b.box(0.08, 0.045, 0.03, -0.1, 1.98, 0.2, 0xd8202a).box(0.08, 0.045, 0.03, 0.1, 1.98, 0.2, 0xd8202a)
 		"cart":                                              # a merchant's cart: two wheels, an awning (white: tinted per merchant), crates and sacks
 			b.box(2.6, 0.18, 1.5, 0, 0.75, 0, P.wood2).box(2.6, 0.5, 0.08, 0, 0.93, 0.72, P.wood).box(2.6, 0.5, 0.08, 0, 0.93, -0.72, P.wood)
 			for sz in [-0.82, 0.82]:
@@ -627,6 +608,90 @@ static func _build(name: String, b: Mesher) -> void:
 
 
 ## Where an item hangs on a peasant: the slot it is worn in decides.
+# ---------------------------------------------------------------- the Lord of Ashhollow (version 7.33, from the asset sheet)
+# A pale square face with red eyes and black hair, a tall black top hat with a gold band and a red ribbon, a great
+# stand-up collar, red inside, a black tailcoat over a red waistcoat, a white cravat with a gold jabot, and a cloak to
+# the ground, black outside and red within. Each part is drawn at an offset, so the whole and the pieces are the same.
+const LORD_SHOULDER := 1.62
+const LORD_GRIP := Vector3(0, 0.86, 0.1)        # from the shoulder down to where the right hand holds the goblet's stem
+const LORD_BLACK := 0x15121a
+const LORD_COAT := 0x1c1822
+const LORD_RED := 0x8e1f25
+const LORD_RED2 := 0x6a141c
+const LORD_GOLD := 0xd9a93a
+const LORD_SKIN := 0xe9e1d2
+
+static func lord_body(b: Mesher, o: Vector3) -> void:
+	var x := o.x; var y := o.y; var z := o.z
+	for sx in [-0.13, 0.13]:                                              # trousers, and polished shoes
+		b.box(0.2, 0.84, 0.22, x + sx, y + 0.06, z, LORD_BLACK).box(0.22, 0.09, 0.3, x + sx, y, z + 0.04, 0x0a080c)
+	b.box(0.64, 0.9, 0.4, x, y + 0.86, z, LORD_COAT)                    # the tailcoat
+	b.box(0.56, 0.55, 0.06, x, y + 0.42, z - 0.2, LORD_COAT, 0, 0.12)    # and its tails
+	b.box(0.3, 0.72, 0.03, x, y + 0.98, z + 0.2, LORD_RED)               # the red waistcoat
+	for k in 3: b.box(0.04, 0.04, 0.02, x, y + 1.08 + k * 0.17, z + 0.215, LORD_GOLD)   # its buttons
+	for sx in [-1.0, 1.0]: b.box(0.13, 0.78, 0.04, x + sx * 0.22, y + 0.95, z + 0.21, 0x0e0c12, 0, 0, sx * -0.12)   # the lapels
+	b.box(0.66, 0.12, 0.42, x, y + 1.72, z, LORD_COAT)                    # the shoulders of the coat
+	for sx in [-1.0, 1.0]: b.box(0.24, 0.18, 0.44, x + sx * 0.36, y + 1.56, z, LORD_COAT)
+	b.box(0.22, 0.24, 0.07, x, y + 1.48, z + 0.2, 0xf2ede2)                # the white cravat
+	b.box(0.17, 0.13, 0.05, x, y + 1.44, z + 0.25, LORD_GOLD).box(0.13, 0.12, 0.05, x, y + 1.32, z + 0.25, LORD_GOLD)   # and its gold jabot
+	b.box(0.09, 0.12, 0.05, x, y + 1.2, z + 0.25, 0xb88a24, 0, 0, 0.78).box(0.05, 0.05, 0.02, x, y + 1.36, z + 0.28, LORD_RED)
+	b.box(0.42, 0.48, 0.4, x, y + 1.78, z, LORD_SKIN)                     # the face: pale, square, hollow-cheeked
+	b.box(0.1, 0.035, 0.03, x - 0.1, y + 2.05, z + 0.2, 0x1a1418, 0, 0, 0.2).box(0.1, 0.035, 0.03, x + 0.1, y + 2.05, z + 0.2, 0x1a1418, 0, 0, -0.2)   # brows, frowning
+	b.box(0.06, 0.1, 0.05, x, y + 1.9, z + 0.21, 0xd9cfbf)                # the nose
+	b.box(0.14, 0.022, 0.02, x, y + 1.85, z + 0.205, 0x5a2a2e)            # a thin mouth
+	b.box(0.025, 0.04, 0.02, x - 0.04, y + 1.81, z + 0.205, 0xffffff).box(0.025, 0.04, 0.02, x + 0.04, y + 1.81, z + 0.205, 0xffffff)   # and the teeth he would rather you did not see
+	b.box(0.07, 0.12, 0.42, x - 0.215, y + 1.98, z - 0.01, 0x121014).box(0.07, 0.12, 0.42, x + 0.215, y + 1.98, z - 0.01, 0x121014)   # black hair, at the sides
+	b.box(0.44, 0.3, 0.06, x, y + 1.86, z - 0.21, 0x121014)                # and the back
+	b.box(0.64, 0.05, 0.6, x, y + 2.24, z, 0x0c0a0e)                      # the hat: its brim, its crown, a gold band, a red ribbon
+	b.box(0.44, 0.62, 0.42, x, y + 2.28, z, 0x0c0a0e)
+	b.box(0.46, 0.08, 0.44, x, y + 2.36, z, LORD_GOLD)
+	b.box(0.03, 0.54, 0.16, x + 0.225, y + 2.36, z + 0.02, LORD_RED)
+	# the great collar: up behind his head, and out round it, red inside and black without
+	b.box(0.98, 0.82, 0.06, x, y + 1.44, z - 0.27, LORD_BLACK).box(0.92, 0.78, 0.03, x, y + 1.46, z - 0.23, LORD_RED)
+	for sx in [-1.0, 1.0]:
+		b.box(0.06, 0.82, 0.42, x + sx * 0.52, y + 1.42, z - 0.08, LORD_BLACK, sx * -0.42).box(0.03, 0.78, 0.4, x + sx * 0.48, y + 1.44, z - 0.07, LORD_RED, sx * -0.42)
+
+static func lord_cloak(b: Mesher, o: Vector3) -> void:                    # its top is at o, and it hangs down
+	var x := o.x; var y := o.y; var z := o.z
+	b.box(1.28, 1.6, 0.06, x, y - 1.6, z - 0.02, LORD_BLACK).box(1.18, 1.56, 0.03, x, y - 1.58, z + 0.03, LORD_RED2)
+	for sx in [-1.0, 1.0]:                                                  # drawn forward round his sides, so the red shows from the front
+		b.box(0.06, 1.54, 0.34, x + sx * 0.62, y - 1.58, z + 0.16, LORD_BLACK).box(0.03, 1.5, 0.32, x + sx * 0.585, y - 1.56, z + 0.16, LORD_RED)
+
+static func lord_arm(b: Mesher, o: Vector3) -> void:                      # hung from the shoulder at o
+	var x := o.x; var y := o.y; var z := o.z
+	b.box(0.17, 0.72, 0.19, x, y - 0.72, z, LORD_COAT)
+	b.box(0.18, 0.06, 0.2, x, y - 0.74, z, 0xf2ede2)                       # a white cuff
+	b.box(0.13, 0.14, 0.14, x, y - 0.88, z + 0.01, LORD_SKIN)              # and a pale hand
+
+static func lord_goblet(b: Mesher, o: Vector3) -> void:                   # held by the stem: o is where his hand grips it
+	var x := o.x; var y := o.y; var z := o.z
+	b.cyl(0.07, 0.08, 0.03, 8, x, y - 0.1, z, LORD_GOLD).box(0.04, 0.16, 0.04, x, y - 0.08, z, LORD_GOLD)
+	b.cyl(0.13, 0.06, 0.17, 8, x, y + 0.07, z, 0xe6b84a)
+	b.cyl(0.11, 0.11, 0.02, 8, x, y + 0.235, z, 0x9a1018)                  # full, of something red
+
+
+## The Lord as a figure that can move: his body and glowing eyes, and his cloak and arms on pivots, named "Cloak",
+## "ArmL" and "ArmR" (the right hand has the goblet). For the field (dead.gd) and the castle (world.gd).
+static func lord_figure() -> Node3D:
+	var n := Node3D.new()
+	var body := MeshInstance3D.new(); body.mesh = get_mesh("lord_body"); n.add_child(body)
+	var ey := MeshInstance3D.new(); ey.mesh = get_mesh("lord_eyes"); ey.material_override = glow(); n.add_child(ey)
+	var cl := Node3D.new(); cl.name = "Cloak"; cl.position = Vector3(0, LORD_SHOULDER, -0.28); n.add_child(cl)
+	var cm := MeshInstance3D.new(); cm.mesh = get_mesh("lord_cloak"); cl.add_child(cm)
+	for side in [["ArmL", -0.42, 0.0], ["ArmR", 0.42, 0.04]]:
+		var a := Node3D.new(); a.name = side[0]; a.position = Vector3(side[1], LORD_SHOULDER, side[2]); n.add_child(a)
+		var am := MeshInstance3D.new(); am.mesh = get_mesh("lord_arm"); a.add_child(am)
+		if side[0] == "ArmR":                      # the goblet, in a node of its own at the hand, to be kept upright (keep_goblet)
+			var g := Node3D.new(); g.name = "Goblet"; g.position = Vector3(0, -LORD_GRIP.y, LORD_GRIP.z); a.add_child(g)
+			var gb := MeshInstance3D.new(); gb.mesh = get_mesh("lord_goblet"); g.add_child(gb)
+	return n
+
+## However his arm swings, the goblet stays upright in his hand (he has not spilt a drop in three hundred years).
+static func keep_goblet(fig: Node3D) -> void:
+	var a: Node3D = fig.get_node("ArmR")
+	(a.get_node("Goblet") as Node3D).rotation = Vector3(-a.rotation.x, 0, -a.rotation.z)
+
+
 static func gear_pool(id: int) -> String:
 	if id == 26: return "bucket"     # the handbell and the censer are carried like a bucket
 	return D.IT[id].pool
