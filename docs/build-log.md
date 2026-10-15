@@ -836,3 +836,9 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 
 - `Rules.ore_extra()` = floor((players - 3) / 2), never below 0: 1 with five or six players, 2 with seven or eight. Each morning's refill gives every vein of the Old Mine `RUNE_PER_VEIN + ore_extra()` mithril and every seam of the Rune Cave `RUNE_PER_SEAM + ore_extra()` runes (so 6 a day each up to four players, 9 with five or six, 12 with seven or eight). Garrick's one piece of ore a day is unchanged.
 - The handbook and the shady fellow's notice say so. New check in `balance_test`. All suites and co-op pass.
+
+## Version 7.36: the bosses, with company (build counter 43)
+
+- `D.BOSS_N` = {hp 0.35, pace 0.07, reach 0.04} for each player past the first. Boss health ×(1 + 0.35(n−1)) (was 0.5: eight players 3.45×, was 4.5×). `Rules.bpace()` = 1/(1 + 0.07(n−1)) multiplies every trick's wait; `breach()` = 1 + 0.04(n−1) its reach; `bmore(k)` = floor((n−1)/k); `_some(near, n)` picks different players.
+- Steward: slam wait and reach; lamp-bearers (skeletons) at his side, `bmore(2)`. Chaplain: sermon wait, reach and mending reach. Cook: ladle wait and reach, pools at 1 + `bmore(3)` different players at once; cauldron swing wait and reach. Coachman: stampede wait; with 5+, `bmore(3)` pallbearers off the back at each stampede. Captain: charge wait; with 5+, every other guard to a second gate. Gamekeeper: howl wait and reach; a hound for every two players. Shadow: blink, raise and lob waits. Lord: gap, blink and lob waits; lobs at 1 + `bmore(3)` players; sweep, slam reach and sweep width (`lord_half`, +5% a player, at most 0.6π).
+- Handbook ("Playing together") says how it all scales. New `bossn_test` (8); `month_test`'s Steward health check follows `BOSS_N`. All 35 suites and co-op pass.

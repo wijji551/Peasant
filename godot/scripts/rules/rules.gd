@@ -4126,7 +4126,7 @@ func spawn_undead(k: int, x = null, z = null) -> E.Undead:
 	if U.ram:                                       # a coffin ram goes for the gate
 		u.lane = 0; u.jit = 0
 	if U.boss:
-		u.hp = roundf(U.hp * (1 + 0.5 * (players.size() - 1))); u.lane = 0; boss = u
+		u.hp = roundf(U.hp * (1 + D.BOSS_N.hp * (players.size() - 1))); u.lane = 0; boss = u   # (version 7.36: a third more for each of you; it was half)
 		for q in peasants: nerve_hit(q, 25)
 	u.mhp = u.hp
 	undead.append(u)
@@ -4137,6 +4137,8 @@ func spawn_boss(k: int) -> void:
 	var u := spawn_undead(k, 0.0, D.SPAWN_Z)
 	match k:
 		D.U_STEWARD:
+			for i in bmore(2):                               # (version 7.36) and with company, a lamp-bearer or two to see him down the road
+				var lb := spawn_undead(1, u.x + rnd2(-2, 2), u.z + rnd2(-1, 1)); lb.state = "walk"; lb.t = 0
 			say("The Steward has come down to supervise.")
 		D.U_COACH:
 			u.march = true; u.lane = rnd2(-1.5, 1.5)
@@ -4144,10 +4146,13 @@ func spawn_boss(k: int) -> void:
 		D.U_CAPTAIN:
 			u.side = [-1, 0, 1][randi() % 3]
 			var gate: String = ["the west gateway", "the north gate", "the east gateway"][u.side + 1]
+			var other: int = [-1, 0, 1].filter(func(s): return s != u.side)[randi() % 2]
+			var split := players.size() >= 5                  # (version 7.36) with five or more of you, half his guard goes for another gate
 			for i in 5 + players.size():
 				var g := spawn_undead(D.U_GUARD, u.x + rnd2(-4, 4), u.z + rnd2(-3, 3))
-				g.side = u.side; g.lane = rnd2(-2, 2)
-			say("The Captain of the Guard has come down with the Lord’s guard behind him. They are making for %s." % gate)
+				g.side = other if split and i % 2 == 1 else u.side; g.lane = rnd2(-2, 2)
+			say("The Captain of the Guard has come down with the Lord’s guard behind him. They are making for %s." % gate + \
+				(" Half of them have peeled off for %s." % ["the west gateway", "the north gate", "the east gateway"][other + 1] if split else ""))
 		D.U_LORD:                                     # his entrance: the field is cleared for him
 			for o in undead.duplicate():
 				if o != u: undead.erase(o)
@@ -4165,6 +4170,8 @@ func spawn_boss(k: int) -> void:
 		D.U_COOK:
 			say("The Castle Cook has come down with a cauldron and a ladle. He is not taking orders.")
 		D.U_WOLF:
+			for i in floori(players.size() / 2.0):           # (version 7.36) with company, he brings the pack: a hound for every two of you
+				var hd := spawn_undead(D.U_HOUND, u.x + rnd2(-3, 3), u.z + rnd2(-2, 2)); hd.state = "walk"; hd.t = 0
 			say("Something is howling on the castle road. The Lord’s Gamekeeper has not been himself since the full moon, and tonight he is very much somebody else.")
 
 func start_night() -> void:
@@ -5034,6 +5041,22 @@ func shove(p: E.Player, dx: float, dz: float, dist: float, quiet: bool = false) 
 	if not quiet: ev.append(["thrown", p.id, r1(p.x), r1(p.z)])
 
 
+## (version 7.36) The bosses with company: what they do comes round sooner, reaches further, and catches more of you.
+## bpace: their tricks' waits are this many times as long (1 alone, about two thirds with eight). breach: their reach
+## (1 alone, about a third more with eight). bmore(k): how many more there are of something, one for every k players past the first.
+func bpace() -> float:
+	return 1.0 / (1.0 + D.BOSS_N.pace * (players.size() - 1))
+func breach() -> float:
+	return 1.0 + D.BOSS_N.reach * (players.size() - 1)
+func bmore(k: int) -> int:
+	return maxi(0, floori((players.size() - 1) / float(k)))
+
+## Some players, picked from those near (different ones, as many as there are, up to n).
+func _some(near: Array, n: int) -> Array:
+	var pool := near.duplicate()
+	pool.shuffle()
+	return pool.slice(0, mini(n, pool.size()))
+
 func _near_players(u: E.Undead, reach: float) -> Array:
 	return players.filter(func(p): return p.state == "ok" and p.room == "" and D.d2(u.x, u.z, p.x, p.z) < reach * reach)
 
@@ -5045,14 +5068,14 @@ func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 			u.state = "atk"; u.sp2 -= dt
 			if u.sp2 <= 0:
 				u.sk = ""; u.ac += 1
-				ev.append(["slam", r1(u.x), r1(u.z), D.SLAM.reach])
-				for p in _near_players(u, D.SLAM.reach):
+				ev.append(["slam", r1(u.x), r1(u.z), D.SLAM.reach * breach()])
+				for p in _near_players(u, D.SLAM.reach * breach()):
 					hurt_friend(p, D.SLAM.dmg * tough, true, u, false); shove(p, p.x - u.x, p.z - u.z, D.SLAM.throw)
 			return true
 		u.sp1 -= dt
-		if u.sp1 <= 0 and _near_players(u, D.SLAM.reach).size():
-			u.sk = "slam"; u.sp2 = D.SLAM.wind; u.sp1 = D.SLAM.every
-			ev.append(["warn", r1(u.x), r1(u.z), D.SLAM.reach, D.SLAM.wind])
+		if u.sp1 <= 0 and _near_players(u, D.SLAM.reach * breach()).size():
+			u.sk = "slam"; u.sp2 = D.SLAM.wind; u.sp1 = D.SLAM.every * bpace()
+			ev.append(["warn", r1(u.x), r1(u.z), D.SLAM.reach * breach(), D.SLAM.wind])
 			return true
 		return false
 	if U.chaplain:                                    # a sermon nobody can walk away from
@@ -5060,18 +5083,18 @@ func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 			u.state = "atk"; u.sp2 -= dt; u.sd -= dt
 			if u.sd <= 0:
 				u.sd = 0.5
-				ev.append(["sermon", r1(u.x), r1(u.z), D.SERMON.reach])
-				for p in _near_players(u, D.SERMON.reach):
+				ev.append(["sermon", r1(u.x), r1(u.z), D.SERMON.reach * breach()])
+				for p in _near_players(u, D.SERMON.reach * breach()):
 					if D.d2(u.x, u.z, p.x, p.z) > 4.0: shove(p, u.x - p.x, u.z - p.z, D.SERMON.tug, true)
-			var mr: float = D.SERMON.mend_reach * D.SERMON.mend_reach
+			var mr: float = pow(D.SERMON.mend_reach * breach(), 2)
 			for o in undead:
 				if o != u and not o.dead and not D.UN[o.k].boss and o.hp < o.mhp and D.d2(u.x, u.z, o.x, o.z) < mr:
 					o.hp = minf(o.mhp, o.hp + o.mhp * D.SERMON.mend * dt)
 			if u.sp2 <= 0:
-				u.sk = ""; u.sp1 = D.SERMON.every
+				u.sk = ""; u.sp1 = D.SERMON.every * bpace()
 			return true
 		u.sp1 -= dt
-		if u.sp1 <= 0 and _near_players(u, D.SERMON.reach).size():
+		if u.sp1 <= 0 and _near_players(u, D.SERMON.reach * breach()).size():
 			u.sk = "sermon"; u.sp2 = D.SERMON.long; u.sd = 0.0
 			ev.append(["sermonstart", r1(u.x), r1(u.z)])
 			return true
@@ -5079,24 +5102,24 @@ func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 	if U.cook:
 		u.sp1 -= dt                                   # the ladle: a pool of boiling stew where somebody is standing
 		if u.sp1 <= 0:
-			var near := _near_players(u, D.STEW.far)
+			var near := _near_players(u, D.STEW.far * breach())
 			if near.size():
-				var t: E.Player = near[randi() % near.size()]
-				u.sp1 = D.STEW.every; u.ac += 1
-				pools.append([r1(t.x), r1(t.z), D.STEW.last + D.STEW.wind, D.STEW.wind, 0.0])
-				ev.append(["ladle", r1(u.x), r1(u.z), r1(t.x), r1(t.z), D.STEW.wind])
+				u.sp1 = D.STEW.every * bpace(); u.ac += 1
+				for t: E.Player in _some(near, 1 + bmore(3)):   # a ladle for one, and with company, for two or three at once
+					pools.append([r1(t.x), r1(t.z), D.STEW.last + D.STEW.wind, D.STEW.wind, 0.0])
+					ev.append(["ladle", r1(u.x), r1(u.z), r1(t.x), r1(t.z), D.STEW.wind])
 		if u.sk == "swing":                            # the cauldron, swung round
 			u.state = "atk"; u.sp2 -= dt
 			if u.sp2 <= 0:
 				u.sk = ""; u.ac += 1
-				ev.append(["slam", r1(u.x), r1(u.z), D.SWING.reach])
-				for p in _near_players(u, D.SWING.reach):
+				ev.append(["slam", r1(u.x), r1(u.z), D.SWING.reach * breach()])
+				for p in _near_players(u, D.SWING.reach * breach()):
 					hurt_friend(p, D.SWING.dmg * tough, true, u, false); shove(p, p.x - u.x, p.z - u.z, D.SWING.throw)
 			return true
 		u.sd -= dt
-		if u.sd <= 0 and _near_players(u, D.SWING.reach).size():
-			u.sk = "swing"; u.sp2 = D.SWING.wind; u.sd = D.SWING.every
-			ev.append(["warn", r1(u.x), r1(u.z), D.SWING.reach, D.SWING.wind])
+		if u.sd <= 0 and _near_players(u, D.SWING.reach * breach()).size():
+			u.sk = "swing"; u.sp2 = D.SWING.wind; u.sd = D.SWING.every * bpace()
+			ev.append(["warn", r1(u.x), r1(u.z), D.SWING.reach * breach(), D.SWING.wind])
 			return true
 		return false
 	if u.k == D.U_CAPTAIN:                            # the shield charge: seen coming, and to be stepped out of
@@ -5130,7 +5153,7 @@ func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 			if best:
 				var l := sqrt(bd)
 				u.ax = (best.x - u.x) / l; u.az = (best.z - u.z) / l
-				u.sk = "charge"; u.sp2 = D.SHIELD.wind; u.sd = D.SHIELD.far; u.sp1 = D.SHIELD.every
+				u.sk = "charge"; u.sp2 = D.SHIELD.wind; u.sd = D.SHIELD.far; u.sp1 = D.SHIELD.every * bpace()
 				ev.append(["line", r1(u.x), r1(u.z), snappedf(u.ax, 0.01), snappedf(u.az, 0.01), D.SHIELD.far, D.SHIELD.wind])
 				return true
 		return false
@@ -5138,12 +5161,12 @@ func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 		u.sp1 -= dt; u.sd -= dt; u.rt -= dt
 		if u.sp1 <= 0: shadow_blink(u)
 		if u.sd <= 0:                                 # it raises the fallen
-			u.sd = D.SHADOW.raise
+			u.sd = D.SHADOW.raise * bpace()
 			for i in mini(graves.size(), 2 + floori(players.size() / 2.0)):
 				var g: Dictionary = graves.pop_at(randi() % graves.size())
 				spawn_undead(g.k, g.x, g.z); ev.append(["raise", r1(g.x), r1(g.z)])
 		if u.rt <= 0:                                 # and throws one of the dead at a player, or at whatever is in its way
-			u.rt = D.SHADOW.lob
+			u.rt = D.SHADOW.lob * bpace()
 			var o: E.Undead = null
 			var od := 64.0
 			for c in undead:
@@ -5169,15 +5192,15 @@ func boss_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 	if U.wolf:                                        # the howl: frozen with fright, unless prayed over or unbothered
 		u.sp1 -= dt
 		if u.sp1 <= 0:
-			u.sp1 = D.HOWL.every; u.ac += 1
+			u.sp1 = D.HOWL.every * bpace(); u.ac += 1
 			ev.append(["howl", r1(u.x), r1(u.z)])
-			for p in _near_players(u, D.HOWL.reach):
+			for p in _near_players(u, D.HOWL.reach * breach()):
 				if p.prot > 0 or p.head == 20 or p.braced > 0:   # (a Brace, too)
 					ev.append(["unbothered", p.id, r1(p.x), r1(p.z)])
 				elif not help_me(p, false):
 					p.frozen = D.HOWL.freeze
 			for q in peasants:
-				if active(q) and D.d2(u.x, u.z, q.x, q.z) < D.HOWL.reach * D.HOWL.reach: nerve_hit(q, 20)
+				if active(q) and D.d2(u.x, u.z, q.x, q.z) < pow(D.HOWL.reach * breach(), 2): nerve_hit(q, 20)
 		return false
 	return false
 
@@ -5214,8 +5237,12 @@ func shadow_blink(u: E.Undead) -> void:
 	ev.append(["mist", r1(u.x), r1(u.z)])
 	u.x = rnd2(-18, 18); u.z = D.VN - rnd2(4, 14)
 	ev.append(["mist", r1(u.x), r1(u.z)])
-	u.sp1 = D.SHADOW.blink
+	u.sp1 = D.SHADOW.blink * bpace()
 
+
+## His cloak's sweep: how far round it reaches either side (wider with company).
+func lord_half() -> float:
+	return minf(PI * 0.6, D.LORD.sweep_half * (1.0 + 0.05 * (players.size() - 1)))
 
 ## The Lord, come down at last. Every attack is shown before it lands, and gets out of the way of.
 func lord_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
@@ -5226,13 +5253,13 @@ func lord_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 		u.state = "atk"; u.sp2 -= dt
 		if u.sp2 > 0: return true
 		var sk := u.sk
-		u.sk = ""; u.sp1 = D.LORD.gap; u.ac += 1
+		u.sk = ""; u.sp1 = D.LORD.gap * bpace(); u.ac += 1
 		match sk:
 			"sweep":                                  # the cloak, across the ground in front of him
-				ev.append(["sweep", r1(u.x), r1(u.z), r2(u.r), D.LORD.sweep_reach, D.LORD.sweep_half])
-				for p in _near_players(u, D.LORD.sweep_reach):
+				ev.append(["sweep", r1(u.x), r1(u.z), r2(u.r), D.LORD.sweep_reach * breach(), lord_half()])
+				for p in _near_players(u, D.LORD.sweep_reach * breach()):
 					var a := absf(wrapf(atan2(p.x - u.x, p.z - u.z) - u.r, -PI, PI))
-					if a <= D.LORD.sweep_half:
+					if a <= lord_half():
 						hurt_friend(p, D.LORD.sweep_dmg * tough, true, u, false); shove(p, p.x - u.x, p.z - u.z, D.LORD.sweep_throw)
 			"bats":                                   # a rush of bats along the line he showed you
 				ev.append(["batrush", r1(u.x), r1(u.z), snappedf(u.ax, 0.01), snappedf(u.az, 0.01), D.LORD.bats_far])
@@ -5244,8 +5271,8 @@ func lord_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 					var off: float = absf(vx * u.az - vz * u.ax)
 					if along > 0 and along < D.LORD.bats_far and off < D.LORD.bats_w: hurt_friend(p, D.LORD.bats_dmg * tough, true, u, false)
 			"slam":
-				ev.append(["slam", r1(u.x), r1(u.z), D.LORD.slam_reach])
-				for p in _near_players(u, D.LORD.slam_reach):
+				ev.append(["slam", r1(u.x), r1(u.z), D.LORD.slam_reach * breach()])
+				for p in _near_players(u, D.LORD.slam_reach * breach()):
 					hurt_friend(p, D.LORD.slam_dmg * tough, true, u, false); shove(p, p.x - u.x, p.z - u.z, D.LORD.slam_throw)
 		return true
 	var np: E.Player = near[0]
@@ -5256,33 +5283,34 @@ func lord_trick(u: E.Undead, U: Dictionary, dt: float) -> bool:
 		var d := D.d2(u.x, u.z, p.x, p.z)
 		if d < nd: nd = d; np = p
 		if d > fd: fd = d; fp = p
-	if u.rt <= 0:                                     # he pulls one of the dead up out of the ground and throws it
-		u.rt = D.LORD.lob
-		var o := spawn_undead(0, u.x + rnd2(-1, 1), u.z + rnd2(-1, 1))
-		ev.append(["raise", r1(o.x), r1(o.z)])
-		lob(o, np.x, np.z)
+	if u.rt <= 0:                                     # he pulls one of the dead up out of the ground and throws it (one each, at more of you, with company)
+		u.rt = D.LORD.lob * bpace()
+		for t: E.Player in [np] + _some(near.filter(func(o_): return o_ != np), bmore(3)):
+			var o := spawn_undead(0, u.x + rnd2(-1, 1), u.z + rnd2(-1, 1))
+			ev.append(["raise", r1(o.x), r1(o.z)])
+			lob(o, t.x, t.z)
 	if u.sd <= 0:                                     # he vanishes, and is behind whoever is furthest off
-		u.sd = D.LORD.blink
+		u.sd = D.LORD.blink * bpace()
 		var bl := maxf(0.1, sqrt(fd))
 		ev.append(["mist", r1(u.x), r1(u.z)])
 		u.x = fp.x + (fp.x - u.x) / bl * 2.2; u.z = fp.z + (fp.z - u.z) / bl * 2.2
 		ev.append(["mist", r1(u.x), r1(u.z)])
 		u.r = atan2(fp.x - u.x, fp.z - u.z)
 		u.sk = "sweep"; u.sp2 = D.LORD.sweep_wind
-		ev.append(["cone", r1(u.x), r1(u.z), r2(u.r), D.LORD.sweep_reach, D.LORD.sweep_half, D.LORD.sweep_wind])
+		ev.append(["cone", r1(u.x), r1(u.z), r2(u.r), D.LORD.sweep_reach * breach(), lord_half(), D.LORD.sweep_wind])
 		return true
 	u.sp1 -= dt
 	var dist := sqrt(nd)
 	if u.sp1 <= 0:
-		var close := _near_players(u, D.LORD.slam_reach).size()
+		var close := _near_players(u, D.LORD.slam_reach * breach()).size()
 		if close >= 2 or (close == 1 and randf() < 0.3):
 			u.sk = "slam"; u.sp2 = D.LORD.slam_wind
-			ev.append(["warn", r1(u.x), r1(u.z), D.LORD.slam_reach, D.LORD.slam_wind])
+			ev.append(["warn", r1(u.x), r1(u.z), D.LORD.slam_reach * breach(), D.LORD.slam_wind])
 			return true
-		if dist < D.LORD.sweep_reach:
+		if dist < D.LORD.sweep_reach * breach():
 			u.r = atan2(np.x - u.x, np.z - u.z)
 			u.sk = "sweep"; u.sp2 = D.LORD.sweep_wind
-			ev.append(["cone", r1(u.x), r1(u.z), r2(u.r), D.LORD.sweep_reach, D.LORD.sweep_half, D.LORD.sweep_wind])
+			ev.append(["cone", r1(u.x), r1(u.z), r2(u.r), D.LORD.sweep_reach * breach(), lord_half(), D.LORD.sweep_wind])
 			return true
 		if dist < D.LORD.bats_far:
 			u.ax = (np.x - u.x) / dist; u.az = (np.z - u.z) / dist; u.r = atan2(u.ax, u.az)
@@ -5340,8 +5368,12 @@ func hearse_step(u: E.Undead, U: Dictionary, dt: float, keep_box: E.Box) -> void
 	var sp: float = U.spd * wspeed() * (0.5 if u.slow > 0 else 1.0) * (1.0 if u.march else 0.7)
 	u.sp1 -= dt; u.sp2 = maxf(0, u.sp2 - dt)
 	if u.sp1 <= 0 and u.march:                         # he whips the horses up, and they stampede
-		u.sp1 = D.STAMPEDE.every; u.sp2 = D.STAMPEDE.long
+		u.sp1 = D.STAMPEDE.every * bpace(); u.sp2 = D.STAMPEDE.long
 		ev.append(["whip", r1(u.x), r1(u.z)])
+		if players.size() >= 5:                         # (version 7.36) a coffin bounces off the back of the hearse, and bursts open
+			for i in bmore(3):
+				var pb := spawn_undead(D.U_PALL, u.x + rnd2(-1.5, 1.5), u.z - rnd2(1.5, 3.0)); pb.state = "walk"; pb.t = 0
+			ev.append(["raise", r1(u.x), r1(u.z - 2.0)])
 	if u.sp2 > 0: sp *= D.STAMPEDE.speed
 	var nx: float = u.x + dx / d * sp * dt
 	var nz: float = u.z + dz / d * sp * dt

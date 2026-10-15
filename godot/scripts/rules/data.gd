@@ -903,6 +903,9 @@ const U_LORD := 12
 const U_CHAPLAIN := 17               # preaches: draws the players in, and mends the dead near him
 const U_COOK := 18                   # ladles boiling stew about, and swings his cauldron
 const U_WOLF := 19                   # the Gamekeeper, on a full moon: barricades go in one blow, and his howl freezes you
+## (version 7.36) How the bosses grow with company, for each player past the first: a third more health (it was half),
+## their tricks come round 7% sooner (two thirds of the wait with eight of you), and reach 4% further.
+const BOSS_N := {"hp": 0.35, "pace": 0.07, "reach": 0.04}
 const BOSS_NIGHTS := {7: 3, 11: 17, 14: 10, 18: 18, 21: 11, 28: 19, 30: 12}   # the night of the month: which boss comes down
 ## What the bosses do to the players (version 7.3). every: seconds between; wind: the warning before it lands.
 const SLAM := {"every": 8.0, "wind": 0.9, "reach": 4.5, "throw": 5.0, "dmg": 10.0}           # the Steward serves notice

@@ -297,7 +297,7 @@ func _init() -> void:
 	ok("a blow on their wall does half what it would alone", is_equal_approx(wl.mhp - wl.hp, D.UN[0].sdmg / 2.0), wl.mhp - wl.hp)
 	X.day = 7; X.start_night()
 	var st := X.spawn_undead(D.U_STEWARD, 0.0, D.SPAWN_Z)
-	ok("the Steward is worth the name, and bigger for four", st.hp == roundf(D.UN[D.U_STEWARD].hp * 2.5) and D.UN[D.U_STEWARD].hp >= 800, st.hp)
+	ok("the Steward is worth the name, and bigger for four", st.hp == roundf(D.UN[D.U_STEWARD].hp * (1 + D.BOSS_N.hp * 3)) and D.UN[D.U_STEWARD].hp >= 800, st.hp)
 
 	var fails := lines.filter(func(l): return l.begins_with("FAIL")).size()
 	for l in lines: print(l)
