@@ -755,3 +755,12 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - Removed: the watch platform's picture hook, `MOON_NAME`, `SKINDS`, `FORGE_A`, none used.
 - Not changed, noted for Matt: Prospero's Marotte duplicates Jester X; Dogs VIII duplicates Relics II; the Dog Lead's second dog never holds, and That One only sends the first.
 - All 32 suites and co-op pass.
+
+## Version 7.26: the country beyond the edges (build counter 33)
+
+- `world._wilds()`: everything outside the playable ground, in batches (`_multi`), from new vertex-coloured shapes in `models.gd` (`wild_pine`, `wild_oak`, `wild_dead`, `wild_bush`, `wild_rock`, `wild_tuft`, `wild_flowers`, `wild_cottage`, `wild_barn`, `wild_hay`), each instance tinted a little differently. A `clear` test keeps all of it off the main map (and 3-4 paces round it), its river, the Riverside and its own fields, and the road south to Hallowshire Town.
+- The west and east thorn hedge: bushes of mixed sizes in a ragged double row (the row of `Build.box` hedge blocks is gone). Woods behind it, thickest nearest the hedge, out to about 80 paces; dead trees where the dead ground runs.
+- The river's far bank: fourteen fields with hedgerows and haystacks, about 2,600 tufts, flowers and small bushes, worn patches, reeds along the bank, 420 trees, rocks, and three farmsteads (cottage, barn, hay).
+- Beyond the castle: the dead ground carries on to z -467; 700 dead trees; a ridge of 34 grey hills on the horizon.
+- The Riverside: one ground colour under all of it, and about 4,200 tries at woods round it, open at first and thick further out, with the road south left clear; woods on the far side of its river too.
+- All suites and co-op pass.

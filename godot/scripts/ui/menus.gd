@@ -39,6 +39,12 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.26: the country beyond the edges", [
+		"The thorn hedge at the village’s west and east edges is a ragged run of bushes now, not a wall of green boxes, and beyond it the woods are thick all the way to the horizon.",
+		"Across the river from the village there is somebody else’s countryside: fields in hedgerows, haystacks, copses and odd oaks, grass and flowers, and three farmsteads with their barns. Nobody from over there has ever come to help.",
+		"Beyond the castle the dead ground carries on into a dead wood, with a ridge of grey hills behind it, somewhere in the mist.",
+		"The Riverside no longer stops at a straight line: it is ringed with woods, a little open at first and thick further out, with the road south going on through them; and the far side of its river is wooded too.",
+	]],
 	["Version 7.25: warm lights, lanterns, and the words brought up to date", [
 		"Windows glow amber at night, like candlelight, instead of white. Lanterns have iron frames and warm glass, and the braziers at the north gate have fires in them, not white boxes.",
 		"Eight lantern posts along the roads, by the gates, the square and the cottages, so there is some light to fight in after dark.",

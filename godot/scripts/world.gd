@@ -108,6 +108,7 @@ func _ready() -> void:
 	_downs()
 	_riverside()
 	_ground_detail()
+	_wilds()
 
 
 ## A fire in a brazier: flames that flicker (they are turned up at night with the lanterns), and the light.
@@ -527,15 +528,7 @@ func _graveyard_and_edges() -> void:
 			Build.cyl(self, 0.09, 0.13, 2, Vector3(sx_, 0, -62.8), Color("4a3b33"), 5, rr(0, 3), 0.0, lean)
 			Build.box(self, Vector3(0.34, 0.3, 0.32), Vector3(sx_ - lean * 1.9, 1.95, -62.8), Color("e9e4cf"), rr(-0.5, 0.5))
 		sx_ += 4.5
-	# west and east: the thorn hedge the village is named for
-	for sx in [-1.0, 1.0]:
-		var z := -64.0
-		while z <= 55.0:
-			var h := rr(1.7, 2.7)
-			var hx: float = sx * (D.X1 + 2.3 + rr(-0.3, 0.3))
-			Build.box(self, Vector3(rr(2.6, 3.6), h, 3.3), Vector3(hx, 0, z), [C.hedge, C.hedge2, C.hedge3][int(absf(z)) % 3], rr(-0.12, 0.12))
-			Build.cone(self, 0.55, 1.1, Vector3(hx - sx * rr(0.2, 1.1), h - 0.2, z + rr(-1, 1)), C.hedge2, 4, rr(0, 3))
-			z += 2.9
+	# west and east: the thorn hedge the village is named for (version 7.26: bushes, drawn in _wilds)
 
 
 ## A run of sharpened palisade logs, gathered up and drawn in one go at the end.
@@ -701,6 +694,130 @@ func _ground_detail() -> void:
 		var cl: Array[Color] = []
 		xf.assign(lists[k][0]); cl.assign(lists[k][1])
 		if xf.size(): _multi(meshes[k], xf, cl)
+
+
+## The country beyond the edges (version 7.26): it was flat empty grass to the horizon, and at the Riverside a sharp line
+## where the fields stopped. Now: woods thick on both sides of the village, the far bank of the river in fields and
+## hedgerows with a farm or two, the dead wood and a ridge of hills beyond the castle, and the Riverside ringed with woods.
+## All of it is out of reach and out of the way: none of it is in the rules.
+func _wilds() -> void:
+	var rg := RandomNumberGenerator.new(); rg.seed = 7260
+	var r := func(a: float, b: float) -> float: return rg.randf_range(a, b)
+	var kinds := ["wild_pine", "wild_oak", "wild_dead", "wild_bush", "wild_rock", "wild_cottage", "wild_barn", "wild_hay", "wild_tuft", "wild_flowers"]
+	var xs := {}
+	var cs := {}
+	for k in kinds:
+		var a1: Array[Transform3D] = []
+		var a2: Array[Color] = []
+		xs[k] = a1; cs[k] = a2
+	var put := func(k: String, x: float, z: float, s: float, ry: float = -1.0, tint: Color = Color.WHITE) -> void:
+		var b := Basis(Vector3.UP, ry if ry >= 0.0 else rg.randf() * TAU).scaled(Vector3.ONE * s)
+		(xs[k] as Array[Transform3D]).append(Transform3D(b, Vector3(x, 0, z)))
+		var t: float = r.call(0.85, 1.08)
+		(cs[k] as Array[Color]).append(Color(tint.r * t, tint.g * t, tint.b * t))
+	var RM: Dictionary = D.ROOMS.riverside
+	var clear := func(x: float, z: float) -> bool:                    # never on the ground anybody walks on, nor in a river
+		if x > D.X0 - 3 and x < D.X1 + 3 and z > D.Z0 - 4 and z < 56: return false          # the main map
+		if z > 54 and z < 76: return false                                                     # its river
+		if x > RM.x - RM.hw - 6 and x < RM.x + RM.hw + 6 and z > RM.z - RM.hd - 18 and z < RM.z + RM.hd + 6: return false   # the Riverside and its own fields
+		if absf(x - RM.x) < 6 and z > RM.z + RM.hd and z < RM.z + RM.hd + 80: return false   # the road south to Hallowshire Town
+		return true
+	# --- the thorn hedge at the village's west and east edges: bushes of all sizes, not a row of boxes
+	for sx in [-1.0, 1.0]:
+		var z := -66.0
+		while z <= 56.0:
+			put.call("wild_bush", sx * (D.X1 + r.call(1.8, 3.4)), z, r.call(1.3, 2.1))
+			if rg.randf() < 0.45: put.call("wild_bush", sx * (D.X1 + r.call(3.5, 5.5)), z + r.call(-1, 1), r.call(1.5, 2.4))
+			z += r.call(1.6, 2.4)
+	# --- the woods either side of the village, thickest nearest the hedge
+	for sx in [-1.0, 1.0]:
+		for i in 900:
+			var d: float = pow(rg.randf(), 1.6) * 75.0
+			var x: float = sx * (D.X1 + 5.0 + d)
+			var z: float = r.call(-180.0, 175.0)
+			if not clear.call(x, z): continue
+			var dead_ground := z < -63
+			put.call("wild_dead" if dead_ground and rg.randf() < 0.7 else "wild_pine" if rg.randf() < 0.55 else "wild_oak", x, z, r.call(0.9, 1.7))
+			if rg.randf() < 0.18: put.call("wild_bush", x + r.call(-3, 3), z + r.call(-3, 3), r.call(0.9, 1.5))
+	# --- the far bank of the village's river: fields in hedgerows, odd trees, a farm or two
+	var fields := []
+	for i in 14:
+		var fx: float = r.call(-200, 200)
+		var fz: float = r.call(84, 160)
+		var fw: float = r.call(16, 34)
+		var fd: float = r.call(10, 22)
+		if not clear.call(fx, fz): continue
+		fields.append([fx, fz, fw, fd])
+		Build.box(self, Vector3(fw, 0.04, fd), Vector3(fx, 0.02, fz), [C.field1, C.field2, C.field3, Color("9aaa62")][i % 4], r.call(-0.08, 0.08))
+		for k in int(fw / 2.2):                                                                 # a hedgerow round each, with gaps
+			if rg.randf() < 0.18: continue
+			put.call("wild_bush", fx - fw / 2 + k * 2.2, fz - fd / 2 - 0.8, r.call(0.7, 1.1))
+			if rg.randf() < 0.8: put.call("wild_bush", fx - fw / 2 + k * 2.2, fz + fd / 2 + 0.8, r.call(0.7, 1.1))
+		if i % 3 == 0:
+			for h in 4: put.call("wild_hay", fx + r.call(-fw / 3, fw / 3), fz + r.call(-fd / 3, fd / 3), r.call(0.8, 1.0))
+	for i in 2600:                                                                               # grass, flowers and the odd bush, so it is not a carpet
+		var x: float = r.call(-230, 230)
+		var z: float = r.call(77, 175)
+		if not clear.call(x, z): continue
+		var roll := rg.randf()
+		if roll < 0.75: put.call("wild_tuft", x, z, r.call(0.8, 1.4))
+		elif roll < 0.95: put.call("wild_flowers", x, z, r.call(0.8, 1.2), -1.0, [Color(1, 0.9, 0.3), Color(0.95, 0.95, 1.0), Color(0.75, 0.5, 1.0), Color(1.0, 0.45, 0.4)][rg.randi() % 4])
+		else: put.call("wild_bush", x, z, r.call(0.5, 0.9))
+	for i in 30:                                                                                 # patches of longer or worn grass
+		var x: float = r.call(-220, 220); var z: float = r.call(78, 170)
+		if clear.call(x, z): Build.box(self, Vector3(r.call(6, 16), 0.03, r.call(4, 10)), Vector3(x, 0.01, z), [C.grass2, C.grass3, Color("7f9f52")][i % 3], r.call(0, 3))
+	for i in 140:                                                                                # reeds along the far bank
+		var x: float = r.call(-215, 215)
+		put.call("wild_tuft", x, r.call(74.5, 76.5), r.call(1.3, 1.9), -1.0, Color(0.85, 0.95, 0.7))
+	for i in 420:                                                                                # trees, scattered and in copses
+		var x: float = r.call(-220, 220)
+		var z: float = r.call(80, 175)
+		if not clear.call(x, z): continue
+		if fields.any(func(f): return absf(x - f[0]) < f[2] / 2 + 1 and absf(z - f[1]) < f[3] / 2 + 1): continue
+		put.call("wild_oak" if rg.randf() < 0.6 else "wild_pine", x, z, r.call(0.9, 1.6))
+	for fm in [[38.0, 108.0, 0.4], [-74.0, 122.0, 2.7], [150.0, 96.0, 1.2]]:                      # farmsteads: a cottage, a barn, a haystack
+		put.call("wild_cottage", fm[0], fm[1], 1.0, fm[2])
+		put.call("wild_barn", fm[0] + 8.0 * cos(fm[2]), fm[1] - 8.0 * sin(fm[2]), 1.0, fm[2])
+		for h in 3: put.call("wild_hay", fm[0] + r.call(-6, 6), fm[1] + r.call(5, 9), r.call(0.8, 1.0))
+	for i in 40:
+		var rkx: float = r.call(-210, 210); var rkz: float = r.call(80, 170)
+		if clear.call(rkx, rkz): put.call("wild_rock", rkx, rkz, r.call(0.6, 1.4))
+	# --- beyond the castle: dead ground carries on, into a dead wood, and a ridge of grey hills on the horizon
+	Build.box(self, Vector3(700, 0.05, 300), Vector3(0, 0.0, -317.0), C.dead)
+	for i in 700:
+		var x: float = r.call(-260, 260)
+		var z: float = r.call(-330, -150)
+		if absf(x) < 45 and z > -175: continue                                                    # the castle's own hill, and its road
+		if not clear.call(x, z): continue
+		put.call("wild_dead", x, z, r.call(0.9, 1.8))
+	for i in 34:
+		var hx: float = -420 + i * 25.0 + r.call(-8, 8)
+		var hh: float = r.call(30, 70)
+		Build.cone(self, r.call(40, 70), hh, Vector3(hx, -2, r.call(-470, -420)), Color("6d6878").lerp(Color("57606a"), rg.randf()), 6, r.call(0, 3))
+	# --- the Riverside, ringed with woods so its fields do not just stop
+	var rx0: float = RM.x - RM.hw - 6; var rx1: float = RM.x + RM.hw + 6
+	var rz0: float = RM.z - RM.hd - 14; var rz1: float = RM.z + RM.hd + 6
+	Build.box(self, Vector3(rx1 - rx0 + 220, 0.06, 260), Vector3(RM.x, -0.04, (rz0 + rz1) / 2.0 + 40), Color("86a85a"))   # the ground under it all, one colour, a little darker
+	for i in 4200:
+		var x: float = r.call(rx0 - 110, rx1 + 110)
+		var z: float = r.call(rz0 - 6, rz1 + 110)
+		if x > rx0 and x < rx1 and z < rz1: continue
+		if absf(x - RM.x) < 6 and z > RM.z + RM.hd: continue                                   # (the road goes on south, through the wood)
+		if z < RM.z - RM.hd - 2: continue                                                         # (not across the river)
+		var near_: float = minf(minf(absf(x - rx0), absf(x - rx1)), absf(z - rz1))
+		if rg.randf() < near_ / 180.0: continue                                                    # thick at the edge, thinning out
+		if near_ < 30 and rg.randf() < 0.45: continue                                              # (but the first of it a little open, a meadow's edge)
+		put.call("wild_pine" if rg.randf() < 0.5 else "wild_oak", x, z, r.call(1.0, 1.8))
+		if rg.randf() < 0.15: put.call("wild_bush", x + r.call(-3, 3), z + r.call(-3, 3), r.call(1.0, 1.6))
+	for i in 260:                                                                                # and the far side of its river: woods too
+		var x: float = r.call(rx0 - 60, rx1 + 60)
+		var z: float = r.call(RM.z - RM.hd - 70, RM.z - RM.hd - 19)
+		if not clear.call(x, z): continue
+		put.call("wild_pine" if rg.randf() < 0.5 else "wild_oak", x, z, r.call(1.0, 1.7))
+	for k in kinds:
+		var xa: Array[Transform3D] = xs[k]
+		var ca: Array[Color] = cs[k]
+		if xa.size(): _multi(Models.get_mesh(k), xa, ca)
 
 
 func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color]) -> void:
