@@ -719,16 +719,6 @@ func _contraptions_now() -> Array:
 
 
 ## 5 (or the fifth card): the next contraption you can build, then none.
-func _next_contraption() -> void:
-	var c := _contraptions_now()
-	if c.is_empty():
-		Sound.play("no"); hud.banner("No contraptions yet", "Barricades for Beginners teaches them, from rank 1. A box of cogs from the tinker builds one without.", 2.0)
-		_build_sel = ""
-		return
-	var i := c.find(_build_sel)
-	_build_sel = c[i + 1] if i + 1 < c.size() else ""
-
-
 func _ghost_pos() -> Dictionary:
 	var rot := roundf(me.r / (PI / 4)) * (PI / 4)
 	return {"x": me.x + sin(me.r) * 2.7, "z": me.z + cos(me.r) * 2.7, "rot": rot}
@@ -1104,7 +1094,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"baa": Sound.play("baa", 0.8, Vector2(ev[1], ev[2]))
 		"eatfish":
 			F.puff(ev[2], 1.6, ev[3], 14, F.C_GLAD, 2.4); F.ring(ev[2], ev[3], 1.6, 16, F.C_SPLASH); Sound.play("eat", 1.0, Vector2(ev[2], ev[3]))
-			if ev[1] == me.id: hud.banner("A fish", "Back to full health. It was very fresh.", 1.4)
+			if ev[1] == me.id: hud.banner("A fish", "Back to full health. It was very fresh." if Rules.rk(me, 1) >= 10 else "Sixty health back. It was very fresh.", 1.4)
 		"mole":                                           # a mole pops up out of its hill, and there are coins
 			world.mole_pop(ev[1], ev[2]); F.puff(ev[1], 0.3, ev[2], 10, F.C_WOOD, 2.0); F.puff(ev[1], 0.8, ev[2], 5, F.C_COIN, 2.0)
 			Sound.play("pop", 0.9, Vector2(ev[1], ev[2])); Sound.play("coin", 0.8, Vector2(ev[1], ev[2]))
@@ -1426,10 +1416,10 @@ func _apply_light(nf: float) -> void:
 	env.background_color = fog
 	env.fog_light_color = fog
 	var lit := smoothstep(0.3, 0.8, nf)                  # windows and lanterns come on as it gets dark
-	world.window_mat.emission_energy_multiplier = 2.6 * lit
-	world.window_mat.albedo_color = Color("3a3f52").lerp(Color("ffe6a8"), lit)
-	world.keep_window_mat.emission_energy_multiplier = 2.6 * lit
-	var kw := Color("3a3f52").lerp(Color("ffe6a8"), lit)
+	world.window_mat.emission_energy_multiplier = 1.5 * lit          # (version 7.25: candlelight, amber, not white)
+	world.window_mat.albedo_color = Color("3a3f52").lerp(Color("e8953e"), lit)
+	world.keep_window_mat.emission_energy_multiplier = 1.5 * lit
+	var kw := Color("3a3f52").lerp(Color("e8953e"), lit)
 	kw.a = world.keep_window_mat.albedo_color.a
 	world.keep_window_mat.albedo_color = kw
 	for l in world.lanterns:
@@ -1687,24 +1677,6 @@ func _test_hook() -> void:
 			var cd := 3.5 + (i % 3) * 3.4
 			var cu := R.spawn_undead(i % 2, me.x + cos(ca) * cd, me.z + sin(ca) * cd)
 			cu.state = "walk"; cu.t = 0; cu.hp = 400; cu.mhp = 400
-	if OS.get_environment("DTV_PLAT") != "" and me and _frame == at + 2:      # for pictures: a watch platform, roofed, with a sentry up it. DTV_PLAT=the day
-		R.day = int(OS.get_environment("DTV_PLAT"))
-		me.x = -8.0; me.z = D.VN + 8.5; me.wood = 30
-		R.try_place(me, "platform", -8.0, D.VN + 5.0, 0.0)
-		R.try_place(me, "platform", -1.0, D.VN + 5.0, 0.0)
-		var k := 0
-		for s in R.structs:
-			if s.k != "platform": continue
-			if k == 0: s.re = true
-			for q in R.peasants:
-				if q.kind == 0 and q.plat == 0 and q.state != "body":
-					q.owner = me.id; q.plat = s.id; q.state = "post"; q.x = s.x; q.z = s.z
-					break
-			k += 1
-		R.sv += 1
-		for i in 5:
-			var pu := R.spawn_undead(i % 2, -9.0 + i * 2.2, D.VN - 5.0 - (i % 2))
-			pu.state = "walk"; pu.stun = 999
 	if OS.get_environment("DTV_TOWER") != "" and me and _frame == at + 2:     # for pictures: all four watch towers built and manned, and both side gates
 		var tk := 0
 		for s in R.structs:

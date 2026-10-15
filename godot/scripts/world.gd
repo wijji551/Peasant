@@ -89,7 +89,7 @@ func _ready() -> void:
 	window_mat = StandardMaterial3D.new()
 	window_mat.albedo_color = Color("3a3f52")
 	window_mat.emission_enabled = true
-	window_mat.emission = Color("ffd98a")
+	window_mat.emission = Color("ff9a3c")
 	window_mat.emission_energy_multiplier = 0.0
 	_ground()
 	_castle()
@@ -110,13 +110,42 @@ func _ready() -> void:
 	_ground_detail()
 
 
+## A fire in a brazier: flames that flicker (they are turned up at night with the lanterns), and the light.
+var _brazier_flames: Array = []
+func _brazier_fire(pos: Vector3, reach: float) -> void:
+	var fm := StandardMaterial3D.new(); fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; fm.albedo_color = Color(1.0, 0.6, 0.2)
+	var fm2 := StandardMaterial3D.new(); fm2.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; fm2.albedo_color = Color(1.0, 0.85, 0.35)
+	for k in 3:
+		var a := k * TAU / 3.0
+		var f := Build.cone(self, 0.2, 0.55, pos + Vector3(cos(a) * 0.14, 0, sin(a) * 0.14), Color.WHITE, 5, a)
+		f.material_override = fm if k != 1 else fm2
+		_brazier_flames.append(f)
+	var f2 := Build.cone(self, 0.16, 0.8, pos, Color.WHITE, 5); f2.material_override = fm2; _brazier_flames.append(f2)
+	var l := OmniLight3D.new(); l.position = pos + Vector3(0, 0.6, 0); l.light_color = Color("ff9a48"); l.omni_range = reach
+	l.omni_attenuation = 1.4; l.light_energy = 0.0; l.shadow_enabled = false; add_child(l); lanterns.append(l)
+
+
+## A lantern on a crooked post, by a road.
+func _lantern_post(at: Vector3, face: float) -> void:
+	Build.box(self, Vector3(0.16, 2.7, 0.16), at, C.timber)
+	Build.box(self, Vector3(0.8, 0.1, 0.1), at + Vector3(face * 0.34, 2.62, 0), C.timber)
+	Build.box(self, Vector3(0.24, 0.1, 0.24), at, C.stone3)
+	lantern(at + Vector3(face * 0.66, 1.92, 0), 11.0)
+
+
 func rr(a: float, b: float) -> float:
 	return rng.randf_range(a, b)
 
 
-## A lantern: a small glowing box and a light that main.gd turns up at night.
+## A lantern: an iron frame round warm glass, and a light that main.gd turns up at night. (Version 7.25: it was a
+## plain glowing box, which at night read as a white cube.)
 func lantern(pos: Vector3, reach: float = 14.0) -> void:
-	Build.glow_box(self, Vector3(0.45, 0.45, 0.45), pos, window_mat)
+	Build.glow_box(self, Vector3(0.3, 0.34, 0.3), pos + Vector3(0, 0.04, 0), window_mat)
+	Build.box(self, Vector3(0.42, 0.06, 0.42), pos, C.iron)                                   # its base,
+	Build.cone(self, 0.3, 0.16, pos + Vector3(0, 0.38, 0), C.iron, 4, PI / 4)                 # its little roof,
+	Build.box(self, Vector3(0.08, 0.1, 0.08), pos + Vector3(0, 0.54, 0), C.iron)              # and a ring to hang it by
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]: Build.box(self, Vector3(0.04, 0.36, 0.04), pos + Vector3(sx * 0.17, 0.03, sz * 0.17), C.iron)
 	var l := OmniLight3D.new()
 	l.position = pos + Vector3(0, 0.3, 0)
 	l.light_color = Color("ffc070")
@@ -548,11 +577,14 @@ func _walls() -> void:
 	_wall(-VW, VS, VW, VS)
 	_gateway(Vector3(-VW, 0, GATE_Z), PI / 2, -0.9)
 	_gateway(Vector3(VW, 0, GATE_Z), PI / 2, 0.9)
-	# two braziers on the road outside the north gate
+	# two braziers on the road outside the north gate (version 7.25: with a fire in them, not a white box)
 	for s in [-1.0, 1.0]:
 		Build.cyl(self, 0.3, 0.42, 1.5, Vector3(s * 4.4, 0, VN - 2.6), C.stone3, 6)
 		Build.cyl(self, 0.55, 0.34, 0.4, Vector3(s * 4.4, 1.5, VN - 2.6), C.iron, 6)
-		lantern(Vector3(s * 4.4, 1.85, VN - 2.6), 16.0)
+		_brazier_fire(Vector3(s * 4.4, 1.85, VN - 2.6), 16.0)
+	# (version 7.25) lantern posts along the roads, so the village has some light to fight in after dark
+	for lp in [[-4.1, -19.5, 1.0], [4.1, -12.5, -1.0], [-12.0, 4.9, 1.0], [12.0, 4.9, -1.0], [-22.0, -0.9, 1.0], [22.0, -0.9, -1.0], [-3.9, 21.5, 1.0], [3.9, 21.5, -1.0]]:
+		_lantern_post(Vector3(lp[0], 0, lp[1]), lp[2])
 	# draw every log at once
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.36
@@ -1560,7 +1592,7 @@ func _inn_room() -> void:
 	Build.box(n, Vector3(0.1, 0.1, 0.1), Vector3(-5.7, 0.12, 5.4), Color("f2c94c"))
 	# light: lanterns over the bar and the room, warm
 	for at in [Vector3(-3.2, 2.9, -3.2), Vector3(3.6, 2.9, -2.6), Vector3(1.0, 2.9, 2.6)]:
-		Build.box(n, Vector3(0.3, 0.36, 0.3), at, Color("ffd98a")).material_override = Build.mat(Color("ffd98a"), 2.2)
+		Build.box(n, Vector3(0.3, 0.36, 0.3), at, Color("ffd98a")).material_override = Build.mat(Color("f0a050"), 1.4)
 		var l := OmniLight3D.new()
 		l.light_color = Color(1.0, 0.82, 0.55)
 		l.omni_range = 10.0
@@ -1979,7 +2011,7 @@ func _druid_cottage(at: Vector3) -> void:
 		Build.box(n, Vector3(0.06, 0.04, 0.06), t + Vector3(0.12, 0.5, 0.05), Color("ffffff"))
 	# herbs drying under the eaves, and a lantern by the door
 	for i in 5: Build.cone(n, 0.14, 0.5, Vector3(3.3, 1.6, -1.0 + i * 0.5), [C.leaf, Color("8a6ab0"), C.leaf2, Color("c0a040"), C.leaf][i], 5)
-	Build.box(n, Vector3(0.24, 0.32, 0.24), Vector3(3.3, 1.9, 0.8), Color("ffd98a")).material_override = Build.mat(Color("ffd98a"), 2.0)
+	Build.box(n, Vector3(0.24, 0.32, 0.24), Vector3(3.3, 1.9, 0.8), Color("ffd98a")).material_override = Build.mat(Color("f0a050"), 1.4)
 	# his table, in the market, with potions glowing on it, and the druid himself behind it
 	var tb := Vector3(5.4, 0, 0)
 	Build.box(n, Vector3(1.0, 0.9, 3.0), tb, C.wood2)
@@ -2024,6 +2056,9 @@ func _washing(a: Vector3, b: Vector3) -> void:
 func _hamlet_step(delta: float) -> void:
 	if _cow == null: return
 	var now := Time.get_ticks_msec() / 1000.0
+	for i in _brazier_flames.size():                                                      # the braziers at the north gate
+		var bf: MeshInstance3D = _brazier_flames[i]
+		bf.scale = Vector3(1.0 + 0.1 * sin(now * 8.0 + i), 0.85 + 0.25 * absf(sin(now * 6.1 + i * 1.9)), 1.0 + 0.1 * cos(now * 7.3 + i))
 	for i in _bonfire_flames.size():
 		var f: MeshInstance3D = _bonfire_flames[i]
 		f.scale = Vector3(1.0 + 0.12 * sin(now * 7.0 + i), 0.85 + 0.25 * absf(sin(now * 5.3 + i * 1.7)), 1.0 + 0.12 * cos(now * 6.1 + i))

@@ -745,3 +745,13 @@ Before the test groups. Agreed with Matt as a set.
 - **See-through player**: players' materials use Godot's stencil X-ray (`STENCIL_MODE_XRAY`), so behind a roof or a tree you show as a pale shape, and not through yourself.
 - **Small touches**: running dust, swimming splashes, a puff when a dog bites; the Out signs moved to the side of each doorway.
 - All 32 suites and co-op pass.
+
+## Version 7.25: lights and lanterns, and the texts brought up to date (build counter 32)
+
+From a review with Matt (his own look at the north wall's dashed foundations is pending).
+
+- **Lights.** Windows: albedo to amber `e8953e` and emission `ff9a3c` at 1.5 (it was a pale cream at 2.6, which went white). `world.lantern()` is an iron-framed lantern with warm glass instead of a plain glowing box. The north-gate braziers have flames (`_brazier_fire`, flickering). Eight `_lantern_post`s along the north road, the west-east road, by the side gates and by the cottages. Interior lamps in the inn and at the Riverside warmed too.
+- **Texts**, checked by a read-through of every rank, relic note and handbook page against the code (`menus.gd` GUIDE, `data.gd` books, lore lines and the talk, `main.gd` messages): the fish banner; the night watchman's numbers and conditions (handbook and rank V); the smithy's rune tab; the lobby's late joining; the outer ruins' places; contraptions on the wheel (and the unused `_next_contraption` removed); the Scythe (you a quarter faster, not your posse); Tam on mithril and runes; the stranger's boss nights; "(up to rank VII)" on the eleven books whose per-rank bonus stops there, and the fire book's burn time; armour's 65% in Hammer V and VIII and the handbook; relic book VII (the Previous Tenant) and VIII (relic weapons and armour); the Helm (the howl); the Dog Lead; hobnailed boots; wraiths and mithril/rune. Carrying limits in the handbook.
+- Removed: the watch platform's picture hook, `MOON_NAME`, `SKINDS`, `FORGE_A`, none used.
+- Not changed, noted for Matt: Prospero's Marotte duplicates Jester X; Dogs VIII duplicates Relics II; the Dog Lead's second dog never holds, and That One only sends the first.
+- All 32 suites and co-op pass.
