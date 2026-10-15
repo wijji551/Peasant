@@ -1481,6 +1481,7 @@ func _camera(delta: float) -> void:
 	world.set_veins(R.rune_left)
 	world.set_riverside(R.raft, R.raftW, R.rcave, R.runes2)
 	world.set_moles(R.moles)
+	world.view_at = _focus
 	atmos.indoors = indoors
 	if not win.is_open("menu"):
 		_yaw_goal += ((1.0 if Keys.held("cam_right") else 0.0) - (1.0 if Keys.held("cam_left") else 0.0)) * delta * 2.2

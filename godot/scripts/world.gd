@@ -77,6 +77,7 @@ var _castle_lit: StandardMaterial3D       # the one window that is always lit
 var storm: Node3D                         # the sky turning over the castle, in the last week
 var _storm_light: OmniLight3D
 var night := 0.0                          # how dark it is (main.gd keeps this up to date)
+var view_at := Vector3.ZERO               # where the view is looking (main.gd), for the crows and the things in the dark
 var _bell_swing := 0.0
 var _dummy_hit: Array[float] = [0.0, 0.0, 0.0]
 
@@ -616,7 +617,7 @@ func _ground_detail() -> void:
 	var main_ok := func(x: float, z: float) -> bool:
 		if x < D.X0 + 1 or x > D.X1 - 1 or z < D.Z0 + 2 or z > 52.5: return false
 		if absf(x) < 3.6 and z < D.VN: return false                                      # the castle road
-		if absf(z - D.GATE_Z) < 2.6 and absf(x) < 48: return false                       # the gate roads
+		if absf(z - D.GATE_Z) < 2.6: return false                                         # the gate roads (version 7.27: all the way to the edges)
 		if x > D.FARM.x0 - 1 and x < D.FARM.x1 + 1 and z > D.FARM.z0 - 1 and z < D.FARM.z1 + 1: return false
 		if Vector2(x, z).distance_to(D.HILL) < 30: return false                          # the castle
 		if Vector2(x - D.MILL.x, z - D.MILL.z).length() < 4.5: return false
@@ -693,7 +694,7 @@ func _ground_detail() -> void:
 		var xf: Array[Transform3D] = []
 		var cl: Array[Color] = []
 		xf.assign(lists[k][0]); cl.assign(lists[k][1])
-		if xf.size(): _multi(meshes[k], xf, cl)
+		if xf.size(): _multi(meshes[k], xf, cl, 0.3 if k == "tuft" else 0.0, 0.21 if k == "tuft" else 0.0)   # (version 7.27: the grass moves)
 
 
 ## The country beyond the edges (version 7.26): it was flat empty grass to the horizon, and at the Riverside a sharp line
@@ -721,14 +722,26 @@ func _wilds() -> void:
 		if z > 54 and z < 76: return false                                                     # its river
 		if x > RM.x - RM.hw - 6 and x < RM.x + RM.hw + 6 and z > RM.z - RM.hd - 18 and z < RM.z + RM.hd + 6: return false   # the Riverside and its own fields
 		if absf(x - RM.x) < 6 and z > RM.z + RM.hd and z < RM.z + RM.hd + 80: return false   # the road south to Hallowshire Town
+		if absf(z - D.GATE_Z) < 4.0: return false                                              # the west and east roads, on into the woods
 		return true
 	# --- the thorn hedge at the village's west and east edges: bushes of all sizes, not a row of boxes
 	for sx in [-1.0, 1.0]:
 		var z := -66.0
 		while z <= 56.0:
+			if absf(z - D.GATE_Z) < 4.2:                                                          # (a gap for the road)
+				z += 1.0; continue
 			put.call("wild_bush", sx * (D.X1 + r.call(1.8, 3.4)), z, r.call(1.3, 2.1))
 			if rg.randf() < 0.45: put.call("wild_bush", sx * (D.X1 + r.call(3.5, 5.5)), z + r.call(-1, 1), r.call(1.5, 2.4))
 			z += r.call(1.6, 2.4)
+	# --- the west and east roads go on, past the hedge and into the woods, rutted and fading
+	for sx in [-1.0, 1.0]:
+		Build.box(self, Vector3(200, 0.07, 5), Vector3(sx * 146.0, 0, D.GATE_Z), C.path)
+		for k in 60:
+			Build.box(self, Vector3(r.call(0.4, 0.9), 0.085, r.call(0.4, 0.9)), Vector3(sx * r.call(48, 240), 0, D.GATE_Z + r.call(-2, 2)), C.path2, r.call(0, 3))
+		for k in 2: Build.box(self, Vector3(200, 0.075, 0.35), Vector3(sx * 146.0, 0, D.GATE_Z + (k * 2 - 1) * 1.1), C.path.darkened(0.12))   # cart ruts
+		var sp := Vector3(sx * (D.X1 + 9.0), 0, D.GATE_Z - 3.6)                                    # and a milestone, just past the hedge
+		Build.box(self, Vector3(0.6, 1.0, 0.35), sp, C.stone3)
+		Build.cyl(self, 0.3, 0.3, 0.35, sp + Vector3(0, 1.0, 0), C.stone3, 8, 0.0, PI / 2)
 	# --- the woods either side of the village, thickest nearest the hedge
 	for sx in [-1.0, 1.0]:
 		for i in 900:
@@ -817,10 +830,146 @@ func _wilds() -> void:
 	for k in kinds:
 		var xa: Array[Transform3D] = xs[k]
 		var ca: Array[Color] = cs[k]
-		if xa.size(): _multi(Models.get_mesh(k), xa, ca)
+		if xa.size(): _multi(Models.get_mesh(k), xa, ca, {"wild_pine": 0.035, "wild_oak": 0.03, "wild_dead": 0.012, "wild_bush": 0.05, "wild_tuft": 0.3, "wild_flowers": 0.25}.get(k, 0.0))
 
 
-func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color]) -> void:
+# --- (version 7.27) crows that lift out of the trees now and then and circle before they go, and at night, out
+# on the dead ground, eyes that open and shut and a will-o'-the-wisp or two drifting about. None of it is in the rules.
+var _crows: Array = []                    # [node, wing L, wing R, phase, radius, height, angle speed]
+var _crow_c := Vector3.ZERO
+var _crow_t := 9.0
+var _crow_age := -1.0
+var _crow_out := Vector3.ZERO
+var _eyes: Array = []                     # [node, seconds shown, seconds hidden]
+var _wisps: Array = []                    # [node, light, base position, phase]
+
+func _outside(p: Vector3) -> bool:       # out of the village walls, where a crow or a pair of eyes might be
+	return absf(p.x) > D.VW + 4 or p.z < D.VN - 4 or p.z > D.VS + 4
+
+func _crows_step(delta: float) -> void:
+	if _crows.is_empty():
+		var black := Build.mat(Color("141018"))
+		for i in 7:
+			var n := Node3D.new(); n.visible = false; add_child(n)
+			Build.box(n, Vector3(0.22, 0.18, 0.46), Vector3(0, 0, 0), Color("141018")).material_override = black
+			Build.box(n, Vector3(0.12, 0.12, 0.16), Vector3(0, 0.08, 0.28), Color("141018")).material_override = black
+			var wl := Node3D.new(); wl.position = Vector3(-0.1, 0.12, 0); n.add_child(wl)
+			Build.box(wl, Vector3(0.5, 0.03, 0.26), Vector3(-0.25, 0, 0), Color("141018")).material_override = black
+			var wr := Node3D.new(); wr.position = Vector3(0.1, 0.12, 0); n.add_child(wr)
+			Build.box(wr, Vector3(0.5, 0.03, 0.26), Vector3(0.25, 0, 0), Color("141018")).material_override = black
+			_crows.append([n, wl, wr, randf() * TAU, randf_range(3.5, 8.0), randf_range(8.0, 13.0), randf_range(0.9, 1.5) * (1.0 if i % 2 else -1.0)])
+		if OS.get_environment("DTV_CROWS") != "": _crow_t = 1.0              # for pictures: a flock up at once
+	var now := Time.get_ticks_msec() / 1000.0
+	if _crow_age < 0.0:
+		_crow_t -= delta
+		if _crow_t > 0.0 or night > 0.6: return
+		_crow_t = randf_range(18.0, 40.0)
+		for k in 8:                                    # somewhere out of the village, near enough to be seen: ahead or to the side (the view looks north)
+			var a := randf_range(PI * 0.95, PI * 2.05)
+			var c := view_at + Vector3(cos(a), 0, sin(a)) * randf_range(16.0, 32.0)
+			if _outside(c) and absf(c.z - 65.0) > 10.0:
+				_crow_c = c; _crow_age = 0.0
+				_crow_out = Vector3(cos(a), 0, sin(a))
+				Sound.play("caw0" if randf() < 0.5 else "caw1", 0.8, Vector2(c.x, c.z))
+				break
+		return
+	_crow_age += delta
+	if OS.get_environment("DTV_CROWS") != "":
+		_crow_age = minf(_crow_age, 5.0)   # (for pictures: held mid-circle)
+	var done := true
+	for cw in _crows:
+		var n: Node3D = cw[0]
+		var t := _crow_age - fmod(float(cw[3]), 1.0) * 0.8          # they go up one after another
+		if t < 0.0: n.visible = false; done = false; continue
+		var ang: float = cw[3] + t * float(cw[6])
+		var h: float = minf(float(cw[5]), t * 4.0)
+		var p := _crow_c + Vector3(cos(ang) * float(cw[4]), h, sin(ang) * float(cw[4]))
+		if t > 9.0: p += _crow_out * (t - 9.0) * 9.0 + Vector3(0, (t - 9.0) * 2.0, 0)   # and away
+		n.visible = t < 16.0
+		if n.visible: done = false
+		var dir := Vector3(-sin(ang) * float(cw[6]), 0.2, cos(ang) * float(cw[6])) if t <= 9.0 else _crow_out
+		n.position = p
+		n.look_at(p + dir, Vector3.UP)
+		n.rotate_object_local(Vector3.UP, PI)
+		var flap := sin(now * 14.0 + float(cw[3]) * 3.0) * 0.7
+		(cw[1] as Node3D).rotation.z = flap; (cw[2] as Node3D).rotation.z = -flap
+	if done: _crow_age = -1.0
+
+func _haunts_step(delta: float) -> void:
+	if _eyes.is_empty():
+		for i in 6:                                        # eyes: a pair, red or green, low among the dead trees
+			var n := Node3D.new(); n.visible = false; add_child(n)
+			var em := Build.mat(Color(1.0, 0.18, 0.1) if i % 2 else Color(0.5, 1.0, 0.3), 3.0)
+			for sx in [-0.09, 0.09]: Build.box(n, Vector3(0.07, 0.05, 0.05), Vector3(sx, 0, 0), Color.WHITE).material_override = em
+			_eyes.append([n, 0.0, randf_range(1.0, 6.0)])
+		for i in 3:                                        # will-o'-the-wisps: a pale light that drifts and bobs
+			var n := MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 0.16; sm.height = 0.32; n.mesh = sm
+			n.material_override = Build.mat(Color(0.55, 0.95, 1.0), 4.0); n.visible = false; add_child(n)
+			var l := OmniLight3D.new(); l.light_color = Color(0.5, 0.9, 1.0); l.omni_range = 4.0; l.light_energy = 0.0; n.add_child(l)
+			_wisps.append([n, l, Vector3.ZERO, randf() * TAU])
+	var dark := night > 0.45
+	var dead_ground := func(p: Vector3) -> bool:
+		return p.z < D.VN - 6 and p.z > -175.0 and absf(p.x) > 6.0 and Vector2(p.x - HILL.x, p.z - HILL.z).length() > 44.0
+	for e in _eyes:
+		var n: Node3D = e[0]
+		if not dark: n.visible = false; continue
+		if n.visible:
+			e[1] -= delta
+			if e[1] <= 0.0: n.visible = false; e[2] = randf_range(2.0, 8.0)
+			elif randf() < delta * 0.6: n.scale = Vector3(1, 0.1, 1)          # a blink
+			else: n.scale = Vector3.ONE
+		else:
+			e[2] -= delta
+			if e[2] <= 0.0:
+				for k in 6:
+					var a := randf() * TAU
+					var p := view_at + Vector3(cos(a), 0, sin(a)) * randf_range(10.0, 30.0)
+					if dead_ground.call(p):
+						n.position = Vector3(p.x, randf_range(0.5, 1.3), p.z)
+						n.look_at(Vector3(view_at.x, n.position.y, view_at.z), Vector3.UP); n.rotate_object_local(Vector3.UP, PI)
+						n.visible = true; e[1] = randf_range(2.0, 5.0)
+						break
+				if not n.visible: e[2] = 1.5
+	var now := Time.get_ticks_msec() / 1000.0
+	for wsp in _wisps:
+		var n: MeshInstance3D = wsp[0]
+		var l: OmniLight3D = wsp[1]
+		if not dark: n.visible = false; l.light_energy = 0.0; continue
+		var b: Vector3 = wsp[2]
+		if not n.visible or Vector2(b.x - view_at.x, b.z - view_at.z).length() > 45.0:
+			for k in 6:
+				var a := randf() * TAU
+				var p := view_at + Vector3(cos(a), 0, sin(a)) * randf_range(14.0, 34.0)
+				if dead_ground.call(p): wsp[2] = p; n.visible = true; break
+			b = wsp[2]
+		var ph: float = wsp[3]
+		n.position = b + Vector3(sin(now * 0.3 + ph) * 3.0, 0.9 + 0.35 * sin(now * 1.7 + ph), cos(now * 0.23 + ph) * 3.0)
+		l.light_energy = (0.6 + 0.3 * sin(now * 3.1 + ph)) * clampf((night - 0.45) * 4.0, 0.0, 1.0)
+
+
+## Things that bend in the wind (version 7.27): each sways by how high the point is above its own foot, in a slow
+## breeze that rolls across the land (its phase from where it stands), and gusts now and then.
+const SWAY_SHADER := """
+shader_type spatial;
+uniform float amount = 0.04;
+uniform float base = 0.0;
+void vertex() {
+	vec3 wp = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+	float h = max(VERTEX.y + base, 0.0);
+	float t = TIME * 1.1 + wp.x * 0.07 + wp.z * 0.05;
+	float gust = 0.75 + 0.25 * sin(TIME * 0.23 + wp.x * 0.01);
+	VERTEX.x += sin(t) * amount * h * gust;
+	VERTEX.z += cos(t * 0.83 + 1.3) * amount * 0.6 * h * gust;
+}
+void fragment() {
+	ALBEDO = COLOR.rgb;
+	ROUGHNESS = 1.0;
+	SPECULAR = 0.15;
+}
+"""
+static var _sway_shader: Shader
+
+func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color], sway: float = 0.0, base: float = 0.0) -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
@@ -829,13 +978,20 @@ func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color]) -> void:
 	for i in xfs.size():
 		mm.set_instance_transform(i, xfs[i])
 		mm.set_instance_color(i, cols[i])
-	var m := StandardMaterial3D.new()
-	m.vertex_color_use_as_albedo = true
-	m.roughness = 1.0
-	m.metallic_specular = 0.15
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.material_override = m
+	if sway > 0.0:
+		if _sway_shader == null:
+			_sway_shader = Shader.new(); _sway_shader.code = SWAY_SHADER
+		var sm := ShaderMaterial.new(); sm.shader = _sway_shader
+		sm.set_shader_parameter("amount", sway); sm.set_shader_parameter("base", base)
+		mmi.material_override = sm
+	else:
+		var m := StandardMaterial3D.new()
+		m.vertex_color_use_as_albedo = true
+		m.roughness = 1.0
+		m.metallic_specular = 0.15
+		mmi.material_override = m
 	add_child(mmi)
 
 
@@ -2347,6 +2503,8 @@ func hit_dummy(i: int) -> void:
 
 
 func _process(delta: float) -> void:
+	_crows_step(delta)
+	_haunts_step(delta)
 	if bell:
 		_bell_swing = maxf(0.0, _bell_swing - delta * 0.45)
 		bell.rotation.x = sin(Time.get_ticks_msec() / 1000.0 * 7.0) * 0.55 * _bell_swing

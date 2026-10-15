@@ -764,3 +764,11 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - Beyond the castle: the dead ground carries on to z -467; 700 dead trees; a ridge of 34 grey hills on the horizon.
 - The Riverside: one ground colour under all of it, and about 4,200 tries at woods round it, open at first and thick further out, with the road south left clear; woods on the far side of its river too.
 - All suites and co-op pass.
+
+## Version 7.27: wind, crows, things in the dark, the roads out (build counter 34)
+
+- **Wind**: `world._multi` takes `sway` and `base`; with sway it uses a small shader (`SWAY_SHADER`) that moves each vertex by its height above the instance's foot, with a breeze whose phase rolls across the land and a slow gust. Used for the wild pines, oaks, dead trees, bushes, tufts and flowers, and the main map's grass tufts.
+- **Crows** (`_crows_step`): every 18-40 s by day, a flock of seven lifts out of somewhere outside the walls, 16-32 paces from the view and ahead of or beside it (the view looks north), rises, circles about nine seconds, and flies off; a caw when they go up. `world.view_at` is the view's focus, set by `main.gd`. `DTV_CROWS` holds a flock mid-circle, for pictures.
+- **Eyes and wisps** (`_haunts_step`): at night (`night` > 0.45), on the dead ground beyond the north wall within 10-34 paces of the view: six pairs of red or green eyes that open for a few seconds, blink, close, and open somewhere else; three will-o'-the-wisps, pale glowing lights that drift and bob, with a faint light of their own.
+- **Roads**: the west and east roads run on from 46 to about 246 paces, with cart ruts and stones, through a gap in the hedge and a lane through the woods (`clear` keeps 4 paces either side), with a milestone just past the hedge. The ground detail keeps off the whole length.
+- All suites and co-op pass.
