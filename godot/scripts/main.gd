@@ -1365,7 +1365,12 @@ func _draw(delta: float) -> void:
 		var ok := Rules.has(me, Rules.cost_of(me, _build_sel)) and R.valid_place(_build_sel, g.x, g.z, g.rot)
 		(_ghost.material_override as StandardMaterial3D).albedo_color = Color(0.6, 0.95, 0.5, 0.45) if ok else Color(0.95, 0.4, 0.35, 0.45)
 	_camera(delta)
+	if OS.get_environment("DTV_WEATHER") != "" and not _weather_forced:   # for pictures: DTV_WEATHER=rain
+		R.weather = OS.get_environment("DTV_WEATHER"); atmos.weather = R.weather; _weather_forced = true; _wind = 2.8; atmos._bolt_t = 0.5
 	if not _weather_forced: atmos.weather = R.weather
+	var wind_want: float = {"clear": 1.0, "overcast": 1.5, "rain": 2.8, "fog": 0.3, "snow": 0.9, "moon": 1.0}.get(atmos.weather, 1.0)   # (version 7.28) the wind, by the weather
+	_wind = move_toward(_wind, wind_want, delta * 0.35)
+	world.set_wind(_wind); Figure.wind = _wind; atmos.wind = _wind; Sound.wind = _wind
 	var lan := me != null and R.players.any(func(o): return o.trk == D.I_LANTERN and o.state == "ok" and D.d2(o.x, o.z, me.x, me.z) < 81)
 	atmos.see = 0.15 if lan else 0.55 if me != null and Rules.rk(me, D.B_WATCH) >= 2 else 1.0   # the Unblinking Lantern, and the watchman's eyes
 	_apply_light(minf(R.nf, 0.35) if lan else R.nf)
@@ -1455,6 +1460,8 @@ func _apply_light(nf: float) -> void:
 
 ## The view: looking down on the player, from the south to begin with (as in the web version). It can be turned
 ## round the player (the turn keys, or the mouse with the wheel pressed or the look key held), tilted, and zoomed.
+var _wind := 1.0
+
 func _camera(delta: float) -> void:
 	var li := _later.size() - 1                          # blows from shots still in the air
 	while li >= 0:

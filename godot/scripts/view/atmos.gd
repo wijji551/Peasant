@@ -36,6 +36,11 @@ var indoors := false                # the player is inside somewhere: no rain in
 var moon := ""                      # which moon is up tonight: "", "full", "harvest", "frost" or "blood"
 var evil := 0                       # how far gone the castle is (0 to 3): more lightning the worse it gets
 var flash := 0.0                    # lightning: 1 at the strike, fading; main.gd brightens the sky by it
+var wind := 1.0                     # (version 7.28) how hard the wind blows, from the weather (main.gd)
+var _splash: CPUParticles3D         # rain landing: little splashes on the ground round you
+var _leaves: CPUParticles3D         # in a storm: leaves and bits torn off, blowing past
+var _bolt: Node3D                   # a fork of lightning, for a moment
+var _bolt_show := 0.0
 var _mists: Array[ShaderMaterial] = []
 var _rain: CPUParticles3D
 var _snow: CPUParticles3D
@@ -88,6 +93,9 @@ func _ready() -> void:
 		_mists.append(m)
 	_rain = _make_rain()
 	add_child(_rain)
+	_splash = _make_splash(); add_child(_splash)
+	_leaves = _make_leaves(); add_child(_leaves)
+	_bolt = Node3D.new(); _bolt.visible = false; add_child(_bolt)
 	_snow = _make_snow()
 	add_child(_snow)
 	_moon = MeshInstance3D.new()             # the full moon, low over the castle
@@ -120,7 +128,7 @@ func pick(game_seed: int, day: int) -> void:
 
 ## How much darker and greyer the day is for the weather, for main.gd's lighting.
 func gloom() -> float:
-	return {"clear": 0.0, "overcast": 0.35, "rain": 0.55, "fog": 0.3, "snow": 0.3, "moon": 0.0}.get(weather, 0.0)
+	return {"clear": 0.0, "overcast": 0.35, "rain": 0.66, "fog": 0.3, "snow": 0.3, "moon": 0.0}.get(weather, 0.0)   # (version 7.28: rain is a storm now, and darker)
 
 
 var see := 1.0                      # how much of the haze there is for the one watching: less for a night watchman, none with the Unblinking Lantern
@@ -136,6 +144,13 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 		m.set_shader_parameter("haunt_tint", Color(0.62, 0.66, 0.6).lerp(Color(0.3, 0.52, 0.36), night))
 	_rain.emitting = weather == "rain" and not indoors
 	_rain.global_position = focus + Vector3(0, 26, 4)
+	_rain.direction = Vector3(0.12 + 0.22 * maxf(wind - 1.0, 0.0), -1, 0.05)        # (version 7.28) driven slantwise by a storm
+	_splash.emitting = weather == "rain" and not indoors
+	_splash.global_position = focus + Vector3(0, 0.08, 2)
+	_leaves.emitting = wind > 1.8 and not indoors
+	_leaves.global_position = focus + Vector3(-30, 3, 2)
+	_leaves.initial_velocity_min = 7.0 * wind; _leaves.initial_velocity_max = 11.0 * wind
+	_snow.direction = Vector3(0.2 * wind, -1, 0.1)
 	_snow.emitting = weather == "snow" and not indoors
 	_snow.global_position = focus + Vector3(0, 18, 4)
 	_moon.visible = moon != "" and night > 0.2
@@ -159,9 +174,17 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 		l.light_energy = (0.6 + night * 2.6) * (0.85 + 0.15 * sin(_t * 11.0 + l.position.x))
 	if _haunt_mat:
 		_haunt_mat.emission_energy_multiplier = 0.2 + night * 3.2
-	# lightning over Ashhollow, at night only
+	# lightning over Ashhollow, at night only; and in a storm, by day too, with a fork you can see (version 7.28)
 	flash = maxf(0.0, flash - delta * 3.5)
-	if night > 0.6:
+	_bolt_show -= delta
+	_bolt.visible = _bolt_show > 0.0
+	if weather == "rain" and not indoors and night <= 0.6:
+		_bolt_t -= delta
+		if _bolt_t <= 0:
+			flash = 1.0                                                     # (and the thunder follows: sound.gd)
+			_bolt_t = _rng.randf_range(10.0, 28.0)
+			_fork(focus)
+	elif night > 0.6:
 		_bolt_t -= delta
 		if _bolt_t <= 0:
 			flash = 1.0
@@ -170,6 +193,74 @@ func update(delta: float, nf: float, focus: Vector3) -> void:
 			flash = 0.6                  # sometimes a second flicker just before
 	else:
 		_bolt_t = maxf(_bolt_t, 6.0)
+
+
+## A fork of lightning: a jagged line of bright pieces from the clouds down to somewhere out of the village.
+func _fork(focus: Vector3) -> void:
+	for c in _bolt.get_children(): c.queue_free()
+	var a := _rng.randf_range(PI * 1.1, PI * 1.9)
+	var at := focus + Vector3(cos(a), 0, sin(a)) * _rng.randf_range(35.0, 70.0)
+	var m := StandardMaterial3D.new(); m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; m.albedo_color = Color(0.92, 0.95, 1.0)
+	var p := at + Vector3(_rng.randf_range(-4, 4), 60.0, _rng.randf_range(-4, 4))
+	while p.y > 0.0:
+		var q := p + Vector3(_rng.randf_range(-3.0, 3.0), -_rng.randf_range(5.0, 9.0), _rng.randf_range(-2.0, 2.0))
+		q.y = maxf(q.y, 0.0)
+		var seg := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.35, 0.35, p.distance_to(q)); seg.mesh = bm
+		seg.material_override = m
+		_bolt.add_child(seg)
+		seg.global_position = (p + q) / 2.0
+		seg.look_at(q, Vector3.RIGHT if absf((q - p).normalized().y) > 0.99 else Vector3.UP)
+		p = q
+	_bolt_show = 0.18
+
+
+func _make_splash() -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = 260
+	p.lifetime = 0.25
+	p.local_coords = false
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	p.emission_box_extents = Vector3(34, 0.05, 26)
+	p.direction = Vector3(0, 1, 0)
+	p.spread = 35.0
+	p.gravity = Vector3(0, -14, 0)
+	p.initial_velocity_min = 1.5
+	p.initial_velocity_max = 2.6
+	var m := BoxMesh.new(); m.size = Vector3(0.07, 0.07, 0.07)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(0.85, 0.9, 1.0, 0.5)
+	m.material = mat
+	p.mesh = m
+	p.emitting = false
+	return p
+
+
+func _make_leaves() -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = 70
+	p.lifetime = 6.0
+	p.local_coords = false
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	p.emission_box_extents = Vector3(2, 3, 30)
+	p.direction = Vector3(1, 0.1, 0.1)
+	p.spread = 18.0
+	p.gravity = Vector3(0, -0.8, 0)
+	p.initial_velocity_min = 7.0
+	p.initial_velocity_max = 11.0
+	p.angular_velocity_min = -400.0
+	p.angular_velocity_max = 400.0
+	p.particle_flag_rotate_y = true
+	var m := BoxMesh.new(); m.size = Vector3(0.22, 0.03, 0.16)
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	m.material = mat
+	p.mesh = m
+	p.color_ramp = Gradient.new()
+	p.color_ramp.set_color(0, Color(0.45, 0.6, 0.25)); p.color_ramp.set_color(1, Color(0.6, 0.45, 0.2))
+	p.emitting = false
+	return p
 
 
 func _make_rain() -> CPUParticles3D:

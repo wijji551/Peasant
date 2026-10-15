@@ -12,13 +12,14 @@ const EFFECTS := ["bell", "bone", "build", "caw0", "caw1", "cheer", "chop", "cla
 	"find", "forge", "groan0", "groan1", "groan2", "gulp", "hit", "holy", "hooves", "hurt", "iron", "jeer", "keep", "knock",
 	"lost", "nail", "no", "owl", "page", "pick", "pluck", "pop", "raise", "rally", "rattle", "relic", "ring", "splash", "splat",
 	"steward", "stone", "swing", "thump", "thunder0", "thunder1", "won", "thwack", "crit", "tink", "whoosh", "shout", "cockerel", "howl", "whip", "sermon", "bark", "growl", "baa", "moo", "bray", "cluck", "whistle"]
-const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "castle": "amb_castle",
+const LOOPS := {"day": "amb_day", "night": "amb_night", "rain": "amb_rain", "wind": "amb_wind", "castle": "amb_castle",
 	"music_day": "music_day", "music_night": "music_night", "music_boss": "music_boss"}
 const VARY := ["chop", "hit", "bone", "swing", "stone", "pick", "build", "splash", "thump", "splat", "groan0", "groan1", "groan2", "rattle", "caw0", "caw1", "thwack", "tink", "whoosh"]
 const HEAR := 34.0               # further from the camera than this, an effect is not heard
 
 static var me: Sound
-static var boss_music := false         # the Lord is on the field: the organ
+static var boss_music := false
+static var wind := 1.0                   # how hard the wind blows (main.gd)         # the Lord is on the field: the organ
 var focus := Vector2.ZERO
 var _fx: Dictionary = {}          # name -> AudioStream
 var _pool: Array[AudioStreamPlayer] = []
@@ -110,6 +111,7 @@ func update(delta: float, nf: float, focus_: Vector3, weather: String, undead_ne
 	_fade("day", (1.0 - night) * (0.75 if weather == "rain" else 1.0) * 0.7, delta)
 	_fade("night", night * 0.8, delta)
 	_fade("rain", 0.34 if weather == "rain" else 0.0, delta)      # (it was 0.8: at full volume the rain drowned the village)
+	_fade("wind", clampf((wind - 1.2) * 0.32, 0.0, 0.5), delta)   # (version 7.28) a storm's wind, gusting
 	_fade("castle", clampf(castle * 0.9 + night * 0.25, 0.0, 1.0) * 0.8, delta)
 	var bm := 1.0 if boss_music else 0.0
 	_fade("music_day", (1.0 - night) * 0.6 * (1.0 - bm), delta * (2.0 if boss_music else 0.5))

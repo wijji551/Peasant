@@ -559,12 +559,32 @@ def boss_music():
 
 ONLY = set(sys.argv[1:])                         # name some effects to make just those: python3 tools/make_sounds.py hooves nail
 
+def storm_wind():
+    # (version 7.28) wind for a storm: a roar that gusts and moans, rising and falling, for when it rains
+    d = 22.0
+    n = int(d * SR)
+    t = np.arange(n) / SR
+    gust = 0.45 + 0.35 * np.sin(2 * np.pi * t / 7.3) + 0.2 * np.sin(2 * np.pi * t / 2.9 + 1.0)
+    roar = lowpass(brown(n), 700) * gust * 0.6
+    w = rng.uniform(-1, 1, n)
+    moan = np.zeros(n)
+    for i in range(0, n, 2048):                 # a whistle through the gaps, sliding up and down with the gusts
+        seg = w[i:i + 2048]
+        f = 380 + 260 * gust[i]
+        moan[i:i + len(seg)] = bandpass(seg, f * 0.85, f * 1.15)
+    moan = lowpass(moan, 1500) * gust ** 2 * 0.5
+    save("amb_wind", seamless(roar + moan), 0.6)
+
+
 if __name__ == "__main__":
     sfx()
     if not ONLY:
         ambient()
         music()
         boss_music()
+        storm_wind()
     elif "music_boss" in ONLY:
         boss_music()
+    if "amb_wind" in ONLY:
+        storm_wind()
     print("made", len(os.listdir(OUT)), "sounds in", os.path.abspath(OUT))

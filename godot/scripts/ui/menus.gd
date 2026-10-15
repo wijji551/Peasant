@@ -39,6 +39,11 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.28: the weather has a wind", [
+		"The wind now goes with the weather: a breeze on clear days, stronger when it is overcast, nearly still in fog, a drift in the snow. Trees, bushes, grass and every banner follow it.",
+		"Rain is a storm now: the trees bend over and thrash, the rain is driven slantwise, it splashes where it lands, leaves and bits are torn off and blow past, the sky is darker, and a storm wind howls and gusts under the rain.",
+		"In a storm there is lightning by day too, a fork you can see coming down somewhere beyond the wall, and the thunder after it.",
+	]],
 	["Version 7.27: wind, crows, things in the dark, and the roads out", [
 		"The trees, the bushes and the long grass move in the wind now: a slow breeze rolling across the land, gusting now and then.",
 		"Now and then a flock of crows lifts out of the trees beyond the wall, circles, and goes off complaining.",

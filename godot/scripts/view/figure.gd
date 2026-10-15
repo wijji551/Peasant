@@ -6,6 +6,7 @@ const HOLYT := Color(1.3, 1.2, 0.75)
 const CORPSE := Color(0.6, 0.56, 0.5)
 
 var is_player := false
+static var wind := 1.0                   # how hard the wind blows (main.gd, from the weather)
 var dark := 0.0                     # how dark it is where this figure stands (0 day, 1 night): a torch shows more in the dark
 var _torch: OmniLight3D
 var fx: Node3D
@@ -179,7 +180,7 @@ func player(p: E.Player, is_me: bool) -> void:
 	_tunic_mat.albedo_color = tint
 	_banner_mat.albedo_color = Color(0.36, 0.26, 0.18)
 	_flag_mat.set_shader_parameter("col", tint)
-	_flag_mat.set_shader_parameter("gust", 1.0 + 1.4 * _mv)
+	_flag_mat.set_shader_parameter("gust", (1.0 + 1.4 * _mv) * (0.5 + 0.5 * wind))   # (version 7.28: and the weather's wind)
 	_wobble = p.hang > 0
 	_set_work(kind)
 	_set_held(p.wpn, (p.bless & 1) != 0 or p.hb > 0)

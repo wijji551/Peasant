@@ -953,13 +953,15 @@ const SWAY_SHADER := """
 shader_type spatial;
 uniform float amount = 0.04;
 uniform float base = 0.0;
+uniform float wind = 1.0;
 void vertex() {
 	vec3 wp = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	float h = max(VERTEX.y + base, 0.0);
-	float t = TIME * 1.1 + wp.x * 0.07 + wp.z * 0.05;
+	float t = TIME * (1.1 + 0.5 * max(wind - 1.0, 0.0)) + wp.x * 0.07 + wp.z * 0.05;
 	float gust = 0.75 + 0.25 * sin(TIME * 0.23 + wp.x * 0.01);
-	VERTEX.x += sin(t) * amount * h * gust;
-	VERTEX.z += cos(t * 0.83 + 1.3) * amount * 0.6 * h * gust;
+	float storm = max(wind - 1.2, 0.0);
+	VERTEX.x += (sin(t) * gust + storm * 0.55 + storm * 0.25 * sin(TIME * 5.3 + wp.z * 0.4)) * amount * h * wind;   // in a storm: bent over, and thrashing
+	VERTEX.z += cos(t * 0.83 + 1.3) * amount * 0.6 * h * gust * wind;
 }
 void fragment() {
 	ALBEDO = COLOR.rgb;
@@ -968,6 +970,11 @@ void fragment() {
 }
 """
 static var _sway_shader: Shader
+var _sway_mats: Array = []
+
+## How hard the wind blows (main.gd, from the weather): 1 a breeze, nearly 3 a storm, 0.3 fog's still air.
+func set_wind(w: float) -> void:
+	for sm in _sway_mats: (sm as ShaderMaterial).set_shader_parameter("wind", w)
 
 func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color], sway: float = 0.0, base: float = 0.0) -> void:
 	var mm := MultiMesh.new()
@@ -985,6 +992,7 @@ func _multi(mesh: Mesh, xfs: Array[Transform3D], cols: Array[Color], sway: float
 			_sway_shader = Shader.new(); _sway_shader.code = SWAY_SHADER
 		var sm := ShaderMaterial.new(); sm.shader = _sway_shader
 		sm.set_shader_parameter("amount", sway); sm.set_shader_parameter("base", base)
+		_sway_mats.append(sm)
 		mmi.material_override = sm
 	else:
 		var m := StandardMaterial3D.new()

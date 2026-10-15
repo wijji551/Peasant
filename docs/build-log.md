@@ -772,3 +772,12 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - **Eyes and wisps** (`_haunts_step`): at night (`night` > 0.45), on the dead ground beyond the north wall within 10-34 paces of the view: six pairs of red or green eyes that open for a few seconds, blink, close, and open somewhere else; three will-o'-the-wisps, pale glowing lights that drift and bob, with a faint light of their own.
 - **Roads**: the west and east roads run on from 46 to about 246 paces, with cart ruts and stones, through a gap in the hedge and a lane through the woods (`clear` keeps 4 paces either side), with a milestone just past the hedge. The ground detail keeps off the whole length.
 - All suites and co-op pass.
+
+## Version 7.28: the weather has a wind (build counter 35)
+
+- **Wind by weather** (`main.gd`): clear 1.0, overcast 1.5, rain 2.8, fog 0.3, snow 0.9, moon 1.0, eased towards at 0.35 a second, and handed to `world.set_wind` (every sway material's `wind`), `Figure.wind` (banners' gust), `atmos.wind` and `Sound.wind`.
+- **Sway shader**: amount scales with the wind; above 1.2 the wind also bends things over downwind and adds a fast thrash, and the breeze itself quickens.
+- **Storms** (`atmos.gd`): the rain slants more the harder it blows; splashes on the ground round the view (`_make_splash`); leaves and bits blowing past when the wind is over 1.8 (`_make_leaves`); snow drifts with the wind; rain's gloom 0.66 (was 0.55). Lightning in rain by day as well as at night: every 10-28 s a visible fork (`_fork`, a jagged run of bright pieces) somewhere 35-70 paces off, ahead or to the side, with the flash and thunder.
+- **Sound**: a storm-wind loop (`amb_wind`, from `tools/make_sounds.py storm_wind()`, a gusting roar and a whistle that slides with the gusts), faded in with the wind above 1.2.
+- `DTV_WEATHER=rain` forces the weather and a bolt, for pictures.
+- All suites and co-op pass.
