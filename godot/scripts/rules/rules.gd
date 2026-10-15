@@ -3156,9 +3156,11 @@ func posse_home(p: E.Player) -> void:
 	if n == 0 and far == 0: return
 	sv += 1
 	if n > 0 and D.d2(p.x, p.z, C.sx, C.sz) < 36.0:   # (version 7.24) sent home from the doorstep: say so, or it looks as though nothing happened
-		ev.append(["found", p.id, "Your posse is home already: you are standing at your cottage door. They will wait here when you go", r1(p.x), r1(p.z), 0, 0])
-	elif n > 0: say("%s has sent %s home to the cottage, to wait by the door. %s" % [p.dn, "their posse" if n > 1 else "one of their posse", pick(["They went, slowly, in case it was a trick.", "They have been told not to touch anything.", "They went without arguing, which is a first."])])
-	if far > 0: ev.append(["found", p.id, "%d of your posse cannot go home from here: the raft does not run errands. They stay with you" % far if far > 1 else "One of your posse cannot go home from here: the raft does not run errands. They stay with you", r1(p.x), r1(p.z), 0, 0])
+		ev.append(["posse", p.id, "Your posse is home already: you are standing at your cottage door. They will wait here when you go"])
+	elif n > 0:
+		say("%s has sent %s home to the cottage, to wait by the door. %s" % [p.dn, "their posse" if n > 1 else "one of their posse", pick(["They went, slowly, in case it was a trick.", "They have been told not to touch anything.", "They went without arguing, which is a first."])])
+		ev.append(["posse", p.id, ("%d of your posse are" % n if n > 1 else "One of your posse is") + " on the way home to your cottage, to wait by the door. Whistle when you want them"])   # (version 7.32: said to you, not only in the log)
+	if far > 0: ev.append(["posse", p.id, "%d of your posse cannot go home from here: the raft does not run errands. They stay with you" % far if far > 1 else "One of your posse cannot go home from here: the raft does not run errands. They stay with you"])
 
 ## A whistle (version 7.20): whoever of yours is sent home and can hear it comes to you, and the posse follows again.
 func posse_whistle(p: E.Player) -> void:
@@ -3173,9 +3175,9 @@ func posse_whistle(p: E.Player) -> void:
 	p.order = 0
 	sv += 1
 	ev.append(["whistle", r1(p.x), r1(p.z)])
-	if far > 0: ev.append(["found", p.id, ("%d of your posse are" % far if far > 1 else "One of your posse is") + " across the river and cannot hear you. Fetch them when you are back", r1(p.x), r1(p.z), 0, 0])
+	if far > 0: ev.append(["posse", p.id, ("%d of your posse are" % far if far > 1 else "One of your posse is") + " across the river and cannot hear you. Fetch them when you are back"])
 	elif n > 0: say("%s has whistled, and %s come running." % [p.dn, "their posse" if n > 1 else "one of their posse"])
-	else: ev.append(["found", p.id, "Your posse is with you already. They look at you, and then at each other", r1(p.x), r1(p.z), 0, 0])
+	else: ev.append(["posse", p.id, "Your posse is with you already. They look at you, and then at each other"])
 
 func do_eat(p: E.Player) -> void:
 	if p.state != "ok" or p.food < 1 or p.eatCd > 0:

@@ -9,6 +9,8 @@ var is_player := false
 static var wind := 1.0                   # how hard the wind blows (main.gd, from the weather)
 var dark := 0.0                     # how dark it is where this figure stands (0 day, 1 night): a torch shows more in the dark
 var _torch: OmniLight3D
+var _flame: Node3D                     # (version 7.32) the burning torch's flame: tongues of fire that leap and lick, not a cone
+var _tongues: Array = []               # [mesh, phase, height]
 var fx: Node3D
 
 var _x := 0.0
@@ -187,6 +189,31 @@ func player(p: E.Player, is_me: bool) -> void:
 		_torch.omni_range = 13.0
 		_torch.position = Vector3(0.3, 1.9, 0.3)
 		add_child(_torch)
+	if lit and _flame == null:
+		_flame = Node3D.new(); _flame.position = Vector3(0, 0.8, 0); _hand.add_child(_flame)
+		var cols := [Color(1.0, 0.32, 0.06, 0.75), Color(1.0, 0.55, 0.12, 0.85), Color(1.0, 0.8, 0.3, 0.9), Color(1.0, 0.95, 0.7, 1.0)]
+		for k in 7:
+			var mi := MeshInstance3D.new()
+			var cm := CylinderMesh.new(); cm.top_radius = 0.0; cm.bottom_radius = [0.2, 0.16, 0.13, 0.09, 0.14, 0.12, 0.08][k]; cm.height = 1.0; cm.radial_segments = 5; cm.rings = 1
+			mi.mesh = cm
+			var fm := StandardMaterial3D.new(); fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD; fm.cull_mode = BaseMaterial3D.CULL_DISABLED
+			fm.albedo_color = cols[[0, 1, 2, 3, 1, 2, 3][k]]
+			mi.material_override = fm; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.position = Vector3([0.0, 0.05, -0.05, 0.0, 0.07, -0.06, 0.02][k], 0, [0.0, -0.04, 0.05, 0.0, 0.05, -0.03, -0.06][k])
+			_flame.add_child(mi)
+			_tongues.append([mi, randf() * TAU, [0.42, 0.48, 0.38, 0.26, 0.32, 0.3, 0.2][k]])
+	if _flame:
+		_flame.visible = lit and _hand.visible
+		if _flame.visible:                                 # each tongue leaps and dies back on its own beat, and leans back as you move
+			var tn := Time.get_ticks_msec() / 1000.0
+			for tg in _tongues:
+				var h: float = tg[2] * (0.75 + 0.35 * sin(tn * 13.0 + tg[1]) * sin(tn * 7.3 + tg[1] * 1.7) + 0.15 * sin(tn * 21.0 + tg[1] * 3.0))
+				var mi: MeshInstance3D = tg[0]
+				mi.scale = Vector3(1.0 + 0.15 * sin(tn * 9.0 + tg[1]), maxf(0.08, h), 1.0)
+				mi.position.y = h * 0.5
+				mi.rotation = Vector3(0.18 * sin(tn * 5.0 + tg[1]) - 0.25 * _mv, tn * 2.0 + tg[1], 0.18 * sin(tn * 6.1 + tg[1] * 2.0))
+			_flame.global_rotation = Vector3(0, _flame.global_rotation.y, 0)   # flames go up, whichever way the torch is held
 	if _torch:
 		_torch.visible = lit
 		_torch.light_energy = (4.2 if p.room == "mine" else 0.5 + 2.1 * dark) * (0.9 + 0.1 * sin(Time.get_ticks_msec() / 70.0 + p.id))

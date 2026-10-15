@@ -812,3 +812,10 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - **No X-ray**: the player figure no longer draws through what is in front of it (the call to `_xray` in `figure.player` is gone).
 - **Underground sound**: `Sound.under` (main: in the mine or either cave across the river) fades out the day, night, rain, wind, castle and above-ground music, stops the owl, the crows and thunder, and fades in `amb_cave` (drips with echo, a rumble, pebbles, creaking timber) and `music_mine` (a low E drone, a glass-like bell a few notes far apart, soft bowed chords, a distant pick tapping), both from `tools/make_sounds.py underground()` (`python3 tools/make_sounds.py amb_cave`).
 - All 34 suites and co-op pass.
+
+## Version 7.32: the posse, the torch, the caves (build counter 39)
+
+- **Posse home**: driven for real (a mouse click on the card's button, in a window), it works: the posse is marked sent and walks home. Three things fixed round it. `posse_home`/`posse_whistle` messages are a new `posse` event, a banner titled "Your posse" (they were "found" events, titled "You found", and the main one was only in the log). The card is `move_to_front()` and `z_index` 10 when opened. And a covering window closing (`hud._process`: every zone made visible again) no longer turns the card back on by itself.
+- **Torch flame** (`figure.gd`): the cones are gone from the `torch` model; a lit torch gets `_flame` on the hand, seven unshaded additive tongues (deep orange to near white) that each leap and die back on their own beat, sway, lean back as you move, and are kept upright.
+- **Trees in the caves**: the woods on the far side of the Riverside's river (`_wilds`) covered the cave rooms at -40 and -80, 240. `clear()` now keeps 14 paces round every room but the Riverside; the Riverside's own ring of woods checks it too.
+- All 34 suites and co-op pass.

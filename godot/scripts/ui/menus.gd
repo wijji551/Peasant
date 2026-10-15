@@ -40,6 +40,11 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.32: the posse, the torch, the caves", [
+		"Sending your posse home now tells you so, in the middle of the screen: how many are on their way to your cottage. The posse’s card is drawn on top of everything else, so nothing can take the click, and it no longer pops up again by itself when the dawn notice or the handbook closes.",
+		"A burning torch has a real flame: tongues of fire that leap and lick and stand up straight whichever way you hold it.",
+		"No more trees growing inside Garrick’s Cave and the Rune Cave (they were the woods across the river, which did not know the caves were there).",
+	]],
 	["Version 7.31: the road, the trees, the Old Mine", [
 		"The west and east roads out to the hedge are clear: the trees that stood in them have moved to the verges.",
 		"The village’s own trees, the ones you chop, now sway in the wind with the woods beyond the hedge, and bend over in a storm.",

@@ -318,6 +318,8 @@ func posse_menu(open: bool, away: int, can_send: bool) -> void:
 	_pbtn[0].disabled = not can_send
 	_pbtn[1].text = "Whistle them to you" + (" (%d at home)" % away if away > 0 else "")
 	_pcard.reset_size()
+	_pcard.move_to_front()                           # (version 7.32) on top of everything else on the screen, so nothing takes the click
+	_pcard.z_index = 10
 	var r := posse_rect()
 	_pcard.position = Vector2(r.position.x, r.position.y - _pcard.size.y - 8)
 	_pcard.visible = true
@@ -427,7 +429,7 @@ func _process(delta: float) -> void:
 	var covered: bool = window.visible and window.covers()
 	if covered != _covered and _playing:
 		_covered = covered
-		for c in _zones: c.visible = not covered
+		for c in _zones: c.visible = not covered and c != _pcard   # (version 7.32: the posse's card stays shut, rather than popping up again by itself)
 		_feed.visible = not covered
 
 

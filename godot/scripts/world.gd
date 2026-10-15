@@ -726,6 +726,9 @@ func _wilds() -> void:
 		if x > RM.x - RM.hw - 6 and x < RM.x + RM.hw + 6 and z > RM.z - RM.hd - 18 and z < RM.z + RM.hd + 6: return false   # the Riverside and its own fields
 		if absf(x - RM.x) < 6 and z > RM.z + RM.hd and z < RM.z + RM.hd + 80: return false   # the road south to Hallowshire Town
 		if absf(z - D.GATE_Z) < 4.0: return false                                              # the west and east roads, on into the woods
+		for rk_ in D.ROOMS:                                                                    # (version 7.32) and never inside a room: trees were growing in the caves
+			var RR: Dictionary = D.ROOMS[rk_]
+			if rk_ != "riverside" and absf(x - RR.x) < RR.hw + 14 and absf(z - RR.z) < RR.hd + 14: return false
 		return true
 	# --- the thorn hedge at the village's west and east edges: bushes of all sizes, not a row of boxes
 	for sx in [-1.0, 1.0]:
@@ -822,6 +825,7 @@ func _wilds() -> void:
 		if z < RM.z - RM.hd - 2: continue                                                         # (not across the river)
 		var near_: float = minf(minf(absf(x - rx0), absf(x - rx1)), absf(z - rz1))
 		if rg.randf() < near_ / 180.0: continue                                                    # thick at the edge, thinning out
+		if not clear.call(x, z) and z > rz1: continue                                              # (and nowhere near a room)
 		if near_ < 30 and rg.randf() < 0.45: continue                                              # (but the first of it a little open, a meadow's edge)
 		put.call("wild_pine" if rg.randf() < 0.5 else "wild_oak", x, z, r.call(1.0, 1.8))
 		if rg.randf() < 0.15: put.call("wild_bush", x + r.call(-3, 3), z + r.call(-3, 3), r.call(1.0, 1.6))

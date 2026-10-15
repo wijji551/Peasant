@@ -1233,6 +1233,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			F.ring(ev[1], ev[2], 3, 20, F.C_ALE); F.shock(ev[1], ev[2], 3.4, Color(1.0, 0.8, 0.35, 0.8))
 			F.puff(ev[1], 1, ev[2], 14, F.C_WOOD, 5)
 			Sound.play("cheer", 1.0, Vector2(ev[1], ev[2]))
+		"posse": if ev[1] == me.id: hud.banner("Your posse", str(ev[2]) + ".", 2.8)   # (version 7.32) what became of an order to go home, or a whistle
 		"found":
 			F.puff(ev[3], 0.5, ev[4], 20 if ev[5] else 6, F.C_HOLY if ev[5] else F.C_DUST, 3)
 			if ev[1] == me.id:
