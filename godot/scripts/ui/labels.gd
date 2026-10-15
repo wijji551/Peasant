@@ -20,6 +20,9 @@ const PLACES := [
 	# the two caves, inside (version 7.21)
 	["The rubble: the Tithe Collector", -40.6, 237.0, 2.4], ["Out", -38.2, 243.4, 1.4],
 	["Seams: runes", -80.5, 236.0, 3.0], ["Saint Wilbur, the Dog Lord", -85.0, 240.0, 2.6], ["Out", -78.2, 243.9, 1.4],
+	# (version 7.39) the ways in, and out, and who is inside
+	["Chapel door", 17.0, -10.2, 2.9], ["Library door", 13.6, 20.4, 2.6], ["Inn door", -13.2, -4.2, 2.6], ["The lane past the hedge (by day)", -121.4, 2.0, 2.6],
+	["The priest", 210.0, 234.3, 2.6], ["Out", 210.0, 247.6, 1.4], ["The librarian", 104.8, 242.2, 2.4], ["Peasants’ Section", 116.3, 239.4, 2.6], ["Out", 110.0, 247.0, 1.4], ["Out", 175.0, 243.9, 1.4],
 ]
 
 var R: Rules

@@ -90,6 +90,23 @@ func _draw() -> void:
 	draw_rect(fr, Color(0.86, 0.72, 0.3, 0.55))
 	draw_rect(fr, Color("7a5a22"), false, 1.0)
 	mark.call((D.FARM.x0 + D.FARM.x1) / 2, (D.FARM.z0 + D.FARM.z1) / 2, Color("e8c040"))
+	# (version 7.39) the ways in: the chapel (a little cross), the library, the inn, the lane past the hedge, the Old Mine; and your own cottage
+	for k in ["chapel", "library", "inn", "woods", "mine"]:
+		var dd: Array = D.ROOMS[k].door
+		draw_rect(Rect2(mx(dd[0]) - 2.5, mz(dd[1]) - 3, 5, 6), Color("2f2318"))
+		draw_rect(Rect2(mx(dd[0]) - 1.5, mz(dd[1]) - 2, 3, 4), Color("e9d9a6") if k != "chapel" else Color("f6f1e2"))
+		if k == "chapel":
+			draw_line(Vector2(mx(dd[0]), mz(dd[1]) - 9), Vector2(mx(dd[0]), mz(dd[1]) - 4), Color("d8b040"), 1.6)
+			draw_line(Vector2(mx(dd[0]) - 2, mz(dd[1]) - 7.4), Vector2(mx(dd[0]) + 2, mz(dd[1]) - 7.4), Color("d8b040"), 1.6)
+	if R.merchant >= 0 and R.phase == "day":                                      # the merchant's cart, on a merchant's day
+		var cs := D.station("cart")
+		mark.call(cs.x, cs.z, Color("c58a3a"))
+	if me:
+		var hc := D.cottage(me.slot)
+		var hp_ := Vector2(mx(hc.sx), mz(hc.sz))
+		draw_colored_polygon(PackedVector2Array([hp_ + Vector2(-4.5, 1.5), hp_ + Vector2(0, -4), hp_ + Vector2(4.5, 1.5)]), Color("2f2318"))
+		draw_rect(Rect2(hp_.x - 3, hp_.y + 1, 6, 4), Color("2f2318"))
+		draw_colored_polygon(PackedVector2Array([hp_ + Vector2(-3, 1.2), hp_ + Vector2(0, -2.6), hp_ + Vector2(3, 1.2)]), Color(D.PCOL[me.col % 8]))
 	var scout := me != null and Rules.rk(me, D.B_WATCH) >= 4             # the night watchman, rank 4: the chest and the outer ruins from the morning
 	if not R.chest.is_empty() and (R.chest.seen or scout) and not R.chest.open:      # the chest that never arrived, once somebody has seen it
 		draw_rect(Rect2(mx(R.chest.x) - 3.5, mz(R.chest.z) - 3, 7, 6), Color("2f2318"))

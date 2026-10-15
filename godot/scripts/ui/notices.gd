@@ -53,10 +53,14 @@ static func letters_page(R: Rules, page: String, title: String, intro: String, b
 
 
 ## A watch tower's notice: who is up it, and the two choices (send one up, coax one down), and the upkeep.
-static func tower_page(R: Rules, i: int, p: E.Player) -> Dictionary:
+static func tower_page(R: Rules, i: int, p: E.Player, page: String = "") -> Dictionary:
 	var s := R.tower(i)
 	if s == null: return {}
 	var o := []
+	if page == "down":                                  # (version 7.39) taking it down asks first: the numbers on the keyboard are close to the action bar's
+		o.append({"label": "Yes, take it down", "sub": "Everybody off it, and half of what it cost back.", "ok": true, "a": "tdis", "arg": i, "page": ""})
+		o.append({"label": "No, leave it standing", "sub": "", "ok": true, "page": ""})
+		return {"title": "Take down the watch tower, %s?" % D.TOWER_NAMES[i], "intro": "It took a good deal of wood to put up.", "o": o}
 	var crew := R.tower_crew(s)
 	var mine := crew.filter(func(q): return q.owner == p.id)
 	var free := R.peasants.any(func(q): return q.owner == p.id and (q.kind == 0 or q.kind == 2) and q.plat == 0 and Rules.active(q))
@@ -76,7 +80,7 @@ static func tower_page(R: Rules, i: int, p: E.Player) -> Dictionary:
 	if not s.re:
 		var rf := Rules.reinf_cost(p, "tower")
 		o.append({"label": "Roof it (%s)" % D.cost_text(rf), "sub": "Keeps the arrows off whoever is up it. The only thing that can reach them otherwise.", "ok": Rules.has(p, rf), "a": "troof", "arg": i})
-	o.append({"label": "Take it down", "sub": "Everybody off it, and half of what it cost back. The site stays, for next time.", "ok": true, "a": "tdis", "arg": i})
+	o.append({"label": "Take it down", "sub": "Everybody off it, and half of what it cost back. The site stays, for next time.", "ok": true, "page": "down"})
 	var intro := ("%d of %d places taken: %s." % [crew.size(), D.TOWER.seats, ", ".join(names)]) if crew.size() else "Nobody is up it. Six can be, from anybody’s posse."
 	if not s.kept: intro += " Nobody has seen to it today, and nobody will climb it until somebody has."
 	if s.re: intro += " It has a roof."
@@ -91,7 +95,7 @@ static func wares_list(o: Array, p: E.Player, wl: Array, pre: String, lore: bool
 		if wv.give == "page":
 			for b in p.books.size():
 				var r := Rules.rk(p, b)
-				if r > 0 and r < D.MAX_RANK:
+				if r > 0 and r < 7:                       # (version 7.39) a page is no help past rank VII, and was offered anyway
 					o.append({"label": "A loose page of " + D.book_title(b), "sub": D.coins(Rules.price_for(p, wv.price)) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= Rules.price_for(p, wv.price) and p.jobT <= 0, "a": "mbuy", "arg": pre + "%d:%d" % [i, b]})
 			continue
 		var sub: String = D.coins(Rules.price_for(p, wv.price)) + (". Sold." if gone else ".") + (" (A tenth off, for your manners.)" if Rules.price_for(p, wv.price) < wv.price and not gone else "")
@@ -106,7 +110,7 @@ static func wares_list(o: Array, p: E.Player, wl: Array, pre: String, lore: bool
 static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 	var o := []
 	if id.begins_with("tower"):
-		return tower_page(R, int(id.substr(5)), p)
+		return tower_page(R, int(id.substr(5)), p, page)
 	match id:
 		"market":
 			var pr := func(n: int) -> int: return floori(n * 1.5) if p.gab else n
@@ -117,7 +121,8 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			o.append({"head": "Buy"})
 			for r in D.RES:
 				if r == "steel" or r == "fish": continue   # nobody sells steel, and the market's fish is not fit to eat
-				o.append({"label": "Buy 5 " + r, "sub": "for 10d", "ok": p.coin >= 2 and p.get(r) < Rules.cap(p), "a": "buy", "arg": r})
+				var nb := mini(mini(5, Rules.cap(p) - p.get(r)), floori(p.coin / 2.0))   # (version 7.39) what you will really get, and pay
+				o.append({"label": "Buy %d %s" % [maxi(nb, 1) if nb > 0 else 5, r], "sub": ("for %dd. You carry %d." % [nb * 2, p.get(r)]) if nb > 0 else ("You can carry no more." if p.get(r) >= Rules.cap(p) else "Two pence a piece, and you have not got two pence."), "ok": nb > 0, "a": "buy", "arg": r})
 			return {"title": "The market", "intro": "You have %s. " % D.coins(p.coin) + ("You have the Gift of the Gab: the stalls pay you three pence for every two pieces, and still charge two a piece." if p.gab else "The stalls pay a penny a piece and charge two."), "o": o}
 		"store":
 			if page == "arms":
@@ -168,9 +173,9 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				o.append({"head": "Give up which book?"})
 				for b in D.BOOKS.size():
 					if p.books[b] > 0:
-						o.append({"label": "Give up %s, rank %d" % [D.book_title(b), p.books[b]], "sub": "Everything it taught you goes. The next book you take up starts at rank %d." % maxi(1, p.books[b] - 1), "ok": true, "a": "card", "arg": b})
+						o.append({"label": "Give up %s, rank %d" % [D.book_title(b), p.books[b]], "sub": "Everything it taught you goes. The next book you take up starts at rank %d." % mini(7, maxi(1, p.books[b] - 1)) + (" (Rank VII is as far as a card will take you.)" if p.books[b] > 8 else ""), "ok": b != D.B_SQUIRE, "a": "card", "arg": b})
 				o.append({"label": "Keep the card for now", "sub": "", "ok": true, "page": ""})
-				return {"title": "Your library card", "intro": "The librarian will take back one of your books and let you choose another: one go, and the card is stamped. You do not start again from nothing: the new book begins a rank behind where the old one was.", "o": o}
+				return {"title": "Your library card", "intro": "The librarian will take back one of your books and let you choose another: one go, and the card is stamped. You do not start again from nothing: the new book begins a rank behind where the old one was, up to rank VII. (Not the Knight's Squire: Sir Aldous lent you that, and wants it back himself.)", "o": o}
 			var slots := Rules.book_slots(p)
 			if p.inv.has(D.I_CARD) and p.books.any(func(r): return r > 0):
 				o.append({"label": "Hand in your library card", "sub": "Give up one of your books, to take up another.", "ok": true, "page": "card"})
@@ -200,11 +205,11 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 				o.append({"label": D.book_title(b) + (" · rank %d of %d" % [r, D.MAX_RANK] if r else ""), "sub": sub, "ok": not r and (slots > 0 or D.FREE_BOOKS.has(b)) and not other_call, "a": "book", "arg": b})
 			var most := 5 if p.xslot else 4
 			var intro := ("You may take up another book." if owned else "The Peasants’ Section: one shelf, propped up with a brick, of books with ten ranks in each. Choose your first. The Holy Book makes you an apprentice priest; one of them comes with a dog; one is not there at all; and one is out on loan. The Holy Book, the Jester and the Knight’s Squire do not count against your books.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four", "five"][most] if owned >= most else "Reach rank 2 in a book to take up a second, rank 3 in two books to take up a third, and rank 4 in three to take up a fourth." + (" Your Index of Further Reading allows a fifth." if p.xslot else " A fifth needs An Index of Further Reading, which turns up in the ruins."))
-			if p.card_rank > 1: intro += " Your card has been stamped: the next book you take up starts at rank %d." % p.card_rank
+			if p.card_rank > 1: intro += " Your card has been stamped: the next book you take up starts at rank %d." % mini(7, p.card_rank)
 			return {"title": "The Peasants’ Section", "intro": intro + (" Cowards learn at half speed today." if p.coward else ""), "o": o}
 		"slum":
 			var c := {"food": Rules.slum_food(p)}
-			var pop := R.peasants.filter(func(q): return q.state != "body" and q.kind != 3).size()
+			var pop := R.peasants.filter(func(q): return q.state != "body" and q.kind != 3 and q.kind != 4).size()
 			var full := pop >= R.pop_cap()
 			var pfull := p.posse >= R.posse_max(p)
 			var sub := "The village has no room for more." if full else ("Your posse is full (%d of %d)." % [p.posse, R.posse_max(p)]) if pfull else "%s%s. You carry %d." % [D.cost_text(c), ", double for a coward" if p.coward else "", p.food]
@@ -362,7 +367,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			return {"title": "Sir Aldous", "intro": D.SQ_NOTES[(R.day + p.slot) % D.SQ_NOTES.size()] + " Sir Aldous de Vere is a knight errant, and at present an errant knight: he has mislaid his squire.", "o": o}
 		"librarian":
 			o.append({"text": "“The Peasants’ Section is on your right,” she says, before you have said anything. “The rest of the library is for those with a coat of arms. Do you have a coat of arms?” You have a coat. She looks at it."})
-			o.append({"text": "“A library card lets you give a book back and take another. They turn up in the ruins, for some reason. Do not ask me how. Do not ask me anything.”" + (" She looks at Sir Aldous, and sighs." if p.sq < 3 else "")})
+			o.append({"text": "“A library card lets you give a book back and take another. They turn up in the chests people send to this village, for some reason. Do not ask me how. Do not ask me anything.”" + (" She looks at Sir Aldous, and sighs." if p.sq < 3 else "")})
 			return {"title": "The librarian", "intro": "Behind her desk, in spectacles, stamping something. She has run this library for forty years and has not enjoyed one of them.", "o": o}
 		"rope":
 			o.append({"text": "A red rope, on two brass posts, and a card on a stand: “BEYOND THIS ROPE: THE LIBRARY. Members of the Nobility only. Kindly show your coat of arms to the librarian. Peasants: see the Peasants’ Section.”"})
@@ -489,7 +494,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var W: Dictionary = D.IT[p.wpn]
 			var bless := func() -> void:
 				if here or p.holy >= 1:
-					o.append({"label": "Bless your " + W.n, "sub": "It is holy already." if W.holy else "Blessed until dawn." if p.bless & 1 else fee.call(p.holy >= 1) + " Holy until dawn: half as much damage again, and bones stay down.", "ok": not W.holy and not (p.bless & 1) and can.call(p.holy >= 1), "a": "bless", "arg": "w"})
+					o.append({"label": "Bless your " + W.n, "sub": "It is holy already." if W.holy else "Blessed until dawn." if p.bless & 1 else fee.call(p.holy >= 1) + " Holy until dawn: a third as much damage again, and bones stay down.", "ok": not W.holy and not (p.bless & 1) and can.call(p.holy >= 1), "a": "bless", "arg": "w"})
 					o.append({"label": "Bless your slop bucket", "sub": "You carry no bucket. The ruins have them." if p.trk != 28 else "Blessed. Heaven help whoever it lands on." if p.bless & 2 else fee.call(p.holy >= 1) + " It will burn as well as stink.", "ok": p.trk == 28 and not (p.bless & 2) and can.call(p.holy >= 1), "a": "bless", "arg": "k"})
 				if here or p.holy >= 2:
 					o.append({"label": "Bless a body you carry", "sub": "You carry none." if not p.bodies else "%d of %d blessed. " % [p.bbod, p.bodies] + fee.call(p.holy >= 2) + " A blessed body can be built into a wall, gate or barricade.", "ok": p.bbod < p.bodies and can.call(p.holy >= 2), "a": "bless", "arg": "b"})
@@ -502,13 +507,13 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 						"ok": p.holy >= 2 and p.coin >= Rules.rune_bless(p), "a": "rbless", "arg": k})
 				o.append({"head": "Holy studies"})
 				var lab := "Holy studies: finished" if p.holy >= 2 else ("In class: %d of %d seconds" % [floori(p.holyT), D.HOLY_TIME]) if p.study else "Sit a class in holy studies (%d of 2 done)" % p.holy
-				var sub := "You can bless anything yourself, anywhere, from your backpack ({pack})." if p.holy >= 2 else "Stay in your pew. Get up, or press again, to stop; he will remember where you got to." if p.study else ("Take a pew and read the bible, about %d seconds of it%s. After one class you can bless your own weapon and bucket for nothing; after two, the departed as well. It does not count as one of your three books." % [D.HOLY_TIME, ", from where you left off" if p.holyT > 0 else ""])
+				var sub := "You can bless anything yourself, anywhere, from your backpack ({pack})." if p.holy >= 2 else "Stay in your pew. Get up, or press again, to stop; he will remember where you got to." if p.study else ("Take a pew and read the bible, about %d seconds of it%s. After one class you can bless your own weapon and bucket for nothing; after two, the departed as well. It does not count as one of your books." % [D.HOLY_TIME, ", from where you left off" if p.holyT > 0 else ""])
 				o.append({"label": lab, "sub": sub, "ok": p.holy < 2, "a": "study"})
 				return {"title": "The priest", "intro": "A blessing lasts until dawn. You have %s." % D.coins(p.coin), "o": o}
 			if page == "drop":
 				o.append({"head": "Throw away"})
 				for i in p.inv.size():
-					o.append({"label": "Drop: " + D.IT[p.inv[i]].n, "sub": "It stays on the ground where you stand.", "ok": true, "a": "dropi", "arg": i})
+					o.append({"label": "Drop: " + D.IT[p.inv[i]].n, "sub": "It stays on the ground where you stand." if p.room == "" else "Not in here: it is left outside, by the way in, in the village.", "ok": true, "a": "dropi", "arg": i})
 				o.append({"label": "Back", "sub": "", "ok": true, "page": ""})
 				return {"title": "Your backpack", "intro": "Anything dropped can be picked up again, by anyone.", "o": o}
 			o.append({"head": "In your backpack (%d of %d)" % [p.inv.size(), D.PACK_MAX]})

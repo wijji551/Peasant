@@ -84,7 +84,7 @@ const CONTRAPTIONS := ["chicken", "pitfall", "tar", "trough", "logs", "thresher"
 const CONTR := {
 	"chicken": {"rank": 1, "d": "A caged chicken. The dead nearby cannot leave it alone, and it does not last long"},
 	"pitfall": {"rank": 3, "d": "Swallows the first four of the dead to cross it, for good. Good inside the wall, for gravediggers"},
-	"tar": {"rank": 4, "d": "Everything that wades through it is slowed, the dead most of all"},
+	"tar": {"rank": 4, "d": "The dead that wade through it are slowed to a crawl"},
 	"trough": {"rank": 5, "d": "Holy water: burns the dead that cross it, wraiths too. Needs water blessed at the chapel (a class of holy studies, or the Holy Book)"},
 	"logs": {"rank": 6, "d": "A stack of logs north of the wall. Once a night, when a crowd or a coffin ram comes down the road past it, it rolls them flat"},
 	"thresher": {"rank": 7, "d": "A spinning flail. Hits everything round it, as long as someone is near enough to turn the handle"},
@@ -444,7 +444,10 @@ const LOCALS := [
 ]
 const TREAT := 6                     # the price of a drink for a local: one good turn each, a day
 const BOSS_HINT := {3: "The Steward keeps back and raises the fallen. He is no fighter: get to him early, and he stops.", 10: "The Coachman’s hearse goes through wood like paper. Stone on the walls and iron on the gate, and keep out of the road.",
-	11: "The Captain does not come by the north gate unless he must. Watch which way his banner turns, and be at that gateway first.", 12: "Himself. Blessed things and rune-cut things hurt him properly. Nothing else does, much."}
+	11: "The Captain does not come by the north gate unless he must. Watch which way his banner turns, and be at that gateway first.", 12: "Himself. His shadow first, and half the horde with it, and then him. He vanishes and comes back behind whoever is furthest off: do not straggle.",
+	17: "The Chaplain preaches, and you will want to listen. Do not. Hit him hard enough and he loses his place, and the dead stop mending.",
+	18: "The Cook ladles boiling stew at whoever is nearest. Do not stand in it, and do not stand in front of the cauldron when he swings it.",
+	19: "The Gamekeeper comes on the full moon. His howl roots you to the spot, unless somebody is praying over you or your helm is the unbothered kind."}
 ## --- The gambler. Stakes, and his patience: when you have won this much in a day he packs up.
 const BETS := [6, 12, 24, 48]
 const GAMBLE_DAY := 120
@@ -532,7 +535,7 @@ const POTIONS := [
 	{"k": "pot_a", "n": "Granny’s Pick-Me-Up", "short": "Pick-Me-Up", "d": "you hit a quarter harder for two minutes"},
 	{"k": "pot_s", "n": "Granny’s Get-a-Move-On", "short": "Move-On", "d": "you walk and swing a fifth faster for two minutes"},
 	{"k": "pot_d", "n": "Granny’s Thick Skin", "short": "Thick Skin", "d": "a quarter less harm for two minutes"},
-	{"k": "pot_i", "n": "Granny’s Last Warning", "short": "Last Warning", "d": "for fifteen to twenty seconds you are wreathed in flame, and the dead near you catch fire. It does not burn you"},
+	{"k": "pot_i", "n": "Granny’s Last Warning", "short": "Last Warning", "d": "for fifteen to twenty seconds (half that, out in the rain) you are wreathed in flame, and the dead near you catch fire. It does not burn you"},
 ]
 const POT := {"t": 120.0, "atk": 1.25, "spd": 1.2, "def": 0.75, "imm": [15.0, 20.0], "reach": 2.6, "recipe": 60}
 ## The folk of the Riverside (version 7.14): [what they are, and what they say about three things].
@@ -718,7 +721,7 @@ const BOOKS := [
 		"It fetches: fallen kits, finds and dropped things are brought back to you",
 		"Knocked down, it is back on its feet in a minute, not at dawn",
 		"Whatever it is holding takes a quarter more harm from everybody",
-		"It drags a fallen player or peasant out of the fight",
+		"It drags a fallen player out of the fight",
 		"It sniffs out rubble that still hides something",
 		"It holds for six seconds, and will hold a boss for two",
 		"The dog cannot be killed, only discouraged"]},

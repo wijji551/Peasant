@@ -203,6 +203,8 @@ class Player:
 	var workX := 0.0
 	var workZ := 0.0
 	var downT := 0.0
+	var nin := 0.0          # (version 7.39) tonight: seconds spent indoors (the mine, the chapel), and out in it
+	var nout := 0.0
 
 
 class Peasant:

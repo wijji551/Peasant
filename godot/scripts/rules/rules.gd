@@ -820,7 +820,8 @@ func dog_step(q: E.Peasant, dt: float) -> void:
 		return
 	if (Ld.room != "" and not (Ld.room == "riverside" and with_)) or Ld.state == "hide":   # indoors: the dog waits outside, by the door
 		if Ld.room != "" and D.ROOMS.has(Ld.room):
-			var dr: Array = D.ROOMS[D.ROOMS[Ld.room].get("parent", Ld.room)].door
+			var RM: Dictionary = D.ROOMS[D.ROOMS[Ld.room].get("parent", Ld.room)]
+			var dr: Array = RM.get("exit", RM.door)              # (version 7.39) the way out, not the doorstep: by the library that was inside its wall
 			if D.ROOMS[Ld.room].get("parent", Ld.room) == "riverside" and over:   # left on the far bank (its player swam back): it stays put
 				return
 			step_to(q, dr[0] + 1.0, dr[1] + 1.6, D.DOG.spd, dt, 0.4)
@@ -1466,7 +1467,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "fish", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote", "pot_a", "pot_s", "pot_d", "pot_i", "frock", "recipes", "tithe", "sq", "kn"]
+const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "fish", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote", "pot_a", "pot_s", "pot_d", "pot_i", "frock", "recipes", "tithe", "sq", "kn", "tpaid", "jlPaid", "jlT", "herdT"]   # (version 7.39: what was paid for, and how far through a lesson)
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -1540,8 +1541,11 @@ func leave_player(id: int) -> void:
 	p.room = ""; p.game = {}; p.bodies = 0
 	away.append(player_record(p))
 	players.erase(p)
-	for q in peasants:
+	for q in peasants.duplicate():
 		if q.owner == id:
+			if q.kind == 3 or q.kind == 4:              # (version 7.39) their dog and their sheep go home with them
+				if q.kind == 3 and q.carry > 0: drop_item(q.carry, q.x, q.z)
+				peasants.erase(q); continue
 			q.owner = 0
 			q.state = "idle" if phase == "day" else "hide"
 	say("%s has gone home for now. Their cottage is kept for them." % p.dn)
@@ -2080,18 +2084,22 @@ func find_interact(p: E.Player):
 	return null
 
 func valid_place(k: String, x: float, z: float, rot: float) -> bool:
-	if x < D.X0 + 2 or x > D.X1 - 2 or z < D.Z0 + 2 or z > D.Z1 - 2: return false
-	if absf(z - D.VN) < 1.7 and absf(x) < 21.5: return false                          # keep the foundations clear
-	if (k == "bodywall" or k == "decoy") and D.inside_village(x, z): return false     # the fallen go outside the wall
-	if k == "logs" and (z > D.VN - 4 or absf(x) > 30): return false                  # the log roller goes up the road, north of the wall
+	return place_why(k, x, z, rot) == ""
+
+## Why a thing cannot be put down here ("" if it can). (version 7.39: the view says so, instead of nothing happening)
+func place_why(k: String, x: float, z: float, rot: float) -> String:
+	if x < D.X0 + 2 or x > D.X1 - 2 or z < D.Z0 + 2 or z > D.Z1 - 2: return "Too near the edge of the world"
+	if absf(z - D.VN) < 1.7 and absf(x) < 21.5: return "That is where the north wall goes"          # keep the foundations clear
+	if (k == "bodywall" or k == "decoy") and D.inside_village(x, z): return "The fallen go outside the wall"
+	if k == "logs" and (z > D.VN - 4 or absf(x) > 30): return "The log roller goes up the road, north of the wall"
 	var c := E.Box.new(x, z, D.SDIM[k].x, D.SDIM[k].y, rot)
 	for o in colliders:
-		if in_box(o.x, o.z, maxf(o.hw, o.hd) * 0.2, c) or in_box(x, z, 0.9, o): return false
+		if in_box(o.x, o.z, maxf(o.hw, o.hd) * 0.2, c) or in_box(x, z, 0.9, o): return "Something is in the way"
 	for s in structs:
-		if s.slot < 0 and D.d2(x, z, s.x, s.z) < 2.3 * 2.3: return false
+		if s.slot < 0 and D.d2(x, z, s.x, s.z) < 2.3 * 2.3: return "Too close to another defence"
 	for t in trees:
-		if t.alive and in_box(t.x, t.z, 0.3, c): return false
-	return true
+		if t.alive and in_box(t.x, t.z, 0.3, c): return "A tree is in the way"
+	return ""
 
 func aim_assist(p: E.Player) -> void:   # turn to the nearest undead in reach
 	var I: Dictionary = D.IT[p.wpn]
@@ -2109,6 +2117,14 @@ func aim_assist(p: E.Player) -> void:   # turn to the nearest undead in reach
 
 # --- things held and worn
 func drop_item(id: int, x: float, z: float) -> void:
+	for k in D.ROOMS:                                   # (version 7.39) indoors, or across the river, nothing can be picked up: it is left outside the way in, in the village
+		var M: Dictionary = D.ROOMS[k]
+		if absf(x - M.x) <= M.hw + 3.0 and absf(z - M.z) <= M.hd + 3.0:
+			var top: String = k
+			while D.ROOMS[top].has("parent"): top = D.ROOMS[top].parent
+			var dr: Array = D.ROOMS[top].get("exit", D.ROOMS[top].door)
+			x = dr[0]; z = dr[1] + (0.0 if D.ROOMS[top].has("exit") else (-2.5 if D.ROOMS[top].get("open", false) else 0.9))
+			break
 	var d := E.Drop.new()
 	d.id = nid; nid += 1; d.it = id; d.day = day
 	d.x = clampf(x + rnd2(-0.9, 0.9), D.X0, D.X1); d.z = clampf(z + rnd2(-0.9, 0.9), D.Z0, D.Z1)
@@ -2350,7 +2366,7 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	u.hp -= d
 	if s.get("p") or s.get("q") or s.get("dot", false):          # for the view: where, how much, and how it told
 		# 0 an ordinary blow, 1 a telling one, 2 a feeble one (wrong tool for the job), 3 a lucky double, 4 burning
-		var how := 4 if s.get("dot", false) else 3 if s.get("crit", false) else 1 if d >= d0 * 1.45 else 2 if d <= d0 * 0.8 else 0
+		var how := 4 if s.get("dot", false) else 3 if s.get("crit", false) else 1 if d >= d0 * 1.3 else 2 if d <= d0 * 0.8 else 0
 		ev.append(["hit", r1(u.x), r1(u.z), maxi(1, roundi(d)), how, s.p.id if s.get("p") else 0, u.k, u.hp <= 0, s.get("ranged", false)])
 	if not s.get("dot", false): u.cd = minf(U.cd, u.cd + 0.25)   # a hit delays its next swing a little; it does not stop it
 	if s.has("x") and not big(u):
@@ -2475,6 +2491,7 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 			e.upOnce = true; e.hp = 35; say("%s went down, thought better of it, and got up again." % e.dn)
 			return
 		e.state = "down"; e.downT = 30.0 if rk(e, 9) >= 5 else 15.0; e.gk = 0; e.prog = 0; e.study = false
+		ev.append(["pdown", e.id, r1(e.x), r1(e.z), roundi(e.downT)])   # (version 7.39) the others are told, and which way
 		for q in peasants:
 			if q.owner == e.id: nerve_hit(q, 30)
 	else:
@@ -2583,12 +2600,17 @@ func shoot(p: E.Player, I: Dictionary, mul: float, o: Dictionary = {}) -> E.Unde
 				ev.append(["shot", r1(p.x), r1(p.z), r1(u.x), r1(u.z), 1]); hit_u(u, dmg_of(p, I, 1.0), vs)
 	return t
 
+## The wait between blows (the view throttles a held button by the same, so nothing it speeds up is lost).
+static func atk_wait(p: E.Player) -> float:
+	var I: Dictionary = D.IT[p.wpn]
+	return I.cd * ((0.6 if rk(p, 5) >= 8 else 0.8) if I.rng and rk(p, 5) >= 4 else 1.0) * (0.67 if p.mist > 0 else 1.0) / (D.POT.spd if p.potS > 0 else 1.0)   # Red Mist: a third faster
+
 func do_attack(p: E.Player) -> void:
 	if p.state != "ok" or p.atkCd > 0 or p.frozen > 0 or p.ride:
 		return
 	var I: Dictionary = D.IT[p.wpn]
 	if phase == "night": p.fought = true
-	p.atkCd = I.cd * ((0.6 if rk(p, 5) >= 8 else 0.8) if I.rng and rk(p, 5) >= 4 else 1.0) * (0.67 if p.mist > 0 else 1.0) / (D.POT.spd if p.potS > 0 else 1.0); p.ac += 1   # Red Mist: a third faster
+	p.atkCd = atk_wait(p); p.ac += 1
 	if I.fire and rk(p, D.B_FIRE) >= 3: light_tar(p.x + sin(p.r) * 1.6, p.z + cos(p.r) * 1.6, p)   # a torch, swung at a tar pit
 	var mul := 1.0
 	if rk(p, 4) >= 7:                                  # every fifth blow twice as hard (every fourth from rank 9)
@@ -3493,6 +3515,10 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				if q.owner == p.id and active(q):
 					q.x = p.x + rnd2(-1.6, 1.6); q.z = p.z + rnd2(0.6, 2.0) * c.dir; q.tx = q.x; q.tz = q.z; q.state = "follow"; q.tree = null
 			say("%s was a stuck little peasant, and is now standing outside their own front door." % p.dn)
+		elif p.stuckT > 0:                              # (version 7.39) it used to do nothing, and say nothing
+			ev.append(["no", p.id, "Not again so soon: in %d seconds. Try walking first." % ceili(p.stuckT), "Still stuck"])
+		else:
+			ev.append(["no", p.id, "Not while you are down. Somebody has to come and get you.", "Still stuck"])
 		return
 	if p.state == "inn":
 		if a == "drink" and ale > 0 and p.drinkT <= 0 and p.cg < 100:
@@ -3662,7 +3688,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 							done = not p.xslot; p.xslot = true
 						"page":
 							var b := int(bits[1]) if bits.size() > 1 else -1
-							done = b >= 0 and rk(p, b) > 0 and rk(p, b) < 7 and p.jobT <= 0
+							done = b >= 0 and rk(p, b) > 0 and rk(p, b) < 7 and p.jobT <= 0   # (a page does not take a book past rank VII: the notice only offers those below it)
 							if done:
 								var rr := rk(p, b)
 								add_xp(p, b, ceili((need_xp(b, rr) - (need_xp(b, rr - 1) if rr > 1 else 0)) * 0.25))
@@ -3750,7 +3776,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				var b := D.blessed_of(p.get(sl))
 				if b >= 0:
 					p.coin -= rune_bless(p); p.set(sl, b); spark.call("coin"); ev.append(["holy", r1(p.x), r1(p.z)])
-					say("The priest has blessed %s’s %s for good, and taken a gold piece for it. He is not doing this for free." % [p.dn, D.IT[b].n.replace("blessed ", "")])
+					say("The priest has blessed %s’s %s for good, and taken %s for it. He is not doing this for free." % [p.dn, D.IT[b].n.replace("blessed ", ""), D.coins(rune_bless(p))])
 		"btalk", "bknock", "bjeer":                # Robert Bailiff, at his upstairs window
 			if near_station(p, "window"):
 				var w := week_of(mday())
@@ -3763,7 +3789,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 						say("%s has jeered at Robert Bailiff. His guards are a shilling dearer today." % p.dn)
 				bail_t = 6.0
 		"card":                                     # a library card: give up a book, to take up another
-			if near_station(p, "library") and p.inv.has(D.I_CARD) and ia >= 0 and ia < D.BOOKS.size() and p.books[ia] > 0:
+			if near_station(p, "library") and p.inv.has(D.I_CARD) and ia >= 0 and ia < D.BOOKS.size() and p.books[ia] > 0 and ia != D.B_SQUIRE:   # (version 7.39: not Sir Aldous's book; it could never be had back)
 				var t0 := title_of(p)
 				p.inv.erase(D.I_CARD)
 				p.card_rank = maxi(1, p.books[ia] - 1)
@@ -3790,7 +3816,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 						for d in D.BOSS_NIGHTS:
 							if last_day >= D.MONTH and int(d) >= day and (nb == 0 or int(d) < nb): nb = int(d)
 						var k: int = D.BOSS_NIGHTS[nb] if nb else D.U_LORD
-						tip = "The stranger tells %s: “%s”" % [p.dn, D.BOSS_HINT[k]]
+						tip = "The stranger tells %s: “%s”" % [p.dn, D.BOSS_HINT.get(k, "Something is coming. It always is.")]
 				say(tip); ev.append(["tip", p.id, D.LOCALS[ia].name, tip])
 		"lread":                                    # the letter on the gatepost has been read
 			letter_new = false
@@ -4237,7 +4263,10 @@ func night_step(dt: float) -> void:
 		var k: int = N.boss
 		N.boss = -1; spawn_boss(k)
 	# with nobody left standing (all dead, or under their beds) the dead make short work of what is in their way, so the night is not dragged out
-	N.idle = 0.0 if players.any(func(p): return (p.state == "ok" and p.room != "mine") or p.state == "down" or p.state == "inn") else N.idle + dt
+	N.idle = 0.0 if players.any(func(p): return (p.state == "ok" and p.room in ["", "riverside", "inn", "tcave", "rcave"]) or p.state == "down" or p.state == "inn") else N.idle + dt   # (version 7.39: the chapel is no hiding place either)
+	for p in players:                              # who was out in it, and who was indoors (version 7.39: the hat is for those who stood)
+		if p.state == "ok" and (p.room == "mine" or p.room == "chapel"): p.nin += dt
+		elif p.state == "ok" or p.state == "down": p.nout += dt
 	rage = minf(40, 6 + (N.idle - 12) * 0.4) if N.idle > 12 else 1.0
 	wave = N.q.size(); left = undead.size() + N.q.size() + lobs.size() + (1 if N.boss >= 0 else 0)   # wave: how many have still to rise
 	if keepHp <= 0:
@@ -4253,7 +4282,7 @@ func tonight_lines() -> Array:
 		D.U_DIGGER: "gravediggers, which tunnel under the north wall and come up inside it",
 		D.U_BATS: "bat swarms, which fly over everything straight for the keep. Slings, bows and the handbell bring them down",
 		D.U_GUARD: "the Lord’s guard: armoured, hard on walls, and barely dented by farm tools. Maces and hammers",
-		D.U_WRAITH: "wraiths, which drift through walls. Ordinary weapons pass straight through them: only holy things hurt them",
+		D.U_WRAITH: "wraiths, which drift through walls. Ordinary weapons pass straight through them: only holy things, mithril and rune hurt them",
 		D.U_RAM: "a coffin ram, carried down the road at the north gate. A warhammer, or a very strong gate",
 		D.U_BLOAT: "the bloated dead, slow and very full, who burst when they are put down and take everything near them along. Do it from a distance",
 		D.U_PALL: "pallbearers, carrying a coffin lid in front of them like a shield. Go round the side, or bring something heavy, or fire",
@@ -4328,15 +4357,23 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 			var hid: bool = p.coward
 			p.state = "ok"; p.hp = minf(max_hp(p), p.hp + 25)
 			if hid: lines.append("%s spent the night under the bed. The village has noticed, and will remember until dusk." % p.dn)
+			elif p.nin > p.nout:                           # (version 7.39) indoors most of the night: no share of the hat, but nobody calls it cowardice
+				lines.append("%s spent most of the night indoors, and the hat went round without them." % p.dn)
 			else:
 				p.coin += share; paid += 1
+			p.nin = 0.0; p.nout = 0.0
 		var c := D.cottage(p.slot)
 		p.x = c.sx; p.tx = p.x; p.z = c.sz; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.bite = 0; p.room = ""; p.rafted = false; p.swimT = 0; p.tired = 0
 		# blessings and Dutch courage both wear off by morning
 		p.sure = false; p.bless = 0; p.bbod = 0; p.cg = 0; p.charge = 0; p.hang = 0; p.drinkT = 0; p.parry = 0; p.guard = 0; p.upOnce = false; p.study = false; p.order = 0; p.ordN = 0; p.abCd = 0; p.useCd = 0; p.tbCd = 0; p.p1Cd = 0; p.p2Cd = 0; p.prot = 0; p.hb = 0
 	if paid: lines.append("The village passed the hat: %s for everyone who stood and fought." % D.coins(share))
 	if ale > 0: lines.append("The innkeeper finished the last %d tankard%s himself." % [ale, "s" if ale > 1 else ""])
-	var hired := peasants.filter(func(q): return q.kind != 0 and q.state != "body")
+	for q in peasants:                              # (version 7.39) the dogs stay, and are up and about again: they used to be sent off with the hired help, and a new dog took to you every morning
+		if q.kind == 3:
+			var dl := player_by_id(q.owner)
+			q.hp = D.DOG.hp; q.state = "follow"; q.downT = 0
+			if dl: q.x = dl.x - 1.0; q.z = dl.z + 1.0; q.tx = q.x; q.tz = q.z
+	var hired := peasants.filter(func(q): return (q.kind == 1 or q.kind == 2) and q.state != "body")
 	for q in hired:                                 # the hired help goes home at dawn (and the odd mercenary turns on his employer)
 		peasants.erase(q)
 		if q.kind != 2: continue

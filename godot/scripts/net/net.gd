@@ -33,7 +33,7 @@ const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel"
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t", "fs", "fsT", "oilCd", "dark", "braced",
 	"banq", "banqP", "herd", "herdT", "herdL", "herdQ", "herdW", "sheep", "sheepFed", "ride", "strayW",
 	"jl", "jhw", "jlT", "jlL", "jlQ", "jlW", "jlPaid", "jnote", "jfail",
-	"rafted", "swimT", "tired", "pot_a", "pot_s", "pot_d", "pot_i", "potA", "potS", "potD", "potI", "frock", "recipes", "tpaid", "tithe", "fish", "fishCd", "sq", "sqd", "kn", "sqsay"]
+	"rafted", "swimT", "tired", "pot_a", "pot_s", "pot_d", "pot_i", "potA", "potS", "potD", "potI", "frock", "recipes", "tpaid", "tithe", "fish", "fishCd", "sq", "sqd", "kn", "sqsay", "workK"]
 
 static var me: Net
 
@@ -584,7 +584,7 @@ func pack(R: Rules, with_undead: bool) -> Dictionary:
 	var pe := PackedFloat32Array()
 	for q in R.peasants:
 		if q.state == "gone" or q.state == "inn": continue
-		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind + (100 if q.stray else 0), q.plat, q.kit])
+		pe.append_array([q.id, q.x, q.z, q.r, q.hp, q.owner, QSTATE.find(q.state), q.ac, q.hc, q.ni, q.armed, q.nv, q.prot, q.kind + (100 if q.stray else 0) + (200 if q.sent else 0) + (400 if q.errand else 0), q.plat, q.kit])   # (version 7.39: sent home, and on an errand, as flags)
 	var o := {"t": "s", "ph": R.phase, "d": R.day, "tl": R.timeLeft, "nf": R.nf, "k": R.keepHp, "kc": R.keepHc,
 		"w": [R.wave, R.waves, R.left], "stt": R.stats, "so": R.store, "si": R.sites, "sp": R.spots, "rs": R.ruins_seen,
 		"al": R.ale, "ih": R.innHp, "wx": R.weather, "mc": R.merchant, "wa": R.wares, "jb": R.job, "rv": R.reserve, "gd": R.guards, "bl": [R.bail_line, R.bail_t, R.bail_mood, R.bell_t], "lt": [R.letters, R.letter_new], "ch": R.chest, "rn": R.rune_left, "mo": R.moles, "rv2": [R.raftW, R.raft, R.rcave, R.spots2, R.runes2, R.tore_day, R.merch2, R.wares2, R.brew], "it": R.items, "dr": R.drops.map(func(d): return [d.id, d.it, d.x, d.z]), "po": R.pools,
@@ -739,7 +739,7 @@ func _snapshot(R: Rules, m: Dictionary) -> void:
 		if q == null:
 			q = E.Peasant.new(); q.id = id; q.x = pe[i + 1]; q.z = pe[i + 2]; q.r = pe[i + 3]
 		q.tx = pe[i + 1]; q.tz = pe[i + 2]; q.tr = pe[i + 3]; q.hp = pe[i + 4]; q.owner = int(pe[i + 5]); q.state = QSTATE[int(pe[i + 6])]
-		q.ac = int(pe[i + 7]); q.hc = int(pe[i + 8]); q.ni = int(pe[i + 9]); q.armed = int(pe[i + 10]); q.nv = pe[i + 11]; q.prot = pe[i + 12]; q.kind = int(pe[i + 13]) % 100; q.stray = int(pe[i + 13]) >= 100; q.plat = int(pe[i + 14]); q.kit = int(pe[i + 15])
+		q.ac = int(pe[i + 7]); q.hc = int(pe[i + 8]); q.ni = int(pe[i + 9]); q.armed = int(pe[i + 10]); q.nv = pe[i + 11]; q.prot = pe[i + 12]; q.kind = int(pe[i + 13]) % 100; q.stray = (floori(pe[i + 13] / 100.0) & 1) == 1; q.sent = (floori(pe[i + 13] / 100.0) & 2) == 2; q.errand = (floori(pe[i + 13] / 100.0) & 4) == 4; q.plat = int(pe[i + 14]); q.kit = int(pe[i + 15])
 		out.append(q)
 	R.peasants = out
 	if m.has("un"):

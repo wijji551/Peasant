@@ -11,13 +11,13 @@ const ACTIONS := [
 	["interact", "Gather, build, search, rally, use a place (hold)"], ["eat", "Eat"], ["pack", "Open your backpack"], ["skills", "Your skills: books and ranks"],
 	["carry", "Use what you carry: bucket or handbell (also on the action bar)"], ["swap", "Swap to the next weapon in your backpack"],
 	["orders", "Posse orders: follow, hold, charge (also on the action bar)"], ["toilet", "Emergency toilet break (also on the action bar)"], ["ride", "Get on or off your sheep (also on the action bar)"],
-	["power1", "Smite (also on the action bar)"], ["power2", "Pray (also on the action bar)"],
+	["power1", "Your calling's first power (also on the action bar)"], ["power2", "Your calling's second power (also on the action bar)"], ["power3", "Your calling's third power (also on the action bar)"],
 	["build", "Building: hold for the wheel, tap for the next thing"], ["ready", "Ready for the night"], ["mute", "Sound on or off"],
 ]
 const DEF := {
 	"up": [KEY_W, KEY_UP], "left": [KEY_A, KEY_LEFT], "down": [KEY_S, KEY_DOWN], "right": [KEY_D, KEY_RIGHT],
 	"attack": [], "jump": [KEY_SPACE], "trick": [], "interact": [KEY_E], "eat": [KEY_F], "pack": [KEY_I], "skills": [KEY_K],
-	"carry": [], "swap": [KEY_X], "orders": [], "toilet": [], "ride": [], "build": [KEY_TAB], "power1": [], "power2": [],   # (version 7.8: these are on the action bar, 1 to 9)
+	"carry": [], "swap": [KEY_X], "orders": [], "toilet": [], "ride": [], "build": [KEY_TAB], "power1": [], "power2": [], "power3": [],   # (version 7.8: these are on the action bar, 1 to 9)
 	"ready": [KEY_R], "mute": [KEY_M],
 	"cam_left": [KEY_COMMA], "cam_right": [KEY_PERIOD], "look": [KEY_V], "cam_reset": [KEY_N],
 }
@@ -108,7 +108,7 @@ static func name(a: String) -> String:
 	var l := keys_of(a)
 	if l.is_empty() and a == "attack": return "left click"
 	if l.is_empty() and a == "trick": return "right-click"
-	if l.is_empty() and a in ["carry", "orders", "toilet", "ride", "power1", "power2"]: return "its button on the action bar"
+	if l.is_empty() and a in ["carry", "orders", "toilet", "ride", "power1", "power2", "power3"]: return "its button on the action bar"
 	return key_name(l[0]) if l.size() else "no key"
 
 

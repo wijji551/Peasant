@@ -856,3 +856,13 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 
 - The bell tower (1.7 square, its front 0.25 in front of the nave's) hid the old door and the rose window. Both are on the tower's face now (`world.gd _chapel`): a stone surround with a pointed top, oak double doors with planks, iron straps and rings, a step, and the round window higher up the tower.
 - The torch's fire puffs (`figure.gd`) are gone; the live flame stays. All suites and co-op pass.
+
+## Version 7.39: polish before the test plays (build counter 46)
+
+An audit (rules, text against rules, UI) and its fixes.
+- Bugs: `main.begin` loads the save when hosting too (it ran `new_game` and the dawn save overwrote it). `BOSS_HINT` has 17, 18, 19 (the stranger's drink errored in three boss weeks) and is read with `.get`. Closing the dawn notice with R returns before `_game_key` (it set ready). Dawn keeps dogs (only kinds 1 and 2 go home), healing them; `leave_player` removes the leaver's dog (dropping what it carried) and sheep. `drop_item` moves anything inside a room's bounds to the outermost room's way in. `Rules.atk_wait` is shared by the rules and the view's held-button throttle; mouse attacks need the press to have reached `_unhandled_input` (`_lmb_world`). The card refuses the Squire. `Net`: peasant `sent`/`errand` flags (×200, ×400 on the kind field) and `workK` in PF. `P_SAVE` += tpaid, jlPaid, jlT, herdT. Dog waits at the room's exit. Slum count ignores sheep.
+- Nights: `N.idle` counts only players outside, at the Riverside, in its caves or in the inn as standing; `p.nin`/`p.nout` time indoors (mine, chapel) against out, and the hat skips those mostly indoors.
+- UI: windows that do not dim pass clicks (`mouse_filter` IGNORE); Esc closes the posse card first and opens the handbook over the bar's notice; `_leave_armed` resets; unstick explains; solo down text; market Buy shows the real number; tower take-down confirms (an option can act and change page); `place_why` reasons; the wheel hint; power3 binding; Controls text; left click skips the castle look, with a hint on days 1 to 3.
+- QoL: dusk warnings at 60 and 20 s (`_tl_last`), red timer; `pdown` event and banner with direction; ready line names; focus-out opens the handbook alone (pausing); minimap doors, cart and cottage; labels for doors, people and "Out"; `Settings.fullscreen`, F11 and Alt+Enter.
+- Text: holy wording and gold threshold 1.3; card rank VII cap shown; pages below VII; seven bosses; fish; market; tar; Dogs VII; wraiths; rune bless price; Last Warning in rain; librarian; the Lord's hint and handbook line; "one of your books".
+- New `polish_test` (9). All 36 suites and co-op pass.

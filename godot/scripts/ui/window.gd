@@ -76,6 +76,7 @@ func open(k: String, title: String, intro: String = "", w: float = 640, h: float
 	closable = can_close
 	_close.visible = can_close
 	_dim.visible = dim
+	mouse_filter = Control.MOUSE_FILTER_STOP if dim else Control.MOUSE_FILTER_IGNORE   # (version 7.39) a notice that does not dim the screen leaves the buttons round it working
 	_title.text = title
 	_top.visible = title != "" or can_close
 	pin = Vector2(-1, -1)

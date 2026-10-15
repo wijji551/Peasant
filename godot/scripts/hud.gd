@@ -326,6 +326,9 @@ func posse_menu(open: bool, away: int, can_send: bool) -> void:
 	_pcard_t = 8.0
 
 
+func close_posse_menu() -> void:
+	if _pcard: _pcard.visible = false
+
 func posse_menu_open() -> bool:
 	return _pcard != null and _pcard.visible
 
@@ -446,6 +449,7 @@ func update(R: Rules, me: E.Player, prompt: String, prog: float, prompt_ok: bool
 		"won": timer = "It is over. You held."
 		"lost": timer = "The keep has fallen"
 	_timer.text = timer
+	_timer.add_theme_color_override("font_color", Color("a8262a") if ph == "day" and R.timeLeft <= 60.0 else Look.INK_SOFT)   # (version 7.39) red in the last minute of the day
 	_title.text = "%s, %s" % [p.dn, Rules.title_of(p)]
 	_ready_lab.text = ready_line
 	_ready_lab.visible = ready_line != ""
@@ -558,7 +562,7 @@ func open_wheel(ks: Array, p: E.Player, sel: String) -> void:
 	if ks.is_empty(): return
 	var centre := root.size * Vector2(0.5, 0.5)
 	var rad := 150.0 if ks.size() > 4 else 120.0
-	var hint := Look.label(_wheel, "Let go over one to place it", 17, Look.PAPER_LIGHT, true)
+	var hint := Look.label(_wheel, Keys.fill("Let go over one to pick it, then {interact} or click to put it down"), 17, Look.PAPER_LIGHT, true)
 	hint.position = centre + Vector2(-hint.get_minimum_size().x / 2, -rad - 78)
 	for i in ks.size():
 		var k: String = ks[i]

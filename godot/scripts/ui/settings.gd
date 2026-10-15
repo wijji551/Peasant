@@ -17,6 +17,7 @@ static var castle_pan := true        # look up at the castle as night falls
 static var numbers := true           # numbers that jump off the dead when they are hit
 static var shake := true             # the view is knocked a little by your own blows
 static var see_keep := true          # see through the keep when something is behind it
+static var fullscreen := false       # (version 7.39) the whole screen, or a window; F11 too
 static var binds := {}               # action -> [physical keycodes]; empty means the usual keys
 static var bar_order: Array = []     # the action bar: the ids put in order by hand, first (the rest follow as they come)
 static var bar_off: Array = []       # and the ones taken off it
@@ -42,6 +43,7 @@ static func load_all() -> void:
 	castle_pan = bool(d.get("castle_pan", true))
 	numbers = bool(d.get("numbers", true))
 	shake = bool(d.get("shake", true))
+	fullscreen = bool(d.get("fullscreen", false))
 	var bo = d.get("bar_order", [])
 	if bo is Array: bar_order = bo.map(func(x): return str(x))
 	var bf = d.get("bar_off", [])
@@ -51,6 +53,13 @@ static func load_all() -> void:
 		for a in b:
 			if Keys.DEF.has(a) and b[a] is Array:
 				binds[a] = b[a].map(func(k): return int(k))
+
+
+## The whole screen, or a window (not in the tests, which have no screen to fill).
+static func apply_window() -> void:
+	if DisplayServer.get_name() == "headless": return
+	var want := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+	if DisplayServer.window_get_mode() != want: DisplayServer.window_set_mode(want)
 
 
 ## The volumes by name, for the sliders in the options.
@@ -73,4 +82,4 @@ static func set_volume(k: String, v: int) -> void:
 
 static func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
-	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "relay": relay, "tags": tags, "see_keep": see_keep, "castle_pan": castle_pan, "numbers": numbers, "shake": shake, "binds": binds, "bar_order": bar_order, "bar_off": bar_off}))
+	if f: f.store_string(JSON.stringify({"name": name, "col": col, "vol": vol, "fx_vol": fx_vol, "amb_vol": amb_vol, "music_vol": music_vol, "muted": muted, "relay": relay, "tags": tags, "see_keep": see_keep, "castle_pan": castle_pan, "numbers": numbers, "shake": shake, "fullscreen": fullscreen, "binds": binds, "bar_order": bar_order, "bar_off": bar_off}))

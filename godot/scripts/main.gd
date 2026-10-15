@@ -111,6 +111,7 @@ var _keep_hc_seen := 0
 
 func _ready() -> void:
 	Settings.load_all()
+	if OS.get_environment("DTV_SHOT") == "": Settings.apply_window()
 	Keys.setup()
 	world = World.new()
 	add_child(world)
@@ -319,9 +320,10 @@ func begin(save) -> void:
 	var nm: String = Settings.name if Settings.name != "" else "Peasant"
 	var info := [{"id": 1, "name": nm, "col": Settings.col}]
 	if Net.me.is_host(): info = Net.me.infos()
-	if save and not Net.me.is_host():
-		info[0].name = save.players[0].name
-		info[0].col = int(save.players[0].get("col", Settings.col))
+	if save:                                             # (version 7.39) a hosted village carries on too: it used to start afresh, and save over the old one
+		if not Net.me.is_host():
+			info[0].name = save.players[0].name
+			info[0].col = int(save.players[0].get("col", Settings.col))
 		R.load_game(save, info)
 	else:
 		R.new_game(info, D.WEEK if OS.get_environment("DTV_SHORT") != "" else next_len)
@@ -432,6 +434,10 @@ func _lights() -> void:
 
 # ---------------------------------------------------------------- input
 func _input(e: InputEvent) -> void:
+	if e is InputEventKey and e.pressed and not e.echo and (e.physical_keycode == KEY_F11 or (e.physical_keycode == KEY_ENTER and e.alt_pressed)):   # (version 7.39) the whole screen, or a window
+		Settings.fullscreen = not Settings.fullscreen; Settings.save(); Settings.apply_window()
+		get_viewport().set_input_as_handled()
+		return
 	# the handbook is waiting for a key to give to an action
 	if win.is_open("menu") and menus.rebinding != "" and e is InputEventKey and e.pressed and not e.echo:
 		get_viewport().set_input_as_handled()
@@ -442,7 +448,16 @@ func _input(e: InputEvent) -> void:
 		_pitch_goal = clampf(_pitch_goal + e.relative.y * 0.004, CAM_PITCH_MIN, CAM_PITCH_MAX)
 
 
+var _lmb_world := false
+var _tl_last := 9999.0                                  # (version 7.39) the day's time left, last frame: for the warnings before dusk                                 # (version 7.39) the left button went down on the world, not on a button
+
+## (version 7.39) alone, the game waits if you go off to another window: the handbook opens, which pauses it
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and screen == "game" and R and R.live() and R.players.size() == 1 and not Net.me.online() and not win.is_open("menu") and OS.get_environment("DTV_SHOT") == "":
+		menus.menu()
+
 func _unhandled_input(e: InputEvent) -> void:
+	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed: _lmb_world = true
 	if not (e is InputEventKey or e is InputEventMouseButton) or not e.is_pressed() or e.is_echo():
 		return
 	if Keys.is_act(e, "mute"):
@@ -451,12 +466,15 @@ func _unhandled_input(e: InputEvent) -> void:
 		Sound.apply_settings()
 		hud.banner("Sound off" if Settings.muted else "Sound on", "%s turns it back on." % Keys.name("mute") if Settings.muted else "", 1.2)
 		return
-	if _pan_t >= 0.0 and _pan_t < 6.0 and (Keys.is_act(e, "attack") or Keys.is_act(e, "jump") or (e is InputEventKey and e.physical_keycode == KEY_ESCAPE)):
+	if _pan_t >= 0.0 and _pan_t < 6.0 and (Keys.is_act(e, "attack") or Keys.is_act(e, "jump") or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventKey and e.physical_keycode == KEY_ESCAPE)):
 		_pan_t = 6.0                                       # seen it: back to the village
 		return
 	if e is InputEventKey and e.physical_keycode == KEY_ESCAPE:   # closes whatever is open; with nothing open, the handbook
-		if win.visible:
+		if hud.posse_menu_open():                          # (version 7.39) the posse card first, and only that
+			hud.close_posse_menu()
+		elif win.visible:
 			if win.closable: win.close()
+			elif screen == "game" and win.kind == "notice": menus.menu()   # (at the bar of the Rose, where the notice cannot be shut: the handbook)
 		elif _build_sel != "": _build_sel = ""
 		elif screen == "game": menus.menu()
 		return
@@ -486,6 +504,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	if win.is_open("dawn") and (Keys.is_act(e, "interact") or Keys.is_act(e, "ready")):
 		win.close()
+		return                                           # (version 7.39) closing the dawn notice with R used to mark you ready as well
 	if win.visible and win.kind != "dawn":
 		return
 	_game_key(e, dg)
@@ -523,6 +542,7 @@ func _game_key(e: InputEvent, dg: int) -> void:   # the keys that act in the wor
 	elif Keys.is_act(e, "ride"): bar_do("sheep")
 	elif Keys.is_act(e, "power1"): bar_do("c0")
 	elif Keys.is_act(e, "power2"): bar_do("c1")
+	elif Keys.is_act(e, "power3"): bar_do("c2")
 	elif Keys.is_act(e, "orders"): bar_do("orders")
 	elif Keys.is_act(e, "build"):                     # held, the wheel opens (see _wheel_step); a tap steps through
 		_wheel_t = 0.0
@@ -754,9 +774,9 @@ func _place_ghost() -> void:
 	if not Rules.has(me, c):
 		Sound.play("no"); hud.banner("A %s needs %s" % [D.SNAME[k], D.cost_text(c)], "", 1.1)
 		return
-	if not R.valid_place(k, g.x, g.z, g.rot):
-		if D.COST[k].has("bodies") and D.inside_village(g.x, g.z):
-			Sound.play("no"); hud.banner("Not inside the village", "The fallen go outside the wall.", 1.5)
+	var why := R.place_why(k, g.x, g.z, g.rot)
+	if why != "":
+		Sound.play("no"); hud.banner("Not here", why + ".", 1.3)
 		return
 	cmd({"t": "bld", "k": k, "x": g.x, "z": g.z, "rot": g.rot})
 
@@ -831,11 +851,11 @@ func option(i: int) -> void:
 	var o: Dictionary = opts[i]
 	if not o.ok:
 		return
+	if o.has("a"):                                       # (version 7.39) an option can do a thing and then turn the page (a "yes" back to the notice)
+		cmd({"t": "act", "a": o.a, "arg": o.get("arg")})
 	if o.has("page"):
 		_page = o.page
 		menus.notice(_panel, _page, true)
-	else:
-		cmd({"t": "act", "a": o.a, "arg": o.get("arg")})
 
 
 func m_has_free_posse() -> bool:
@@ -927,10 +947,10 @@ func _tick() -> void:
 		var e := R.move_player(p, mx, mz, STEP, _clock)
 		if e != "":
 			_edge = e; _edge_t = 0.5
-		var atk: bool = Keys.held("attack") or (Input.is_action_pressed("dtv_attack_mouse") and _build_sel == "" and not win.visible) or (_bot and R.phase == "night")
+		if not Input.is_action_pressed("dtv_attack_mouse"): _lmb_world = false
+		var atk: bool = Keys.held("attack") or (Input.is_action_pressed("dtv_attack_mouse") and _lmb_world and _build_sel == "" and not win.visible) or (_bot and R.phase == "night")
 		if atk and _atk_cd <= 0 and p.gk != 5 and not p.ride:
-			var I: Dictionary = D.IT[p.wpn]
-			_atk_cd = I.cd * (0.8 if I.rng and Rules.rk(p, 5) >= 5 else 1.0)
+			_atk_cd = Rules.atk_wait(p)
 			R.aim_assist(p); cmd({"t": "atk", "r": p.r})
 	if not Net.me.is_client():                           # a joined game does not run the rules: the host does
 		Dev.step(R)                                      # (the test copy: everything kept full)
@@ -1113,6 +1133,10 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"hold": F.puff(ev[1], 0.4, ev[2], 8, F.C_DUST, 2.5); Sound.play("growl", 0.8, Vector2(ev[1], ev[2]))
 		"dogdown": F.puff(ev[1], 0.6, ev[2], 6, F.C_DUST, 2.0)
 		"fetched": if ev[1] == me.id: hud.banner("Fetched", "The dog has brought you %s." % ev[2], 1.8)
+		"pdown":                                         # (version 7.39) a team-mate is down: say so, and which way
+			var who := R.player_by_id(int(ev[1]))
+			if who and who != me and R.players.size() > 1:
+				Sound.play("no"); hud.banner("%s is down!" % who.dn, "%s of you. %d seconds to get there and hold %s." % [D.compass(float(ev[2]) - me.x, float(ev[3]) - me.z).capitalize(), int(ev[4]), Keys.name("interact")], 2.6)
 		"no": if ev[1] == me.id: Sound.play("no"); hud.banner(ev[3] if ev.size() > 3 else "Not here", ev[2], 1.6 if ev.size() < 4 else 2.4)
 		"baa": Sound.play("baa", 0.8, Vector2(ev[1], ev[2]))
 		"eatfish":
@@ -1607,7 +1631,9 @@ func _hud_update(delta: float) -> void:
 			"dusk":
 				Sound.play("bell")
 				hud.banner("Dusk", _dusk_line(), 6.5 if Settings.castle_pan else 5.0)
-				if Settings.castle_pan and not _bot and OS.get_environment("DTV_SHOT") == "" and me.room == "": _pan_t = 0.0
+				if Settings.castle_pan and not _bot and OS.get_environment("DTV_SHOT") == "" and me.room == "":
+					_pan_t = 0.0
+					if R.day <= 3: hud.feed("%s or a click: back to the village. (The look up at the castle can be turned off in the handbook's options.)" % Keys.name("jump"))
 				if win.is_open("dawn"): win.close()
 			"night":
 				hud.banner("Night %d" % R.day, "The dead are rising all along the graveyard, and some have brought bows." if R.day >= 4 else "The dead are rising all along the graveyard.", 4.5)
@@ -1620,6 +1646,16 @@ func _hud_update(delta: float) -> void:
 			_end_shown = true
 			_build_sel = ""; _panel = ""
 			menus.ending(ph == "won")
+	if ph == "day" and R.live() and me:                  # (version 7.39) a warning before dusk, at a minute and at twenty seconds
+		for th in [60.0, 20.0]:
+			if _tl_last > th and R.timeLeft <= th:
+				var far: bool = me.room == "riverside" or D.ROOMS.get(me.room, {}).get("parent", "") == "riverside"
+				var shut: bool = me.room != "" and D.ROOMS.get(me.room, {}).get("day", false)
+				Sound.play("ring", 0.5)
+				hud.banner("Dusk in %s" % ("a minute" if th > 30 else "twenty seconds"), "The raft stops at dusk: get back across, or it is a swim." if far else "You will be shown out when night falls." if shut else "Finish what you are doing, and get to the wall.", 2.6)
+		_tl_last = R.timeLeft
+	else:
+		_tl_last = 9999.0
 	if R.dawn.seq != _dawn_seen and ph == "day":         # a new morning: the dawn notice
 		_dawn_seen = R.dawn.seq
 		hud.banner("Day %d" % R.dawn.day, "", 2.6)
@@ -1670,13 +1706,14 @@ func _hud_update(delta: float) -> void:
 				break
 	if p.state == "inn" and R.live() and ptxt == "": ptxt = "Hold {interact} to get up from the bar"
 	_edge_t -= delta
-	if p.state == "down": ptxt = "You are down. A team-mate can revive you for %d more seconds." % ceili(p.downT)
+	if p.state == "down": ptxt = ("You are down. A team-mate can revive you for %d more seconds." % ceili(p.downT)) if R.players.size() > 1 else ("You are down, and there is nobody to pick you up. In %d seconds you are out until dawn; the keep has to hold without you." % ceili(p.downT))
 	elif p.state == "dead": ptxt = "You are dead. A relative arrives at dawn."
 	elif _build_sel != "": ptxt = "Press {interact} or click to place a %s (%s). {build} changes, Esc cancels." % [D.SNAME[_build_sel], D.cost_text(Rules.cost_of(p, _build_sel))]
 	var rd := R.players.filter(func(o): return o.ready).size()
 	var ready_line := ""
 	if ph == "day":
-		ready_line = ("You are ready (%d of %d). %s to change your mind." % [rd, R.players.size(), Keys.name("ready")]) if p.ready else "Press %s when you are ready for the night." % Keys.name("ready")
+		var wait_for: Array = R.players.filter(func(o): return not o.ready and o != p).map(func(o): return o.dn)   # (version 7.39) who the night is waiting for
+		ready_line = ("You are ready (%d of %d). %s%s to change your mind." % [rd, R.players.size(), ("Waiting for %s. " % ", ".join(wait_for)) if wait_for.size() and wait_for.size() <= 4 else "", Keys.name("ready")]) if p.ready else "Press %s when you are ready for the night." % Keys.name("ready")
 	hud.update(R, p, ptxt, p.prog if it and it.ok and p.gk != 5 else 0.0, it == null or it.ok, _build_sel, ready_line)
 	hud.bar(bar_slots().map(func(id): return [id, bar_info(id)]))
 
