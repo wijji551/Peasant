@@ -103,7 +103,10 @@ func act(st: String, a: String, arg = null) -> void:
 	if s.get("room", "") != "":                  # (version 7.30) the library is a room: in at the door, and out again
 		var M: Dictionary = D.ROOMS[s.room]
 		go(M.door[0], M.door[1]); R.enter_room(me, s.room); me.x = s.x; me.z = s.z
-		R.do_act(me, a, arg); R.leave_room(me); fast(0.2)
+		R.do_act(me, a, arg)
+		if a == "study" and me.study:            # (version 7.37) a class is sat in a pew: stay for it
+			fast(D.HOLY_TIME + 2.0, func(): return me.study)
+		R.leave_room(me); fast(0.2)
 		return
 	go(s.x, s.z)
 	R.do_act(me, a, arg)

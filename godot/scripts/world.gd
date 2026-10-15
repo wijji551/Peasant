@@ -4,6 +4,7 @@ extends Node3D
 
 const Build := preload("res://scripts/build.gd")
 const Squire := preload("res://scripts/view/squire.gd")
+const Chapel := preload("res://scripts/view/chapel.gd")
 var squire: Node3D
 
 const VW := 28.0          # half the village's width
@@ -84,6 +85,12 @@ var _storm_light: OmniLight3D
 var night := 0.0                          # how dark it is (main.gd keeps this up to date)
 var view_at := Vector3.ZERO               # where the view is looking (main.gd), for the crows and the things in the dark
 var _bell_swing := 0.0
+var _glass: Array = []                    # (version 7.37) the chapel's coloured windows: on the nights of the bells they blaze
+var _chapel_lights: Array = []
+var _spill: Array = []                    # the windows' colours on the grass: [mesh, material, which window]
+var _bells_on := false
+var _ducks: Array = []                    # the ducks on the pond: [node, phase, radius, speed]
+var _pond := Vector3.ZERO
 var _dummy_hit: Array[float] = [0.0, 0.0, 0.0]
 
 var _log_xf: Array[Transform3D] = []
@@ -116,6 +123,7 @@ func _ready() -> void:
 	_ground_detail()
 	_wilds()
 	squire = Squire.new(); add_child(squire)     # (version 7.30) the library, the lane and the cabin
+	add_child(Chapel.new())                      # (version 7.37) the inside of the chapel
 
 
 ## A fire in a brazier: flames that flicker (they are turned up at night with the lanterns), and the light.
@@ -1287,7 +1295,8 @@ func _chapel() -> void:
 			Build.box(n, Vector3(0.45, 2.6, 0.45), Vector3(sx * (w / 2 + 0.2), 0.35, zz), trim)
 			Build.box(n, Vector3(0.32, 1.0, 0.32), Vector3(sx * (w / 2 + 0.14), 2.95, zz), trim, 0.0, 0.0, sx * 0.25)
 	# tall pointed windows of coloured glass between the buttresses
-	var glass := [Build.mat(Color("c23b3b"), 0.9), Build.mat(Color("3b6fc2"), 0.9), Build.mat(Color("e0b13a"), 0.9)]
+	var glass := [Build.mat(Color("c23b3b"), 0.9).duplicate(), Build.mat(Color("3b6fc2"), 0.9).duplicate(), Build.mat(Color("e0b13a"), 0.9).duplicate()]   # (their own: they change)
+	_glass = glass.duplicate()
 	for sx in [-1.0, 1.0]:
 		for i in 2:
 			var zz := -0.95 + i * 1.9
@@ -1295,6 +1304,10 @@ func _chapel() -> void:
 			Build.box(n, Vector3(0.12, 1.9, 0.62), Vector3(sx * (w / 2 + 0.02), 1.15, zz), Color("4a4438"))
 			Build.glow_box(n, Vector3(0.12, 1.6, 0.44), Vector3(sx * (w / 2 + 0.05), 1.25, zz), g)
 			var tip := Build.glow_box(n, Vector3(0.12, 0.32, 0.32), Vector3(sx * (w / 2 + 0.05), 2.82, zz), g)
+			var sm := StandardMaterial3D.new(); sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			sm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD; sm.albedo_color = Color((g as StandardMaterial3D).albedo_color, 0.0)
+			var spill := Build.glow_box(n, Vector3(1.6, 0.02, 0.7), Vector3(sx * (w / 2 + 1.0), 0.14, zz), sm)   # (version 7.37) its colour thrown on the grass, on the nights of the bells
+			spill.visible = false; _spill.append([spill, sm, _glass.find(g)])
 			tip.rotation.x = PI / 4                                                            # the pointed top
 	# the front: a pointed doorway, a round window above it, and the bell tower over all
 	Build.box(n, Vector3(1.5, 2.3, 0.2), Vector3(0, 0.35, d / 2 + 0.02), trim)
@@ -1305,7 +1318,11 @@ func _chapel() -> void:
 	var rose := Build.cyl(n, 0.62, 0.62, 0.12, Vector3(0, 3.0, d / 2 + 0.02), trim, 12, 0.0, PI / 2)
 	rose.position = Vector3(0, 3.0, d / 2 + 0.06)
 	var rg := Build.cyl(n, 0.5, 0.5, 0.12, Vector3(0, 3.0, d / 2 + 0.1), Color.WHITE, 12, 0.0, PI / 2)
-	rg.material_override = Build.mat(Color("8f5bc2"), 1.0)
+	rg.material_override = Build.mat(Color("8f5bc2"), 1.0).duplicate()
+	_glass.append(rg.material_override)
+	for sx in [-1.0, 1.0]:                                                                       # the light through them, out on to the grass, on the nights of the bells
+		var cl := OmniLight3D.new(); cl.position = Vector3(sx * (w / 2 + 1.4), 1.6, 0); cl.omni_range = 7.0; cl.light_energy = 0.0; n.add_child(cl)
+		_chapel_lights.append(cl)
 	rg.position = Vector3(0, 3.0, d / 2 + 0.1)
 	# the bell tower, at the south end
 	var tz := d / 2 - 0.6
@@ -1474,10 +1491,15 @@ func _green() -> void:
 	pm.roughness = 0.12
 	pm.metallic = 0.2
 	pond.material_override = pm
-	for d in [Vector3(0.6, 0, -0.4), Vector3(-0.5, 0, 0.5)]:
-		Build.box(self, Vector3(0.38, 0.22, 0.24), pp + d + Vector3(0, 0.05, 0), Color("f2efe4"))
-		Build.box(self, Vector3(0.14, 0.18, 0.14), pp + d + Vector3(0.18, 0.25, 0), Color("3c6f43"))
-		Build.box(self, Vector3(0.12, 0.05, 0.08), pp + d + Vector3(0.3, 0.33, 0), Color("e0a526"))
+	_pond = pp
+	for k in 3:                                                                                # (version 7.37) the ducks paddle about
+		var dk := Node3D.new(); add_child(dk)
+		Build.box(dk, Vector3(0.38, 0.22, 0.24), Vector3(0, 0.05, 0), Color("f2efe4") if k != 2 else Color("8a6a45"))
+		Build.box(dk, Vector3(0.14, 0.18, 0.14), Vector3(0.18, 0.25, 0), Color("3c6f43") if k != 2 else Color("6b5236"))
+		Build.box(dk, Vector3(0.12, 0.05, 0.08), Vector3(0.3, 0.33, 0), Color("e0a526"))
+		Build.box(dk, Vector3(0.1, 0.06, 0.16), Vector3(-0.2, 0.18, 0), Color("e6e2d6") if k != 2 else Color("7a5c3e"), 0.0, 0.0, 0.5)   # a tail, cocked
+		if k == 2: dk.scale = Vector3.ONE * 0.8                                                     # (a duck, and a smaller brown one)
+		_ducks.append([dk, k * 2.1, [0.9, 0.55, 1.15][k], [0.35, -0.5, 0.25][k]])
 	# the cottages' back gardens: a wattle fence and rows of cabbages
 	for i in 4:
 		var gx := -7.5 + i * 5.0
@@ -2590,7 +2612,49 @@ func hit_dummy(i: int) -> void:
 	if i >= 0 and i < _dummy_hit.size(): _dummy_hit[i] = 1.0
 
 
+## The nights of the bells (main.gd): the priest has lit every candle he owns, and the chapel's windows blaze.
+func set_bells(on: bool) -> void:
+	_bells_on = on
+
+func _chapel_step(delta: float) -> void:
+	var t := Time.get_ticks_msec() / 1000.0
+	var cols := [Color(1.0, 0.25, 0.2), Color(0.3, 0.5, 1.0), Color(1.0, 0.78, 0.25), Color(0.7, 0.4, 1.0)]
+	for i in _glass.size():
+		var m: StandardMaterial3D = _glass[i]
+		if _bells_on:                             # each window flares and flickers on its own beat, as candle after candle is lit
+			var f: float = 0.55 + 0.45 * sin(t * (5.0 + i * 1.3) + i * 2.0) * sin(t * (2.3 + i * 0.7))
+			var flash: float = 2.5 if fmod(t * 0.9 + i * 0.37, 1.7) < 0.12 else 0.0
+			m.emission_energy_multiplier = 1.4 + 1.4 * f + flash * 0.5
+		else:
+			m.emission_energy_multiplier = 0.9
+	for sp in _spill:
+		(sp[0] as Node3D).visible = _bells_on
+		if _bells_on:
+			var e: float = (_glass[sp[2]] as StandardMaterial3D).emission_energy_multiplier
+			var smat: StandardMaterial3D = sp[1]
+			var sc := smat.albedo_color; sc.a = clampf(0.12 * e, 0.0, 0.85); smat.albedo_color = sc
+	for j in _chapel_lights.size():
+		var cl: OmniLight3D = _chapel_lights[j]
+		if _bells_on:
+			var k: int = (int(t * 1.6) + j * 2) % cols.size()
+			cl.light_color = (cols[k] as Color).lerp(cols[(k + 1) % cols.size()], fmod(t * 1.6, 1.0))
+			cl.light_energy = 2.2 + 0.9 * sin(t * 9.0 + j) * sin(t * 4.1)
+		else:
+			cl.light_energy = 0.0
+
+func _ducks_step(delta: float) -> void:            # round the pond, each at its own pace, bobbing, and now and then turning back
+	var t := Time.get_ticks_msec() / 1000.0
+	for dk in _ducks:
+		var a: float = dk[1] + t * dk[3] + 0.4 * sin(t * 0.3 + dk[1])
+		var r: float = dk[2] + 0.15 * sin(t * 0.5 + dk[1] * 3.0)
+		var n: Node3D = dk[0]
+		n.position = _pond + Vector3(cos(a) * r, 0.02 + 0.02 * sin(t * 2.4 + dk[1]), sin(a) * r)
+		n.rotation.y = -a + (PI if dk[3] > 0 else 0.0)                             # facing the way it is going
+		n.rotation.z = 0.06 * sin(t * 2.4 + dk[1])
+
 func _process(delta: float) -> void:
+	_chapel_step(delta)
+	_ducks_step(delta)
 	_lord_step(delta)
 	_crows_step(delta)
 	_haunts_step(delta)

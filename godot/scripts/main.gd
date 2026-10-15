@@ -1152,6 +1152,11 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			F.puff(ev[2], 1.4, ev[3], 18, F.C_GLAD, 2.6); Sound.play("rally", 0.8, Vector2(ev[2], ev[3]))
 			if ev[1] == me.id: hud.banner("Second Wind", "A third of your health back, from somewhere. Once a night.", 2.0)
 		"page": Sound.play("page", 0.9, Vector2(ev[1], ev[2]))
+		"pew":                                           # (version 7.37) sat down in a pew, and the bible opened: the priest's notice can go
+			Sound.play("page", 0.9, Vector2(ev[2], ev[3]))
+			if ev[1] == me.id and _panel == "priest":
+				_panel = ""; _page = ""
+				if win.is_open("notice"): win.close()
 		"hone":
 			F.pillar(ev[2], ev[3], ev[4])
 			if ev[1] == me.id: hud.banner("Hone", "The relic is %s." % D.compass(ev[2] - me.x, ev[3] - me.z), 2.4)
@@ -1412,6 +1417,7 @@ func _draw(delta: float) -> void:
 	Sound.under = me != null and me.room in ["mine", "tcave", "rcave"]
 	Sound.me.update(delta, R.nf, _focus, atmos.weather, near, atmos.flash, R.live())
 	var ringing: bool = R.phase == "night" and R.bells()        # a night of the bells: they toll till dawn, and the dead see red
+	world.set_bells(ringing or (OS.get_environment("DTV_BELLS") != "" and R.phase == "night"))   # (DTV_BELLS: for pictures)
 	dead_view.enraged = ringing or (R.phase == "night" and R.moon() == "blood")
 	if ringing:
 		_bells_t -= delta
@@ -1485,6 +1491,15 @@ func _apply_light(nf: float) -> void:
 		env.ambient_light_color = Color(1.0, 0.86, 0.66) if lib else Color(0.86, 0.8, 0.72)
 		env.ambient_light_energy = 0.5 if lib else 0.46
 		env.background_color = Color(0.05, 0.04, 0.03)
+		env.fog_light_color = env.background_color
+		env.fog_depth_begin = 400.0
+		env.fog_depth_end = 500.0
+		env.adjustment_saturation = 1.05
+	elif screen == "game" and me and me.room == "chapel":   # (version 7.37) the chapel: candles, and coloured daylight through the glass
+		sun.light_energy = 0.0
+		env.ambient_light_color = Color(0.94, 0.86, 0.76).lerp(Color(1.0, 0.78, 0.55), 0.5 if world._bells_on else 0.0)
+		env.ambient_light_energy = 0.5 if world._bells_on else 0.44
+		env.background_color = Color(0.04, 0.035, 0.035)
 		env.fog_light_color = env.background_color
 		env.fog_depth_begin = 400.0
 		env.fog_depth_end = 500.0
@@ -1693,6 +1708,9 @@ func _test_hook() -> void:
 		R.enter_room(me, rm[0])
 		if rm.size() >= 3:
 			me.x = float(rm[1]); me.z = float(rm[2])
+	if OS.get_environment("DTV_STUDY") != "" and _frame == at - 3 and me and me.room == "chapel":   # for pictures: at holy studies, in a pew
+		var ps := D.station("priest"); me.x = ps.x; me.z = ps.z; me.holy = 0
+		R.do_act(me, "study")
 	if OS.get_environment("DTV_GAME") != "" and _frame == at + 6 and me:      # for pictures: a game with the gambler (use with DTV_ROOM=inn and DTV_OPEN=notice:gambler)
 		me.coin = 200
 		R.do_act(me, "gstart", OS.get_environment("DTV_GAME") + ":12")
@@ -1816,7 +1834,7 @@ func _test_hook() -> void:
 		elif o == "host": Net.me.host("Matt", 2); menus.lobby()
 		elif o == "none": win.close()
 		elif o.begins_with("weather:"): R.weather = o.substr(8); atmos.weather = R.weather; _weather_forced = true; win.close()
-		elif o == "menu": menus.menu()
+		elif o == "menu": menus.guide_ch = int(OS.get_environment("DTV_GUIDE")); menus.menu()   # (DTV_GUIDE=n: that chapter)
 		elif o == "keys": menus.menu("keys")
 		elif o == "dawn": menus.dawn(R.day, R.dawn.lines); _dawn_t = 99.0
 		elif o == "end": menus.ending(true)

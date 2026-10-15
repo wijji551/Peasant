@@ -1734,9 +1734,31 @@ func leave_room(p: E.Player) -> void:
 		p.x = M.exit[0]; p.z = M.exit[1] + rnd2(-0.4, 0.4); p.tx = p.x; p.tz = p.z; p.r = atan2(M.exit[0] - M.door[0], M.exit[1] - M.door[1]); p.goal_r = p.r
 	ev.append(["door", r1(p.x), r1(p.z)])
 
+## A class in holy studies (version 7.37): into the first free seat in the pews, front row first, facing the altar.
+func sit_pew(p: E.Player) -> void:
+	var seats := D.pew_seats()
+	var k := 0
+	for i in seats.size():
+		var s: Array = seats[i]
+		if not players.any(func(o): return o != p and o.room == "chapel" and o.study and D.d2(o.x, o.z, s[0], s[1]) < 0.25):
+			k = i; break
+	p.x = seats[k][0]; p.z = seats[k][1]; p.tx = p.x; p.tz = p.z; p.r = PI; p.goal_r = PI; p.tp = tpc; tpc += 1; p.eLock = true
+	ev.append(["pew", p.id, r1(p.x), r1(p.z)])
+
+## Which pew seat a player is sat in, or -1 (they have got up and walked off).
+func pew_of(p: E.Player) -> int:
+	if p.room != "chapel": return -1
+	var seats := D.pew_seats()
+	for i in seats.size():
+		if D.d2(p.x, p.z, seats[i][0], seats[i][1]) < 0.36: return i
+	return -1
+
 ## What holding E would do, indoors.
 func room_interact(p: E.Player):
 	var M: Dictionary = D.ROOMS[p.room]
+	if p.room == "chapel" and p.study:                  # (version 7.37) sat in a pew, reading: get up, and the priest remembers where you got to
+		return {"type": "unpew", "key": "unpew", "ok": true, "dur": 0.6, "x": p.x, "z": p.z, "rad": 0.8,
+			"label": "Reading the bible: %d of %d seconds. Hold {interact} to close it and get up; the priest will remember where you got to" % [floori(p.holyT), D.HOLY_TIME]}
 	if p.room == "mine":
 		for i in D.RUNE_VEINS.size():
 			var v: Array = D.RUNE_VEINS[i]
@@ -3773,8 +3795,9 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 		"lread":                                    # the letter on the gatepost has been read
 			letter_new = false
 		"study":
-			if near_station(p, "priest") and p.holy < 2:
+			if p.room == "chapel" and near_station(p, "priest") and p.holy < 2:
 				p.study = not p.study
+				if p.study: sit_pew(p)
 		"rbuy":                                         # the merchant who never leaves: materials, or a piece of rune (arg: a material, or an item)
 			if not near_station(p, "rmerch"): return
 			if typeof(arg) == TYPE_STRING and D.RESIDENT.has(sa) and sa != "weapon" and sa != "armour":
@@ -4469,9 +4492,8 @@ func player_step(p: E.Player, dt: float) -> void:
 		return
 	if rk(p, 9) >= 4 and p.hp < max_hp(p):
 		p.hp = minf(max_hp(p), p.hp + dt)
-	if p.study:                                    # a class in holy studies: stay by the priest until it is over
-		var st: Dictionary = D.station("priest")
-		if p.state != "ok" or p.holy >= 2 or D.d2(p.x, p.z, st.x, st.z) > pow(st.r + 1.5, 2):
+	if p.study:                                    # a class in holy studies: sat in a pew with the bible open, until it is over (version 7.37)
+		if p.state != "ok" or p.holy >= 2 or p.room != "chapel" or pew_of(p) < 0:
 			p.study = false
 		else:
 			p.holyT += dt
@@ -4527,6 +4549,8 @@ func player_step(p: E.Player, dt: float) -> void:
 		if p.itT >= it.dur:
 			p.itT = 0
 			match it.type:
+				"unpew":                                     # (version 7.37) out of the pew, into the aisle
+					p.study = false; p.x = 210.0 + signf(p.x - 210.0) * 0.4; p.tx = p.x; p.tp = tpc; tpc += 1; p.eLock = true
 				"unhide":
 					p.state = "ok"; p.eLock = true
 				"bell":

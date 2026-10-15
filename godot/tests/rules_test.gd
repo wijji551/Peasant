@@ -187,8 +187,10 @@ func run() -> void:
 	X.do_attack(m); ok("a sword does not", farS.hp == D.UN[0].hp)
 
 	# ---------- the priest and holy studies
-	clear_u(); at(13.6, -10.6); m.coin = 30; m.wpn = 1; m.bless = 0
+	var ps := D.station("priest")
+	clear_u(); m.room = "chapel"; at(ps.x, ps.z); m.coin = 30; m.wpn = 1; m.bless = 0
 	X.do_act(m, "bless", "w"); ok("the priest blesses a sword for two shillings", (m.bless & 1) == 1 and m.coin == 6, m.coin)
+	m.room = ""; at(13.6, -10.6)
 	var hu: E.Undead = mob(1, 0, 1.4)[0]
 	m.atkCd = 0; m.r = 0; m.combo = 0; X.do_attack(m)
 	var holy_dmg: float = hu.mhp - hu.hp
@@ -198,11 +200,18 @@ func run() -> void:
 	var plain: float = pu2.mhp - pu2.hp
 	clear_u()
 	ok("a blessed blow does a third as much again (version 7.24)", absf(holy_dmg / plain - 1.35) < 0.02, "%.1f vs %.1f" % [holy_dmg, plain])
+	m.room = "chapel"; at(ps.x, ps.z)
 	X.do_act(m, "bless", "w"); ok("no blessing without the fee", m.bless == 0 and m.coin == 6)
-	at(13.6, -10.6); X.do_act(m, "study"); fast(46); ok("one class of holy studies", m.holy == 1 and not m.study, "%d %.1f" % [m.holy, m.holyT])
+	m.room = ""; at(13.6, -10.6); X.do_act(m, "study"); ok("(version 7.37) no class outside: the priest is in his chapel now", not m.study)
+	m.room = "chapel"; at(ps.x, ps.z); X.do_act(m, "study")
+	ok("(version 7.37) a class is sat in a pew, at the front, facing the altar", m.study and X.pew_of(m) == 0 and absf(m.r - PI) < 0.01 and m.z > ps.z + 2.0, [m.x, m.z])
+	fast(46); ok("one class of holy studies", m.holy == 1 and not m.study, "%d %.1f" % [m.holy, m.holyT])
 	at(40, 0); X.do_act(m, "bless", "w"); ok("after a class, bless your own weapon anywhere for nothing", (m.bless & 1) == 1 and m.coin == 6)
-	at(13.6, -10.6); X.do_act(m, "study"); fast(20); at(40, 0); fast(1); ok("walking out stops the class but keeps the progress", not m.study and m.holyT > 15 and m.holy == 1, m.holyT)
-	at(13.6, -10.6); X.do_act(m, "study"); fast(30); ok("second class finished", m.holy == 2)
+	m.room = "chapel"; at(ps.x, ps.z); X.do_act(m, "study"); fast(20); at(ps.x, ps.z); fast(1); ok("getting up out of the pew stops the class but keeps the progress", not m.study and m.holyT > 15 and m.holy == 1, m.holyT)
+	at(ps.x, ps.z); X.do_act(m, "study"); fast(30); ok("second class finished", m.holy == 2)
+	m.room = ""; at(17.0, -9.4); var ci = X.find_interact(m)
+	ok("(version 7.37) the chapel has a door, and it opens", ci != null and ci.type == "enter" and ci.room == "chapel" and ci.ok, ci.label if ci else null)
+	at(40, 0)
 
 	# ---------- barricades: blessed bodies, and the evening rot
 	m.wood = 30; at(40, 5); m.r = 0

@@ -177,7 +177,15 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var owned := 0
 			for b in p.books.size():
 				if p.books[b] > 0 and not D.FREE_BOOKS.has(b): owned += 1
-			for b in D.BOOKS.size():
+			var order := []                                   # (version 7.37) the shelf in kinds, each under its heading
+			for G in D.BOOK_GROUPS:
+				order.append(G[0])
+				order.append_array(G[1])
+			for b_ in order:
+				if b_ is String:
+					o.append({"head": b_})
+					continue
+				var b: int = b_
 				var B: Dictionary = D.BOOKS[b]
 				var r: int = Rules.rk(p, b)
 				if b == D.B_SQUIRE and not r:                 # (version 7.30) not on the shelf: a gap, and a card in it
@@ -272,7 +280,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			if R.job.done:
 				o.append({"label": M.job + ": done", "sub": "He is very pleased, in his way.", "ok": false, "a": "job"})
 			else:
-				var where: String = {"stone": "at the rocky outcrop", "cart": "here by the cart", "priest": "up at the chapel", "library": "in the library"}[M.where]
+				var where: String = {"stone": "at the rocky outcrop", "cart": "here by the cart", "priest": "inside the chapel", "library": "in the library"}[M.where]
 				o.append({"label": ("Stop: " if p.job else "Take the job: ") + M.job, "sub": ("You are %s (%d%% done). Stay %s. " % [M.doing, pct, where] if p.job else "Pay: %s. It is done %s, and takes most of a day alone, or half a day each with a team-mate. %s" % [M.pay, where, "(%d%% done.) " % pct if pct > 0 else ""]) + "Nobody learns anything from a book on a day they work for a merchant.",
 					"ok": R.phase == "day", "a": "job"})
 			return {"title": M.name[0].to_upper() + M.name.substr(1), "intro": "Selling %s. You have %s. He leaves at dusk." % [M.sells, D.coins(p.coin)], "o": o}
@@ -494,7 +502,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 						"ok": p.holy >= 2 and p.coin >= Rules.rune_bless(p), "a": "rbless", "arg": k})
 				o.append({"head": "Holy studies"})
 				var lab := "Holy studies: finished" if p.holy >= 2 else ("In class: %d of %d seconds" % [floori(p.holyT), D.HOLY_TIME]) if p.study else "Sit a class in holy studies (%d of 2 done)" % p.holy
-				var sub := "You can bless anything yourself, anywhere, from your backpack ({pack})." if p.holy >= 2 else "Stay beside the priest. Press again to walk out; he will remember where you got to." if p.study else "About %d seconds beside the priest. After one class you can bless your own weapon and bucket for nothing; after two, the departed as well. It does not count as one of your three books." % D.HOLY_TIME
+				var sub := "You can bless anything yourself, anywhere, from your backpack ({pack})." if p.holy >= 2 else "Stay in your pew. Get up, or press again, to stop; he will remember where you got to." if p.study else ("Take a pew and read the bible, about %d seconds of it%s. After one class you can bless your own weapon and bucket for nothing; after two, the departed as well. It does not count as one of your three books." % [D.HOLY_TIME, ", from where you left off" if p.holyT > 0 else ""])
 				o.append({"label": lab, "sub": sub, "ok": p.holy < 2, "a": "study"})
 				return {"title": "The priest", "intro": "A blessing lasts until dawn. You have %s." % D.coins(p.coin), "o": o}
 			if page == "drop":

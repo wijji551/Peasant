@@ -245,6 +245,10 @@ func player(p: E.Player, is_me: bool) -> void:
 	_model.scale = Vector3.ONE * 1.2
 	_lift = 0.6 if p.ride else 0.0                  # on a sheep: up on its back, and the sheep under
 	_riding = p.ride
+	_seated = p.study and p.room == "chapel" and p.state == "ok"
+	if _seated and _bible == null: _bible = _bible_node()
+	if _bible: _bible.visible = _seated
+	if _seated: _show_bar(2.1, 1.0, p.holyT / D.HOLY_TIME, Color(0.95, 0.8, 0.36))   # how far through the class
 	if p.ride and _mount == null: _mount = _sheep_node(self, (p.slot * 5 + p.id) % D.SHEEP_NAMES.size())
 	if _mount:
 		_mount.visible = p.ride
@@ -344,6 +348,25 @@ var _wobble := false
 
 var _bar_f := 1.0
 var _riding := false                 # astride a sheep: the legs sit still either side of it, and the sheep does the walking (version 7.20)
+var _seated := false                 # (version 7.37) sat in a pew in the chapel, the bible open on your knees, at holy studies
+var _bible: Node3D
+
+
+## The bible, open, held in both hands (made the first time anybody sits down to read it).
+func _bible_node() -> Node3D:
+	var b := Node3D.new()
+	b.position = Vector3(0, 0.78, 0.34); b.rotation.x = -0.75
+	_model.add_child(b)
+	for part in [[Vector3(0.46, 0.04, 0.32), Vector3(0, 0, 0), Color("6a1d1a")],                 # the cover, red leather
+			[Vector3(0.2, 0.03, 0.29), Vector3(-0.11, 0.03, 0), Color("f3ead2")], [Vector3(0.2, 0.03, 0.29), Vector3(0.11, 0.03, 0), Color("f3ead2")],   # the two pages
+			[Vector3(0.012, 0.035, 0.29), Vector3(0, 0.04, 0), Color("8a7a5c")],                  # the fold
+			[Vector3(0.03, 0.005, 0.2), Vector3(0.06, 0.05, 0.02), Color("a8262a")]]:              # and a ribbon, to keep the place
+		var mi := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = part[0]; mi.mesh = bm
+		mi.position = part[1]; mi.material_override = _mat(part[2]); b.add_child(mi)
+	for k in 6:                                                                                  # a few lines of very small print
+		var ln := MeshInstance3D.new(); var lm := BoxMesh.new(); lm.size = Vector3(0.14, 0.004, 0.012); ln.mesh = lm
+		ln.position = Vector3(-0.11 if k < 3 else 0.11, 0.047, -0.08 + (k % 3) * 0.07); ln.material_override = _mat(Color("4a3a2a")); b.add_child(ln)
+	return b
 var _lift := 0.0                    # how far off the ground this figure stands (on a watch platform)
 
 
@@ -698,14 +721,21 @@ func _process(delta: float) -> void:
 	var swing_ := 0.0 if _riding else sin(_walk) * 0.7 * _mv
 	_leg_l.rotation.x = -0.55 + sin(_walk * 2.0) * 0.06 * _mv if _riding else swing_   # astride: legs forward round the fleece, jogging a little
 	_leg_r.rotation.x = -0.55 + sin(_walk * 2.0 + 1.0) * 0.06 * _mv if _riding else -swing_
+	if _seated:                                          # (version 7.37) sat in a pew: knees forward, and a foot tapping, now and then
+		_leg_l.rotation.x = -1.05
+		_leg_r.rotation.x = -1.05 + (0.12 * maxf(0.0, sin(now * 6.0)) if fmod(now + get_instance_id() % 7, 9.0) < 1.5 else 0.0)
 	rotation.y = lerp_angle(rotation.y, _r, minf(1.0, delta * 16.0))
 	if _frozen: rotation.y += sin(now * 47.0) * 0.06
 	_model.rotation = Vector3(-1.45 * _fall + stoop + (0.08 * _mv if _riding else 0.0), 0, (sin(_walk) * 0.03 if _riding else sin(_walk) * 0.07) * _mv + wob)
 	_model.position.y = (absf(sin(_walk * 2.0)) * 0.06 if _riding else absf(sin(_walk)) * 0.14) * _mv + _fall * 0.2
 	_model.position.z = sin(_atk * PI) * 0.22 if _tool == "" and not _down else 0.0     # into the blow, and back
+	if _seated:                                          # down on to the seat, leaning a little over the book, and nodding off now and then
+		var nod := 0.1 * maxf(0.0, sin(now * 0.37 + get_instance_id())) ** 6
+		_model.position.y = -0.12; _model.position.z = 0.0
+		_model.rotation = Vector3(0.12 + nod, 0, 0)
 	var f := (1.0 + _flash * 1.2) * _dim
 	_body_mat.albedo_color = Color(f * _skin.r, f * _skin.g, f * _skin.b)
-	_hand.visible = not _down and stoop == 0.0
+	_hand.visible = not _down and stoop == 0.0 and not _seated
 	for g in _gear.get_children():                       # a body on the ground keeps its hat and its coat
 		var s: String = g.get_meta("slot")
 		g.visible = not _down or s == "h" or s == "b"

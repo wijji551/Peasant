@@ -1,7 +1,7 @@
 extends Node3D
 ## The things that move every morning: the rocky outcrop (stone), the mine (iron), the jetty (fish), and the
 ## two outer ruins, which fall down differently every night, with their heaps of rubble to search. And the
-## priest, who stands outside his chapel whatever the day.
+## priest, who stands at his altar whatever the day (inside his chapel, since version 7.37).
 
 var _key := ""
 var _quarry: MeshInstance3D
@@ -54,10 +54,10 @@ func _ready() -> void:
 	mm.rotation.y = PI * 0.85
 	mm.scale = Vector3.ONE * 1.1
 	_cart.visible = false
-	var pr := _mi("priest")                          # the priest, outside his chapel
+	var pr := _mi("priest")                          # the priest: inside his chapel now (version 7.37), at the altar, facing his pews
 	var st: Dictionary = D.station("priest")
-	pr.position = Vector3(st.x + 0.9, 0, st.z - 0.5)
-	pr.rotation.y = -2.2
+	pr.position = Vector3(st.x, 0.12, st.z - 1.0)
+	pr.rotation.y = 0.0
 	pr.scale = Vector3.ONE * 1.08
 	var halo := MeshInstance3D.new()                  # and, faintly, a halo. He has been very good this year
 	var tm := TorusMesh.new(); tm.inner_radius = 0.2; tm.outer_radius = 0.26; tm.rings = 20; tm.ring_segments = 6

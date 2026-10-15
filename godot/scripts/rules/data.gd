@@ -496,7 +496,23 @@ const ROOMS := {
 	"cabin": {"name": "the cabin", "x": 175.0, "z": 240.0, "hw": 5.0, "hd": 4.0, "at": [175.0, 243.4], "door": [117.0, 417.3], "wait": [117.0, 418.6], "parent": "woods", "day": true,
 		"in": "go into the cabin", "out": "go back out into the clearing",
 		"box": [[171.1, 240.6, 0.8, 1.3], [179.2, 238.6, 0.5, 1.0], [179.2, 242.2, 0.45, 0.6], [170.4, 243.0, 0.5, 0.8], [175.3, 240.6, 0.8, 0.5], [173.6, 236.8, 0.3, 0.3]]},   # the beds, the chest, the hearth, the table, the armour stand
+	# (version 7.37) the inside of the chapel: the priest at the altar, behind his rail, and four rows of pews either side of
+	# the aisle, where holy studies are now sat, with a bible. Open day and night: the priest blesses before a fight too.
+	"chapel": {"name": "the chapel", "x": 210.0, "z": 240.0, "hw": 6.0, "hd": 8.0, "at": [210.0, 247.0], "door": [17.0, -10.3],
+		"in": "go into the chapel", "out": "go back out into the village",
+		"box": [[210.0, 233.0, 1.3, 0.5], [207.0, 235.6, 2.0, 0.1], [213.0, 235.6, 2.0, 0.1], [205.2, 236.5, 0.45, 0.45], [214.8, 236.5, 0.4, 0.35], [214.6, 246.2, 0.5, 0.5],   # the altar, the rail (a gap in the middle), the pulpit, the lectern, the font
+			[207.1, 238.1, 1.95, 0.34], [212.9, 238.1, 1.95, 0.34], [207.1, 239.9, 1.95, 0.34], [212.9, 239.9, 1.95, 0.34],      # the pews
+			[207.1, 241.7, 1.95, 0.34], [212.9, 241.7, 1.95, 0.34], [207.1, 243.5, 1.95, 0.34], [212.9, 243.5, 1.95, 0.34]]},
 }
+## The seats in the chapel's pews (version 7.37), front row first and the aisle end of each pew first: where a class in
+## holy studies is sat. [x, z]; you sit facing the altar, to the north.
+const PEW_ROWS := [238.0, 239.8, 241.6, 243.4]
+static func pew_seats() -> Array:
+	var out := []
+	for z in PEW_ROWS:
+		for k in 3:
+			out.append([208.3 - k * 1.2, z - 0.02]); out.append([211.7 + k * 1.2, z - 0.02])
+	return out
 ## The Riverside (version 7.12). The raft is built once, for everyone, from 100 wood; it crosses by day. Swimming, once
 ## there is a raft, is how anyone gets across after dusk: twenty seconds, half your health, and forty-five tired seconds after.
 const RAFT := {"wood": 100, "swim": 20.0, "tired": 45.0, "tired_mul": 0.75, "tired_spd": 0.6}
@@ -737,6 +753,13 @@ const B_SHIELD := 13
 const B_DOG := 14
 const B_JEST := 15
 const B_SQUIRE := 16
+## (version 7.37) The books, sorted into kinds, for the library, the skills window and the handbook.
+const BOOK_GROUPS := [
+	["Gathering and making", [0, 1, 2, 3]],
+	["Fighting", [4, 5, 13, 11, 12]],
+	["Leading and looking after", [6, 9, 14, 7, 8]],
+	["Callings and quests (these do not count against your books)", [10, 15, 16]],
+]
 const FREE_BOOKS := [10, 15, 16]     # (version 7.30) the Holy Book, the Jester and the Knight's Squire: none of them count against your books
 ## The Knight's Squire (version 7.30). Sir Aldous wants a sword: one tier of short sword, his own secret, a different one
 ## for each player. The notebook is in a chest in the squire's cabin, at the end of the lane past the west hedge; three
@@ -963,7 +986,7 @@ const STATIONS := [
 	{"id": "sqchest", "x": 178.2, "z": 242.2, "r": 1.2, "room": "cabin", "name": "the squire’s chest", "verb": "look at the chest"},
 	{"id": "slum", "x": -17.6, "z": 17.4, "r": 3.4, "name": "the slum", "verb": "recruit in the slum"},
 	{"id": "inn", "x": 60.0, "z": 236.9, "r": 1.9, "room": "inn", "name": "the bar of the Thorny Rose", "verb": "have a word with the innkeeper"},
-	{"id": "priest", "x": 13.6, "z": -10.6, "r": 2.3, "name": "the priest", "verb": "speak to the priest"},
+	{"id": "priest", "x": 210.0, "z": 235.3, "r": 2.0, "room": "chapel", "name": "the priest", "verb": "speak to the priest"},   # (version 7.37) inside his chapel, at the altar rail
 	{"id": "cart", "x": 10.4, "z": 22.6, "r": 3.0, "name": "the merchant’s cart", "verb": "see what the merchant has"},
 	{"id": "bailiff", "x": -14.5, "z": -16.6, "r": 2.4, "name": "Robert Bailiff’s back door", "verb": "knock at Robert Bailiff’s back door"},
 	{"id": "window", "x": -11.8, "z": -7.7, "r": 2.6, "name": "Robert Bailiff’s window", "verb": "call up to Robert Bailiff’s window"},
