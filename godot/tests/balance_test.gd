@@ -45,6 +45,15 @@ func _init() -> void:
 	ok("an ordinary one, out in the dark, at rank X: three times", absf((900 - n.hp) - 30.0) < 0.5, 900 - n.hp)
 	m.books[0] = 10
 	ok("carrying stops at 50", Rules.cap(m) == 50)
+	# (version 7.35) more mithril and runes for a big village: one more a vein and a seam for every two players above three
+	var got := []
+	for np in [4, 5, 7, 8]:
+		var Rn := Rules.new()
+		var inf := []
+		for i in np: inf.append({"id": i + 1, "name": "P%d" % i, "col": i})
+		Rn.new_game(inf)
+		got.append([Rn.rune_left[0], Rn.runes2[0]])
+	ok("mithril and runes: 2, 3, 4, 4 a vein and a seam for 4, 5, 7 and 8 players", got == [[2, 2], [3, 3], [4, 4], [4, 4]], got)
 	for l in lines: print(l)
 	var bad := lines.filter(func(l): return l.begins_with("FAIL")).size()
 	print("%d passed, %d failed" % [lines.size() - bad, bad])

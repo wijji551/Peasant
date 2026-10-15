@@ -1167,6 +1167,12 @@ static func unseen(p: E.Player) -> float:
 ## Relics follow the books (version 7.9): there is one of each book's relic for every player who holds that book, and
 ## one of each pair of relic boots for every player. relics holds every copy found and still about; what is left is
 ## what may still turn up.
+## (version 7.35) A bigger village digs deeper: one more lump of mithril in each vein of the Old Mine, and one more rune in
+## each seam of the Rune Cave, every day, for every two players above three (five or six players: one more; seven or
+## eight: two more).
+func ore_extra() -> int:
+	return maxi(0, floori((players.size() - 3) / 2.0))
+
 func relic_wanted(id: int) -> int:
 	if D.BOOT_RELICS.has(id): return players.size()
 	if not D.RELIC_LORE.has(id): return 1
@@ -1305,7 +1311,8 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	set_sites(sites)
 	for i in spots.size():
 		spots[i] = D.SEARCHES
-	rune_left = [D.RUNE_PER_VEIN, D.RUNE_PER_VEIN, D.RUNE_PER_VEIN]
+	var ex := ore_extra()
+	rune_left = [D.RUNE_PER_VEIN + ex, D.RUNE_PER_VEIN + ex, D.RUNE_PER_VEIN + ex]
 	ruins_seen = [true, false, false]
 	weather = weather_of(gseed, day, last_day)
 	merchant = merchant_on(gseed, day, last_day)
@@ -1313,7 +1320,7 @@ func roll_day(first: bool) -> void:   # a new morning: the stone, the iron and t
 	reserve = false
 	make_wares()
 	spots2 = []; for i in D.RIVER_SPOTS.size(): spots2.append(D.SEARCHES)
-	runes2 = []; for i in D.RUNE_SEAMS.size(): runes2.append(D.RUNE_PER_SEAM)
+	runes2 = []; for i in D.RUNE_SEAMS.size(): runes2.append(D.RUNE_PER_SEAM + ex)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = gseed * 7919 + day * 104729
 	merch2 = rng.randi() % D.MERCHANTS.size()

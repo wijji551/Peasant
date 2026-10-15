@@ -831,3 +831,8 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 ## Version 7.34: one Lord (build counter 41)
 
 - In the last week both castle figures showed (the window and the wall), so the dusk look up at the castle had two Lords. `world.set_lord_out` and `set_evil` now show the window Lord only before the last week, and the wall Lord only in it; neither while he is on the field.
+
+## Version 7.35: more ore for a bigger village (build counter 42)
+
+- `Rules.ore_extra()` = floor((players - 3) / 2), never below 0: 1 with five or six players, 2 with seven or eight. Each morning's refill gives every vein of the Old Mine `RUNE_PER_VEIN + ore_extra()` mithril and every seam of the Rune Cave `RUNE_PER_SEAM + ore_extra()` runes (so 6 a day each up to four players, 9 with five or six, 12 with seven or eight). Garrick's one piece of ore a day is unchanged.
+- The handbook and the shady fellow's notice say so. New check in `balance_test`. All suites and co-op pass.
