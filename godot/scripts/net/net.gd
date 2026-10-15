@@ -33,7 +33,7 @@ const PF := ["dn", "x", "z", "r", "hp", "wood", "stone", "iron", "food", "steel"
 	"order", "parry", "guard", "state", "ready", "posse", "ac", "hc", "cc", "gk", "prog", "tp", "bite", "downT", "frozen", "jumpT", "pages", "flask", "pwCd", "p3Cd", "many", "whet", "mist", "cry", "hone_i", "hone_t", "fs", "fsT", "oilCd", "dark", "braced",
 	"banq", "banqP", "herd", "herdT", "herdL", "herdQ", "herdW", "sheep", "sheepFed", "ride", "strayW",
 	"jl", "jhw", "jlT", "jlL", "jlQ", "jlW", "jlPaid", "jnote", "jfail",
-	"rafted", "swimT", "tired", "pot_a", "pot_s", "pot_d", "pot_i", "potA", "potS", "potD", "potI", "frock", "recipes", "tpaid", "tithe", "fish", "fishCd"]
+	"rafted", "swimT", "tired", "pot_a", "pot_s", "pot_d", "pot_i", "potA", "potS", "potD", "potI", "frock", "recipes", "tpaid", "tithe", "fish", "fishCd", "sq", "sqd", "kn", "sqsay"]
 
 static var me: Net
 

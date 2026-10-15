@@ -362,7 +362,7 @@ static func cap(p: E.Player) -> int:
 
 func posse_max(p: E.Player) -> int:
 	var r := rk(p, 6)
-	return maxi(1, pm + (4 if r >= 8 else 3 if r >= 6 else 2 if r >= 4 else 1 if r >= 2 else 0) - (1 if p.coward else 0)) + strays_of(p)
+	return maxi(1, pm + (4 if r >= 8 else 3 if r >= 6 else 2 if r >= 4 else 1 if r >= 2 else 0) + (1 if rk(p, D.B_SQUIRE) >= 10 else 0) - (1 if p.coward else 0)) + strays_of(p)
 
 ## How many strays are in this player's posse (version 7.10): each is over and above its usual size.
 func strays_of(p: E.Player) -> int:
@@ -426,10 +426,37 @@ func jest_why(p: E.Player) -> String:
 	if p.jl >= 3: return "He has taught you everything he knows, he says, and one or two things he does not."
 	if phase != "day": return "He does not teach after dark. The inn is otherwise engaged, and so is he."
 	if p.jlQ >= 0: return "He is waiting for an answer."
-	if p.jl == 0 and book_slots(p) <= 0: return "He looks at your books and says you have no room in your head for him. Come back when you can take up another book."
 	if p.jl > 0 and p.jhw < D.JEST.hw: return "Homework first. He will not give the next lesson until you have played your last trick on twenty of the dead (%d so far)." % p.jhw
 	if not p.jlPaid and ale < 1: return "The note did say to bring a drink, and the barrel is empty. Give the innkeeper some food first."
 	return ""
+
+## The Knight's Squire (version 7.30). Which short sword Sir Aldous is secretly after, for this player: crude, iron, steel or
+## mithril (an index into D.SQ_TIERS). It is fixed for the game, and differs between the first four players.
+func sq_want(p: E.Player) -> int:
+	return posmod(int(p.slot) + gseed, D.SQ_TIERS.size())
+
+## The tier of a short sword ("crude", "forged", "steel", "mithril", "rune"; "relic" for the Silvered Sword), or "".
+static func sq_tier(id: int) -> String:
+	if id <= 0 or id >= D.IT.size(): return ""
+	var I: Dictionary = D.IT[id]
+	if I.pool != "sword": return ""
+	if I.tier == "relic": return "relic"
+	return I.tier if (id == 1 or I.base == 1) else ""
+
+## The squire's lock: what is in each of the three paintings in the cabin (two to nine of each), fixed for the game.
+static func sq_code(seed_: int) -> Array:
+	return [2 + posmod(seed_ * 7 + 3, 8), 2 + posmod(seed_ * 13 + 5, 8), 2 + posmod(seed_ * 29 + 11, 8)]
+func sq_code_n() -> int:
+	var c := sq_code(gseed)
+	return c[0] * 100 + c[1] * 10 + c[2]
+
+## What a merchant asks of this player: a tenth less, with the Knight's Squire's Courtesy (rank VI).
+static func price_for(p: E.Player, price: int) -> int:
+	return ceili(price * D.SQUIRE.cheap) if rk(p, D.B_SQUIRE) >= 6 else price
+
+## A player's name, with Sir or Dame in front if they have been knighted.
+static func knight_name(p: E.Player) -> String:
+	return ["", "Sir ", "Dame "][clampi(p.kn, 0, 2)] + D.rel_name(p.name, p.deaths)
 
 ## Which week of the game it is, counting from nothing (for "one stray a week").
 func week_i() -> int:
@@ -496,6 +523,7 @@ static func can_forge(p: E.Player, id: int) -> bool:
 	if I.cost.is_empty() or I.wear == 2: return false
 	if I.s == "k": return rk(p, 3) >= D.KIT_RANK[I.tier]          # posse kits: crude from rank 1, iron from 3, steel from 6
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return false
+	if I.two and rk(p, D.B_SQUIRE) < 3: return false               # greatswords: rank III of the Knight's Squire
 	match I.tier:
 		"crude", "made": return true
 		"steel": return rk(p, 3) >= 4
@@ -512,6 +540,7 @@ static func forge_why(p: E.Player, id: int) -> String:   # why not, for the smit
 	if I.tier == "mithril" and rk(p, 3) < D.MITHRIL_RANK: return "Mithril needs rank %d of Hammer and Tongs." % D.MITHRIL_RANK
 	if I.tier == "steel" and rk(p, 3) < 4: return "Steel needs rank 4 of Hammer and Tongs."
 	if I.heavy and I.tier != "crude" and rk(p, 3) < 2: return "Heavy arms need rank 2 of Hammer and Tongs."
+	if I.two and rk(p, D.B_SQUIRE) < 3: return "Greatswords need rank 3 of the Knight’s Squire."
 	if I.tier == "forged" and I.s == "w" and rk(p, 3) < 1: return "Refined weapons need Hammer and Tongs, from the library."
 	return ""
 
@@ -537,7 +566,9 @@ static func book_slots(p: E.Player) -> int:
 	var any2 := false
 	var n3 := 0
 	var n4 := 0
-	for r in p.books:
+	for b in p.books.size():                          # (version 7.30: the Holy Book, the Jester and the Knight's Squire do not count)
+		var r: int = p.books[b]
+		if D.FREE_BOOKS.has(b): continue
 		if r > 0: owned += 1
 		if r >= 2: any2 = true
 		if r >= 3: n3 += 1
@@ -600,6 +631,7 @@ func add_xp(p: E.Player, b: int, n: float) -> void:
 	while p.books[b] < D.MAX_RANK and p.xp[b] >= need_xp(b, p.books[b]):
 		p.books[b] += 1
 		say("%s has reached rank %d of %s." % [p.dn, p.books[b], D.book_title(b)])
+		if b == D.B_SQUIRE and p.books[b] == D.MAX_RANK and p.kn == 0: say("Sir Aldous would like a word with %s, in the library. He has polished his sword." % p.dn)
 	retitle(p, t0)
 
 func retitle(p: E.Player, before: String) -> void:   # tell the village when someone's title changes
@@ -1427,7 +1459,7 @@ func start_day(lines: Array) -> void:
 
 
 # --- saving: the host keeps the morning of the current day
-const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "fish", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote", "pot_a", "pot_s", "pot_d", "pot_i", "frock", "recipes", "tithe"]
+const P_SAVE := ["card_rank", "rune", "mith", "pages", "flask", "name", "dn", "col", "slot", "hp", "wood", "stone", "iron", "food", "coin", "bodies", "wpn", "head", "body", "off", "trk", "feet", "holy", "holyT", "gab", "coward", "deaths", "spare", "xslot", "cogs", "steel", "fish", "herd", "sheep", "sheepFed", "strayW", "banq", "jl", "jhw", "jnote", "pot_a", "pot_s", "pot_d", "pot_i", "frock", "recipes", "tithe", "sq", "kn"]
 
 func save_data() -> Dictionary:
 	var tree_codes := []
@@ -1479,7 +1511,7 @@ func restore_player(p: E.Player, sp: Dictionary) -> void:
 	while p.books.size() < D.BOOKS.size(): p.books.append(0)   # a save from before the Holy Book
 	while p.xp.size() < D.BOOKS.size(): p.xp.append(0.0)
 	if p.hp <= 0: p.hp = D.PLAYER_HP * 0.5
-	p.dn = D.rel_name(p.name, p.deaths)
+	p.dn = knight_name(p)
 
 
 ## Somebody playing together has gone (they left, or their connection dropped). Their peasant is kept, with all it
@@ -1672,7 +1704,7 @@ func enter_room(p: E.Player, k: String) -> void:
 	if k == "riverside":
 		p.rafted = true; ev.append(["raft", r1(M.door[0]), r1(M.door[1])])
 		note("raft")
-	p.room = k; p.x = M.at[0]; p.z = M.at[1] + (2.6 if k == "riverside" else -1.2); p.tx = p.x; p.tz = p.z; p.r = PI; p.goal_r = p.r; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
+	p.room = k; p.x = M.at[0]; p.z = M.at[1] + (2.6 if k == "riverside" else -1.2); p.tx = p.x; p.tz = p.z; p.r = M.get("face", PI); p.goal_r = p.r; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
 	ev.append(["door", r1(M.door[0]), r1(M.door[1])])
 
 func leave_room(p: E.Player) -> void:
@@ -1691,6 +1723,8 @@ func leave_room(p: E.Player) -> void:
 				if q.owner == p.id and active(q) and room_at(q.x, q.z) != "":
 					q.x = M.door[0] + rnd2(-2, 2); q.z = M.door[1] - rnd2(2, 4); q.tx = q.x; q.tz = q.z
 	p.room = ""; p.rafted = false; p.x = M.door[0] + rnd2(-0.4, 0.4); p.z = M.door[1] + (-2.0 if M.get("open", false) else 1.2); p.tx = p.x; p.tz = p.z; p.tp = tpc; tpc += 1; p.gk = 0; p.prog = 0; p.eLock = true
+	if M.has("exit"):                                   # (version 7.30) a door that does not face south
+		p.x = M.exit[0]; p.z = M.exit[1] + rnd2(-0.4, 0.4); p.tx = p.x; p.tz = p.z; p.r = atan2(M.exit[0] - M.door[0], M.exit[1] - M.door[1]); p.goal_r = p.r
 	ev.append(["door", r1(p.x), r1(p.z)])
 
 ## What holding E would do, indoors.
@@ -1708,6 +1742,11 @@ func room_interact(p: E.Player):
 	if p.room == "riverside" or M.get("parent", "") == "riverside":
 		var r_ = riverside_interact(p)
 		if r_ != null: return r_
+	if p.room != "riverside":                           # (version 7.30) a door into a room inside this one: the cabin, in the clearing
+		for k in D.ROOMS:
+			var C_: Dictionary = D.ROOMS[k]
+			if C_.get("parent", "") == p.room and D.d2(p.x, p.z, C_.door[0], C_.door[1]) < 2.4:
+				return {"type": "enter", "room": k, "key": "enter" + k, "ok": true, "dur": 0.6, "x": C_.door[0], "z": C_.door[1], "rad": 1.2, "label": "Hold {interact} to " + C_["in"]}
 	for st in D.STATIONS:
 		if st.get("room", "") == p.room and D.d2(p.x, p.z, st.x, st.z) < st.r * st.r:
 			return {"type": "station", "st": st, "key": "st" + st.id, "ok": true, "dur": 0.12, "x": st.x, "z": st.z, "rad": 1.1, "label": "Hold {interact} to " + st.verb}
@@ -1828,8 +1867,9 @@ func find_interact(p: E.Player):
 			if M.has("parent"): continue                 # a cave across the river: its mouth is over there
 			if D.d2(p.x, p.z, M.door[0], M.door[1]) < 4.0:
 				var shut: bool = k == "inn" and innHp <= 0
-				return {"type": "enter", "room": k, "key": "enter" + k, "ok": not shut, "dur": 0.6, "x": M.door[0], "z": M.door[1], "rad": 1.1,
-					"label": "The door of the Rose is in pieces. It is shut until morning" if shut else "Hold {interact} to " + M["in"]}
+				var dark: bool = M.get("day", false) and phase == "night"
+				return {"type": "enter", "room": k, "key": "enter" + k, "ok": not shut and not dark, "dur": 0.6, "x": M.door[0], "z": M.door[1], "rad": 1.1,
+					"label": "The door of the Rose is in pieces. It is shut until morning" if shut else ("The library is shut for the night. The librarian has gone home, and taken the candles" if k == "library" else "Nobody goes down the lane after dark. Not twice") if dark else "Hold {interact} to " + M["in"]}
 	if p.state == "ok" and not chest.is_empty() and not chest.open and D.d2(p.x, p.z, chest.x, chest.z) < 7.0:
 		return {"type": "chest", "key": "chest", "ok": true, "dur": 1.5, "x": chest.x, "z": chest.z, "rad": 1.1, "label": "Hold {interact} to open the chest"}
 	if p.state != "ok":
@@ -2052,6 +2092,12 @@ func stow(p: E.Player, id: int) -> void:
 func wear(p: E.Player, id: int) -> void:
 	var k: String = D.SLOTK[D.IT[id].s]
 	var old: int = p.get(k)
+	if k == "wpn" and D.IT[id].two and p.off >= 0:   # (version 7.30) a greatsword wants both hands: the shield goes in the backpack
+		var o_: int = p.off
+		p.off = -1; stow(p, o_)
+	elif k == "off" and D.IT[p.wpn].two:              # and a shield taken up puts the greatsword away
+		var w_: int = p.wpn
+		take_off(p, "wpn"); stow(p, w_)
 	p.set(k, id)
 	if k == "wpn":
 		p.bless &= ~1; p.abCd = maxf(p.abCd, 1.5)
@@ -2063,6 +2109,8 @@ func wear(p: E.Player, id: int) -> void:
 static func wears_now(p: E.Player, id: int) -> bool:   # would go straight on, not into the backpack
 	if not D.SLOTK.has(D.IT[id].s): return false           # a paper: it is kept, not worn
 	var k: String = D.SLOTK[D.IT[id].s]
+	if k == "off" and D.IT[p.wpn].two: return false        # (a greatsword in both hands: a shield goes in the backpack)
+	if k == "wpn" and D.IT[id].two and p.off >= 0: return false
 	return can_use(p, id) and (p.wpn == 0 if k == "wpn" else p.get(k) < 0)
 
 func gain(p: E.Player, id: int) -> void:
@@ -2228,6 +2276,10 @@ func hit_u(u: E.Undead, d: float, s: Dictionary = {}) -> void:
 	if holy: d *= holy
 	if u.vuln > 0: d *= 1.5
 	if u.mark > 0: d *= 1.25                         # The Marked Man
+	if u.chal > 0 and u.chalby:                      # Challenge! (version 7.30): a fifth more from the challenger, or from everybody with the relic
+		var cb := player_by_id(u.chalby)
+		var who_ = s.get("p")
+		if cb and ((who_ is E.Player and who_.id == cb.id) or lore(cb, D.I_OATH)): d *= D.SQUIRE.chal_mul
 	var extra := 1.0                                 # (version 7.24: burning and held do not add up; one quarter more, whichever)
 	if u.burn > 0 and u.burnby:                      # rank 9 of the fire book: the burning take a quarter more
 		var fb := player_by_id(u.burnby)
@@ -2319,7 +2371,7 @@ func nerve_hit(q: E.Peasant, n: float) -> void:   # a fright. At no nerve left, 
 		return
 	if own.head == 20 or rk(own, 6) >= 7 or own.charge > 0 or crying(own):
 		return
-	q.nv -= n * (1 - 0.1 * mini(rk(own, 6), 7)) / hn(own, 6)
+	q.nv -= n * (1 - 0.1 * mini(rk(own, 6), 7)) / hn(own, 6) * (0.7 if rk(own, D.B_SQUIRE) >= 2 and D.d2(q.x, q.z, own.x, own.z) < D.SQUIRE.near * D.SQUIRE.near else 1.0)   # (the Knight's Squire, rank II)
 	if q.nv <= 0:
 		q.nv = 0; q.state = "hide"; q.tree = null; say("%s has lost their nerve and run for the keep." % D.PNAMES[q.ni]); bark(q, D.BARK_RUN)
 
@@ -2332,12 +2384,14 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 			return
 		if not ranged and u and e.parry > 0:
 			e.parry = 0; u.stun = maxf(u.stun, 2); hit_u(u, dmg_of(e, D.IT[e.wpn], 1), src_of(e, D.IT[e.wpn])); ev.append(["parry", r1(e.x), r1(e.z)])
+			e.sqx = true
 			return
 		if rk(e, 4) >= 2 and randf() < 0.125:
 			ev.append(["miss", r1(e.x), r1(e.z)])
 			return
 		if u and not ranged and covered(e, u):        # Brace: nothing from the front harms you (or, at rank 7, those behind you)
 			ev.append(["block", r1(e.x), r1(e.z)])
+			e.sqx = true
 			if e.off >= 0: add_xp(e, D.B_SHIELD, 0.5)
 			var B: E.Player = e if e.braced > 0 else bracer_of(e)
 			if B and rk(B, D.B_SHIELD) >= 6: stun_u(u, 1.0)   # rank 6: the blow is blocked, and whoever dealt it staggers
@@ -2348,6 +2402,7 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 				u.x += bx / bl_ * 1.2; u.z += bz / bl_ * 1.2
 			return
 		d *= gear_cut(e) * (0.5 if e.charge > 0 else 1.0) * (0.67 if e.prot > 0 else 1.0) * (D.POT.def if e.potD > 0 else 1.0)
+		if players.any(func(o): return o.state == "ok" and o.room == e.room and rk(o, D.B_SQUIRE) >= 10 and D.d2(o.x, o.z, e.x, e.z) < D.SQUIRE.near * D.SQUIRE.near): d *= D.SQUIRE.aura   # a knight near you
 		if e.off >= 0 and D.IT[e.off].pool == "shield" and rk(e, D.B_SHIELD) > 0: add_xp(e, D.B_SHIELD, 0.3)   # learned by taking blows on a shield
 		if u and not ranged and e.feet == D.I_HOTFOOT: ignite(u, e, 3.0)   # Brother Cinder's Hot-Foot Boots
 		var bl := blessed_worn(e)                      # rune armour blessed for good: wraiths do half, and whatever strikes it is scorched
@@ -2379,6 +2434,10 @@ func hurt_friend(e, d: float, is_player: bool, u: E.Undead, ranged: bool) -> voi
 	e.hp -= d; e.hc += 1; e.hurtT = 0
 	if not is_player:
 		nerve_hit(e, 3)
+	elif e.hp > 0 and e.hp < max_hp(e) * D.SQUIRE.wind and not e.swind and rk(e, D.B_SQUIRE) >= 5:   # Second Wind (the Knight's Squire, rank V)
+		e.swind = true; e.hp += max_hp(e) * D.SQUIRE.wind_back
+		ev.append(["wind2", e.id, r1(e.x), r1(e.z)])
+		say("%s has found a second wind, from somewhere." % e.dn)
 	if e.hp > 0:
 		return
 	e.hp = 0
@@ -2511,13 +2570,18 @@ func do_attack(p: E.Player) -> void:
 		if shot_at == null: drill(p, I.rng, 0.3, 5)
 		elif I.chain > 0: lightning(p, I, shot_at, mul)
 		return
+	if p.sqx and rk(p, D.B_SQUIRE) >= 7:              # the Knight's Squire, rank VII: the blow after a parry or a brace
+		mul *= 2.0
+	p.sqx = false
 	var src := src_of(p, I)
 	if mul > 1.0: src["crit"] = true
 	var hit := false
-	for u in targets(p, I.reach, I.arc - 0.35 if rk(p, 4) >= 4 else I.arc):
+	var arc: float = I.arc - (0.35 if rk(p, 4) >= 4 else 0.0) - (0.3 if I.two and rk(p, D.B_SQUIRE) >= 4 else 0.0)   # (rank IV: a greatsword sweeps wider)
+	for u in targets(p, I.reach, arc):
 		hit_u(u, dmg_of(p, I, mul), src); hit = true
 		if I.fire: ignite(u, p, D.BURN_TIME)
-	if not hit: drill(p, I.reach + 0.5, I.arc, 4)
+	if hit and I.two: add_xp(p, D.B_SQUIRE, 1)          # the Knight's Squire is learned by greatsword blows
+	if not hit: drill(p, I.reach + 0.5, I.arc, D.B_SQUIRE if I.two and rk(p, D.B_SQUIRE) > 0 else 4)
 
 ## The Thunderer's Crossbow: the bolt that struck jumps on, as lightning, to the nearest few of the dead.
 func lightning(p: E.Player, I: Dictionary, from: E.Undead, mul: float = 1.0) -> void:
@@ -2861,6 +2925,21 @@ func book_power(p: E.Player, b: int) -> void:
 			dog.tree = null; dog.dt = t.id; dog.state = "fight"
 			ev.append(["thatone", p.id, t.id])
 			lines_ = "%s has pointed at one of the dead and said “That one.” The dog has taken this personally."
+		16:                                         # Challenge! (the Knight's Squire): the strongest of the dead nearby, and it comes for you
+			var t: E.Undead = null
+			var best := -1.0
+			for u in undead:
+				if u.dead or u.state == "rise" or u.state == "pile" or D.d2(u.x, u.z, p.x, p.z) > D.SQUIRE.chal_reach * D.SQUIRE.chal_reach: continue
+				if D.UN[u.k].boss and rk(p, D.B_SQUIRE) < 9: continue      # bosses from rank IX
+				if u.mhp > best: best = u.mhp; t = u
+			if t == null:
+				ev.append(["no", p.id, "There is nothing near enough worth challenging.", "Challenge!"])
+				return
+			var tc: float = long * (0.5 if D.UN[t.k].boss else 1.0)
+			t.chal = tc; t.chalby = p.id; t.taunt = p.id; t.tauntT = maxf(t.tauntT, tc)
+			ev.append(["chal", t.id, tc, p.id])
+			add_xp(p, b, 2)
+			lines_ = "%s has challenged %s. It has accepted." % ["%s", "the " + D.UN[t.k].name.trim_prefix("the ") if not D.UN[t.k].boss else D.UN[t.k].name]
 		9:                                          # Smelling Salts
 			var n := 0
 			for o in players:
@@ -3485,7 +3564,8 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 					p.jnote = true; gain_or_drop(p, D.I_NOTE)
 					ev.append(["found", p.id, "a note, where the book should be: “%s”" % D.JEST_NOTE, r1(p.x), r1(p.z), 0, 1])
 				return
-			if near_station(p, "library") and ia >= 0 and ia < D.BOOKS.size() and not p.books[ia] and book_slots(p) > 0 and not (is_class_book(ia) and class_of(p) >= 0):
+			if ia == D.B_SQUIRE: return                 # not on the shelf: Sir Aldous has it
+			if near_station(p, "library") and ia >= 0 and ia < D.BOOKS.size() and not p.books[ia] and (book_slots(p) > 0 or D.FREE_BOOKS.has(ia)) and not (is_class_book(ia) and class_of(p) >= 0):
 				var t0 := title_of(p)
 				p.books[ia] = 1; say("%s has taken up %s." % [p.dn, D.book_title(ia)])
 				if p.card_rank > 1:                         # a library card was handed in: not quite from the beginning
@@ -3532,7 +3612,8 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 			var here_: bool = (near_station(p, "tmerch") and merch2 >= 0) if trav else (near_station(p, "cart") and merchant >= 0 and phase == "day")
 			if here_ and i >= 0 and i < wl.size():
 				var wv: Dictionary = wl[i]
-				if wv.left > 0 and p.coin >= wv.price:
+				var price := price_for(p, wv.price)
+				if wv.left > 0 and p.coin >= price:
 					var done := true
 					match wv.give:
 						"iron":
@@ -3562,7 +3643,7 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 							else:
 								say("%s has bought %s from the relic pedlar. It is, on closer inspection, rubbish." % [p.dn, wv.n])
 					if done:
-						p.coin -= wv.price; wv.left -= 1; spark.call("coin")
+						p.coin -= price; wv.left -= 1; spark.call("coin")
 		"job":
 			if near_station(p, "cart") and merchant >= 0 and phase == "day" and not job.done:
 				p.job = not p.job
@@ -3706,6 +3787,55 @@ func do_act(p: E.Player, a: String, arg = null) -> void:   # things done from a 
 				var key: String = D.POTIONS[ia].k
 				pay(p, brew[ia]); p.set(key, p.get(key) + 1); spark.call("holy")
 				ev.append(["found", p.id, D.POTIONS[ia].n + ". " + pick(D.DRUID_LINES), r1(p.x), r1(p.z), 0, 0])
+		"sqsword":                                      # (version 7.30) a short sword, shown to Sir Aldous. arg: "w" the one in hand, or "i<n>" from the backpack
+			if p.room != "library" or not near_station(p, "knight") or p.sq != 0: return
+			var at_ := int(sa.substr(1)) if sa.begins_with("i") else -1
+			var sid: int = p.wpn if sa == "w" else p.inv[at_] if at_ >= 0 and at_ < p.inv.size() else -1
+			var st_ := sq_tier(sid) if sid > 0 else ""
+			if st_ == "": return
+			var take := func() -> void:
+				if at_ >= 0: p.inv.remove_at(at_)
+				else: take_off(p, "wpn")
+			if st_ == "relic":
+				p.sqsay = D.SQ_RELIC
+			elif st_ == "rune":
+				take.call(); p.sqsay = D.SQ_RUNE
+				say("%s has shown Sir Aldous a rune sword, and has been relieved of it, at swordpoint." % p.dn)
+			elif st_ == D.SQ_TIERS[sq_want(p)]:
+				take.call(); p.sq = 1; p.sqsay = D.SQ_RIGHT; spark.call("page")
+				say("%s has brought Sir Aldous the sword he was looking for. He has sent them for his squire’s notebook." % p.dn)
+			else:
+				var lo: bool = D.TIERS.find(st_) < D.TIERS.find(D.SQ_TIERS[sq_want(p)])
+				p.sqsay = D.SQ_WRONG[(p.sqd + D.TIERS.find(st_) + day) % D.SQ_WRONG.size()] + D.SQ_HINT["low" if lo else "high"]
+		"sqbook":                                       # the notebook, handed over: he reads you a few pages
+			if p.room == "library" and near_station(p, "knight") and p.sq == 2:
+				var t0 := title_of(p)
+				p.sq = 3; p.sqsay = D.SQ_READ
+				if p.books[D.B_SQUIRE] == 0: p.books[D.B_SQUIRE] = 1
+				gain(p, D.I_GREAT + 1)                     # his squire's old practice blade: a crude greatsword
+				say("%s has had a squire’s notebook read to them by Sir Aldous, and has taken up %s." % [p.dn, D.book_title(D.B_SQUIRE)])
+				retitle(p, t0); spark.call("page")
+		"sqdub":                                        # rank X: knighted, as Sir (1) or Dame (2)
+			if p.room == "library" and near_station(p, "knight") and rk(p, D.B_SQUIRE) >= D.MAX_RANK and p.kn == 0 and (ia == 1 or ia == 2):
+				p.kn = ia; p.sqsay = D.SQ_DUB
+				var was: String = p.dn
+				p.dn = knight_name(p)
+				say("%s has been knighted by Sir Aldous, in the library, among the candles. Arise, %s." % [was, p.dn])
+				spark.call("page")
+		"sqdial":                                       # the squire's lock: arg "0+" turns the first dial on, "2-" the third back
+			if p.room == "cabin" and near_station(p, "sqchest") and sa.length() == 2:
+				var di := int(sa[0])
+				var dg := [floori(p.sqd / 100.0) % 10, floori(p.sqd / 10.0) % 10, p.sqd % 10]
+				if di >= 0 and di < 3:
+					dg[di] = posmod(int(dg[di]) + (1 if sa[1] == "+" else -1), 10)
+					p.sqd = int(dg[0]) * 100 + int(dg[1]) * 10 + int(dg[2])
+		"sqopen":
+			if p.room == "cabin" and near_station(p, "sqchest"):
+				if p.sqd != sq_code_n():
+					ev.append(["no", p.id, "The lid does not move. Somebody has been very careful about this lock.", "Locked"])
+				elif p.sq == 1:
+					p.sq = 2; spark.call("page")
+					ev.append(["found", p.id, "the squire’s notebook: “Things Sir Aldous Has Told Me, Vol. 9”", r1(p.x), r1(p.z), 0, 1])
 		"tpay":                                         # a search of the cave's rubble, paid in advance
 			if near_station(p, "keeper") and not p.tithe and not p.tpaid and p.coin >= tithe_fee():
 				p.coin -= tithe_fee(); p.tpaid = true; spark.call("coin")
@@ -3855,7 +3985,7 @@ func dusk_falls() -> void:
 	for q in peasants:
 		if q.state == "idle": q.state = "hide"
 	for p in players:
-		p.ready = false; p.coward = false
+		p.ready = false; p.coward = false; p.swind = false
 	for s in structs:
 		if s.k == "logs": s.tick = 1.0                 # the log roller is stacked again for the night
 	var rot := 0
@@ -4041,6 +4171,12 @@ func start_night() -> void:
 	night = {"t": 0.0, "q": q, "total": q.size(), "c": plan.c, "dur": plan.dur, "kills": 0, "boss": plan.boss, "idle": 0.0, "sides": [] if plan.boss == D.U_LORD else side_gates()}
 	waves = q.size()
 	for p in players: p.ready = false
+	for p in players:                               # (version 7.30) the library shuts, and nobody stays out in the woods after dark
+		if p.room != "" and D.ROOMS[p.room].get("day", false):
+			var was: String = p.room
+			leave_room(p)
+			if p.room != "": leave_room(p)              # (out of the cabin, and then out of the woods)
+			ev.append(["no", p.id, "The librarian has put out the candles, and you." if was == "library" else "The light has gone. You find your way back up the lane, mostly by walking into trees.", "Night has fallen"])
 
 func night_step(dt: float) -> void:
 	var N: Dictionary = night
@@ -4129,7 +4265,7 @@ func end_night() -> void:   # dawn: count the cost, bring people home, start the
 			var kept := []
 			for id in [p.wpn, p.head, p.body, p.off, p.trk, p.feet] + p.inv:
 				if id > 0 and D.IT[id].tier == "relic" and id != D.I_TITHE: kept.append(id)
-			p.deaths += 1; p.dn = D.rel_name(p.name, p.deaths)
+			p.deaths += 1; p.dn = knight_name(p)
 			for id in kept: drop_item(id, p.x, p.z)
 			p.wood = 0; p.stone = 0; p.iron = 0; p.food = 0; p.bodies = 0; p.bbod = 0; p.wpn = 0; p.head = -1; p.body = -1; p.off = -1; p.trk = -1; p.feet = -1
 			p.inv = [D.I_TITHE] if p.tithe else []; p.hp = D.PLAYER_HP; p.state = "ok"; p.coward = false   # (whoever found it keeps it, even now)
@@ -4318,7 +4454,7 @@ func player_step(p: E.Player, dt: float) -> void:
 	if rk(p, 9) >= 4 and p.hp < max_hp(p):
 		p.hp = minf(max_hp(p), p.hp + dt)
 	if p.study:                                    # a class in holy studies: stay by the priest until it is over
-		var st: Dictionary = D.STATIONS[6]
+		var st: Dictionary = D.station("priest")
 		if p.state != "ok" or p.holy >= 2 or D.d2(p.x, p.z, st.x, st.z) > pow(st.r + 1.5, 2):
 			p.study = false
 		else:
@@ -4686,7 +4822,8 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 	if not near and q.nv < 100: q.nv = minf(100, q.nv + dt * 3)
 	if tgt:
 		q.state = "fight"; q.tree = null
-		var bonus: float = (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0) * hn(Ld, 6) * (1.3 if crying(Ld) else 1.0)
+		var bonus: float = (1.25 if rk(Ld, 6) >= 5 else 1.0) * (1.3 if Ld.charge > 0 else 1.0) * hn(Ld, 6) * (1.3 if crying(Ld) else 1.0) \
+			* (1.1 if rk(Ld, D.B_SQUIRE) >= 8 and D.d2(q.x, q.z, Ld.x, Ld.z) < D.SQUIRE.near * D.SQUIRE.near else 1.0)   # (the Knight's Squire, rank VIII)
 		if shoot > 0:                                  # a ranger: keeps back, and shoots
 			var d := sqrt(D.d2(q.x, q.z, tgt.x, tgt.z))
 			if d > shoot: step_to(q, tgt.x, tgt.z, 5.2, dt, shoot - 1.0)
@@ -4770,7 +4907,7 @@ func peasant_step(q: E.Peasant, dt: float) -> void:
 			return
 		elif Ld.room != "":                              # the leader has gone in somewhere: wait by the door
 			var rm_: String = D.ROOMS[Ld.room].get("parent", Ld.room)   # (in a cave across the river they swam to: by the raft, this side)
-			var dr: Array = D.ROOMS[rm_].door
+			var dr: Array = D.ROOMS[rm_].get("exit", D.ROOMS[rm_].door)
 			tx = dr[0] + f[0]; tz = dr[1] + (-2.6 if rm_ == "riverside" else 2.2) - f[1] * 0.7
 		var d := Vector2(tx - q.x, tz - q.z).length()
 		if d > 40:
@@ -5236,7 +5373,7 @@ func undead_step(dt: float) -> void:
 	for u in undead:
 		var U: Dictionary = D.UN[u.k]
 		u.cd = maxf(0, u.cd - dt * (D.CENSER.strike if u.smoke > 0 else 1.0)); u.t -= dt; u.slow = maxf(0, u.slow - dt); u.smoke = maxf(0, u.smoke - dt)
-		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.mark = maxf(0, u.mark - dt); u.held = maxf(0, u.held - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
+		u.stun = maxf(0, u.stun - dt); u.pin = maxf(0, u.pin - dt); u.vuln = maxf(0, u.vuln - dt); u.mark = maxf(0, u.mark - dt); u.held = maxf(0, u.held - dt); u.chal = maxf(0, u.chal - dt); u.fear = maxf(0, u.fear - dt); u.tauntT = maxf(0, u.tauntT - dt)
 		u.conf = maxf(0, u.conf - dt); u.astray = maxf(0, u.astray - dt)
 		if u.dead: continue
 		if mending and u.hp < u.mhp and u.burn <= 0 and u.state != "pile" and u.state != "rise":     # the harvest moon: they mend, slowly (not while alight)

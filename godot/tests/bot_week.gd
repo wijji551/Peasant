@@ -100,6 +100,11 @@ func get_res(res: String, n: int) -> void:
 
 func act(st: String, a: String, arg = null) -> void:
 	var s := D.station(st)
+	if s.get("room", "") != "":                  # (version 7.30) the library is a room: in at the door, and out again
+		var M: Dictionary = D.ROOMS[s.room]
+		go(M.door[0], M.door[1]); R.enter_room(me, s.room); me.x = s.x; me.z = s.z
+		R.do_act(me, a, arg); R.leave_room(me); fast(0.2)
+		return
 	go(s.x, s.z)
 	R.do_act(me, a, arg)
 	fast(0.2)

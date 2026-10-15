@@ -49,7 +49,7 @@ func _init() -> void:
 	R.new_game([{"id": 1, "name": "Matt", "col": 0}, {"id": 2, "name": "Fred", "col": 1}])
 	m = R.players[0]; f = R.players[1]
 	R.weather = "clear"
-	ok("sixteen books: the Jester the last, a calling", D.BOOKS.size() == 16 and D.BOOKS[D.B_JEST].get("class", -1) == 1 and D.CLASSES[1].book == D.B_JEST and D.POWERS.size() == 16)
+	ok("seventeen books: the Jester the sixteenth, a calling", D.BOOKS.size() == 17 and D.BOOKS[D.B_JEST].get("class", -1) == 1 and D.CLASSES[1].book == D.B_JEST and D.POWERS.size() == 17)
 	# ---------------------------------------------------------------- the library: a note where the book should be
 	at(m, "library")
 	R.do_act(m, "book", D.B_JEST)

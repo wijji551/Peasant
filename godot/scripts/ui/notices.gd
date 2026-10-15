@@ -92,15 +92,15 @@ static func wares_list(o: Array, p: E.Player, wl: Array, pre: String, lore: bool
 			for b in p.books.size():
 				var r := Rules.rk(p, b)
 				if r > 0 and r < D.MAX_RANK:
-					o.append({"label": "A loose page of " + D.book_title(b), "sub": D.coins(wv.price) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= wv.price and p.jobT <= 0, "a": "mbuy", "arg": pre + "%d:%d" % [i, b]})
+					o.append({"label": "A loose page of " + D.book_title(b), "sub": D.coins(Rules.price_for(p, wv.price)) + ". A quarter of the way to your next rank." + (" Not today: you are on the job." if p.jobT > 0 else ""), "ok": not gone and p.coin >= Rules.price_for(p, wv.price) and p.jobT <= 0, "a": "mbuy", "arg": pre + "%d:%d" % [i, b]})
 			continue
-		var sub: String = D.coins(wv.price) + (". Sold." if gone else ".")
+		var sub: String = D.coins(Rules.price_for(p, wv.price)) + (". Sold." if gone else ".") + (" (A tenth off, for your manners.)" if Rules.price_for(p, wv.price) < wv.price and not gone else "")
 		if wv.give == "it": sub += " " + item_sub(p, wv.it)
 		elif wv.give == "relic":
 			sub += " He swears it is genuine." + ((" Your relic lore says: it is!" if wv.real >= 0 else " Your relic lore says: it is not.") if lore else "")
 		elif wv.give == "cogs": sub += " Lets you build a contraption you have not learned yet. You have %d." % p.cogs
 		elif wv.give == "index": sub += " A fifth book." if not p.xslot else " You have read it already."
-		o.append({"label": wv.n[0].to_upper() + wv.n.substr(1), "sub": sub, "ok": not gone and p.coin >= wv.price and not (wv.give == "index" and p.xslot), "a": "mbuy", "arg": pre + str(i)})
+		o.append({"label": wv.n[0].to_upper() + wv.n.substr(1), "sub": sub, "ok": not gone and p.coin >= Rules.price_for(p, wv.price) and not (wv.give == "index" and p.xslot), "a": "mbuy", "arg": pre + str(i)})
 
 
 static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
@@ -159,6 +159,7 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 					if t == "steel": forge.call(D.I_SABATONS)
 				"kits":
 					for i in D.kits(): forge.call(i)
+			if t != "kits" and Rules.rk(p, D.B_SQUIRE) > 0: forge.call(D.great_of(t))   # (version 7.30) a greatsword, for a squire
 			for tt in D.TIERS + ["kits"]:
 				if tt != t: o.append({"label": D.TIER_NAME.get(tt, "Posse kits") if tt != "kits" else "Posse kits", "sub": "", "ok": true, "page": tt})
 			return {"title": "The smithy", "intro": "You carry %d iron, %d steel, %d mithril and %d wood." % [p.iron, p.steel, p.mith, p.wood], "o": o}
@@ -173,20 +174,26 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 			var slots := Rules.book_slots(p)
 			if p.inv.has(D.I_CARD) and p.books.any(func(r): return r > 0):
 				o.append({"label": "Hand in your library card", "sub": "Give up one of your books, to take up another.", "ok": true, "page": "card"})
-			var owned: int = p.books.filter(func(r): return r > 0).size()
+			var owned := 0
+			for b in p.books.size():
+				if p.books[b] > 0 and not D.FREE_BOOKS.has(b): owned += 1
 			for b in D.BOOKS.size():
 				var B: Dictionary = D.BOOKS[b]
 				var r: int = Rules.rk(p, b)
+				if b == D.B_SQUIRE and not r:                 # (version 7.30) not on the shelf: a gap, and a card in it
+					o.append({"label": D.book_title(b), "sub": "A gap on the shelf, and a card in it: “Out on loan to Sir Aldous, who is not to be disturbed.” He is at the desk behind the rope.", "ok": false})
+					continue
 				var other_call: bool = Rules.is_class_book(b) and not r and Rules.class_of(p) >= 0
 				if b == D.B_JEST and not r:                   # the Jester: withdrawn by its author, and a note in its place
 					o.append({"label": D.book_title(b), "sub": "One calling at a time." if other_call else "You have the note that was in its place. Prospero, at the Thorny Rose, by the fire." if p.jnote else "Withdrawn by its author, it says on the spine. Take it, and see.", "ok": not other_call and not p.jnote, "a": "book", "arg": b})
 					continue
 				var sub := "One calling at a time." if other_call else ("%s." % Keys.fill(B.ranks[0])) if not r else ("Latest: %s." % lower(B.ranks[r - 1])) + ((" Next: %s (%d of %d, by %s)." % [lower(B.ranks[r]), floori(p.xp[b]), Rules.need_xp(b, r), B.by]) if r < D.MAX_RANK else " You have finished it.")
-				o.append({"label": D.book_title(b) + (" · rank %d of %d" % [r, D.MAX_RANK] if r else ""), "sub": sub, "ok": not r and slots > 0 and not other_call, "a": "book", "arg": b})
+				if D.FREE_BOOKS.has(b) and not r and not other_call: sub += " It does not count against your books."
+				o.append({"label": D.book_title(b) + (" · rank %d of %d" % [r, D.MAX_RANK] if r else ""), "sub": sub, "ok": not r and (slots > 0 or D.FREE_BOOKS.has(b)) and not other_call, "a": "book", "arg": b})
 			var most := 5 if p.xslot else 4
-			var intro := ("You may take up another book." if owned else "The peasants’ section is one shelf of sixteen books, with ten ranks in each. Choose your first. The Holy Book makes you an apprentice priest; one of them comes with a dog; and the last is not there at all.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four", "five"][most] if owned >= most else "Reach rank 2 in a book to take up a second, rank 3 in two books to take up a third, and rank 4 in three to take up a fourth." + (" Your Index of Further Reading allows a fifth." if p.xslot else " A fifth needs An Index of Further Reading, which turns up in the ruins."))
+			var intro := ("You may take up another book." if owned else "The Peasants’ Section: one shelf, propped up with a brick, of books with ten ranks in each. Choose your first. The Holy Book makes you an apprentice priest; one of them comes with a dog; one is not there at all; and one is out on loan. The Holy Book, the Jester and the Knight’s Squire do not count against your books.") if slots > 0 else ("You have your %s books." % ["", "one", "two", "three", "four", "five"][most] if owned >= most else "Reach rank 2 in a book to take up a second, rank 3 in two books to take up a third, and rank 4 in three to take up a fourth." + (" Your Index of Further Reading allows a fifth." if p.xslot else " A fifth needs An Index of Further Reading, which turns up in the ruins."))
 			if p.card_rank > 1: intro += " Your card has been stamped: the next book you take up starts at rank %d." % p.card_rank
-			return {"title": "The library", "intro": intro + (" Cowards learn at half speed today." if p.coward else ""), "o": o}
+			return {"title": "The Peasants’ Section", "intro": intro + (" Cowards learn at half speed today." if p.coward else ""), "o": o}
 		"slum":
 			var c := {"food": Rules.slum_food(p)}
 			var pop := R.peasants.filter(func(q): return q.state != "body" and q.kind != 3).size()
@@ -321,6 +328,67 @@ static func data(R: Rules, id: String, p: E.Player, page: String) -> Dictionary:
 		"hsign":
 			o.append({"text": D.HALLOWSHIRE_SIGN})
 			return {"title": "A signpost", "intro": "", "o": o}
+		"knight":                                     # (version 7.30) Sir Aldous, at his desk beyond the rope
+			if p.sqsay != "": o.append({"text": p.sqsay})
+			match p.sq:
+				0:
+					if p.sqsay == "": o.append({"text": D.SQ_ASK[R.day % D.SQ_ASK.size()]})
+					var any := false
+					if Rules.sq_tier(p.wpn) != "":
+						o.append({"label": "Show him the %s in your hand" % D.IT[p.wpn].n, "sub": "He will keep it if it is the one.", "ok": true, "a": "sqsword", "arg": "w"}); any = true
+					for i in p.inv.size():
+						if Rules.sq_tier(p.inv[i]) != "":
+							o.append({"label": "Show him the %s in your backpack" % D.IT[p.inv[i]].n, "sub": "He will keep it if it is the one.", "ok": true, "a": "sqsword", "arg": "i%d" % i}); any = true
+					if not any: o.append({"text": "You have no short sword about you. The smithy makes them, crude for anybody, and better ones for a reader of Hammer and Tongs. The merchant’s cart has one now and then."})
+				1:
+					if p.sqsay != D.SQ_RIGHT: o.append({"text": "“The notebook,” he says. “In the chest at the cabin, at the end of the lane past the western hedge. The lock is the paintings. He painted everything. Do keep up.”"})
+				2:
+					o.append({"label": "Give Sir Aldous the squire’s notebook", "sub": "He will read you some of it. It does not count against your books.", "ok": true, "a": "sqbook"})
+				3:
+					if Rules.rk(p, D.B_SQUIRE) >= D.MAX_RANK and p.kn == 0:
+						o.append({"text": "“You have learned all a squire can be taught,” he says, “and some things I would rather you had not. Kneel.”"})
+						o.append({"label": "Kneel, to be dubbed Sir", "sub": "", "ok": true, "a": "sqdub", "arg": 1})
+						o.append({"label": "Kneel, to be dubbed Dame", "sub": "", "ok": true, "a": "sqdub", "arg": 2})
+					elif p.sqsay == "":
+						o.append({"text": ("“%s.” He nods to you as to an equal. Nearly." % p.dn) if p.kn else "“Carry on, squire. Both hands. Stand up straight.”"})
+			return {"title": "Sir Aldous", "intro": D.SQ_NOTES[(R.day + p.slot) % D.SQ_NOTES.size()] + " Sir Aldous de Vere is a knight errant, and at present an errant knight: he has mislaid his squire.", "o": o}
+		"librarian":
+			o.append({"text": "“The Peasants’ Section is on your right,” she says, before you have said anything. “The rest of the library is for those with a coat of arms. Do you have a coat of arms?” You have a coat. She looks at it."})
+			o.append({"text": "“A library card lets you give a book back and take another. They turn up in the ruins, for some reason. Do not ask me how. Do not ask me anything.”" + (" She looks at Sir Aldous, and sighs." if p.sq < 3 else "")})
+			return {"title": "The librarian", "intro": "Behind her desk, in spectacles, stamping something. She has run this library for forty years and has not enjoyed one of them.", "o": o}
+		"rope":
+			o.append({"text": "A red rope, on two brass posts, and a card on a stand: “BEYOND THIS ROPE: THE LIBRARY. Members of the Nobility only. Kindly show your coat of arms to the librarian. Peasants: see the Peasants’ Section.”"})
+			o.append({"text": "Beyond it: shelves to the ceiling, a ladder on wheels, a globe of the known world (most of it labelled “Here Be Dragons”), and every book there is. You can see them. You cannot have them." + (" Not even now that you are %s. Your arms have not been registered." % p.dn if p.kn else "")})
+			return {"title": "The rest of the library", "intro": "", "o": o}
+		"sqsign":
+			o.append({"text": "Nailed to a tree, in red paint: “SIR ALDOUS DE VERE, KNIGHT. PRIVATE. NO PEASANTS.” And underneath, smaller, in another hand: “(except on business) (wipe your feet) — W.”"})
+			return {"title": "A sign", "intro": "", "o": o}
+		"sqnote":
+			o.append({"text": "Pinned to the stable post, in a careful hand: “Sir. Have gone after the horse, who has gone after something. Back soon. Do NOT let anybody touch my notebook. It is in the chest. The lock is the paintings, in order. — Wat (your squire).”"})
+			o.append({"text": "The note is some weeks old. The stable is empty, and so is the saddle."})
+			return {"title": "A note", "intro": "", "o": o}
+		"sqtrail":
+			o.append({"text": "A boot. A little further on, a gauntlet. Then a helmet, upside down, with a bird’s nest in it already. Then nothing: only the woods, and a great many hoofprints, going somewhere in a hurry."})
+			o.append({"text": "Wherever the squire went, he went quickly, and got lighter on the way."})
+			return {"title": "A trail", "intro": "", "o": o}
+		"paint0", "paint1", "paint2":
+			var pi_ := int(id.substr(5))
+			var n_: int = Rules.sq_code(R.gseed)[pi_]
+			o.append({"text": "A painting of %s, done with great care and very little skill. You count: %d %s. On the frame, a numeral: %s." % [D.SQ_PAINT[pi_][1], n_, D.SQ_PAINT[pi_][0], ["I", "II", "III"][pi_]]})
+			return {"title": "A painting", "intro": "Signed, in the corner, “W.”", "o": o}
+		"sqchest":
+			var dg := [floori(p.sqd / 100.0) % 10, floori(p.sqd / 10.0) % 10, p.sqd % 10]
+			var open_: bool = p.sqd == R.sq_code_n()
+			if open_:
+				o.append({"text": "The lid is up. Inside: a great many notebooks, all labelled “Things Sir Aldous Has Told Me”, a sock, and a letter to the squire’s mother, not sent." + (" You have taken one of the notebooks. There are plenty." if p.sq >= 2 else "")})
+				if p.sq == 1: o.append({"label": "Take a notebook", "sub": "For Sir Aldous, in the library.", "ok": true, "a": "sqopen"})
+			else:
+				for i in 3:
+					o.append({"label": "The %s dial, with a %s scratched on it: %d" % [["first", "second", "third"][i], ["sheep", "candle", "crow"][i], dg[i]], "sub": "Turn it on.", "ok": true, "a": "sqdial", "arg": "%d+" % i})
+				for i in 3:
+					o.append({"label": "Turn the %s dial back" % ["first", "second", "third"][i], "sub": "", "ok": true, "a": "sqdial", "arg": "%d-" % i})
+				o.append({"label": "Lift the lid", "sub": "", "ok": true, "a": "sqopen"})
+			return {"title": "The squire’s chest", "intro": "A stout chest with a lock of three dials." if not open_ else "The squire’s chest.", "o": o}
 		"keeper":
 			var fee := R.tithe_fee()
 			if p.tithe:

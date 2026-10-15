@@ -87,10 +87,11 @@ func run() -> void:
 		for j in 8:
 			if in_keep(Rules.home_spot(s, j, 7)): bad += 1
 	ok("no cottage lines its people up inside the keep", bad == 0, bad)
-	ok("pitchfork, empty pack, sixteen books of ten ranks", m.wpn == 0 and m.inv.is_empty() and m.books.size() == 16 and D.BOOKS.size() == 16 and D.BOOKS.all(func(b): return b.ranks.size() == D.MAX_RANK) and D.MAX_RANK == 10)
+	ok("pitchfork, empty pack, sixteen books of ten ranks", m.wpn == 0 and m.inv.is_empty() and m.books.size() == 17 and D.BOOKS.size() == 17 and D.BOOKS.all(func(b): return b.ranks.size() == D.MAX_RANK) and D.MAX_RANK == 10)
 
 	# ---------- books: ten of them, seven ranks
-	at(13.4, 20.4)
+	var LB := D.station("library")
+	at(LB.x, LB.z)
 	X.do_act(m, "book", 4); ok("took The Art of Hitting Things", m.books[4] == 1 and Rules.book_slots(m) == 0)
 	X.add_xp(m, 4, Rules.need_xp(4, 1)); ok("rank 2 opens a second book", m.books[4] == 2 and Rules.book_slots(m) == 1)
 	X.do_act(m, "book", 6); X.add_xp(m, 6, Rules.need_xp(6, 2)); ok("leadership rank 3", m.books[6] == 3 and Rules.book_slots(m) == 0)
@@ -310,7 +311,7 @@ func run() -> void:
 	ok("the posse lines up outside the door, not in the keep", not R.peasants.any(func(q): return q.state != "body" and in_keep(q)))
 	at(R.drops[0].x, R.drops[0].z + 0.5); hold(1, func(): return R.drops.size() < 2); ok("a relic can be picked up again", R.drops.size() == 1 and (m.wpn >= 15 or m.inv.size() == 1))
 	var sv = saved
-	ok("the save holds the new things", sv != null and sv.v == 4 and sv.sites == R.sites and sv.trees.size() >= 1 and sv.drops.size() == 2 and sv.players[0].books.size() == 16)
+	ok("the save holds the new things", sv != null and sv.v == 4 and sv.sites == R.sites and sv.trees.size() >= 1 and sv.drops.size() == 2 and sv.players[0].books.size() == 17)
 	# a save survives the trip to text and back
 	var back = JSON.parse_string(JSON.stringify(sv))
 	var R2 := Rules.new()
@@ -375,7 +376,7 @@ func run() -> void:
 	at(D.X1 - 0.1, 0); keys.right = true; fast(0.5); keys.right = false; ok("the hedge stops you, and says so", m.x <= D.X1 and edge == "hedge", m.x)
 	# ---------- bows: the book lets you use one, and comes with a sling
 	m.state = "ok"; R.phase = "day"; R.timeLeft = 300
-	m.books = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; m.xp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; m.inv = [13]; m.wpn = 0; at(13.4, 20.4)
+	m.books = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; m.xp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; m.inv = [13]; m.wpn = 0; at(D.station("library").x, D.station("library").z)
 	X.do_act(m, "eq", 0); ok("no bow without the book", m.wpn == 0 and m.inv == [13])
 	X.do_act(m, "book", 5); ok("Slings, Bows and Thrown Turnips comes with a sling", m.books[5] == 1 and m.inv.has(12), m.inv)
 	X.do_act(m, "eq", 0); ok("with the book, the bow goes in the hand", m.wpn == 13 and not m.inv.has(13), "%d / %s" % [m.wpn, m.inv])

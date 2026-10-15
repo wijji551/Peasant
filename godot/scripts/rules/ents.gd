@@ -77,8 +77,8 @@ class Player:
 	var holyT := 0.0
 	var study := false
 	var gab := false
-	var books: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # a rank in each book (fifteen from version 7.9, sixteen with the Jester in 7.11)
-	var xp: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+	var books: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # a rank in each book (fifteen from version 7.9, sixteen with the Jester in 7.11, seventeen with the Knight's Squire in 7.30)
+	var xp: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 	var xslot := false      # read An Index of Further Reading: a fifth book (a fourth until version 7.7)
 	var p1Cd := 0.0         # a calling's two powers (the Holy Book: Smite and Pray)
 	var p2Cd := 0.0
@@ -137,6 +137,12 @@ class Player:
 	var recipes := 0        # the druid's recipes known, a bit each
 	var tpaid := false      # a search of the cave's rubble paid for
 	var tithe := false      # has found the Tithe Collector
+	var sq := 0             # Sir Aldous's errand (version 7.30): 0 he wants a sword, 1 the sword is his and he wants the notebook, 2 you have it, 3 he has read it to you
+	var sqd := 0            # the squire's lock, as you have turned it: three dials, a digit each (hundreds, tens, units)
+	var kn := 0             # knighted (rank X of the Knight's Squire, and dubbed): 1 Sir, 2 Dame
+	var swind := false      # tonight's Second Wind has been used
+	var sqsay := ""         # what Sir Aldous said last, for his notice
+	var sqx := false        # a parry or a brace has just turned a blow: the next blow is twice as hard (rank VII)
 	var flask := false      # a hip flask of ale, carried out of the inn (rank 9 of the Landlord's Ledger)
 	var sure := false       # the day's certain find has been used (rank 10 of Relics and Where They Were Left)
 	var shots := 0          # shots loosed, for the free volley every tenth (rank 10 of Slings, Bows and Thrown Turnips)
@@ -294,6 +300,8 @@ class Undead:
 	var cr := 0.0           # and which way that is
 	var taunt := 0
 	var tauntT := 0.0
+	var chal := 0.0         # Challenge! (the Knight's Squire): it has been challenged, for this long, by chalby
+	var chalby := 0
 	var tg := 0
 	var dead := false
 	var revived := false

@@ -180,7 +180,7 @@ const _IT := [
 	{"n": "slop bucket", "s": "t", "tier": "found", "pool": "bucket", "tint": [0.6, 0.48, 0.3], "note": "{carry} lobs it, once: every undead it splashes runs from the smell"},
 ]
 const _IT_DEF := {"dmg": 0.0, "cd": 0.0, "reach": 0.0, "arc": 0.0, "ab": "", "note": "", "swing": 0, "cost": {}, "blunt": false, "heavy": false,
-	"fire": false, "runed": false, "blessed": false, "kit": "", "spd": 0.0, "chain": 0, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
+	"fire": false, "runed": false, "blessed": false, "two": false, "kit": "", "spd": 0.0, "chain": 0, "kb": 0.0, "rng": 0.0, "shot": 0, "need": [], "holy": false, "line": false, "tint": [1, 1, 1], "cut": 0.0, "slow": 0.0, "arrow": 0.0, "base": -1, "wear": 0}
 ## The smithy makes three grades. Anyone can knock out a crude weapon, which wears out: after a night's fighting it is
 ## chipped, and after a second it falls apart. Hammer and Tongs (rank 1) makes the refined ones (the first list above);
 ## from rank 4, steel, from the old steel mine. Crude, chipped and steel things are made here from the refined ones,
@@ -358,7 +358,32 @@ const _V711 := [
 const I_NOTE := 101
 const I_MAROTTE := 102
 const I_TITHE := 103                 # the Tithe Collector (version 7.12): whoever finds it keeps it
-static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers() + _V79 + _V711, _IT_DEF)
+## Version 7.30: the Knight's Squire. The greatsword, a two-handed sword (two: nothing in the off hand), in every metal,
+## and the book's relic. Only a reader of the Knight's Squire can swing one; the smithy forges them from its third rank.
+const _GREAT := {"n": "greatsword", "s": "w", "tier": "forged", "dmg": 34, "cd": 0.85, "reach": 2.5, "arc": 0.0, "kb": 0.6, "heavy": true, "two": true, "ab": "parry", "pool": "great", "swing": 1,
+	"need": [16, 1], "cost": {"iron": 10, "wood": 3}, "note": "Two-handed. Heavy, long, and a wide sweep: nothing goes in the other hand"}
+static func _v730() -> Array:
+	var out := [_GREAT.duplicate(true)]                                    # 104: iron
+	for w in [1, 2]:                                                       # 105-106: crude, and chipped
+		var o := _tier_of(_GREAT, 104, "crude")
+		o.wear = w; o.need = [16, 1]; o.dmg = roundf(_GREAT.dmg * (0.8 if w == 1 else 0.68))
+		if w == 2:
+			o.n = "chipped " + o.n; o.tint = [0.62, 0.52, 0.44]
+		o.note = "Crude: " + ("it will be chipped after a night’s fighting, and fall apart after a second" if w == 1 else "chipped, and will fall apart after another night’s fighting") + ". Two-handed"
+		out.append(o)
+	for t in ["steel", "mithril", "rune"]:                                 # 107-109
+		var o := _tier_of(_GREAT, 104, t); o.need = [16, 1]
+		out.append(o)
+	out.append({"n": "Sir Aldous’s Grandfather’s Greatsword", "s": "w", "tier": "relic", "dmg": 44, "cd": 0.9, "reach": 2.7, "arc": -0.15, "kb": 1.4, "holy": true, "two": true, "heavy": true,   # 110
+		"ab": "parry", "pool": "great", "swing": 1, "need": [16, 1], "tint": [1.3, 1.2, 0.75],
+		"note": "Holy, and two-handed: a sweep that takes in most of what is round you, and sends it back a step. Sir Aldous will want to know where you found it"})
+	return out
+const I_GREAT := 104                 # the iron greatsword; crude 105 (chipped 106), steel 107, mithril 108, rune 109
+const I_OATH := 110                  # the Knight's Squire's relic
+static var IT: Array = _fill(_IT + _grades() + _MORE + _runes() + _RELICS2 + _more_tiers() + _V79 + _V711 + _v730(), _IT_DEF)
+## The greatsword in a tier ("crude", "forged", "steel", "mithril", "rune").
+static func great_of(tier: String) -> int:
+	return {"crude": 105, "forged": 104, "steel": 107, "mithril": 108, "rune": 109}[tier]
 const I_CARD := 47
 const I_TORCH := 48
 const BURN_TIME := 4.0               # how long a thing set alight burns, and what it takes every half second
@@ -456,6 +481,21 @@ const ROOMS := {
 	"rcave": {"name": "the Rune Cave", "x": -80.0, "z": 240.0, "hw": 6.0, "hd": 4.5, "at": [-80.0, 243.5], "door": [-134.6, 308.0], "wait": [-138.5, 308.0], "parent": "riverside",
 		"in": "go into the Rune Cave", "out": "go back out into the daylight",
 		"box": [[-75.2, 236.4, 1.2, 1.0], [-85.0, 240.0, 0.6, 0.6], [-77.0, 241.5, 0.4, 0.4]]},   # the rock hiding something, Saint Wilbur, a prop
+	# (version 7.30) the library, a room now. The Peasants' Section at the front; a rope across the middle, and beyond it the
+	# rest of the library, for those with a coat of arms. "day": shut at night (you are shown out when night falls).
+	# "exit": where you come out (the library's door faces west).
+	"library": {"name": "the library", "x": 110.0, "z": 240.0, "hw": 9.0, "hd": 7.0, "at": [110.0, 246.2], "door": [14.0, 20.4], "exit": [13.0, 20.4], "day": true,
+		"in": "go into the library", "out": "go back out into the village",
+		"box": [[110.0, 239.0, 9.0, 0.15], [104.8, 242.2, 1.5, 0.45], [116.3, 239.7, 2.2, 0.4], [112.6, 243.6, 1.3, 0.5]]},   # the rope; the librarian's desk; the Peasants' Section; a reading table
+	# the lane past the west hedge, and the clearing at the end of it (open, like the Riverside): Sir Aldous's cabin, and
+	# his squire's, who has gone. Thickets either side of the lane. "face": which way you face, coming in.
+	"woods": {"name": "the lane past the hedge", "x": 130.0, "z": 420.0, "hw": 24.0, "hd": 12.0, "at": [152.0, 420.6], "door": [-122.4, 2.0], "exit": [-120.6, 2.0], "open": true, "day": true, "face": -PI / 2,
+		"in": "follow the lane past the hedge, into the woods", "out": "follow the lane back to Thornhallow",
+		"box": [[142.0, 412.3, 12.0, 4.3], [142.0, 427.7, 12.0, 4.3],                                    # the thickets either side of the lane
+			[117.0, 414.0, 3.5, 2.5], [126.0, 411.5, 2.2, 1.3], [127.0, 424.0, 0.35, 0.35], [111.5, 417.0, 1.0, 0.25], [121.0, 423.5, 0.7, 0.7], [110.6, 414.0, 0.6, 1.4]]},   # the cabin, the stable, a dummy, a rack, the old fire, the woodpile
+	"cabin": {"name": "the cabin", "x": 175.0, "z": 240.0, "hw": 5.0, "hd": 4.0, "at": [175.0, 243.4], "door": [117.0, 417.3], "wait": [117.0, 418.6], "parent": "woods", "day": true,
+		"in": "go into the cabin", "out": "go back out into the clearing",
+		"box": [[171.1, 240.6, 0.8, 1.3], [179.2, 238.6, 0.5, 1.0], [179.2, 242.2, 0.45, 0.6], [170.4, 243.0, 0.5, 0.8], [175.3, 240.6, 0.8, 0.5], [173.6, 236.8, 0.3, 0.3]]},   # the beds, the chest, the hearth, the table, the armour stand
 }
 ## The Riverside (version 7.12). The raft is built once, for everyone, from 100 wood; it crosses by day. Swimming, once
 ## there is a raft, is how anyone gets across after dusk: twenty seconds, half your health, and forty-five tired seconds after.
@@ -539,7 +579,7 @@ const I_BOW := 54                    # the Thunderer's Crossbow (a bow until ver
 const I_SCYTHE := 55                 # Saint Walstan's Scythe
 const I_TROWEL := 56                 # the Mason's Blessed Trowel
 const I_TONGS := 57                  # Saint Dunstan's Tongs
-const RELICS := [15, 16, 17, 20, 23, 26, 27, 54, 55, 56, 57, 91, 92, 93, 94, 102]     # one for every book (and from version 7.9, one copy for every player who holds that book)
+const RELICS := [15, 16, 17, 20, 23, 26, 27, 54, 55, 56, 57, 91, 92, 93, 94, 102, 110]     # one for every book (and from version 7.9, one copy for every player who holds that book)
 const CHAIN_REACH := 4.5             # how far the Thunderer's lightning jumps (half as far again with its book)
 const TROWEL_REACH := 9.0
 const TROWEL_MEND := 3.0             # health a second it puts back into each defence near you (twice that with its book)
@@ -678,12 +718,47 @@ const BOOKS := [
 		"One card in three comes back to your hand",
 		"The bosses you insult are so put out that half their blows go astray",
 		"The Encore: after a trick fails, the next one cannot"]},
+	# --- version 7.30: not on the library's shelf. Sir Aldous, who is doing some research in the library, reads it to you
+	{"name": "The Knight’s Squire", "what": "Chivalry, for peasants", "base": 40, "by": "greatsword blows and Challenges", "ranks": [
+		"Two-handed swords: you can swing a greatsword (and Sir Aldous lends you his squire’s old one). Challenge!, on the action bar: the strongest of the dead nearby turns on you, and takes a fifth more from your blows for eight seconds",
+		"Your posse keeps its nerve better while it is near you",
+		"The smithy will forge you a greatsword, in any metal you can work",
+		"Your greatsword sweeps wider",
+		"Second Wind: once a night, when you are brought down to a quarter of your health, you get a third of it back",
+		"Courtesy: the merchants charge you a tenth less",
+		"After a parry or a brace, your next blow is twice as hard",
+		"Your posse hits a tenth harder while it is near you",
+		"Challenge works on bosses too, for half as long",
+		"Knighted: Sir Aldous dubs you Sir or Dame, your posse is one larger, and the living near you take a tenth less harm"]},
 ]
 const B_FIRE := 11
 const B_WATCH := 12
 const B_SHIELD := 13
 const B_DOG := 14
 const B_JEST := 15
+const B_SQUIRE := 16
+const FREE_BOOKS := [10, 15, 16]     # (version 7.30) the Holy Book, the Jester and the Knight's Squire: none of them count against your books
+## The Knight's Squire (version 7.30). Sir Aldous wants a sword: one tier of short sword, his own secret, a different one
+## for each player. The notebook is in a chest in the squire's cabin, at the end of the lane past the west hedge; three
+## paintings on its walls give the three numbers of the lock.
+const SQUIRE := {"chal": 8.0, "chal_mul": 1.2, "chal_reach": 10.0, "wind": 0.25, "wind_back": 1.0 / 3.0, "near": 8.0, "cheap": 0.9, "aura": 0.9}
+const SQ_TIERS := ["crude", "forged", "steel", "mithril"]
+const SQ_ASK := ["“A sword,” says Sir Aldous, without looking up. “A short sword. I have very particular requirements, which I shall not be sharing. Bring me one, and I shall know it when I see it.”",
+	"“A short sword, peasant. Not any short sword. The right one. I shall know it when I see it.”"]
+const SQ_WRONG := ["“No,” says Sir Aldous. “That is not the sword I am looking for.” He hands it back, hilt first, which is something.",
+	"He turns it over, sights along it, and gives it back. “Not the one. A fine sword, for a peasant. Not the one.”",
+	"“Ah,” he says, and then, “no.” He returns it to you as if it might go off.",
+	"He tests the edge on a page of his notes, which is a pity for the notes. “That will not do,” he says. “But do keep trying. I find it very restful.”"]
+const SQ_HINT := {"low": " “Something a little finer, I think.”", "high": " “Rather grand, for what I have in mind. Something humbler.”"}
+const SQ_RIGHT := "Sir Aldous holds it up to the candle, and for a moment says nothing at all. “That,” he says, “is the sword I was looking for.” He puts it under the table, where you will not see it again. “Now. A small favour. My squire kept a notebook, with all my best advice in it. He has gone. I do not know where. The notebook is in a chest at our cabin, at the end of the lane past the western hedge. He was forever changing the lock, and always to things he had painted. Fetch it for me.”"
+const SQ_RUNE := "Sir Aldous rises, draws his own sword, and points it at your chest. “Where did you get this?” He takes it from you without waiting for an answer. “This is far too powerful for the hands of a peasant of this village. It is not a weapon such people should have access to.” He sits down again and puts it under the table, with the others. “Bring me a proper sword.”"
+const SQ_RELIC := "“A relic,” says Sir Aldous, and pushes it back across the desk with one finger. “I could not possibly. Put it away, before the librarian sees.”"
+const SQ_READ := "Sir Aldous opens the notebook, clears his throat, and reads you a few pages: on holding a sword with both hands, on standing up straight, on the correct way to issue a challenge, and on when to run, which has been crossed out. “There,” he says. “You are now as good as a squire. Better, in some respects. You came back.” He hands you the squire’s old practice blade, which is rough, and long, and his."
+const SQ_DUB := "Sir Aldous takes up his sword, and you kneel on the library floor, among the candles. The librarian looks up, and says nothing, which from her is a great deal. He touches each of your shoulders with the flat of the blade, misses the second one slightly, and says: “Arise.”"
+const SQ_NOTES := ["Sir Aldous is reading a book on heraldry, and making notes in the margin, which is not allowed.", "Sir Aldous is copying out a list of dragons. It is a short list, and most of it has been crossed out.",
+	"Sir Aldous has three books open at once and is frowning at all of them.", "Sir Aldous is reading “The Peasant: His Uses”, and nodding."]
+## The paintings in the cabin: what each one has in it, to be counted. Each game's lock is the three counts.
+const SQ_PAINT := [["sheep", "a field with sheep in it"], ["candles", "a table with candles on it"], ["crows", "a tree with crows in it"]]
 ## The Jester (version 7.11): Prospero's three lessons, each a trick, with a question or two after his talk. A lesson costs a
 ## tankard from the barrel, is given by day only, and the next waits until the last trick has been played on twenty of the dead.
 const JEST := {"time": 45.0, "hw": 20, "cd": [6.0, 20.0, 40.0], "reach": 14.0, "bang": 4.5, "bang_big": 7.0, "jape": 9.0, "conf": 6.0, "smoke": 6.0}
@@ -743,13 +818,14 @@ const POWERS := [
 	{"n": "Brace", "icon": "shield", "cd": 30.0, "t": 4.0, "rank": 3, "d": "plant your feet: nothing from the front harms you, and whatever hits you is shoved back"},
 	{"n": "That One", "icon": "dog", "cd": 25.0, "t": 4.0, "rank": 3, "d": "point at one of the dead, and the dog pulls it down and holds it there"},
 	{},
+	{"n": "Challenge!", "icon": "challenge", "cd": 25.0, "t": 8.0, "d": "the strongest of the dead nearby turns on you, and takes a fifth more from your blows for eight seconds"},
 ]
 ## A second power for a book (the fire-raiser's burning oil), at its rank.
 const POWERS2 := {11: {"n": "Burning Oil", "icon": "oil", "cd": 50.0, "t": 8.0, "rank": 6, "d": "poured over the dead at the wall, from a wall, a gate or a tower: that patch of ground burns"}}
 const POWER_NEAR := 8.0              # what "near you" is, for the powers that reach the people round you
 ## A title from the books you have read: the one you know best, and the next best.
-const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest", "Fire-Raiser", "Night Watchman", "Shield-Wall", "Dog-Walker", "Jester"]
-const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy", "Singed", "Shifty", "Dented", "Muddy-Pawed", "Motley"]
+const TITLE_NOUN := ["Woodcutter", "Cook", "Barricader", "Smith", "Brawler", "Turnip-Slinger", "Ringleader", "Regular", "Relic-Botherer", "Granny", "Apprentice Priest", "Fire-Raiser", "Night Watchman", "Shield-Wall", "Dog-Walker", "Jester", "Squire"]
+const TITLE_ADJ := ["Splintery", "Well-Fed", "Over-Fortified", "Sooty", "Bruising", "Sharp-Eyed", "Bossy", "Merry", "Dusty", "Kindly", "Holy", "Singed", "Shifty", "Dented", "Muddy-Pawed", "Motley", "Gallant"]
 ## Each relic has a book it goes with. Carrying the relic with that book read does something more.
 const RELIC_LORE := {
 	15: [1, "Every Bury feeds you: 10 health"],
@@ -768,6 +844,7 @@ const RELIC_LORE := {
 	93: [13, "Arrows it sends back hit twice as hard"],
 	94: [14, "The two dogs bite a quarter harder"],
 	102: [15, "It answers back: your japes last a third longer"],
+	110: [16, "What you Challenge takes a fifth more from everybody, not just from you"],
 }
 # --- the dead. first: the night of the month they first come down. cost: how much of a night's horde one of them is
 # worth (a shambler is 1). Flags: bony (reassembles once), boss, climb (over barricades), dig (under the north wall),
@@ -870,7 +947,17 @@ const STATIONS := [
 	{"id": "market", "x": 0.0, "z": 19.7, "r": 3.4, "name": "the market", "verb": "trade at the market"},
 	{"id": "smithy", "x": 12.4, "z": -4.7, "r": 3.2, "name": "the smithy", "verb": "use the smithy"},
 	{"id": "store", "x": 12.9, "z": 10.6, "r": 3.0, "name": "the storehouse", "verb": "open the storehouse"},
-	{"id": "library", "x": 13.4, "z": 20.4, "r": 3.0, "name": "the library", "verb": "read in the library"},
+	{"id": "library", "x": 116.3, "z": 241.1, "r": 1.8, "room": "library", "name": "the Peasants’ Section", "verb": "browse the Peasants’ Section"},
+	{"id": "librarian", "x": 104.8, "z": 243.5, "r": 1.6, "room": "library", "name": "the librarian", "verb": "speak to the librarian"},
+	{"id": "knight", "x": 112.6, "z": 239.8, "r": 1.7, "room": "library", "name": "Sir Aldous", "verb": "speak to Sir Aldous, who is doing some research"},
+	{"id": "rope", "x": 107.2, "z": 239.7, "r": 1.3, "room": "library", "name": "the rope", "verb": "look at the rope, and the rest of the library"},
+	{"id": "sqnote", "x": 126.0, "z": 413.4, "r": 1.6, "room": "woods", "name": "a note on the stable", "verb": "read the note pinned to the stable"},
+	{"id": "sqtrail", "x": 109.0, "z": 429.6, "r": 2.2, "room": "woods", "name": "a trail of things", "verb": "look at the trail of things dropped in the grass"},
+	{"id": "sqsign", "x": 150.0, "z": 417.2, "r": 1.6, "room": "woods", "name": "a sign", "verb": "read the sign"},
+	{"id": "paint0", "x": 172.2, "z": 237.4, "r": 1.1, "room": "cabin", "name": "the first painting", "verb": "look at the painting"},
+	{"id": "paint1", "x": 175.0, "z": 237.4, "r": 1.1, "room": "cabin", "name": "the second painting", "verb": "look at the painting"},
+	{"id": "paint2", "x": 177.8, "z": 237.4, "r": 1.1, "room": "cabin", "name": "the third painting", "verb": "look at the painting"},
+	{"id": "sqchest", "x": 178.2, "z": 242.2, "r": 1.2, "room": "cabin", "name": "the squire’s chest", "verb": "look at the chest"},
 	{"id": "slum", "x": -17.6, "z": 17.4, "r": 3.4, "name": "the slum", "verb": "recruit in the slum"},
 	{"id": "inn", "x": 60.0, "z": 236.9, "r": 1.9, "room": "inn", "name": "the bar of the Thorny Rose", "verb": "have a word with the innkeeper"},
 	{"id": "priest", "x": 13.6, "z": -10.6, "r": 2.3, "name": "the priest", "verb": "speak to the priest"},

@@ -87,6 +87,7 @@ func _init() -> void:
 	ok("Esc closes the handbook", not m.win.visible)
 	# a place's notice: stand at the library and hold E
 	var st := D.station("library")
+	m.R.enter_room(m.me, "library"); m.me.eLock = false
 	m.me.x = st.x; m.me.z = st.z
 	Input.action_press("dtv_interact")
 	await frames(20)
@@ -97,7 +98,7 @@ func _init() -> void:
 	key(KEY_5)
 	await frames(5)
 	ok("pressing 5 takes up book five", m.me.books[4] == 1, m.me.books)
-	m.me.x = st.x + 12
+	m.R.leave_room(m.me)
 	await frames(10)
 	ok("walking away closes the notice", not m.win.visible)
 	# the end of the week

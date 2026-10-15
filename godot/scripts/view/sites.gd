@@ -55,7 +55,7 @@ func _ready() -> void:
 	mm.scale = Vector3.ONE * 1.1
 	_cart.visible = false
 	var pr := _mi("priest")                          # the priest, outside his chapel
-	var st: Dictionary = D.STATIONS[6]
+	var st: Dictionary = D.station("priest")
 	pr.position = Vector3(st.x + 0.9, 0, st.z - 0.5)
 	pr.rotation.y = -2.2
 	pr.scale = Vector3.ONE * 1.08

@@ -110,6 +110,9 @@ static func _build(name: String, b: Mesher) -> void:
 			for x in [-0.15, 0.0, 0.15]: b.box(0.05, 0.32, 0.05, x, 1.22, 0, P.iron)
 		"sword":
 			b.box(0.07, 0.26, 0.07, 0, -0.08, 0, P.wood).box(0.32, 0.06, 0.09, 0, 0.18, 0, P.iron).box(0.1, 0.95, 0.035, 0, 0.24, 0, 0xcfd4dc)
+		"great":                                             # a greatsword (version 7.30): a long grip for two hands, a wide guard, a long blade
+			b.box(0.08, 0.5, 0.08, 0, -0.32, 0, P.timber).ico(0.07, 0, -0.36, 0, P.iron).box(0.6, 0.07, 0.11, 0, 0.18, 0, P.iron)
+			b.box(0.13, 1.45, 0.04, 0, 0.25, 0, 0xcfd4dc).cyl(0, 0.065, 0.16, 4, 0, 1.7, 0, 0xcfd4dc)
 		"spear":
 			b.box(0.06, 2.2, 0.06, 0, -0.65, 0, P.wood).cyl(0, 0.1, 0.42, 4, 0, 1.55, 0, 0xcfd4dc)
 		"mace":

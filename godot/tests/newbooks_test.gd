@@ -43,8 +43,8 @@ func _init() -> void:
 	m = R.players[0]; f = R.players[1]
 	R.weather = "clear"
 	# ---------- the shelf
-	ok("sixteen books, the new four after the Holy Book, ten ranks each", D.BOOKS.size() == 16 and D.BOOKS[11].name == "Fire and How to Start It" and D.BOOKS[14].name.begins_with("Dogs") and D.BOOKS.all(func(b): return b.ranks.size() == 10))
-	ok("titles for them", D.TITLE_NOUN.size() == 16 and D.TITLE_ADJ.size() == 16)
+	ok("seventeen books, the new four after the Holy Book, ten ranks each", D.BOOKS.size() == 17 and D.BOOKS[11].name == "Fire and How to Start It" and D.BOOKS[14].name.begins_with("Dogs") and D.BOOKS.all(func(b): return b.ranks.size() == 10))
+	ok("titles for them", D.TITLE_NOUN.size() == 17 and D.TITLE_ADJ.size() == 17)
 	ok("the new things kept their numbers after everything else", D.IT[D.I_MATCH].n == "the Everlasting Match" and D.IT[D.I_HOTFOOT].n.begins_with("Brother Cinder") and D.IT[90].s == "k")
 	ok("an old save's books are made up to the full shelf", (func():
 		var sv := R.save_data(); for pr in sv.players: pr.books = pr.books.slice(0, 11); pr.xp = pr.xp.slice(0, 11)

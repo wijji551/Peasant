@@ -685,6 +685,8 @@ func _wheel_step(delta: float) -> void:
 
 var _marked := [0, 0.0]              # The Marked Man: [which of the dead, seconds left]
 var _mark_node: MeshInstance3D
+var _chal := [0, 0.0]                # Challenge! (version 7.30): a gold diamond over the challenged, while it lasts
+var _chal_node: MeshInstance3D
 
 var _smokes: Array = []              # the jester's lingering smoke, for the view: [x, z, radius, seconds left]
 
@@ -713,6 +715,22 @@ func _mark_step(delta: float) -> void:
 	if u:
 		_mark_node.position = Vector3(u.x, 2.9 + D.UN[u.k].r + 0.2 * sin(_marked[1] * 6.0), u.z)
 		_mark_node.rotation.y += delta * 3.0
+	_chal[1] -= delta
+	var cu: E.Undead = null
+	if _chal[1] > 0:
+		for o in R.undead:
+			if o.id == _chal[0] and not o.dead: cu = o
+	if _chal_node == null:
+		_chal_node = MeshInstance3D.new()
+		var pm := PrismMesh.new(); pm.size = Vector3(0.42, 0.42, 0.12)
+		_chal_node.mesh = pm
+		var cm2 := StandardMaterial3D.new(); cm2.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; cm2.albedo_color = Color(1.0, 0.8, 0.25); cm2.no_depth_test = true
+		_chal_node.material_override = cm2
+		add_child(_chal_node)
+	_chal_node.visible = cu != null
+	if cu:
+		_chal_node.position = Vector3(cu.x, 3.3 + D.UN[cu.k].r + 0.15 * sin(_chal[1] * 5.0), cu.z)
+		_chal_node.rotation = Vector3(PI, _chal_node.rotation.y + delta * 2.5, 0)
 
 
 func _builds_now() -> Array:
@@ -1080,7 +1098,7 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 		"unbothered": F.puff(ev[2], 1.8, ev[3], 8, F.C_HOLY, 1.5)
 		"power":                                          # a book's power, used: a ring of its colour, and a word for whoever used it
 			F.shock(ev[3], ev[4], D.POWER_NEAR if ev[2] in [1, 3, 7, 9] else 3.0, Color(1.0, 0.86, 0.5, 0.8))
-			Sound.play(["chop", "eat", "build", "forge", "swing", "pop", "rally", "cheer", "pick", "pop"][int(ev[2])] if int(ev[2]) < 10 else "holy", 0.9, Vector2(ev[3], ev[4]))
+			Sound.play(["chop", "eat", "build", "forge", "swing", "pop", "rally", "cheer", "pick", "pop"][int(ev[2])] if int(ev[2]) < 10 else "swing" if int(ev[2]) == D.B_SQUIRE else "holy", 0.9, Vector2(ev[3], ev[4]))
 			if ev[1] == me.id: hud.banner(D.POWERS[int(ev[2])].n, "", 1.0)
 		"stick":                                          # a fire stick, thrown
 			F.fly(ev[1], ev[2], ev[3], ev[4], 1); F.puff(ev[3], 0.8, ev[4], 12, F.C_FIRE, 3.0); Sound.play("whoosh", 0.6, Vector2(ev[1], ev[2]))
@@ -1127,6 +1145,13 @@ func _event(ev: Array) -> void:   # things that happened this moment, from the r
 			if ev[1] == me.id: hud.banner("A new trick: " + str(ev[4]), "It is on your action bar.", 3.0)
 		"deserted": if ev[1] == me.id: Sound.play("no"); hud.banner("A stray has run off", "%s has gone into the dusk, and has helped himself to your coin on the way." % ev[2], 3.0)
 		"mark": _marked = [int(ev[1]), float(ev[2])]        # The Marked Man: a red mark over it, while it lasts
+		"chal":                                           # Challenge!: a gold mark over it, and a word from it
+			_chal = [int(ev[1]), float(ev[2])]
+			Sound.play("rally", 0.9)
+		"wind2":
+			F.puff(ev[2], 1.4, ev[3], 18, F.C_GLAD, 2.6); Sound.play("rally", 0.8, Vector2(ev[2], ev[3]))
+			if ev[1] == me.id: hud.banner("Second Wind", "A third of your health back, from somewhere. Once a night.", 2.0)
+		"page": Sound.play("page", 0.9, Vector2(ev[1], ev[2]))
 		"hone":
 			F.pillar(ev[2], ev[3], ev[4])
 			if ev[1] == me.id: hud.banner("Hone", "The relic is %s." % D.compass(ev[2] - me.x, ev[3] - me.z), 2.4)
@@ -1452,6 +1477,16 @@ func _apply_light(nf: float) -> void:
 		env.fog_depth_begin = 400.0
 		env.fog_depth_end = 500.0
 		env.adjustment_saturation = 1.0
+	elif screen == "game" and me and (me.room == "library" or me.room == "cabin"):   # (version 7.30) the library by candlelight; the cabin, dim and shuttered
+		var lib: bool = me.room == "library"
+		sun.light_energy = 0.0
+		env.ambient_light_color = Color(1.0, 0.86, 0.66) if lib else Color(0.86, 0.8, 0.72)
+		env.ambient_light_energy = 0.5 if lib else 0.46
+		env.background_color = Color(0.05, 0.04, 0.03)
+		env.fog_light_color = env.background_color
+		env.fog_depth_begin = 400.0
+		env.fog_depth_end = 500.0
+		env.adjustment_saturation = 1.05
 	elif screen == "game" and me and me.room == "inn":  # in the Rose: lamplight and firelight, whatever the hour
 		sun.light_energy = 0.0
 		env.ambient_light_color = Color(1.0, 0.82, 0.62)
@@ -1493,6 +1528,7 @@ func _camera(delta: float) -> void:
 	world.set_veins(R.rune_left)
 	world.set_riverside(R.raft, R.raftW, R.rcave, R.runes2)
 	world.set_moles(R.moles)
+	world.squire.set_code(Rules.sq_code(R.gseed))
 	world.view_at = _focus
 	if folk: folk.R = R; folk.me = me
 	atmos.indoors = indoors

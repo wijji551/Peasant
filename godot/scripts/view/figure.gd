@@ -696,6 +696,9 @@ func _process(delta: float) -> void:
 		_hand.position = Vector3(0.36, 0.72, 0.42 - s2 * 0.12); _hand.rotation = Vector3(0.12, 0, 0)
 	elif _held_pool == "xbow":
 		_hand.position = Vector3(0.3, 0.62, 0.2 - s2 * 0.14); _hand.rotation = Vector3(-s2 * 0.2, 0, 0)
+	elif _held_pool == "great":                          # (version 7.30) both hands, in front: up over the shoulder, and a great sweep across
+		_hand.position = Vector3(0.22 - s2 * 0.3, 0.66, 0.3 + s2 * 0.3)
+		_hand.rotation = Vector3(0.35 + s2 * 1.3, -s2 * 1.5, -0.25 + s2 * 0.4)
 	else:
 		_hand.position = Vector3(0.42, 0.6, 0.14 + s2 * (0.25 if _held_swing else 0.55))
 		_hand.rotation = Vector3(0.12 + s2 * (1.7 if _held_swing else 1.4), -s2 * 0.9 if _held_swing else 0.0, 0)

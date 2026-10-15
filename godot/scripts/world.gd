@@ -3,6 +3,8 @@ extends Node3D
 ## Same layout and measurements as the web version: x runs east, z runs south, north is -z.
 
 const Build := preload("res://scripts/build.gd")
+const Squire := preload("res://scripts/view/squire.gd")
+var squire: Node3D
 
 const VW := 28.0          # half the village's width
 const VN := D.VN          # the north wall (moved forward three paces in version 7.5)
@@ -110,6 +112,7 @@ func _ready() -> void:
 	_riverside()
 	_ground_detail()
 	_wilds()
+	squire = Squire.new(); add_child(squire)     # (version 7.30) the library, the lane and the cabin
 
 
 ## A fire in a brazier: flames that flicker (they are turned up at night with the lanterns), and the light.
