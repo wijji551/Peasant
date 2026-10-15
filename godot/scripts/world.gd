@@ -425,7 +425,7 @@ func _evil_build(n: Node3D) -> void:
 ## The Lord has come down in person (main.gd): he is not at his window, nor on his wall.
 func set_lord_out(out: bool) -> void:
 	_lord_out = out
-	if _lord_win: _lord_win.visible = not out
+	if _lord_win: _lord_win.visible = not out and _evil_now < 3      # (version 7.34) one Lord at a time: in the last week he has left the window for the wall
 	if _lord_wall: _lord_wall.visible = not out and _evil_now >= 3
 
 func _lord_step(delta: float) -> void:                 # at the window he turns a little, now and then; on the wall he raises his goblet to you
@@ -447,6 +447,7 @@ func set_evil(level: int) -> void:
 	_evil_now = level
 	for i in _evil.size(): _evil[i].visible = level > i
 	if _lord_wall: _lord_wall.visible = not _lord_out and level >= 3
+	if _lord_win: _lord_win.visible = not _lord_out and level < 3
 	if haunt_mat: haunt_mat.emission = [Color("b45cff"), Color("b45cff"), Color("d0406a"), Color("ff2a2a")][clampi(level, 0, 3)]
 	if _castle_lit:
 		_castle_lit.albedo_color = Color("ff5a4a") if level >= 3 else Color("ffe9a8")

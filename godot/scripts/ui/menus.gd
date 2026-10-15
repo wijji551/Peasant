@@ -40,6 +40,9 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.34: one Lord", [
+		"In the last week there were two Lords at the castle, one in the lit window and one on the wall over the gate. He has left the window now: in the last week he is only on the wall.",
+	]],
 	["Version 7.33: the Lord, as he should look", [
 		"The Lord of Ashhollow has been redrawn from his portrait: a pale, square face with red eyes that glow and teeth he would rather you did not see, black hair, a tall black top hat with a gold band and a red ribbon, a great stand-up collar, red within, a black tailcoat over a red waistcoat with gold buttons, a white cravat and a gold jabot, and a cloak to the ground, black outside and red inside. His goblet stays upright in his hand whatever he is doing, and when he stands about he raises it to you.",
 		"He can be seen at the castle from the first day now: a small figure on a balcony in the one lit window, looking down on the village. In the last week he comes out on to the wall over the gate, and raises his goblet. The night he comes down in person, he is in neither.",

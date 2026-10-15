@@ -827,3 +827,7 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - The castle (`world.gd`): a small balcony under the one lit window, and the Lord on it (0.62 scale) from day one, turning a little; in the last week (evil level 3) a full-size Lord on the wall over the gate, behind the merlons, turning and raising his goblet. `world.set_lord_out` (main, from the undead list) hides both while he is on the field.
 - The Lord's shadow has his hat and collar.
 - All 34 suites and co-op pass.
+
+## Version 7.34: one Lord (build counter 41)
+
+- In the last week both castle figures showed (the window and the wall), so the dusk look up at the castle had two Lords. `world.set_lord_out` and `set_evil` now show the window Lord only before the last week, and the wall Lord only in it; neither while he is on the field.
