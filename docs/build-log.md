@@ -781,3 +781,13 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - **Sound**: a storm-wind loop (`amb_wind`, from `tools/make_sounds.py storm_wind()`, a gusting roar and a whistle that slides with the gusts), faded in with the wind above 1.2.
 - `DTV_WEATHER=rain` forces the weather and a bolt, for pictures.
 - All suites and co-op pass.
+
+## Version 7.29: townsfolk (build counter 36)
+
+- `scripts/view/folk.gd` (added by `main.gd` as `folk`): seven townsfolk, not in the rules. Each day's plan for each is worked out from the day number (seeded), and where they are from the day's clock (`DAY_LEN - timeLeft`, which co-op already sends), so every player sees the same without anything new on the network.
+- Ways: a 1-pace grid over the village and round it, the buildings and walls blocked (from `Map.colliders()`, with a little room), one walk out from the keep's door to everywhere, and each path pulled straight where the line is clear.
+- Their day: out from the keep's door to a place and back, again and again; each has a favourite (the farm, the mill, fishing from the bank at three spots, a standing tree at the edge of the west wood, the market, square and notice board, the Rose, the library and smithy). At the farm they stoop to work; at a tree they swing at it, with the sound; fishing they face the river; at the Rose they are inside, out of sight.
+- At dusk they run (6.5 a second) back along the way they came to the keep's door, and are gone until morning; the furthest is home in under 17 of dusk's 20 seconds. At night, and when you are indoors, nobody is about.
+- Hello: come within about three paces and one says something (a bubble, `labels.bark_at`), from a list of seventeen, at most once in 25 seconds each.
+- They look like the rest of the village (`Figure.peasant` with a peasant record that is never in the rules), with their own hats and tunics.
+- New `folk_test` (5). All 33 suites and co-op pass.

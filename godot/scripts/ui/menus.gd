@@ -39,6 +39,11 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.29: townsfolk", [
+		"Seven of the village’s townsfolk now go about their day: working the farm, walking out to the mill, fishing from the bank, taking a drink at the Thorny Rose, chopping at a tree at the edge of the wood, or standing about the market, the square and the notice board. They gather nothing. They are only living here, which is brave of them.",
+		"Walk up to one and they will say hello, or something like it.",
+		"At dusk they drop what they are doing and run for the keep, and hide in it until morning. Every player sees the same townsfolk doing the same thing.",
+	]],
 	["Version 7.28: the weather has a wind", [
 		"The wind now goes with the weather: a breeze on clear days, stronger when it is overcast, nearly still in fog, a drift in the snow. Trees, bushes, grass and every banner follow it.",
 		"Rain is a storm now: the trees bend over and thrash, the rain is driven slantwise, it splashes where it lands, leaves and bits are torn off and blow past, the sky is darker, and a storm wind howls and gusts under the rain.",

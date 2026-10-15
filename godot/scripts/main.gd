@@ -11,6 +11,8 @@ const Dead := preload("res://scripts/view/dead.gd")
 const Fx := preload("res://scripts/view/fx.gd")
 const Minimap := preload("res://scripts/ui/minimap.gd")
 const Labels := preload("res://scripts/ui/labels.gd")
+const Folk := preload("res://scripts/view/folk.gd")
+var folk: Node3D
 const Pops := preload("res://scripts/ui/pops.gd")
 const TreesView := preload("res://scripts/view/trees.gd")
 const SitesView := preload("res://scripts/view/sites.gd")
@@ -167,6 +169,9 @@ func _ready() -> void:
 	hud.map_slot.add_child(minimap)
 	minimap.R = R
 	labels.R = R
+	folk = Folk.new()                                   # (version 7.29) townsfolk about their day
+	folk.labels = labels; folk.fx = _fx
+	add_child(folk)
 	DisplayServer.window_set_title(D.GAME)
 	Net.ensure(get_tree()).attach(self)
 	Net.me.changed.connect(_net_changed)
@@ -1489,6 +1494,7 @@ func _camera(delta: float) -> void:
 	world.set_riverside(R.raft, R.raftW, R.rcave, R.runes2)
 	world.set_moles(R.moles)
 	world.view_at = _focus
+	if folk: folk.R = R; folk.me = me
 	atmos.indoors = indoors
 	if not win.is_open("menu"):
 		_yaw_goal += ((1.0 if Keys.held("cam_right") else 0.0) - (1.0 if Keys.held("cam_left") else 0.0)) * delta * 2.2

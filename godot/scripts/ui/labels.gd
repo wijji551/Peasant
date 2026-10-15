@@ -35,6 +35,13 @@ var _bubbles := {}                  # peasant id -> [label, seconds left]
 var _bailiff: Label
 
 
+## Somebody who is not in the rules (the townsfolk, version 7.29) says something: a bubble over the node, for a few seconds.
+var _nbubbles := {}
+func bark_at(key: String, text: String, node: Node3D) -> void:
+	if _nbubbles.has(key): _nbubbles[key][0].queue_free()
+	_nbubbles[key] = [_label(text, 13, Color("2f2318"), Color("fffaf0")), 3.5, node]
+
+
 ## A peasant says something: a little speech bubble over their head for a few seconds.
 func bark(qid: int, text: String) -> void:
 	if _bubbles.has(qid): _bubbles[qid][0].queue_free()
@@ -135,6 +142,14 @@ func _process(_delta: float) -> void:   # (_delta is used: bubbles fade)
 			l.modulate.a = lerpf(l.modulate.a, lerpf(1.0, 0.45, near), minf(1.0, _delta * 6.0))
 		else:
 			l.visible = false
+	for k in _nbubbles.keys():                        # what the townsfolk are saying
+		var nb: Array = _nbubbles[k]
+		nb[1] -= _delta
+		if nb[1] <= 0 or not is_instance_valid(nb[2]) or not (nb[2] as Node3D).visible:
+			nb[0].queue_free(); _nbubbles.erase(k)
+			continue
+		var np: Vector3 = (nb[2] as Node3D).global_position
+		_put(nb[0], Vector3(np.x, 2.6, np.z))
 	for qid in _bubbles.keys():                       # what peasants are saying
 		var b: Array = _bubbles[qid]
 		b[1] -= _delta
