@@ -82,6 +82,10 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.38: a door you can see, and a quieter torch", [
+		"The chapel's door is on the front of the bell tower now, where you can see it: a pointed stone doorway, a pair of oak doors with iron straps and two rings, and a step. The bell tower used to stand in front of the old door and hide it, and the round window too, which has moved up the tower above the new one.",
+		"A burning torch no longer throws little yellow sparks out of the top as you walk about. The flame is enough on its own.",
+	]],
 	["Version 7.37: the chapel, inside, and a handbook you can find things in", [
 		"The priest has moved indoors. The chapel has a door now, under the bell tower, and inside it a nave: flagstones, a red runner up the aisle, four rows of pews either side, the altar rail, and the altar with its cloth, cross and candlesticks, where the priest stands. There is a pulpit, a brass eagle with the bible open on its wings, a font at the back and a collection box for the roof. The chapel is open day and night, so you can still be blessed before a fight.",
 		"Holy studies are sat in a pew now. Ask the priest for a class and you take the first free seat, front row first, with the bible open on your knees, for the forty-five seconds. A bar over your head shows how far you have got. Hold {interact} to close the book and get up, or just walk off: he remembers where you got to, as before.",

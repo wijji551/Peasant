@@ -217,7 +217,6 @@ func player(p: E.Player, is_me: bool) -> void:
 	if _torch:
 		_torch.visible = lit
 		_torch.light_energy = (4.2 if p.room == "mine" else 0.5 + 2.1 * dark) * (0.9 + 0.1 * sin(Time.get_ticks_msec() / 70.0 + p.id))
-		if lit and fx and randf() < get_process_delta_time() * 9: fx.puff(p.x + sin(p.r) * 0.5, 2.3, p.z + cos(p.r) * 0.5, 1, fx.C_FIRE, 0.8)
 	_set_gear([p.head, p.body, p.off, p.trk, p.feet])
 	var jest: bool = Rules.class_of(p) == 1 and p.head < 0          # a jester wears the cap and bells, unless there is a helm in the way
 	if jest and _jhat == null:

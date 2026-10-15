@@ -851,3 +851,8 @@ From a review with Matt (his own look at the north wall's dashed foundations is 
 - Handbook: twelve chapters, each in sub-sections (`guide_page`, chapter buttons left, scrolling page right); a page per boss, and "Bosses with company". Books are grouped (`D.BOOK_GROUPS`) on the library shelf, in the handbook and in the skills window.
 - Ducks: three, swimming round the pond at their own paces (`_ducks_step`).
 - `rules_test`: blessing and studies inside the chapel, the pew, no class outside, the chapel door. `bot_week` sits its class. All suites and co-op pass.
+
+## Version 7.38: the chapel door, and the torch (build counter 45)
+
+- The bell tower (1.7 square, its front 0.25 in front of the nave's) hid the old door and the rose window. Both are on the tower's face now (`world.gd _chapel`): a stone surround with a pointed top, oak double doors with planks, iron straps and rings, a step, and the round window higher up the tower.
+- The torch's fire puffs (`figure.gd`) are gone; the live flame stays. All suites and co-op pass.

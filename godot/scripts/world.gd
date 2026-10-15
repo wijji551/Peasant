@@ -1309,21 +1309,33 @@ func _chapel() -> void:
 			var spill := Build.glow_box(n, Vector3(1.6, 0.02, 0.7), Vector3(sx * (w / 2 + 1.0), 0.14, zz), sm)   # (version 7.37) its colour thrown on the grass, on the nights of the bells
 			spill.visible = false; _spill.append([spill, sm, _glass.find(g)])
 			tip.rotation.x = PI / 4                                                            # the pointed top
-	# the front: a pointed doorway, a round window above it, and the bell tower over all
-	Build.box(n, Vector3(1.5, 2.3, 0.2), Vector3(0, 0.35, d / 2 + 0.02), trim)
-	Build.box(n, Vector3(1.1, 2.0, 0.22), Vector3(0, 0.35, d / 2 + 0.04), Color("4b2f1e"))
-	var arch := Build.box(n, Vector3(0.8, 0.8, 0.22), Vector3(0, 1.95, d / 2 + 0.04), Color("4b2f1e"))
-	arch.rotation.z = PI / 4
-	Build.box(n, Vector3(0.08, 1.9, 0.24), Vector3(0, 0.35, d / 2 + 0.06), Color("8a6a3c"))
-	var rose := Build.cyl(n, 0.62, 0.62, 0.12, Vector3(0, 3.0, d / 2 + 0.02), trim, 12, 0.0, PI / 2)
-	rose.position = Vector3(0, 3.0, d / 2 + 0.06)
-	var rg := Build.cyl(n, 0.5, 0.5, 0.12, Vector3(0, 3.0, d / 2 + 0.1), Color.WHITE, 12, 0.0, PI / 2)
+	# the front (version 7.37: on the face of the bell tower, which used to stand in front of them and hide them): a pointed
+	# doorway with a stone surround, a pair of oak doors with iron straps and a ring, a step, and a round window above
+	var f := d / 2 + 0.25                                                                       # the tower's front face
+	var oak := Color("6b4326")
+	Build.box(n, Vector3(1.35, 0.14, 0.7), Vector3(0, 0.35, f + 0.3), trim)                       # the step
+	Build.box(n, Vector3(1.4, 2.25, 0.14), Vector3(0, 0.35, f + 0.02), trim)                      # the stone surround
+	var sa := Build.box(n, Vector3(0.99, 0.99, 0.14), Vector3(0, 2.13, f + 0.02), trim)          # and its pointed top
+	sa.rotation.z = PI / 4
+	Build.box(n, Vector3(1.0, 1.95, 0.12), Vector3(0, 0.35, f + 0.1), oak)                         # the doors
+	var da := Build.box(n, Vector3(0.71, 0.71, 0.12), Vector3(0, 1.94, f + 0.1), oak)
+	da.rotation.z = PI / 4
+	Build.box(n, Vector3(0.05, 2.2, 0.14), Vector3(0, 0.35, f + 0.11), Color("3a2414"))            # where they meet
+	for k in 7: Build.box(n, Vector3(0.02, 1.9, 0.13), Vector3(-0.45 + k * 0.15, 0.36, f + 0.105), Color("573620"))   # the planks
+	for y in [0.75, 1.75]:                                                                         # the iron straps
+		for sx in [-1.0, 1.0]: Build.box(n, Vector3(0.42, 0.07, 0.15), Vector3(sx * 0.25, y, f + 0.12), C.iron)
+	for sx in [-1.0, 1.0]:                                                                         # and the rings
+		Build.cyl(n, 0.09, 0.09, 0.03, Vector3(sx * 0.12, 1.12, f + 0.19), Color("3a3d44"), 10, 0.0, PI / 2)
+		Build.cyl(n, 0.05, 0.05, 0.04, Vector3(sx * 0.12, 1.12, f + 0.2), Color("70757f"), 8, 0.0, PI / 2)
+	var rose := Build.cyl(n, 0.48, 0.48, 0.12, Vector3(0, 3.6, f), trim, 12, 0.0, PI / 2)
+	rose.position = Vector3(0, 3.6, f + 0.04)
+	var rg := Build.cyl(n, 0.38, 0.38, 0.12, Vector3(0, 3.6, f + 0.08), Color.WHITE, 12, 0.0, PI / 2)
 	rg.material_override = Build.mat(Color("8f5bc2"), 1.0).duplicate()
 	_glass.append(rg.material_override)
 	for sx in [-1.0, 1.0]:                                                                       # the light through them, out on to the grass, on the nights of the bells
 		var cl := OmniLight3D.new(); cl.position = Vector3(sx * (w / 2 + 1.4), 1.6, 0); cl.omni_range = 7.0; cl.light_energy = 0.0; n.add_child(cl)
 		_chapel_lights.append(cl)
-	rg.position = Vector3(0, 3.0, d / 2 + 0.1)
+	rg.position = Vector3(0, 3.6, f + 0.08)
 	# the bell tower, at the south end
 	var tz := d / 2 - 0.6
 	Build.box(n, Vector3(1.7, 7.2, 1.7), Vector3(0, 0.35, tz), stone)
