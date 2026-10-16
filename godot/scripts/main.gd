@@ -78,7 +78,8 @@ var _focus := Vector3(0, 0, -4)
 var _zoom := 1.0
 var _pan_t := -1.0                   # the look up at the castle as night falls: how far through it (-1: not looking)
 var _fog_back := 0.0                 # how much further off than usual the camera is, so the haze can keep its distance
-var _title_art: TextureRect          # the title screen's picture
+var _title_art: TextureRect          # the title screen's name (version 7.42: the logo, over the live forest)
+var _title_shade: TextureRect        # and a shadow down the left behind it
 var _upd: VBoxContainer              # the title screen's corner: which build this is, and a newer one if there is one
 # The view can be turned round the player, tilted and brought closer. Each has where it is and where it is going, so it glides.
 const CAM_PITCH0 := 0.8672          # the tilt the game began with: looking down from 66 up and 56 back
@@ -216,16 +217,25 @@ func in_game() -> bool:
 func _home(quiet: bool = false) -> void:
 	screen = "home"
 	hud.playing(false)
-	if _title_art == null:                               # the title picture, behind the menu
-		_title_art = TextureRect.new()
-		_title_art.texture = load("res://art/title.jpg")
-		_title_art.set_anchors_preset(Control.PRESET_FULL_RECT)
-		_title_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		_title_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		_title_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _title_art == null:                               # (version 7.42) the name, over the forest rolling by behind it (the old picture is gone)
 		var layer := CanvasLayer.new()
 		layer.layer = hud.layer - 1                      # under the readouts and the window
 		add_child(layer)
+		_title_shade = TextureRect.new()                 # a shadow down the left, so the name and the menu stand out from the trees
+		var gt := GradientTexture2D.new(); gt.width = 256; gt.height = 4
+		var gr := Gradient.new(); gr.set_color(0, Color(0.02, 0.02, 0.03, 0.72)); gr.set_color(1, Color(0.02, 0.02, 0.03, 0.0)); gr.add_point(0.55, Color(0.02, 0.02, 0.03, 0.38))
+		gt.gradient = gr
+		_title_shade.texture = gt
+		_title_shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_title_shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_title_shade.stretch_mode = TextureRect.STRETCH_SCALE
+		_title_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		layer.add_child(_title_shade)
+		_title_art = TextureRect.new()
+		_title_art.texture = load("res://art/logo_title.png")
+		_title_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_title_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+		_title_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		layer.add_child(_title_art)
 		_upd = VBoxContainer.new()
 		_upd.theme = Look.theme()
@@ -890,17 +900,25 @@ func inv_do(a: String, arg) -> void:
 # ---------------------------------------------------------------- the loop
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.25)
-	if _title_art: _title_art.visible = screen == "home"; _upd.visible = screen == "home"
-	if screen == "home":                                 # behind the home screen: a slow look round the village
+	if _title_art:
+		_title_art.visible = screen == "home"; _title_shade.visible = _title_art.visible
+		if _title_art.visible:                           # the name sits above the menu's scroll, which is pinned at 4.5% across and 37% down
+			var vs := get_viewport().get_visible_rect().size
+			var lw := minf(vs.x * 0.5, vs.y * 0.31 * 1580.0 / 351.0)
+			_title_art.size = Vector2(lw, lw * 351.0 / 1580.0)
+			_title_art.position = Vector2(vs.x * 0.03, maxf(10.0, vs.y * 0.345 - _title_art.size.y - 6.0)); _upd.visible = screen == "home"
+	if screen == "home":                                 # (version 7.42) behind the home screen: Hallowshire Forest, rolling by for ever, as the evening comes on
 		_home_t += delta
-		var a := _home_t * 0.05
-		_focus = Vector3(sin(a) * 14, 0, -4 + cos(a) * 10)
-		camera.position = _focus + Vector3(0, 66, 56) * 1.25
-		camera.look_at(_focus + Vector3(0, 1, 0))
+		var a := _home_t * 0.022 + 0.6
+		_focus = Vector3(-76.0 + cos(a) * 24.0, 0, -16.0 + sin(a) * 17.0)            # round and round the forest, slowly
+		var out := Vector3(cos(a), 0, sin(a))
+		camera.fov = 42.0
+		camera.position = _focus + out * 24.0 + Vector3(0, 23.0, 0) + Vector3(-out.z, 0, out.x) * 6.0
+		camera.look_at(_focus + Vector3(0, 1.5, 0) - out * 6.0)
 		trees_view.sync(R, delta)
 		sites_view.sync(R)
-		_apply_light(0.0)
-		atmos.update(delta, 0.0, _focus)
+		_apply_light(0.42)
+		atmos.update(delta, 0.42, _focus)
 		Sound.me.update(delta, 0.0, _focus, "clear", 0, 0.0, false)
 		_test_hook()
 		return
@@ -1611,7 +1629,7 @@ func _camera(delta: float) -> void:
 		camera.fov = 38.0
 		camera.position = Vector3(lp.x + 5.5, 4.2 + _cut_t * 0.3, D.VN + 6.0)
 		camera.look_at(lp + Vector3(0, 2.0, 0))
-	elif camera.fov != 20.0 and OS.get_environment("DTV_CAM") == "":
+	elif camera.fov != 20.0 and OS.get_environment("DTV_CAM") == "" and screen != "home":
 		camera.fov = 20.0
 	minimap.view = _cam_yaw
 	world.night = R.nf

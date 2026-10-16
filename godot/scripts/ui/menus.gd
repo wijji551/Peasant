@@ -82,6 +82,9 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.42: a new title screen", [
+		"The title screen is the village's own world again, not a picture: Hallowshire Forest goes by behind the menu, round and round, for ever, in the warm light of a long evening. The new name sits over the menu, carved and gilded.",
+	]],
 	["Version 7.41: a real cockerel", [
 		"The cockerel at dawn is a real one now, a recording, rather than one made from scratch: \"Cartoon Rooster Sounds\" by DRAGON-STUDIO, from Pixabay. He still crows a moment after the morning chord, every morning.",
 	]],

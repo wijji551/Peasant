@@ -875,3 +875,8 @@ An audit (rules, text against rules, UI) and its fixes.
 ## Version 7.41: a real cockerel (build counter 48)
 
 - The synthesised crow (7.40) did not sound like one. `sounds/sfx_cockerel.wav` is now a recording: "Cartoon Rooster Sounds" by DRAGON-STUDIO, Pixabay 487663 (Pixabay Content License), fetched in the browser on Matt's PC, converted to 22 050 Hz mono, 1.68 s, peak 0.62. The source mp3 and its notes are in `tools/recorded/`; `make_sounds.py` no longer makes the cockerel, so running it will not overwrite the recording.
+
+## Version 7.42: the title screen (build counter 49)
+
+- `art/title.jpg` is gone. `art/logo_title.png` is the big logo from Matt's sheet (ChatGPT), cut out with its alpha keyed from brightness over the sheet's near-black and the black un-mixed from the colour. `main._home`: a shade (a left-to-right gradient, 0.72 to 0) and the logo, sized to half the screen's width at most and set just above the menu's scroll (pinned at 4.5%, 37%).
+- Behind it the live world: the camera goes round Hallowshire Forest for ever (focus on an ellipse about (−76, −16), 24 by 17, a turn every five minutes; the camera 24 out, 23 up and a little to the side, FOV 42), lit at `nf` 0.42, a warm evening. `_camera` leaves the FOV alone on the home screen.
