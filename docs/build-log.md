@@ -866,3 +866,8 @@ An audit (rules, text against rules, UI) and its fixes.
 - QoL: dusk warnings at 60 and 20 s (`_tl_last`), red timer; `pdown` event and banner with direction; ready line names; focus-out opens the handbook alone (pausing); minimap doors, cart and cottage; labels for doors, people and "Out"; `Settings.fullscreen`, F11 and Alt+Enter.
 - Text: holy wording and gold threshold 1.3; card rank VII cap shown; pages below VII; seven bosses; fish; market; tar; Dogs VII; wraiths; rune bless price; Last Warning in rain; librarian; the Lord's hint and handbook line; "one of your books".
 - New `polish_test` (9). All 36 suites and co-op pass.
+
+## Version 7.40: the cockerel (build counter 47)
+
+- `tools/make_sounds.py`: the cockerel is additive now: five syllables, each a harmonic buzz (f0 contour with jitter and a 9 Hz waver, a half-pitch growl for the rasp, breath noise) weighted by three formants (about 1, 1.8 to 2.1 and 3.1 kHz); the last syllable 1.05 s, rising to 900 Hz and falling to 620, with a crack. Peak about −4 dB (it was −16, under the dawn chord). `python3 tools/make_sounds.py cockerel`.
+- `main.gd`: the crow plays 1.4 s after the dawn chord (`_crow_t`), at full volume, every morning including the first.

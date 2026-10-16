@@ -82,6 +82,9 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.40: a cockerel you can hear", [
+		"The cockerel at dawn has been made again, as a voice rather than a buzz: cock-a-doodle-DOOOO, the last note held, climbing, cracking and falling away. He crows on his own now, a moment after the morning chord instead of underneath it, and at full volume, every morning including the first.",
+	]],
 	["Version 7.39: polish, before the test plays", [
 		"Mended: hosting \"Carry on from day N\" (or \"Try day N again\") started a new month and saved over the old one. It carries on now.",
 		"Mended: buying the stranger a drink in the weeks before the Chaplain, the Cook and the Gamekeeper took your sixpence and told you nothing. He has a word about every one of them now.",

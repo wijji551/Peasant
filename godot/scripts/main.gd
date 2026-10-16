@@ -449,7 +449,8 @@ func _input(e: InputEvent) -> void:
 
 
 var _lmb_world := false
-var _tl_last := 9999.0                                  # (version 7.39) the day's time left, last frame: for the warnings before dusk                                 # (version 7.39) the left button went down on the world, not on a button
+var _tl_last := 9999.0
+var _crow_t := -1.0                                     # (version 7.40) seconds until the cockerel crows, after the dawn chord                                  # (version 7.39) the day's time left, last frame: for the warnings before dusk                                 # (version 7.39) the left button went down on the world, not on a button
 
 ## (version 7.39) alone, the game waits if you go off to another window: the handbook opens, which pauses it
 func _notification(what: int) -> void:
@@ -1646,6 +1647,9 @@ func _hud_update(delta: float) -> void:
 			_end_shown = true
 			_build_sel = ""; _panel = ""
 			menus.ending(ph == "won")
+	if _crow_t > 0.0:
+		_crow_t -= delta
+		if _crow_t <= 0.0: Sound.play("cockerel", 1.0)
 	if ph == "day" and R.live() and me:                  # (version 7.39) a warning before dusk, at a minute and at twenty seconds
 		for th in [60.0, 20.0]:
 			if _tl_last > th and R.timeLeft <= th:
@@ -1662,8 +1666,8 @@ func _hud_update(delta: float) -> void:
 		if R.dawn.lines.size() and not win.is_open("menu"):
 			_panel = ""
 			atmos.pick(R.gseed, R.dawn.day)
-			if R.dawn.day > 1:
-				Sound.play("dawn"); Sound.play("cockerel", 0.7)      # somebody has to be pleased about it
+			if R.dawn.day > 1: Sound.play("dawn")
+			_crow_t = 1.4                                    # (version 7.40) and a moment later the cockerel, on his own, so he is heard: somebody has to be pleased about it
 			menus.dawn(R.dawn.day, R.dawn.lines + ([D.WEATHER_LINE[R.weather]] if D.WEATHER_LINE.get(R.weather, "") != "" and not D.MOON_LINE.has(R.moon()) else []))
 			_dawn_t = 15.0
 		if R.phase == "day" and R.bells() and not R.dawn.lines.has(D.BELLS_LINE): hud.feed(D.BELLS_LINE)   # (a save from before there were bells)
