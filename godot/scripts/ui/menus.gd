@@ -82,6 +82,9 @@ const GUIDE := [
 ]
 
 const CHANGES := [
+	["Version 7.41: a real cockerel", [
+		"The cockerel at dawn is a real one now, a recording, rather than one made from scratch: \"Cartoon Rooster Sounds\" by DRAGON-STUDIO, from Pixabay. He still crows a moment after the morning chord, every morning.",
+	]],
 	["Version 7.40: a cockerel you can hear", [
 		"The cockerel at dawn has been made again, as a voice rather than a buzz: cock-a-doodle-DOOOO, the last note held, climbing, cracking and falling away. He crows on his own now, a moment after the morning chord instead of underneath it, and at full volume, every morning including the first.",
 	]],

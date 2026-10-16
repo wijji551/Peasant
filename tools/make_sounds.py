@@ -285,36 +285,7 @@ def sfx():
         add(sh, bandpass(v, 300, 2600), at)
         add(sh, noise(0.05, 0.12, 2400), at)
     S["shout"] = reverb(sh * V, 0.5, 0.22)
-    # the cockerel, at dawn (version 7.40: a voice, not a buzzer): cock-a-doodle-DOOOO. Each syllable is a throat
-    # (a buzz of harmonics, roughened, with a little wavering) sung through a beak (formants about 1, 2 and 3.2 kHz,
-    # which move a little from syllable to syllable), and the last is held, climbs, cracks, and falls away.
-    ck = buf(2.4)
-    crow_rng = np.random.default_rng(1337)
-    syl = ((0.00, 0.13, [560, 640], (950, 1850, 3100), 0.55),            # cock
-           (0.17, 0.09, [640, 680], (1000, 2000, 3200), 0.45),           # a
-           (0.30, 0.20, [690, 820], (900, 1700, 3000), 0.75),            # doo
-           (0.54, 0.11, [800, 760], (1100, 2100, 3300), 0.6),            # dle
-           (0.70, 1.05, [760, 880, 900, 860, 620], (950, 1800, 3100), 1.0))  # DOOOO
-    for at, dur, contour, fm, g in syl:
-        n = int(SR * dur)
-        t = np.arange(n) / SR
-        f0 = np.interp(np.linspace(0, 1, n), np.linspace(0, 1, len(contour)), contour)
-        jit = np.cumsum(crow_rng.standard_normal(n)) ; jit = lowpass(jit - jit.mean(), 18) ; jit = jit / (np.abs(jit).max() + 1e-9)
-        f0 = f0 * (1 + 0.025 * jit + 0.012 * np.sin(2 * np.pi * 9 * t))      # wavering, as a bird's voice does
-        ph = 2 * np.pi * np.cumsum(f0) / SR
-        v = np.zeros(n)
-        for k in range(1, 15):                                               # the harmonics, shaped by the beak
-            fk = f0 * k
-            w = sum(a * np.exp(-((fk - c) / bw) ** 2) for c, bw, a in ((fm[0], 380, 1.0), (fm[1], 520, 0.8), (fm[2], 700, 0.45)))
-            v += np.sin(k * ph) * (w + 0.04) / k ** 0.35 * (fk < SR / 2 - 500)
-        v *= 1 + 0.45 * np.sin(ph / 2)                                       # the rasp: a growl at half the pitch
-        v += bandpass(crow_rng.standard_normal(n), 1400, 4200) * 0.18        # and breath
-        rise = min(0.02, dur * 0.25)
-        env = np.minimum(1.0, t / rise) * np.clip((dur - t) / min(0.05, dur * 0.3), 0, 1)
-        if dur > 0.5:                                                        # the last one: swells, holds, and falls away with a crack
-            env *= np.interp(t, [0, 0.12, 0.6, dur], [0.7, 1.0, 0.95, 0.3]) * (1 - 0.35 * (np.abs(t - 0.82) < 0.025))
-        add(ck, v / (np.abs(v).max() + 1e-9) * env * g, at)
-    S["cockerel"] = reverb(ck * V * 1.25, 1.1, 0.22)
+    # the cockerel (version 7.41) is a recording now, not made here: see tools/recorded/README.md
     # the Gamekeeper's howl: one long rising and falling note with a growl under it, carried a long way
     n = int(SR * 2.4)
     t = np.arange(n) / SR

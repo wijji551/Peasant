@@ -871,3 +871,7 @@ An audit (rules, text against rules, UI) and its fixes.
 
 - `tools/make_sounds.py`: the cockerel is additive now: five syllables, each a harmonic buzz (f0 contour with jitter and a 9 Hz waver, a half-pitch growl for the rasp, breath noise) weighted by three formants (about 1, 1.8 to 2.1 and 3.1 kHz); the last syllable 1.05 s, rising to 900 Hz and falling to 620, with a crack. Peak about −4 dB (it was −16, under the dawn chord). `python3 tools/make_sounds.py cockerel`.
 - `main.gd`: the crow plays 1.4 s after the dawn chord (`_crow_t`), at full volume, every morning including the first.
+
+## Version 7.41: a real cockerel (build counter 48)
+
+- The synthesised crow (7.40) did not sound like one. `sounds/sfx_cockerel.wav` is now a recording: "Cartoon Rooster Sounds" by DRAGON-STUDIO, Pixabay 487663 (Pixabay Content License), fetched in the browser on Matt's PC, converted to 22 050 Hz mono, 1.68 s, peak 0.62. The source mp3 and its notes are in `tools/recorded/`; `make_sounds.py` no longer makes the cockerel, so running it will not overwrite the recording.
